@@ -50,12 +50,7 @@ BeamExportModule :: ~BeamExportModule() { }
 IRResultType
 BeamExportModule::initializeFrom(InputRecord *ir)
 {
-    IRResultType result;                 // Required by IR_GIVE_FIELD macro
-    IR_GIVE_FIELD(ir, this->ists, _IFT_BeamExportModule_ISTs);
-    this->scale = 1.;
-    IR_GIVE_OPTIONAL_FIELD(ir, this->scale, _IFT_BeamExportModule_scale);
-    this->matnum.clear();
-    IR_GIVE_OPTIONAL_FIELD(ir, this->matnum, _IFT_BeamExportModule_matnum);
+    //IRResultType result;                 // Required by IR_GIVE_FIELD macro
     return ExportModule :: initializeFrom(ir);
 }
 
@@ -66,34 +61,36 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
         return;
     }
 
-    bool volExported = false;
-    fprintf(this->stream, "%.3e  ", tStep->giveTargetTime());
-    for ( int ist: ists ) {
-        FloatArray ipState, avgState;
-        double VolTot = 0.;
-        Domain *d = emodel->giveDomain(1);
-        for ( auto &elem : d->giveElements() ) {
-            if ( this->matnum.giveSize() == 0 || this->matnum.contains( elem->giveMaterial()->giveNumber() ) ) { ///@todo We shouldn't rely on element->giveMaterial, won't work for layered cross-sections
-                for ( GaussPoint *gp: *elem->giveDefaultIntegrationRulePtr() ) {
-                    double dV = elem->computeVolumeAround(gp);
-                    VolTot += dV;
-                    elem->giveGlobalIPValue(ipState, gp, (InternalStateType)ist, tStep);
-                    avgState.add(dV, ipState);
-                }
-            }
-        }
+	// loop through the beam elements
+    FloatArray ipState;
+    Domain *d = emodel->giveDomain(1);
+    for ( auto &elem : d->giveElements() ) {
+		if (strcmp(elem->giveClassName(), "beam3d") || strcmp(elem->giveClassName(), "beam2d")) { // check if elem is beam (LIbeam?)
 
-        if ( !volExported ) {
-            fprintf(this->stream, "%.3e    ", VolTot);
-            volExported = true;
-        }
-        avgState.times( 1. / VolTot * this->scale );
-        fprintf(this->stream, "%d ", avgState.giveSize());
-        for ( auto s: avgState ) {
-            fprintf(this->stream, "%e ", s);
-        }
-        fprintf(this->stream, "    ");
+		//	for ( GaussPoint *gp: *elem->giveDefaultIntegrationRulePtr() ) {
+		//		double dV = elem->computeVolumeAround(gp);
+		//		
+		//		elem->giveGlobalIPValue(ipState, gp, (InternalStateType)1, tStep); // IST_StressTensor
+		//		
+		//	}
+
+		}
     }
+
+	// loop through the loads
+	//	d->giveSets or d->giveLoad ?
+
+
+	// write file in the format:
+	// elementNumber distanceFromIend N_x T_z T_y M_x M_y M_z
+	// if 3 Gauss points are used, there would be 5 lines per beam (at distances 0, 0.2254*L, 0.5*L, 0.7746*L, L), ->>> check
+
+    //fprintf(this->stream, "%d ", avgState.giveSize());
+    //for ( auto s: avgState ) {
+    //    fprintf(this->stream, "%e ", s);
+    //}
+    fprintf(this->stream, "    ");
+    
     fprintf(this->stream, "\n" );
     fflush(this->stream);
 }
@@ -107,9 +104,9 @@ BeamExportModule :: initialize()
     }
 
     fprintf(this->stream, "#Time      Volume       ");
-    for ( int var: this->ists ) {
-        fprintf(this->stream, "%s    ", __InternalStateTypeToString( ( InternalStateType ) var) );
-    }
+    //for ( int var: this->ists ) {
+    //    fprintf(this->stream, "%s    ", __InternalStateTypeToString( ( InternalStateType ) var) );
+    //}
     fprintf(this->stream, "\n" );
     fflush(this->stream);
 }

@@ -38,35 +38,27 @@
 #include "exportmodule.h"
 #include "floatarray.h"
 
-///@name Input fields for Homogenization export module
+///@name Input fields for Beam export module
 //@{
-#define _IFT_BeamExportModule_Name "hom"
-#define _IFT_BeamExportModule_ISTs "ists" /// List of internal state types used for output
-#define _IFT_BeamExportModule_scale "scale" ///[optional] Scales the output variables
-#define _IFT_BeamExportModule_matnum "matnum" ///[optional] If specified, only these material are used
+#define _IFT_BeamExportModule_Name "bem"
 //@}
 
 namespace oofem {
 /**
- * Represents HOM (Homogenization) export module. It averages internal variables over the whole domain
- * and all elements in global coordinate system. Tensors are given in Voigt notation.
- * Thus various element types (beam, plane element, brick) can be combined and will give correct averaged values.
+ * Represents beam (2D and 3D) export module. It gives the beam diagram values (N_x, T_z, T_y, M_x, M_y, M_z)
+ * for all beam elements in the model, in local coordinate system.
  *
  * @author Vit Smilauer
  * @author Mikael Öhman
+ * @author Giovanni Rinaldin
  */
 class OOFEM_EXPORT BeamExportModule : public ExportModule
 {
 protected:
-    /// Scale of all homogenized values.
-    double scale;
     /// Stream for file.
     FILE *stream;
-    /// Material numbers over which averaging is performed.
-    IntArray matnum;
-    /// Internal states to export
-    IntArray ists;
-
+	/// Array for the beam diagrams
+	FloatArray *res;
 public:
     /// Constructor. Creates empty Output Manager.
     BeamExportModule(int n, EngngModel * e);
