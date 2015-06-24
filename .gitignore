@@ -43,3 +43,5 @@ tests/sm/crack0Step0.vtk
 tests/sm/crack1Step0.vtk
 tests/sm/crack2Step0.vtk
 tests/sm/t3d.bmf
+/64
+/CMakeFiles/3.0.2

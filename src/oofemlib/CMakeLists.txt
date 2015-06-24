@@ -147,6 +147,7 @@ set (core_export
     vtkexportmodule.C
     vtkxmlexportmodule.C
     homexportmodule.C
+    BeamExportModule.C
     matlabexportmodule.C
     gpexportmodule.C
     )
