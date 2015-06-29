@@ -44,16 +44,10 @@
 #include "intarray.h"
 #include "floatarray.h"
 #include "floatmatrix.h"
-//#include "debug.h"
 #include "verbose.h"
 #include "material.h"
-
 #include "elementside.h"
 #include "mathfem.h"
-#ifndef __MAKEDEPEND
- #include <stdlib.h>
- #include <stdio.h>
-#endif
 
 #ifdef __OOFEG
  #include "oofeggraphiccontext.h"
@@ -176,6 +170,9 @@ PFEMElement ::  giveCharacteristicVector(FloatArray &answer, CharType mtrx, Valu
         FloatArray u;
         this->computeVectorOfVelocities(VM_Total, tStep, u);
         answer.beProductOf(d, u);
+    } else if ( mtrx == LumpedMassMatrix ) {
+        this->computeDiagonalMassMtrx(reducedVector, tStep);
+        answer.assemble(reducedVector, this->giveVelocityDofMask());
     } else {
         OOFEM_ERROR("giveCharacteristicVector: Unknown Type of characteristic mtrx.");
     }

@@ -49,13 +49,9 @@
 #include "load.h"
 #include "timestep.h"
 #include "boundaryload.h"
-#ifndef __MAKEDEPEND
- #include <math.h>
- #include <stdio.h>
-#endif
+#include "mathfem.h"
 #include "contextioerr.h"
 
-#include <assert.h>
 #ifdef __OOFEG
  #include "oofeggraphiccontext.h"
  #include "connectivitytable.h"
@@ -237,7 +233,18 @@ TR1_2D_PFEM :: computeEdgeBCSubVectorAt(FloatArray &answer, Load *load, int iEdg
     }
 }
 
+void
+TR1_2D_PFEM :: computeDiagonalMassMtrx(FloatArray &answer, TimeStep *atTime)
+{
+    answer.resize(6);
+    answer.zero();
 
+    double rho = this->giveMaterial()->give( 'd', integrationRulesArray [ 0 ]->getIntegrationPoint(0) );
+    double mm = rho * this->area / 3.0;
+    for ( int i = 1; i <= 6; i++ ) {
+        answer.at(i) = mm;
+    }
+}
 
 void
 TR1_2D_PFEM :: computeDiagonalMassMtrx(FloatMatrix &answer, TimeStep *atTime)
