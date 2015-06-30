@@ -1,0 +1,18 @@
+OneDistrib-Qk1T.out
+NextFEM model 6/16/2015 6:03:31 PM
+linearstatic nsteps 1
+domain 3dShell
+OutputManager tstep_all dofman_all element_all
+ndofman 2 nelem 1 ncrosssect 2 nmat 1 nbc 2 nic 0 nltf 2 nset 1
+node 1 coords 3 0 0 0  bc 6 1 1 1 1 1 1 
+node 2 coords 3 2500 0 0 
+Beam3d 1 nodes 2 1 2 mat 1 crossSect 2 refAngle 0 
+# fictitious section for LumpedMass elements
+SimpleCS 1 thick 0 drillstiffness 0
+SimpleCS 2 area 150000 Iy 1125000192 Iz 3125000192 Ik 4250000384 beamShearCoeff 0.8333333333333 thick 1 width 1
+IsoLE 1 d 2.5E-09 E 30000 n 0.3 tAlpha 0
+BoundaryCondition 1 loadTimeFunction 1 prescribedvalue 0.0
+ConstantEdgeLoad 2 loadTimeFunction 2 Components 1 -10000 DOFs 1 3 set 1
+ConstantFunction 1 f(t) 1.0
+PiecewiseLinFunction 2 npoints 2 t 2 0.0 1.0 f(t) 2 0.0 1.0
+set 1 elementedges 2 1 1
