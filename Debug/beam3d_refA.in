@@ -1,0 +1,72 @@
+beam3dA.out
+ProjId=[3] SubProjId=[0] AltSolId=[0] Date=[2010-Sep-09 18:43:15]
+LinearStatic nsteps 17 lstype 0
+domain 3dShell
+OutputManager tstep_all dofman_all element_all
+ndofman 13 nelem 8 ncrossSect 6 nmat 1 nbc 17 nic 0 nltf 17
+node 1 coords 3 0.0 0.0 0.0 bc 6 0 0 0 0 0 0
+node 2 coords 3 0.0010 0.0 0.0 bc 6 1 1 1 1 0 0
+node 3 coords 3 4.396 0.0 0.0 bc 6 0 0 0 0 0 0
+node 4 coords 3 5.0009999999999994 0.0 0.0 bc 6 1 1 1 1 0 0
+node 5 coords 3 5.0009999999999994 0.0 0.0 bc 6 1 1 1 1 0 0
+node 6 coords 3 5.606 0.0 0.0 bc 6 0 0 0 0 0 0
+node 7 coords 3 10.001 0.0 0.0 bc 6 1 1 1 1 0 0
+node 8 coords 3 10.001999999999999 0.0 0.0 bc 6 0 0 0 0 0 0
+node 9 coords 3 0.0 1.0 0.0 bc 6 1 1 1 1 1 1
+rigidArmNode 10 coords 3 4.0009999999999994 0.0 -1.0 master 4 masterMask 6 1 1 1 1 1 1 dofType 6 2 2 2 2 2 2
+rigidArmNode 11 coords 3 6.0009999999999994 0.0 -1.0 master 5 masterMask 6 1 1 1 1 1 1 dofType 6 2 2 2 2 2 2
+rigidArmNode 12 coords 3 4.0009999999999994 -1.0 0.0 master 4 masterMask 6 1 1 1 1 1 1 dofType 6 2 2 2 2 2 2
+rigidArmNode 13 coords 3 6.0009999999999994 -1.0 0.0 master 5 masterMask 6 1 1 1 1 1 1 dofType 6 2 2 2 2 2 2
+Beam3d 1 nodes 2 1 2 mat 1 crossSect 1 refAngle 90 boundaryLoads 8 2 1 4 1 6 1 12 1
+Beam3d 2 nodes 2 2 3 mat 1 crossSect 1 refAngle 90 boundaryLoads 8 2 1 4 1 7 1 13 1
+Beam3d 3 nodes 2 3 4 mat 1 crossSect 2 refAngle 90 boundaryLoads 8 2 1 4 1 8 1 14 1
+Beam3d 4 nodes 2 5 6 mat 1 crossSect 4 refAngle 90 boundaryLoads 8 3 1 5 1 9 1 15 1
+Beam3d 5 nodes 2 6 7 mat 1 crossSect 3 refAngle 90 boundaryLoads 8 3 1 5 1 10 1 16 1
+Beam3d 6 nodes 2 7 8 mat 1 crossSect 3 refAngle 90 boundaryLoads 8 3 1 5 1 11 1 17 1
+Beam3d 7 nodes 2 10 11 mat 1  crossSect 5 refAngle 90
+Beam3d 8 nodes 2 12 13 mat 1  crossSect 6 refAngle 90
+SimpleCS 1 area 6.5188E-4 Iy 5.65606E-7 Iz 3.166181E-6 Ik 1.0 beamShearCoeff 1.e18 thick 1 width 1.0
+SimpleCS 2 area 0.00130376 Iy 1.131212E-6 Iz 6.332362E-6 Ik 1.0 beamShearCoeff 1.e18 thick 1 width 1.0
+SimpleCS 3 area 6.5188E-4 Iy 5.65606E-7 Iz 3.166181E-6 Ik 1.0 beamShearCoeff 1.e18 thick 1 width 1.0
+SimpleCS 4 area 0.00130376 Iy 1.131212E-6 Iz 6.332362E-6 Ik 1.0 beamShearCoeff 1.e18 thick 1 width 1.0
+SimpleCS 5 area 2.493751285615116E-5 Iy 1.0 Iz 1.0 Ik 1.0 beamShearCoeff 1.e18 thick 1.0 width 1.0
+SimpleCS 6 area 4.3678281946067775E-6 Iy 1.0 Iz 1.0 Ik 1.0 beamShearCoeff 1.e18 thick 1.0 width 1.0
+IsoLE 1 d 1. E 2.0E11 n 0.3 tAlpha 1.2E-5
+BoundaryCondition 1 loadTimeFunction 1 prescribedValue 0.0
+# ULCs (span ULC) loadcases (for external load only) : yyBending
+ConstantEdgeLoad 2 loadTimeFunction 2 Components 6 0. 1. 0. 0.0 0.0 0.0 loadType 3 ndofs 6
+ConstantEdgeLoad 3 loadTimeFunction 3 Components 6 0. 1. 0. 0.0 0.0 0.0 loadType 3 ndofs 6
+# ULCs (span ULC) loadcases (for external load only) : zzBending
+ConstantEdgeLoad 4 loadTimeFunction 4 Components 6 0. 0. 1. 0.0 0.0 0.0 loadType 3 ndofs 6
+ConstantEdgeLoad 5 loadTimeFunction 5 Components 6 0. 0. 1. 0.0 0.0 0.0 loadType 3 ndofs 6
+# ULCm (member ULC) loadcases (for deadweight only) : yyBending
+ConstantEdgeLoad 6 loadTimeFunction 6 Components 6 0. 1. 0. 0.0 0.0 0.0 loadType 3 ndofs 6
+ConstantEdgeLoad 7 loadTimeFunction 7 Components 6 0. 1. 0. 0.0 0.0 0.0 loadType 3 ndofs 6
+ConstantEdgeLoad 8 loadTimeFunction 8 Components 6 0. 1. 0. 0.0 0.0 0.0 loadType 3 ndofs 6
+ConstantEdgeLoad 9 loadTimeFunction 9 Components 6 0. 1. 0. 0.0 0.0 0.0 loadType 3 ndofs 6
+ConstantEdgeLoad 10 loadTimeFunction 10 Components 6 0. 1. 0. 0.0 0.0 0.0 loadType 3 ndofs 6
+ConstantEdgeLoad 11 loadTimeFunction 11 Components 6 0. 1. 0. 0.0 0.0 0.0 loadType 3 ndofs 6
+# ULCm (member ULC) loadcases (for deadweight only) : zzBending
+ConstantEdgeLoad 12 loadTimeFunction 12 Components 6 0. 0. 1. 0.0 0.0 0.0 loadType 3 ndofs 6
+ConstantEdgeLoad 13 loadTimeFunction 13 Components 6 0. 0. 1. 0.0 0.0 0.0 loadType 3 ndofs 6
+ConstantEdgeLoad 14 loadTimeFunction 14 Components 6 0. 0. 1. 0.0 0.0 0.0 loadType 3 ndofs 6
+ConstantEdgeLoad 15 loadTimeFunction 15 Components 6 0. 0. 1. 0.0 0.0 0.0 loadType 3 ndofs 6
+ConstantEdgeLoad 16 loadTimeFunction 16 Components 6 0. 0. 1. 0.0 0.0 0.0 loadType 3 ndofs 6
+ConstantEdgeLoad 17 loadTimeFunction 17 Components 6 0. 0. 1. 0.0 0.0 0.0 loadType 3 ndofs 6
+ConstantFunction 1 f(t) 1.0
+PeakFunction 2 t 2 f(t) 1.0
+PeakFunction 3 t 3 f(t) 1.0
+PeakFunction 4 t 4 f(t) 1.0
+PeakFunction 5 t 5 f(t) 1.0
+PeakFunction 6 t 6 f(t) 1.0
+PeakFunction 7 t 7 f(t) 1.0
+PeakFunction 8 t 8 f(t) 1.0
+PeakFunction 9 t 9 f(t) 1.0
+PeakFunction 10 t 10 f(t) 1.0
+PeakFunction 11 t 11 f(t) 1.0
+PeakFunction 12 t 12 f(t) 1.0
+PeakFunction 13 t 13 f(t) 1.0
+PeakFunction 14 t 14 f(t) 1.0
+PeakFunction 15 t 15 f(t) 1.0
+PeakFunction 16 t 16 f(t) 1.0
+PeakFunction 17 t 17 f(t) 1.0
