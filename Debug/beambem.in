@@ -1,0 +1,16 @@
+beambem.out
+prova bem
+linearstatic nsteps 1 nmodules 1
+bem tstep_all domain_all
+domain 3dShell
+#vtkxml tstep_all domain_all primvars 1 1
+OutputManager tstep_all dofman_all element_all
+ndofman 2 nelem 1 ncrossSect 1 nmat 1 nbc 2 nic 0 nltf 1
+node 1 coords 3 0.0 0.0 0.0 bc 6 1 1 1 1 1 1
+node 2 coords 3 1.0 0.0 0.0 bc 6 0 0 0 0 0 0 load 1 2
+Beam3d 1 nodes 2 1 2 mat 1 crossSect 1 refAngle 90
+SimpleCS 1 area 1 Iy 1.0 Iz 1.0 Ik 1.0 beamShearCoeff 1.e18 thick 1 width 1.0
+IsoLE 1 d 1. E 2.1E11 n 0.3 tAlpha 1.2E-5
+BoundaryCondition 1 loadTimeFunction 1 prescribedValue 0.0
+NodalLoad 2 loadTimeFunction 1 Components 6 1000.0 100.0 10.0 0 0 0
+PiecewiseLinFunction 1 npoints 2 t 2 0. 1. f(t) 2 0. 1.
