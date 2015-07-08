@@ -65,11 +65,17 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
         return;
     }
 
+	std::vector <int> beamIDs;
+	std::map <int, std::map < double, FloatArray> > BeamForces;
+
 	// loop through the beam elements
     Domain *d = emodel->giveDomain(1);
     for ( auto &elem : d->giveElements() ) {
-		if (strcmp(elem->giveClassName(), "beam3d") || strcmp(elem->giveClassName(), "beam2d")) { // check if elem is beam (LIbeam?)
+		if (strcmp(elem->giveClassName(), "Beam3d")==0 || strcmp(elem->giveClassName(), "Beam2d")==0) { // check if elem is beam (LIbeam?)
 			
+			// store IDs of known beams
+			beamIDs.push_back(elem->giveNumber());
+
 			StructuralElement * SElem;
 			SElem = static_cast <StructuralElement*> (elem.get());
 
@@ -124,38 +130,57 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 			E.beSubArrayOf(Fl, temp);
 			Dict[l] = E;
 
+			BeamForces[elem->giveNumber()] = Dict;
+
 			//elem->giveBodyLoadArray
 		}
     }
-
-	//std::vector< std::unique_ptr< Set > > Sets = d->giveSets(); // errore xmemory0
-
+	
 	//std::vector< std::unique_ptr< GeneralBoundaryCondition > > BCs = d->giveBcs();
 
-	// loop through the loads
-	for (auto &bc : d->giveBcs())
-	{
-		int bType = bc->giveBCValType(); // ConstantEdgeLoad non è mai == 2 , sono tutti 0 == unknown !!!
-		//if (bc->giveBCValType() == ForceLoadBVT) {
-			if (strcmp(bc->giveClassName(), "ConstatEdgeLoad")){
+	// tamper with stuff only if sets are defined.
+	if (d->giveNumberOfSets()){
+		// loop through the loads
+		for (auto &bc : d->giveBcs())
+		{
+			int bType = bc->giveBCValType(); // ConstantEdgeLoad non è mai == 2 , sono tutti 0 == unknown !!!
+			//if (bc->giveBCValType() == ForceLoadBVT) {
+			if (strcmp(bc->giveClassName(), "ConstantEdgeLoad")==0){
 				ConstantEdgeLoad *CLoad = static_cast <ConstantEdgeLoad*> (bc.get());
-				
+
 				// is it in a set?
 				int nSet = CLoad->giveSetNumber();
 				if (nSet) // qui non dovrebbe entrare sempre se nSet > 0 ? o fa già così?
 				{
 					Set* mySet = d->giveSet(nSet);
 					// contains any of our beams?
-					IntArray beamIDs;
+					const IntArray &EdgeList = mySet->giveEdgeList();
+					const int numEdges = EdgeList.giveSize()/2;
 
-					// then apply to each beam for each dof
+					int c = 1;
+					while (c<=numEdges)
+					{
+						FloatArray compArr;
+						int elNum = EdgeList.at(c), edgeNum = EdgeList.at(++c);
+						d->giveElement(elNum)->computeBoundaryEdgeLoadVector(compArr, CLoad, edgeNum, ExternalForcesVector, VM_Total, tStep); // always vm_total???
+						
+						// transform to local coordinates
+
+						// compute contribution to internal forces
+
+						// save them into BeamForces for each dof of this beam
+
+					}
 
 				}
 
 
 			}
-		//}
+			//}
+		}
 	}
+
+	
 
 	//for (auto &set : d->giveSets()) {
 	//	IntArray &ElEdges = set->giveEdgeList();
