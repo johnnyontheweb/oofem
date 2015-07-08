@@ -128,21 +128,25 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 		}
     }
 
-	std::vector< std::unique_ptr< Set > > Sets = d->giveSets();
+	//std::vector< std::unique_ptr< Set > > Sets = d->giveSets(); // errore xmemory0
 
 	//std::vector< std::unique_ptr< GeneralBoundaryCondition > > BCs = d->giveBcs();
+
+	// loop through the loads
 	for (auto &bc : d->giveBcs())
 	{
-		if (bc->giveBCValType() == ForceLoadBVT) {
+		int bType = bc->giveBCValType(); // ConstantEdgeLoad non è mai == 2 , sono tutti 0 == unknown !!!
+		//if (bc->giveBCValType() == ForceLoadBVT) {
 			if (strcmp(bc->giveClassName(), "ConstatEdgeLoad")){
 				ConstantEdgeLoad *CLoad = static_cast <ConstantEdgeLoad*> (bc.get());
 				
 				// is it in a set?
 				int nSet = CLoad->giveSetNumber();
-				if (nSet)
+				if (nSet) // qui non dovrebbe entrare sempre se nSet > 0 ? o fa già così?
 				{
 					Set* mySet = d->giveSet(nSet);
 					// contains any of our beams?
+					IntArray beamIDs;
 
 					// then apply to each beam for each dof
 
@@ -150,7 +154,7 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 
 
 			}
-		}
+		//}
 	}
 
 	//for (auto &set : d->giveSets()) {
@@ -158,14 +162,12 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 	//}
 	
 
-
-	// loop through the loads
 	//	d->giveSets or d->giveLoad ?
 
 
 	// write file in the format:
 	// elementNumber distanceFromIend N_x T_z T_y M_x M_y M_z
-	// if 3 Gauss points are used, there would be 5 lines per beam (at distances 0, 0.2254/2*L, 0.5*L, 0.7746/2*L, L), ->>> check
+	// if 3 Gauss points are used, there would be 5 lines per beam (at distances 0, 0.1127*L, 0.5*L, 0.0.8873*L, L), ->>> to check
 
     //fprintf(this->stream, "%d ", avgState.giveSize());
     //for ( auto s: avgState ) {
