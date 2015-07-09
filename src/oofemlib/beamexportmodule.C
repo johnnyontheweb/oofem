@@ -143,14 +143,14 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 		// loop through the loads
 		for (auto &bc : d->giveBcs())
 		{
-			int bType = bc->giveBCValType(); // ConstantEdgeLoad non è mai == 2 , sono tutti 0 == unknown !!!
+			int bType = bc->giveBCValType(); // UNUSED: ConstantEdgeLoad is never == 2, they're all == 0 == unknown
 			//if (bc->giveBCValType() == ForceLoadBVT) {
 			if (strcmp(bc->giveClassName(), "ConstantEdgeLoad")==0){
 				ConstantEdgeLoad *CLoad = static_cast <ConstantEdgeLoad*> (bc.get());
 
 				// is it in a set?
 				int nSet = CLoad->giveSetNumber();
-				if (nSet) // qui non dovrebbe entrare sempre se nSet > 0 ? o fa già così?
+				if (nSet)
 				{
 					Set* mySet = d->giveSet(nSet);
 					// contains any of our beams?
@@ -211,8 +211,8 @@ BeamExportModule :: initialize()
     if ( ( this->stream = fopen(fileName.c_str(), "w") ) == NULL ) {
         OOFEM_ERROR( "failed to open file %s", fileName.c_str() );
     }
-
-    fprintf(this->stream, "#Time      Volume       ");
+	// ";" as separator
+	fprintf(this->stream, "#Time;BeamNo;DistanceFromI;N_x;T_z;T_y;M_x;M_y;M_z;");
     //for ( int var: this->ists ) {
     //    fprintf(this->stream, "%s    ", __InternalStateTypeToString( ( InternalStateType ) var) );
     //}
