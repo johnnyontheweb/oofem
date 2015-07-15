@@ -67,7 +67,7 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 
 	std::vector <int> beamIDs;
 	std::map <int, std::map < double, FloatArray> > BeamForces;
-
+	IntArray temp;
 	// loop through the beam elements
     Domain *d = emodel->giveDomain(1);
     for ( auto &elem : d->giveElements() ) {
@@ -104,7 +104,7 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 			//}
 
 			I.resize(6);
-			IntArray temp;
+			
 			temp.resize(6); temp.at(1) = 1; temp.at(2) = 2; temp.at(3) = 3; temp.at(4) = 4; temp.at(5) = 5; temp.at(6) = 6;
 			I.beSubArrayOf(Fl, temp);
 			Dict[0.0] = I;
@@ -140,10 +140,11 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 
 	// tamper with stuff only if sets are defined.
 	if (d->giveNumberOfSets()){
+		temp.resize(6); temp.at(1) = 1; temp.at(2) = 2; temp.at(3) = 3; temp.at(4) = 4; temp.at(5) = 5; temp.at(6) = 6;
 		// loop through the loads
 		for (auto &bc : d->giveBcs())
 		{
-			int bType = bc->giveBCValType(); // UNUSED: ConstantEdgeLoad is never == 2, they're all == 0 == unknown
+			// int bType = bc->giveBCValType(); // UNUSED: ConstantEdgeLoad is never == 2, they're all == 0 == unknown
 			//if (bc->giveBCValType() == ForceLoadBVT) {
 			if (strcmp(bc->giveClassName(), "ConstantEdgeLoad")==0){
 				ConstantEdgeLoad *CLoad = static_cast <ConstantEdgeLoad*> (bc.get());
@@ -160,13 +161,32 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 					int c = 1;
 					while (c<=numEdges)
 					{
-						FloatArray compArr;
+						FloatArray compArr, tempArr;
+						FloatMatrix T;
 						int elNum = EdgeList.at(c), edgeNum = EdgeList.at(++c);
-						d->giveElement(elNum)->computeBoundaryEdgeLoadVector(compArr, CLoad, edgeNum, ExternalForcesVector, VM_Total, tStep); // always vm_total???
+						CLoad->computeValues(compArr, tStep,NULL, temp, VM_Total);
+						//d->giveElement(elNum)->computeBoundaryEdgeLoadVector(compArr, CLoad, edgeNum, ExternalForcesVector, VM_Total, tStep); // always vm_total???
 						
 						// transform to local coordinates
+						d->giveElement(elNum)->computeGtoLRotationMatrix(T);
+						T.resizeWithData(6, 6);
+						compArr.rotatedWith(T, 'n');
 
 						// compute contribution to internal forces
+						std::map<double, FloatArray> Dst = BeamForces[elNum];
+						for (auto &PointVals : Dst)
+						{
+							const double &pos = PointVals.first;
+							FloatArray Vals = PointVals.second;
+
+							// tamper with values?
+							//Vals.add(pos, compArr);
+
+							// update in point-forces map
+							PointVals.second = Vals;
+						}
+						// update in beam-forces map
+						BeamForces[elNum] = Dst;
 
 						// save them into BeamForces for each dof of this beam
 
@@ -174,13 +194,10 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 
 				}
 
-
 			}
 			//}
 		}
 	}
-
-	
 
 	//for (auto &set : d->giveSets()) {
 	//	IntArray &ElEdges = set->giveEdgeList();
@@ -189,10 +206,29 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 
 	//	d->giveSets or d->giveLoad ?
 
+	double curTime = tStep->giveTargetTime();
+
+	for (auto &bForces : BeamForces)
+	{
+		std::map <double, FloatArray> pForces = bForces.second;
+		int ID = bForces.first;
+		for (auto &vals : pForces)
+		{
+			double pos = vals.first;
+			FloatArray forces = vals.second;
+			fprintf(this->stream, "%10.3e;%d;%10.3e;", curTime, ID, pos);
+			for (auto &val : forces)
+			{
+				fprintf(this->stream, "%10.3e;", val);
+			}
+			fprintf(this->stream, "\n");
+
+		}
+	}
 
 	// write file in the format:
 	// elementNumber distanceFromIend N_x T_z T_y M_x M_y M_z
-	// if 3 Gauss points are used, there would be 5 lines per beam (at distances 0, 0.1127*L, 0.5*L, 0.0.8873*L, L), ->>> to check
+	// if 3 Gauss points are used, there would be 5 lines per beam (at distances 0, 0.1127*L, 0.5*L, 0.8873*L, L), ->>> to check
 
     //fprintf(this->stream, "%d ", avgState.giveSize());
     //for ( auto s: avgState ) {
