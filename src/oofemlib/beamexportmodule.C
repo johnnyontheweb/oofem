@@ -89,6 +89,7 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 			if (loadEndForces.giveSize()) {
 				Fl.subtract(loadEndForces);
 			}
+
 			//SElem->giveEndForcesVector(Fl, tStep);
 
 			std::map <double, FloatArray> Dict;
@@ -96,7 +97,7 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 			//fprintf(this->stream, "\nBeam: %d \n", elem->giveNumber());
 			//fprintf(this->stream, "length: %e \n", l);
 
-			FloatArray I, E;
+			FloatArray I, E, Diff;
 
 			//fprintf(this->stream, "End Forces: ");
 			//for (auto &val : Fl) {
@@ -107,7 +108,14 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 			
 			temp.resize(6); temp.at(1) = 1; temp.at(2) = 2; temp.at(3) = 3; temp.at(4) = 4; temp.at(5) = 5; temp.at(6) = 6;
 			I.beSubArrayOf(Fl, temp);
+			//I *= -1;
 			Dict[0.0] = I;
+
+			E.resize(6);
+			for (int i = 1; i < 7; i++) temp.at(i) = temp.at(i) + 6;
+			E.beSubArrayOf(Fl, temp);
+			
+			Diff.beDifferenceOf(E, I);
 			
 			fprintf(this->stream, "\n");
 
@@ -115,8 +123,12 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 				//double dV = elem->computeVolumeAround(gp);
 				FloatArray ipState;
 				ksi = 0.5 + 0.5 * gp->giveNaturalCoordinate(1);
-				elem->giveGlobalIPValue(ipState, gp, (InternalStateType)1, tStep); // IST_StressTensor
-
+				
+				// can't use this until beam is fixed?
+				// elem->giveGlobalIPValue(ipState, gp, (InternalStateType)1, tStep); // IST_StressTensor
+				ipState.zero();
+				ipState.beScaled(ksi, Diff);
+				ipState.add(I);
 				Dict[ksi*l] = ipState;
 
 				//fprintf(this->stream, "gp: %d pos: %e forces:" , gp->giveNumber(), ksi*l);
@@ -125,9 +137,6 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 				//}
 			}
 
-			E.resize(6);
-			for (int i = 1; i < 7; i++) temp.at(i) = temp.at(i) + 6;
-			E.beSubArrayOf(Fl, temp);
 			Dict[l] = E;
 
 			BeamForces[elem->giveNumber()] = Dict;
@@ -164,7 +173,7 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 						FloatArray compArr, tempArr;
 						FloatMatrix T;
 						int elNum = EdgeList.at(c), edgeNum = EdgeList.at(++c);
-						CLoad->computeValues(compArr, tStep,NULL, temp, VM_Total);
+						CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
 						//d->giveElement(elNum)->computeBoundaryEdgeLoadVector(compArr, CLoad, edgeNum, ExternalForcesVector, VM_Total, tStep); // always vm_total???
 						
 						// transform to local coordinates
@@ -182,13 +191,15 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 							// tamper with values?
 							//Vals.add(pos, compArr);
 
+							// only these two parabolic. linear interpolation should be enough for the other directions
+							Vals.at(5) += compArr.at(3) *(pos) / 2 * (d->giveElement(elNum)->computeLength() - pos);
+							Vals.at(6) -= compArr.at(2)*(pos) / 2 * (d->giveElement(elNum)->computeLength() - pos);
+
 							// update in point-forces map
 							PointVals.second = Vals;
 						}
 						// update in beam-forces map
 						BeamForces[elNum] = Dst;
-
-						// save them into BeamForces for each dof of this beam
 
 					}
 
