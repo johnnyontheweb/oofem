@@ -245,7 +245,7 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
     //for ( auto s: avgState ) {
     //    fprintf(this->stream, "%e ", s);
     //}
-    fprintf(this->stream, "    ");
+    //fprintf(this->stream, "    ");
     
     fprintf(this->stream, "\n" );
     fflush(this->stream);
@@ -259,7 +259,7 @@ BeamExportModule :: initialize()
         OOFEM_ERROR( "failed to open file %s", fileName.c_str() );
     }
 	// ";" as separator
-	fprintf(this->stream, "#Time;BeamNo;DistanceFromI;N_x;T_z;T_y;M_x;M_y;M_z;");
+	fprintf(this->stream, "#Time;BeamNo;DistanceFromI;N_x;T_y;T_z;M_x;M_y;M_z;");
     //for ( int var: this->ists ) {
     //    fprintf(this->stream, "%s    ", __InternalStateTypeToString( ( InternalStateType ) var) );
     //}
