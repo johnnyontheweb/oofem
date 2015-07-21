@@ -249,6 +249,7 @@ set (sm_export
     export/dmexportmodule.C
     export/poiexportmodule.C
     export/gnuplotexportmodule.C
+    export/beamexportmodule.C
     )
 
 set (sm_barrier

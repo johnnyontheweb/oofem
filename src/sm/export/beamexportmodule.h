@@ -57,11 +57,11 @@ class OOFEM_EXPORT BeamExportModule : public ExportModule
 protected:
     /// Stream for file.
     FILE *stream;
-	/// Array for the beam diagrams
-	FloatArray *res;
+    /// Array for the beam diagrams
+    FloatArray *res;
 public:
     /// Constructor. Creates empty Output Manager.
-    BeamExportModule(int n, EngngModel * e);
+    BeamExportModule(int n, EngngModel *e);
     /// Destructor.
     virtual ~BeamExportModule();
     virtual IRResultType initializeFrom(InputRecord *ir);
