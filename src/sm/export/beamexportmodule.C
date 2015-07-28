@@ -113,7 +113,7 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
             temp.at(5) = 5;
             temp.at(6) = 6;
             I.beSubArrayOf(Fl, temp);
-            //I *= -1;
+            I *= -1; // invert sign of I end
             Dict [ 0.0 ] = I;
 
             E.resize(6);
