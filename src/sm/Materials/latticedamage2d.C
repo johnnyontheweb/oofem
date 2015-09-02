@@ -333,7 +333,6 @@ LatticeDamage2d :: giveRealStressVector(FloatArray &answer,
 
     double f, equivStrain, tempKappa, omega = 0.;
 
-    //this->initGpForNewStep(gp);
     this->initTempStatus(gp);
     reducedStrain = totalStrain;
 
@@ -407,13 +406,11 @@ LatticeDamage2d :: giveRealStressVector(FloatArray &answer,
 
     //Calculate the the bio coefficient;
     double biot = 0.;
-    if(this->biotType == 0){
-      biot = this->biotCoefficient;
-    }
-    else if(this->biotType == 1){
-      biot = computeBiot(omega, tempKappa, le);
-    }
-    else{
+    if ( this->biotType == 0 ) {
+        biot = this->biotCoefficient;
+    } else if ( this->biotType == 1 ) {
+        biot = computeBiot(omega, tempKappa, le);
+    } else {
       OOFEM_ERROR("Unknown biot type\n");
     }
     
@@ -435,8 +432,6 @@ LatticeDamage2d :: giveRealStressVector(FloatArray &answer,
     status->setTempCrackWidth(crackWidth);
     
     status->setBiotCoefficientInStatus(biot);
-
-    return;
 }
 
 double

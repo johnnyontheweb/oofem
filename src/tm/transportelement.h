@@ -41,6 +41,8 @@
 #include "matresponsemode.h"
 
 namespace oofem {
+class TransportCrossSection;
+
 /**
  * This abstract class represent a general base element class for transport problems.
  * In actual implementation, the same approximation order of all unknowns is assumed,
@@ -72,9 +74,13 @@ public:
 
     virtual void computeLoadVector(FloatArray &answer, Load *load, CharType type, ValueModeType mode, TimeStep *tStep);
     virtual void computeBoundaryLoadVector(FloatArray &answer, BoundaryLoad *load, int boundary, CharType type, ValueModeType mode, TimeStep *tStep);
+    virtual void computeTangentFromBoundaryLoad(FloatMatrix &answer, BoundaryLoad *load, int boundary, MatResponseMode rmode, TimeStep *tStep);
     virtual void computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, int edge, CharType type, ValueModeType mode, TimeStep *tStep);
 
     virtual void computeField(ValueModeType mode, TimeStep *tStep, const FloatArray &lcoords, FloatArray &answer);
+
+    TransportCrossSection * giveTransportCrossSection();
+    virtual Material * giveMaterial();
 
     /**
      * Gives the thickness at some global coordinate.

@@ -717,6 +717,37 @@ Domain :: instanciateYourself(DataReader *dr)
     BuildElementPlaceInArrayMap();
     BuildDofManPlaceInArrayMap();
 
+    // Support sets defined directly after the elements (special hack for backwards compatibility).
+    setList.clear();
+    if ( dr->peakNext("set") ) {
+        setList.resize(nset);
+        for ( int i = 1; i <= nset; i++ ) {
+            ir = dr->giveInputRecord(DataReader :: IR_setRec, i);
+            // read type of set
+            IR_GIVE_RECORD_KEYWORD_FIELD(ir, name, num);
+            // Only one set for now (i don't see any need to ever introduce any other version)
+            std :: unique_ptr< Set > set(new Set(num, this)); //classFactory.createSet(name.c_str(), num, this)
+            if ( !set ) {
+                OOFEM_ERROR("Couldn't create set: %s", name.c_str());
+            }
+
+            set->initializeFrom(ir);
+
+            // check number
+            if ( num < 1 || num > nset ) {
+                OOFEM_ERROR("Invalid set number (num=%d)", num);
+            }
+
+            if ( !setList[num - 1] ) {
+                setList[num - 1] = std :: move(set);
+            } else {
+                OOFEM_ERROR("Set entry already exist (num=%d)", num);
+            }
+
+            ir->finish();
+        }
+    }
+    
 #  ifdef VERBOSE
     VERBOSE_PRINT0("Instanciated elements ", nelem);
 #  endif
@@ -921,33 +952,34 @@ Domain :: instanciateYourself(DataReader *dr)
     VERBOSE_PRINT0("Instanciated load-time fncts ", nloadtimefunc)
 #  endif
 
-    // read load time functions
-    setList.clear();
-    setList.resize(nset);
-    for ( int i = 1; i <= nset; i++ ) {
-        ir = dr->giveInputRecord(DataReader :: IR_setRec, i);
-        // read type of set
-        IR_GIVE_RECORD_KEYWORD_FIELD(ir, name, num);
-        // Only one set for now (i don't see any need to ever introduce any other version)
-        std :: unique_ptr< Set > set(new Set(num, this)); //classFactory.createSet(name.c_str(), num, this)
-        if ( !set ) {
-            OOFEM_ERROR("Couldn't create set: %s", name.c_str());
+    // read sets
+    if ( setList.size() == 0 ) {
+        setList.resize(nset);
+        for ( int i = 1; i <= nset; i++ ) {
+            ir = dr->giveInputRecord(DataReader :: IR_setRec, i);
+            // read type of set
+            IR_GIVE_RECORD_KEYWORD_FIELD(ir, name, num);
+            // Only one set for now (i don't see any need to ever introduce any other version)
+            std :: unique_ptr< Set > set(new Set(num, this)); //classFactory.createSet(name.c_str(), num, this)
+            if ( !set ) {
+                OOFEM_ERROR("Couldn't create set: %s", name.c_str());
+            }
+
+            set->initializeFrom(ir);
+
+            // check number
+            if ( ( num < 1 ) || ( num > nset ) ) {
+                OOFEM_ERROR("Invalid set number (num=%d)", num);
+            }
+
+            if ( !setList[num - 1] ) {
+                setList[num - 1] = std :: move(set);
+            } else {
+                OOFEM_ERROR("Set entry already exist (num=%d)", num);
+            }
+
+            ir->finish();
         }
-
-        set->initializeFrom(ir);
-
-        // check number
-        if ( ( num < 1 ) || ( num > nset ) ) {
-            OOFEM_ERROR("Invalid set number (num=%d)", num);
-        }
-
-        if ( !setList[num - 1] ) {
-            setList[num - 1] = std :: move(set);
-        } else {
-            OOFEM_ERROR("Set entry already exist (num=%d)", num);
-        }
-
-        ir->finish();
     }
 
 #  ifdef VERBOSE
@@ -961,6 +993,10 @@ Domain :: instanciateYourself(DataReader *dr)
 
         IR_GIVE_RECORD_KEYWORD_FIELD(ir, name, num);
         xfemManager.reset( classFactory.createXfemManager(name.c_str(), this) );
+        if ( !xfemManager ) {
+            OOFEM_ERROR("Couldn't create xfemmanager: %s", name.c_str());
+        }
+
         xfemManager->initializeFrom(ir);
         xfemManager->instanciateYourself(dr);
 #  ifdef VERBOSE
@@ -975,6 +1011,10 @@ Domain :: instanciateYourself(DataReader *dr)
 
         IR_GIVE_RECORD_KEYWORD_FIELD(ir, name, num);
         contactManager.reset( classFactory.createContactManager(name.c_str(), this) );
+        if ( !contactManager ) {
+            OOFEM_ERROR("Couldn't create contact manager: %s", name.c_str());
+        }
+
         contactManager->initializeFrom(ir);
         contactManager->instanciateYourself(dr);
     }
@@ -1033,13 +1073,6 @@ Domain :: instanciateYourself(DataReader *dr)
 void
 Domain :: postInitialize()
 {
-    // Dofs must be created before dof managers due their post-initialization:
-    this->createDofs();
-
-    for ( auto &dman: dofManagerList ) {
-        dman->postInitialize();
-    }
-
     // New  - in development /JB
     // set element cross sections based on element set definition and set the corresponding
     // material based on the cs
@@ -1053,6 +1086,12 @@ Domain :: postInitialize()
         }
     }
 
+    // Dofs must be created before dof managers due their post-initialization:
+    this->createDofs();
+
+    for ( auto &dman: dofManagerList ) {
+        dman->postInitialize();
+    }
 
     if ( this->hasXfemManager() ) {
         //this->giveXfemManager()->postInitialize();

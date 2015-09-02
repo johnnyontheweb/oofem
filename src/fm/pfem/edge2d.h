@@ -43,28 +43,36 @@ class IntArray;
 
 /**
  * Edge class for Delaunay triangulation
+ *
+ * @author David Krybus
  */
 class Edge2D
 {
 private:
     /// Global node numbers
-    IntArray nodes;             //at 1 - nodeA; at 2 -nodeB
+    std :: pair< int, int >nodeNumbers;
 
 public:
     /// Constructor
     Edge2D(int node1, int node2);
     /// Destructor
     virtual ~Edge2D();
-    int giveNode(int n) { return nodes.at(n); }
-    virtual bool operator == ( const Edge2D & right );
+    /// Gives the number of the first node
+    int giveFirstNodeNumber() { return nodeNumbers.first; }
+    /// Gives the number of the second node
+    int giveSecondNodeNumber() { return nodeNumbers.second; }
+    /// Compares receiver with passed Edge2D. Returns true if node numbers are equal, false otherwise
+    virtual bool operator==(const Edge2D &right);
 };
 
 /**
  * Class for the boundary recognition method - alpha shape.
- * Case 1 - convex hull edge: alpha greater than outerAlphaBound, edge is part of alpha shape
- * Case 2 - shared edge: alpha greater than innerAlphaBound, edge lies within alpha shape;
+ * Case 1 - convex hull edge: alpha greater than outerAlphaBound, edge is part of alpha shape.
+ * Case 2 - shared edge: alpha greater than innerAlphaBound, edge lies within alpha shape.
  * Alpha between bounds, edge is exactly on alpha shape
  * Alpha smaller than outerAlphaBound, edge lies outside of alpha shape
+ *
+ * @author David Krybus
  */
 class AlphaEdge2D : public Edge2D
 {
@@ -74,20 +82,31 @@ public:
     /// Destructor
     virtual ~AlphaEdge2D();
 
+    /// Sets the outer limit
     void setOuterAlphaBound(double alphaMin) { outerAlphaBound = alphaMin; }
+    /// Sets the inner limit
     void setInnerAlphaBound(double alphaMax) { innerAlphaBound = alphaMax; }
+    /// Returns the outer limit
     double giveOuterAlphaBound() { return outerAlphaBound; }
+    /// Returns the inner limit
     double giveInnerAlphaBound() { return innerAlphaBound; }
+    /// Sets the convex hull property
     void setHullFlag(bool flag) { isOnConvexHull = flag; }
+    /// Returns true if the edge lies on convex hull, false otherwise
     bool giveHullFlag() { return isOnConvexHull; }
+    /// Stores DelaunayTriangle sharing the receiver
     void setSharing(int n, DelaunayTriangle *pTE);
+    /// Returns DelaunayTriangle sharing receiver
     DelaunayTriangle *giveShared(int n) { return sharedByTriangles [ n - 1 ]; }
+    /// Returns length of the receiver
     double giveLength() { return length; }
 
 private:
     /// Convex hull flag means edge is not shared by two triangle
     bool isOnConvexHull;
+    /// Bottom (outer) limit for alpha shape, for smaller values of alpha the edge lies outside
     double outerAlphaBound;
+    /// Top (inner) limit for alpha shape, for greater values of alpha the edge lies inside of the shape
     double innerAlphaBound;
     /// Triangles which share the alphaEdge
     DelaunayTriangle *sharedByTriangles [ 2 ];

@@ -46,7 +46,6 @@
 #include "mathfem.h"
 #include "crosssection.h"
 #include "transportcrosssection.h"
-#include "simpletransportcrosssection.h"
 #include "feinterpol.h"
 #include "feinterpol2d.h"
 #include "feinterpol3d.h"
@@ -143,8 +142,8 @@ TransportElement :: checkConsistency()
 //
 {
     int result = 1;
-    if ( !dynamic_cast< TransportMaterial * >( giveMaterial() ) ) {
-        OOFEM_WARNING("material without support for transport problems");
+    if ( this->material > 0 && !dynamic_cast< TransportMaterial* >( this->giveMaterial() ) ) {
+        OOFEM_WARNING("cross section without support for transport problems");
         result = 0;
     }
 
@@ -461,8 +460,6 @@ TransportElement :: computeInternalForcesVector(FloatArray &answer, TimeStep *tS
     FloatArray unknowns;
     this->computeVectorOf(VM_Total, tStep, unknowns);
 
-    //TransportCrossSection *cs = static_cast< SimpleTransportCrossSection * >( this->giveCrossSection() );
-    //TransportMaterial *mat = static_cast< SimpleTransportCrossSection * >( cs )->giveMaterial();
     TransportMaterial *mat = static_cast< TransportMaterial* >( this->giveMaterial() );
     FloatArray flux, grad, field;
     FloatMatrix B, N;
@@ -533,25 +530,30 @@ TransportElement :: computeLoadVector(FloatArray &answer, Load *load, CharType t
 {
     answer.clear();
 
+    ///@todo We could technically support other types of volume loads. Even a bulk load is a type of transmission b.c.
+#if 1
+    if ( type != ExternalForcesVector ) {
+        return;
+    }
+#else
     if ( !( load->giveType() == TransmissionBC && type == ExternalForcesVector ) &&
         !( load->giveType() == ConvectionBC && type == InternalForcesVector ) ) {
         return;
     }
+#endif
 
     FloatArray gcoords, val, n, unknowns;
     FloatMatrix N;
     IntArray dofid;
-    int unknownsPerNode = 1;
-    if ( this->emode == HeatMass1TransferEM ) {
-        unknownsPerNode = 2;
-    }
-
+    int unknownsPerNode = this->emode == HeatMass1TransferEM ? 2 : 1;
 
     this->giveElementDofIDMask(dofid);
 
     ///@todo Deal with coupled fields (I think they should be another class of problems completely).
     FEInterpolation *interp = this->giveInterpolation();
-    std :: unique_ptr< IntegrationRule > iRule( interp->giveIntegrationRule( load->giveApproxOrder() + 1 + interp->giveInterpolationOrder() ) );
+    //std :: unique_ptr< IntegrationRule > iRule( interp->giveIntegrationRule( load->giveApproxOrder() + 1 + interp->giveInterpolationOrder() ) );
+    ///@todo FIXME backwards compatibility, the old tests used insufficient integration points for axisymm elements.
+    std :: unique_ptr< IntegrationRule > iRule( interp->giveIntegrationRule( load->giveApproxOrder() ) );
 
     if ( load->giveType() == ConvectionBC ) {
         this->computeVectorOf(dofid, VM_Total, tStep, unknowns);
@@ -572,17 +574,6 @@ TransportElement :: computeLoadVector(FloatArray &answer, Load *load, CharType t
             load->computeValueAt(val, tStep, gcoords, mode);
         }
 
-        if ( load->giveType() == TransmissionBC ) {
-            val.negated();
-        } else {
-            FloatArray field;
-            field.beProductOf(N, unknowns);
-            ///@todo Rather have this for generality:
-            //convectiveload->computeValueAt(val, field, tStep, gcoords, mode);
-            val.subtract(field);
-            val.times( -1.0 * load->giveProperty('a', tStep) );
-        }
-
         answer.plusProduct(N, val, dV);
     }
 }
@@ -601,10 +592,7 @@ TransportElement :: computeBoundaryLoadVector(FloatArray &answer, BoundaryLoad *
     FloatArray gcoords, val, n, unknowns, field;
     FloatMatrix N;
     IntArray dofid;
-    int unknownsPerNode = 1;
-    if ( this->emode == HeatMass1TransferEM ) {
-        unknownsPerNode = 2;
-    }
+    int unknownsPerNode = this->emode == HeatMass1TransferEM ? 2 : 1;
 
     this->giveElementDofIDMask(dofid);
 
@@ -644,6 +632,37 @@ TransportElement :: computeBoundaryLoadVector(FloatArray &answer, BoundaryLoad *
 
         answer.plusProduct(N, val, dA);
     }
+}
+
+
+void
+TransportElement :: computeTangentFromBoundaryLoad(FloatMatrix &answer, BoundaryLoad *load, int boundary, MatResponseMode rmode, TimeStep *tStep)
+{
+    answer.clear();
+
+    if ( load->giveType() != ConvectionBC ) {
+        return;
+    }
+
+    FloatArray gcoords, n;
+    FloatMatrix N;
+    int unknownsPerNode = this->emode == HeatMass1TransferEM ? 2 : 1;
+
+    ///@todo Deal with coupled fields (I think they should be another class of problems completely).
+    FEInterpolation *interp = this->giveInterpolation();
+    std :: unique_ptr< IntegrationRule > iRule( interp->giveBoundaryIntegrationRule(load->giveApproxOrder() + 1 + interp->giveInterpolationOrder(), boundary) );
+
+    for ( auto &gp : *iRule ) {
+        const FloatArray &lcoords = gp->giveNaturalCoordinates();
+
+        interp->boundaryEvalN( n, boundary, lcoords, FEIElementGeometryWrapper(this) );
+        interp->boundaryLocal2Global( gcoords, boundary, lcoords, FEIElementGeometryWrapper(this) );
+        double detJ = interp->boundaryGiveTransformationJacobian( boundary, lcoords, FEIElementGeometryWrapper(this) );
+        double dA = this->giveThicknessAt(gcoords) * gp->giveWeight() * detJ;
+        N.beNMatrixOf(n, unknownsPerNode);
+        answer.plusProductSymmUpper(N, N, load->giveProperty('a', tStep) * dA);
+    }
+    answer.symmetrized();
 }
 
 
@@ -1153,6 +1172,24 @@ TransportElement :: EIPrimaryFieldI_evaluateFieldVectorAt(FloatArray &answer, Pr
         OOFEM_ERROR("target point not in receiver volume");
         return 1; // failed
     }
+}
+
+
+TransportCrossSection *
+TransportElement :: giveTransportCrossSection()
+{
+    return static_cast< TransportCrossSection* >( this->giveCrossSection() );
+}
+
+
+Material *
+TransportElement :: giveMaterial()
+{
+    // This method is overloaded in order to have some backwards compatibility
+    if ( material ) {
+        return domain->giveMaterial(this->material);
+    }
+    return static_cast< TransportCrossSection* >( this->giveCrossSection() )->giveMaterial();
 }
 
 
