@@ -200,6 +200,13 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
                             // tamper with values?
                             //Vals.add(pos, compArr);
 
+							// axial force. linear interpolation
+							Vals.at(1) += compArr.at(1) * (d->giveElement(elNum)->computeLength() / 2 - pos);
+
+							// shear forces. linear interpolation
+							Vals.at(3) += compArr.at(3) * (d->giveElement(elNum)->computeLength() / 2 - pos);
+							Vals.at(2) += compArr.at(2) * (d->giveElement(elNum)->computeLength() / 2 - pos);
+
                             // only these two parabolic. linear interpolation should be enough for the other directions
                             Vals.at(5) += compArr.at(3) * ( pos ) / 2 * ( d->giveElement(elNum)->computeLength() - pos );
                             Vals.at(6) -= compArr.at(2) * ( pos ) / 2 * ( d->giveElement(elNum)->computeLength() - pos );
