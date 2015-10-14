@@ -59,6 +59,21 @@ BeamExportModule :: initializeFrom(InputRecord *ir)
 }
 
 void
+addComponents(FloatArray &dst, FloatArray &src, double pos, double len)
+{
+	// axial force. linear interpolation
+	dst.at(1) += src.at(1) * (len / 2 - pos);
+
+	// shear forces. linear interpolation
+	dst.at(3) += src.at(3) * (len / 2 - pos);
+	dst.at(2) += src.at(2) * (len / 2 - pos);
+
+	// only these two parabolic. linear interpolation should be enough for the other directions
+	dst.at(5) += src.at(3) * (pos) / 2 * (len - pos);
+	dst.at(6) -= src.at(2) * (pos) / 2 * (len - pos);
+}
+
+void
 BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 {
     if ( !( testTimeStepOutput(tStep) || forcedOutput ) ) {
@@ -76,6 +91,8 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
             beamIDs.push_back( elem->giveNumber() );
 
             StructuralElement *SElem;
+			int elNum;
+			elNum = elem->giveNumber();
             SElem = static_cast< StructuralElement * >( elem.get() );
 
             double ksi, l = elem->computeLength();
@@ -89,19 +106,8 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
                 Fl.subtract(loadEndForces);
             }
 
-            //SElem->giveEndForcesVector(Fl, tStep);
-
             std :: map< double, FloatArray >Dict;
-
-            //fprintf(this->stream, "\nBeam: %d \n", elem->giveNumber());
-            //fprintf(this->stream, "length: %e \n", l);
-
             FloatArray I, E, Diff;
-
-            //fprintf(this->stream, "End Forces: ");
-            //for (auto &val : Fl) {
-            //	fprintf(this->stream, " %.4e", val);
-            //}
 
             I.resize(6);
 
@@ -126,25 +132,57 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 
             fprintf(this->stream, "\n");
 
-            for ( GaussPoint *gp: *elem->giveDefaultIntegrationRulePtr() ) {
-                //double dV = elem->computeVolumeAround(gp);
-                FloatArray ipState;
-                ksi = 0.5 + 0.5 * gp->giveNaturalCoordinate(1);
+			FloatArray FinalLoads;
+			FinalLoads.resize(6);
+			FinalLoads.zero();
 
-                // can't use this until beam is fixed?
-                // elem->giveGlobalIPValue(ipState, gp, (InternalStateType)1, tStep); // IST_StressTensor
-                ipState.zero();
-                ipState.beScaled(ksi, Diff);
-                ipState.add(I);
-                Dict [ ksi * l ] = ipState;
+			FloatMatrix T;
+			elem->computeGtoLRotationMatrix(T);
+			T.resizeWithData(6, 6);
 
-                //fprintf(this->stream, "gp: %d pos: %e forces:" , gp->giveNumber(), ksi*l);
-                //for (auto &val : ipState) {
-                //	fprintf(this->stream, " %.4e", val);
-                //}
-            }
+			temp.resize(6);
+			temp.at(1) = 1;
+			temp.at(2) = 2;
+			temp.at(3) = 3;
+			temp.at(4) = 4;
+			temp.at(5) = 5;
+			temp.at(6) = 6;
 
-            Dict [ l ] = E;
+			IntArray *loads = elem->giveBoundaryLoadArray();
+			for (auto &loadNum : *loads)
+			{
+				GeneralBoundaryCondition *bc = d->giveBc(loadNum);
+				if (strcmp(bc->giveClassName(), "ConstantEdgeLoad") == 0) {
+					ConstantEdgeLoad *CLoad = static_cast<ConstantEdgeLoad *>(bc);
+					FloatArray compArr;
+
+					CLoad->computeValues(compArr, tStep,NULL, temp, VM_Total);
+
+					// transform to local coordinates
+					compArr.rotatedWith(T, 'n');
+					FinalLoads.add(compArr);
+				}
+			}
+
+			for (GaussPoint *gp : *elem->giveDefaultIntegrationRulePtr()) {
+				//double dV = elem->computeVolumeAround(gp);
+				FloatArray ipState;
+				double pos;
+				ksi = 0.5 + 0.5 * gp->giveNaturalCoordinate(1);
+				pos = ksi*l;
+
+				// can't use this until beam is fixed?
+				// elem->giveGlobalIPValue(ipState, gp, (InternalStateType)1, tStep); // IST_StressTensor
+				ipState.zero();
+				ipState.beScaled(ksi, Diff);
+				ipState.add(I);
+
+				addComponents(ipState, FinalLoads, pos, l);
+
+				Dict[pos] = ipState;
+			}
+
+			Dict[l] = E;
 
             BeamForces [ elem->giveNumber() ] = Dict;
 
@@ -198,18 +236,7 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
                             FloatArray Vals = PointVals.second;
 
                             // tamper with values?
-                            //Vals.add(pos, compArr);
-
-							// axial force. linear interpolation
-							Vals.at(1) += compArr.at(1) * (d->giveElement(elNum)->computeLength() / 2 - pos);
-
-							// shear forces. linear interpolation
-							Vals.at(3) += compArr.at(3) * (d->giveElement(elNum)->computeLength() / 2 - pos);
-							Vals.at(2) += compArr.at(2) * (d->giveElement(elNum)->computeLength() / 2 - pos);
-
-                            // only these two parabolic. linear interpolation should be enough for the other directions
-                            Vals.at(5) += compArr.at(3) * ( pos ) / 2 * ( d->giveElement(elNum)->computeLength() - pos );
-                            Vals.at(6) -= compArr.at(2) * ( pos ) / 2 * ( d->giveElement(elNum)->computeLength() - pos );
+							addComponents(Vals, compArr, pos, d->giveElement(elNum)->computeLength());
 
                             // update in point-forces map
                             PointVals.second = Vals;
@@ -226,7 +253,6 @@ BeamExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
     //for (auto &set : d->giveSets()) {
     //	IntArray &ElEdges = set->giveEdgeList();
     //}
-
 
     //	d->giveSets or d->giveLoad ?
 
