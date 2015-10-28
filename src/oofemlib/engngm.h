@@ -108,8 +108,8 @@ class CommunicatorBuff;
 class ProcessCommunicator;
 class UnknownNumberingScheme;
 
-
 typedef std :: shared_ptr< Field > EModelFieldPtr;
+
 
 /**
  * Class EngngModelContext represents a context, which is shared by all problem engng sub-models.
