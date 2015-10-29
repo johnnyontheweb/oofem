@@ -346,10 +346,10 @@ StaggeredProblem :: giveSolutionStepWhenIcApply(bool force)
 
 int
 StaggeredProblem :: giveNumberOfFirstStep(bool force) {
-    if ( timeDefinedByProb ) {
+    if ( timeDefinedByProb && !force) {
         return emodelList [ timeDefinedByProb - 1 ].get()->giveNumberOfFirstStep(true);
     } else {
-        return EngngModel :: giveNumberOfFirstStep();
+        return EngngModel :: giveNumberOfFirstStep(force);
     }
 }
 
@@ -380,9 +380,9 @@ StaggeredProblem :: giveNextStep()
     } else {
         if ( this->adaptiveStepLength ) {
             OOFEM_LOG_INFO("\n==================================================================\n");
-            OOFEM_LOG_INFO( "\nAdjusting time step length to: %lf \n\n",  this->giveDeltaT(istep) );
+            OOFEM_LOG_INFO( "\nAdjusting time step length to: %lf \n\n", totalTime - previousStep->giveTargetTime() );
         }
-        currentStep.reset( new TimeStep(istep, this, 1, totalTime, this->giveDeltaT(istep), counter) );
+        currentStep.reset( new TimeStep(istep, this, 1, totalTime, totalTime - previousStep->giveTargetTime(), counter) );
     }
 
     // time and dt variables are set eq to 0 for statics - has no meaning
