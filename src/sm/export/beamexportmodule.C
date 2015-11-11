@@ -36,7 +36,7 @@
 #include "timestep.h"
 #include "element.h"
 #include "../sm/Elements/structuralelement.h"
-#include "../sm/Elements/Beams/Beam3d.h"
+#include "../sm/Elements/Beams/beam3d.h"
 #include "gausspoint.h"
 #include "engngm.h"
 #include "material.h"
@@ -88,7 +88,7 @@ namespace oofem {
 		// loop through the beam elements
 		Domain *d = emodel->giveDomain(1);
 		for (auto &elem : d->giveElements()) {
-			if (strcmp(elem->giveClassName(), "Beam3d") == 0 || strcmp(elem->giveClassName(), "Beam2d") == 0) {   // check if elem is beam (LIbeam?)
+			if (strcmp(elem->giveClassName(), "Beam3d") == 0 || strcmp(elem->giveClassName(), "Beam2d") == 0 || strcmp(elem->giveClassName(), "beam3d") == 0 || strcmp(elem->giveClassName(), "beam2d") == 0) {   // check if elem is beam (LIbeam?)
 				// store IDs of known beams
 				// beamIDs.push_back( elem->giveNumber() );
 				beamIDs.push_back(elem->giveLabel());
@@ -158,8 +158,10 @@ namespace oofem {
 					if (strcmp(bc->giveClassName(), "ConstantEdgeLoad") == 0) {
 						ConstantEdgeLoad *CLoad = static_cast<ConstantEdgeLoad *>(bc);
 						FloatArray compArr;
+						const FloatArray coords;
 
-						CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
+						// CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
+						CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
 
 						// transform to local coordinates
 						compArr.rotatedWith(T, 'n');
@@ -221,14 +223,17 @@ namespace oofem {
 						Set *mySet = d->giveSet(nSet);
 						// contains any of our beams?
 						const IntArray &EdgeList = mySet->giveEdgeList();
-						const int numEdges = EdgeList.giveSize() / 2;
+						int numEdges = EdgeList.giveSize() / 2;
 
 						int c = 1;
 						while (c <= numEdges) {
 							FloatArray compArr, tempArr;
 							FloatMatrix T;
 							int elNum = EdgeList.at(c); // , edgeNum = EdgeList.at(++c)
-							CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
+							const FloatArray coords;
+
+							// CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
+							CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
 							//d->giveElement(elNum)->computeBoundaryEdgeLoadVector(compArr, CLoad, edgeNum, ExternalForcesVector, VM_Total, tStep); // always vm_total???
 
 							// transform to local coordinates
