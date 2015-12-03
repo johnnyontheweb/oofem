@@ -94,6 +94,9 @@ BoundaryLoad :: initializeFrom(InputRecord *ir)
     IRResultType result;                // Required by IR_GIVE_FIELD macro
 
     result = Load :: initializeFrom(ir);
+    if ( result != IRRT_OK ) {
+        return result;
+    }
 
     int dummy;
     IR_GIVE_OPTIONAL_FIELD(ir, dummy, "ndofs");
@@ -109,9 +112,7 @@ BoundaryLoad :: initializeFrom(InputRecord *ir)
     IR_GIVE_OPTIONAL_FIELD(ir, propertyDictionary, _IFT_BoundaryLoad_properties);
     IR_GIVE_OPTIONAL_FIELD(ir, propertyTimeFunctDictionary, _IFT_BoundaryLoad_propertyTimeFunctions);
 
-    IR_GIVE_OPTIONAL_FIELD(ir, propertyMultExpr, _IFT_BoundaryLoad_propertyMultExpr);
-
-    return result;
+    return IRRT_OK;
 }
 
 

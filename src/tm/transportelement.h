@@ -222,6 +222,7 @@ protected:
      * In the default implementation the same approximation order is assumed, but it can be extended.
      */
     virtual void computeNmatrixAt(FloatMatrix &answer, const FloatArray &lcoords);
+    virtual void computeBmatrixAt(FloatMatrix &answer, const FloatArray &lcoords);
     /**
      * Computes the gradient matrix corresponding to one unknown.
      */

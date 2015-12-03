@@ -1,5 +1,5 @@
 beam02T.out
-Simply suported beam - test 
+Cantilever beam - test 
 LinearStatic nsteps 1 
 domain 3dShell
 OutputManager tstep_all dofman_all element_all
