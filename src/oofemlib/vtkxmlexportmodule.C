@@ -76,7 +76,7 @@ REGISTER_ExportModule(VTKXMLExportModule)
 
 IntArray VTKXMLExportModule :: redToFull = {1, 5, 9, 8, 7, 4, 6, 3, 2}; //position of xx, yy, zz, yz, xz, xy in tensor
 
-VTKXMLExportModule :: VTKXMLExportModule(int n, EngngModel *e) : ExportModule(n, e), internalVarsToExport(), primaryVarsToExport(), regionSets(), defaultElementSet( 0, e->giveDomain(1) )
+VTKXMLExportModule :: VTKXMLExportModule(int n, EngngModel *e) : ExportModule(n, e), internalVarsToExport(), primaryVarsToExport()
 {
     primVarSmoother = NULL;
     smoother = NULL;
@@ -110,13 +110,8 @@ VTKXMLExportModule :: initializeFrom(InputRecord *ir)
     val = 1;
     IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_VTKXMLExportModule_stype); // Macro
     stype = ( NodalRecoveryModel :: NodalRecoveryModelType ) val;
-    timeScale = 1.;
-    IR_GIVE_OPTIONAL_FIELD(ir, timeScale, _IFT_VTKXMLExportModule_timescale); // Macro
 
-    regionSets.resize(0);
-    IR_GIVE_OPTIONAL_FIELD(ir, regionSets, _IFT_VTKXMLExportModule_regionsets); // Macro
-
-	this->particleExportFlag = false;
+    this->particleExportFlag = false;
     IR_GIVE_OPTIONAL_FIELD(ir, particleExportFlag, _IFT_VTKXMLExportModule_particleexportflag); // Macro
 
     return ExportModule :: initializeFrom(ir);
@@ -131,13 +126,7 @@ VTKXMLExportModule :: initialize()
         this->smoother = NULL;
     }
 
-    if ( regionSets.isEmpty() ) {
-        // default: whole domain region
-        regionSets.resize(1);
-        regionSets.at(1) = -1;
-
-        defaultElementSet.addAllElements();
-    }
+    ExportModule :: initialize();
 }
 
 
@@ -362,7 +351,7 @@ VTKXMLExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 
     // Write output: VTK header
 #ifndef __VTK_MODULE
-    fprintf(this->fileStream, "<!-- TimeStep %e Computed %d-%02d-%02d at %02d:%02d:%02d -->\n", tStep->giveIntrinsicTime()*timeScale, current->tm_year + 1900, current->tm_mon + 1, current->tm_mday, current->tm_hour,  current->tm_min,  current->tm_sec);
+    fprintf(this->fileStream, "<!-- TimeStep %e Computed %d-%02d-%02d at %02d:%02d:%02d -->\n", tStep->giveTargetTime()*timeScale, current->tm_year + 1900, current->tm_mon + 1, current->tm_mday, current->tm_hour,  current->tm_min,  current->tm_sec);
     fprintf(this->fileStream, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">\n");
     fprintf(this->fileStream, "<UnstructuredGrid>\n");
 #endif
@@ -528,7 +517,7 @@ VTKXMLExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
             std :: stringstream subStep;
             if (tstep_substeps_out_flag)
                 subStep << "." << tStep->giveSubStepNumber();
-            pvdEntry << "<DataSet timestep=\"" << tStep->giveIntrinsicTime()*this->timeScale << subStep.str() << "\" group=\"\" part=\"\" file=\"" << this->giveOutputBaseFileName(tStep) + ".gp.vtu" << "\"/>";
+            pvdEntry << "<DataSet timestep=\"" << tStep->giveTargetTime()*this->timeScale << subStep.str() << "\" group=\"\" part=\"\" file=\"" << this->giveOutputBaseFileName(tStep) + ".gp.vtu" << "\"/>";
             this->gpPvdBuffer.push_back( pvdEntry.str() );
             this->writeGPVTKCollection();
         }
@@ -2132,19 +2121,5 @@ VTKXMLExportModule :: exportIntVarsInGpAs(IntArray valIDs, TimeStep *tStep)
     fclose(stream);
 }
 
-int VTKXMLExportModule :: giveNumberOfRegions()
-{
-    // Returns number of regions (aka sets)
-    return this->regionSets.giveSize();
-}
 
-Set *VTKXMLExportModule :: giveRegionSet(int i)
-{
-    int setid = regionSets.at(i);
-    if ( setid > 0 ) {
-        return emodel->giveDomain(1)->giveSet(setid);
-    } else {
-        return & this->defaultElementSet;
-    }
-}
 } // end namespace oofem
