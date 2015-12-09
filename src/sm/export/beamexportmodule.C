@@ -133,8 +133,6 @@ namespace oofem {
 
 				Diff.beDifferenceOf(E, I);
 
-				fprintf(this->stream, "\n");
-
 				FloatArray FinalLoads;
 				FinalLoads.resize(6);
 				FinalLoads.zero();
@@ -294,7 +292,6 @@ namespace oofem {
 		//}
 		//fprintf(this->stream, "    ");
 
-		fprintf(this->stream, "\n");
 		fflush(this->stream);
 	}
 
