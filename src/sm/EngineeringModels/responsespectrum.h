@@ -66,6 +66,7 @@ private:
     SparseMtrxType sparseMtrxType;
     FloatMatrix eigVec;
     FloatArray eigVal;
+	FloatArray centroid;
 	FloatArray totMass;
 	FloatMatrix partFact;
 	FloatMatrix massPart;
