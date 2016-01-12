@@ -47,6 +47,7 @@
 #include "dof.h"
 #include "domain.h"
 #include "element.h"
+#include "node.h"
 #include "unknownnumberingscheme.h"
 
 #ifdef __OOFEG
@@ -204,6 +205,7 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 
 	// matrix and array initialization
 	totMass.resize(3);		// 3 are the translational dofs - enough for the moment
+	centroid.resize(3);
 	partFact.resize(numberOfRequiredEigenValues, 3);	
 	massPart.resize(numberOfRequiredEigenValues, 3);
 	unitDisp->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 3);
@@ -220,6 +222,16 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 		eigVec.setColumn(*tempCol, i);
 	}
 	// eigVec has been normalized
+
+	IntArray masterDofIDs, nodalArray, ids;
+	IntArray locationArray;
+	IntArray *dofIdArray = new IntArray();
+	dofIdArray->clear();
+
+	FloatMatrix tempMat, tempMat2;
+	FloatArray tempCoord, coordArray;
+	tempMat.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 3);
+	tempMat2.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 3);
 
 	//
 	// create unit displacement vectors
@@ -238,19 +250,20 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 
 			int eqN = EModelDefaultEquationNumbering().giveDofEquationNumber(*myDof);
 
-			// save unit displacement
-			if (eqN>0) unitDisp->at(eqN, dType) = 1.0;
+			// save unit displacement and coordinate
+			if (eqN > 0)
+			{
+				unitDisp->at(eqN, dType) = 1.0;
+				tempMat2.at(eqN, dType) = node->giveCoordinate(dType);
+			}
 		}
-	}
-
-	IntArray masterDofIDs, nodalArray, ids;
-	IntArray locationArray;
-	IntArray *dofIdArray = new IntArray();
-	dofIdArray->clear();
+	}  // end of search among nodes
 
 	// then from internaldof managers
 	for (int ielem = 1; ielem <= nelem; ielem++) {
 		Element *element = domain->giveElement(ielem);
+		locationArray.clear();
+		tempCoord.clear();
 
 		// retrieve internal dof managers and location array
 		for (int i = 1; i <= element->giveNumberOfInternalDofManagers(); i++) {
@@ -261,6 +274,13 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 				element->giveInternalDofManager(i)->giveMasterDofIDArray(ids, masterDofIDs);
 				dofIdArray->followedBy(masterDofIDs);
 			}
+			coordArray.resize(masterDofIDs.giveSize());
+			int c = 1;
+			for (int dof : masterDofIDs)
+			{
+				coordArray.at(c++) = element->giveNode(i)->giveCoordinate(dof);
+			}
+			tempCoord.append(coordArray);
 		}
 
 		// search for our dofs in there
@@ -271,33 +291,37 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 
 			int eqN = locationArray.at(myDof);
 
-			// save unit displacement
-			if (eqN>0) unitDisp->at(eqN, dType) = 1.0;
+			// save unit displacement and coordinate
+			if (eqN > 0)
+			{
+				unitDisp->at(eqN, dType) = 1.0;
+				tempMat2.at(eqN, dType) = tempCoord.at(myDof);
+			}
 		}
 	}  // end of search among internal dof managers
+	// end of creation of translational unit displacement vectors
+
 
 	//
 	// calculate participation factors and mass participation
 	//
 
-	FloatMatrix tempMat;
-	tempMat.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 3);
-
-
-
 	// may be better to implement a SparseMatrix - FloatMatrix function to condense the following...
 	for (int i = 1; i <= 3; i++)
 	{
 		tempCol->beColumnOf(*unitDisp, i);
-		massMatrix->times(*tempCol, *tempCol2);
+		massMatrix->times(*tempCol, *tempCol2);  // now tempCol2 has only the masses pertaining the i-th direction
 		tempMat.setColumn(*tempCol2, i);
-		totMass.at(i) = tempCol->dotProduct(*tempCol2);
+		totMass.at(i) = tempCol->dotProduct(*tempCol2);  // total mass for direction i-th direction
+		tempCol->beColumnOf(tempMat2, i);	// fetch coordinates in i-th direction
+		centroid.at(i) = tempCol->dotProduct(*tempCol2) / totMass.at(i);  // dot multiply to get first moment, then divide by total mass in i-th direction to get i-th coordinate of the centroid
 	}
+
 	// participation factors
 	partFact.beTProductOf(eigVec, tempMat);
 
 	// mass participation ratios
-	for (int i = 1; i<= numberOfRequiredEigenValues; i++)
+	for (int i = 1; i <= numberOfRequiredEigenValues; i++)
 	{
 		for (int j = 1; j <= 3; j++)
 		{
@@ -340,8 +364,13 @@ void ResponseSpectrum::terminate(TimeStep *tStep)
         }
     }
 	
+	
+	fprintf(outputStream, "\n\nCentroid Coordinates are:\n-----------------\n\tX\t|\tY\t|\tZ\n");
+	for (int i = 1; i <= centroid.giveSize(); ++i) {
+		fprintf(outputStream, "%10.3e ", centroid.at(i));
+	}
+	
 	fprintf(outputStream, "\n\nParticipation Factors are:\n-----------------\n\tDx\t|\tDy\t|\tDz\n");
-
 	for (int i = 1; i <= partFact.giveNumberOfRows(); ++i) {
 		for (int j = 1; j <= partFact.giveNumberOfColumns(); ++j) {
 			fprintf(outputStream, "%10.3e ", partFact.at(i,j));
@@ -355,7 +384,6 @@ void ResponseSpectrum::terminate(TimeStep *tStep)
 	}
 
 	fprintf(outputStream, "\n\nMass Ratios are:\n-----------------\n\tDx\t|\tDy\t|\tDz\n");
-
 	for (int i = 1; i <= massPart.giveNumberOfRows(); ++i) {
 		for (int j = 1; j <= massPart.giveNumberOfColumns(); ++j) {
 			fprintf(outputStream, "%10.3e ", massPart.at(i,j));
