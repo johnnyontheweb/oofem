@@ -1189,11 +1189,13 @@ EngngModel :: assembleExtrapolatedForces(FloatArray &answer, TimeStep *tStep, Ch
         ///@todo This is not perfect. It is probably no good for viscoelastic materials, and possibly other scenarios that are rate dependent
         ///(tangent will be computed for the previous step, with whatever deltaT it had)
         element->giveCharacteristicMatrix(charMatrix, type, tStep);
-        element->computeVectorOf(VM_Incremental, tStep, delta_u);
-        charVec.beProductOf(charMatrix, delta_u);
-        if ( element->giveRotationMatrix(R) ) {
-            charVec.rotatedWith(R, 't');
-        }
+		if (charMatrix.isNotEmpty()) {
+			element->computeVectorOf(VM_Incremental, tStep, delta_u);
+			charVec.beProductOf(charMatrix, delta_u);
+			if ( element->giveRotationMatrix(R) ) {
+				charVec.rotatedWith(R, 't');
+			}
+		}
 
         ///@todo Deal with element deactivation and reactivation properly.
 #ifdef _OPENMP
