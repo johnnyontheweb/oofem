@@ -112,6 +112,8 @@ BoundaryLoad :: initializeFrom(InputRecord *ir)
     IR_GIVE_OPTIONAL_FIELD(ir, propertyDictionary, _IFT_BoundaryLoad_properties);
     IR_GIVE_OPTIONAL_FIELD(ir, propertyTimeFunctDictionary, _IFT_BoundaryLoad_propertyTimeFunctions);
 
+    IR_GIVE_OPTIONAL_FIELD(ir, propertyMultExpr, _IFT_BoundaryLoad_propertyMultExpr);
+
     return IRRT_OK;
 }
 
@@ -128,12 +130,14 @@ BoundaryLoad :: giveInputRecord(DynamicInputRecord &input)
 }
 
 void
-BoundaryLoad :: setVariableState(int aVariable, double val){
+BoundaryLoad :: setVariableState(int aVariable, double val)
+{
     variableState.at(aVariable) = val;
 }
 
 double
-BoundaryLoad :: giveVariableState(int aVariable){
+BoundaryLoad :: giveVariableState(int aVariable)
+{
     return variableState.at(aVariable);
 }
 
