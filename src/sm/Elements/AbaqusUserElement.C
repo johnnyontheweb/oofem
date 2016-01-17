@@ -305,4 +305,28 @@ AbaqusUserElement :: computeConsistentMassMatrix(FloatMatrix &answer, TimeStep *
     answer.resize(ndofel, ndofel);
     answer.zero();
 }
+
+
+void
+AbaqusUserElement::printOutputAt(FILE *File, TimeStep *tStep)
+{
+	FloatArray rl;
+
+	fprintf(File, "abaqususerelement %d (%8d) :\n", this->giveLabel(), this->giveNumber());
+
+	// ask for global element displacement vector
+	this->computeVectorOf(VM_Total, tStep, rl);
+
+	fprintf(File, "  local displacements ");
+	for (auto &val : rl) {
+		fprintf(File, " %.4e", val);
+	}
+
+	fprintf(File, "\n  element svars       ");
+	for (int i = 1; i <= this->numSvars; i++)
+	{
+		fprintf(File, " %.4e", this->svars.at(i));
+	}
+}
+
 }       // namespace oofem

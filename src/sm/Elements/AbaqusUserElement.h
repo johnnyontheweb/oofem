@@ -204,7 +204,9 @@ public:
 
     virtual IRResultType initializeFrom(InputRecord *ir);
     virtual void giveInputRecord(DynamicInputRecord &input);
-    virtual void postInitialize();
+	virtual void postInitialize();
+
+	virtual void printOutputAt(FILE *file, TimeStep *tStep);
 
     // definition & identification
     virtual const char *giveClassName() const { return "AbaqusUserElement"; }
