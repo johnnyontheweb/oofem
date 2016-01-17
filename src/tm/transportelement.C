@@ -57,9 +57,12 @@
 #endif
 
 namespace oofem {
+
+const double TransportElement :: stefanBoltzmann = 5.67e-8; //W/m2/K4
+
 TransportElement :: TransportElement(int n, Domain *aDomain, ElementMode em) :
-    Element(n, aDomain), emode( em ){
-    stefanBoltzmann = 5.67e-8; //W/m2/K4
+    Element(n, aDomain), emode( em )
+{
 }
 
 
@@ -863,7 +866,6 @@ TransportElement :: computeBodyBCSubVectorAt(FloatArray &answer, Load *load,
 {
     FloatArray val, globalIPcoords, n;
     answer.resize( this->giveNumberOfDofManagers() );
-    answer.zero();
 
     std :: unique_ptr< IntegrationRule > iRule( this->giveInterpolation()->giveIntegrationRule(load->giveApproxOrder()) );
     for ( GaussPoint *gp : *iRule ) {
@@ -956,7 +958,7 @@ TransportElement :: computeSurfaceBCSubVectorAt(FloatArray &answer, Load *load,
         answer.resize( this->giveNumberOfDofManagers() );
         answer.zero();
 
-        double coeff;
+        double coeff=0.;
         int approxOrder = surfLoad->giveApproxOrder() + this->giveApproxOrder(indx);
 
         std :: unique_ptr< IntegrationRule > iRule( this->GetSurfaceIntegrationRule(approxOrder) );
@@ -981,6 +983,8 @@ TransportElement :: computeSurfaceBCSubVectorAt(FloatArray &answer, Load *load,
                 coeff = surfLoad->giveProperty('a', tStep);
             } else if ( load->giveType() == RadiationBC ) {
                 coeff = getRadiativeHeatTranferCoef(surfLoad, tStep);
+            } else {
+                OOFEM_ERROR("Unknown load type");
             }
 
             this->computeSurfaceNAt( n, iSurf, gp->giveNaturalCoordinates() );
@@ -1144,11 +1148,13 @@ TransportElement :: assembleLocalContribution(FloatArray &answer, FloatArray &sr
 }
 
 double
-TransportElement :: getRadiativeHeatTranferCoef(BoundaryLoad *bLoad, TimeStep *tStep){
+TransportElement :: getRadiativeHeatTranferCoef(BoundaryLoad *bLoad, TimeStep *tStep)
+{
     double answer = 0;
-    FloatArray *components = bLoad->GiveCopyOfComponentArray();
+    ///@todo Why aren't this code using the standard approach of calling computeComponentArrayAt(...) to get the time function scaling and all?
+    const FloatArray &components = bLoad->giveComponentArray();
     
-    answer = components->at(1);//T_infty
+    answer = components.at(1);//T_infty
     answer += 273.15;
     answer = answer*answer*answer;
     answer *= 4 * bLoad->giveProperty('e', tStep) * stefanBoltzmann;

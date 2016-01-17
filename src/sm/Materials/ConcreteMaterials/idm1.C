@@ -46,6 +46,7 @@
 #include "dynamicinputrecord.h"
 #include "engngm.h"
 
+
 namespace oofem {
 REGISTER_Material(IsotropicDamageMaterial1);
 
@@ -1355,11 +1356,19 @@ IsotropicDamageMaterial1 :: MMI_map(GaussPoint *gp, Domain *oldd, TimeStep *tSte
 #ifdef IDM_USE_MAPPEDSTRAIN
     result = mapper.mapVariable(intVal, gp, IST_StrainTensor, tStep);
     if ( result ) {
-        status->letTempStrainVectorBe(intVal);
+        FloatArray sr;
+        this->giveReducedSymVectorForm(sr, intVal, gp->giveMaterialMode());
+        status->letTempStrainVectorBe(sr);
     }
 
 #endif
     status->updateYourself(tStep);
+
+    if ( result ) {
+        FloatArray sr;
+        this->giveReducedSymVectorForm(sr, intVal, gp->giveMaterialMode());
+        status->letTempStrainVectorBe(sr);
+    }
 
     return result;
 }
