@@ -310,15 +310,22 @@ AbaqusUserElement :: computeConsistentMassMatrix(FloatMatrix &answer, TimeStep *
 void
 AbaqusUserElement::printOutputAt(FILE *File, TimeStep *tStep)
 {
-	FloatArray rl;
+	FloatArray rl, Fl;
 
 	fprintf(File, "abaqususerelement %d (%8d) :\n", this->giveLabel(), this->giveNumber());
 
 	// ask for global element displacement vector
 	this->computeVectorOf(VM_Total, tStep, rl);
+	// ask for global element end forces vector
+	this->giveInternalForcesVector(Fl, tStep, 1);
 
 	fprintf(File, "  local displacements ");
 	for (auto &val : rl) {
+		fprintf(File, " %.4e", val);
+	}
+	
+	fprintf(File, "\n  internal forces     ");
+	for (auto &val : Fl) {
 		fprintf(File, " %.4e", val);
 	}
 
