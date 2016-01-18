@@ -585,7 +585,6 @@ namespace oofem {
 #if 0
 		FloatMatrix stiffness;
 		FloatArray u;
-
 		this->computeStiffnessMatrix(stiffness, SecantStiffness, tStep);
 		this->computeVectorOf(VM_Total, tStep, u);
 		answer.beProductOf(stiffness, u);
@@ -776,7 +775,7 @@ namespace oofem {
 	{
 		FloatArray rl, Fl;
 
-		fprintf(File, "beam element %d (%8d) :\n", this->giveLabel(), this->giveNumber());
+		fprintf(File, "beam element %d :\n", number);
 
 		// ask for global element displacement vector
 		this->computeVectorOf(VM_Total, tStep, rl);
