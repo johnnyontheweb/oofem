@@ -108,7 +108,7 @@ private:
     int ndofel = 0;
 
     /// mcrd
-    int mcrd = 2;
+    int mcrd = 0;
 
     /// mlvarx
     int mlvarx = 1;
@@ -181,14 +181,14 @@ public:
         return hasTangentFlag;
     }
     virtual void letTempTangentBe(FloatMatrix &src) {
-        tempAmatrx = src;
+		tempAmatrx = src;
         hasTangentFlag = true;
     }
-    virtual FloatMatrix &letTempRhsBe(FloatMatrix &src) {
-        return tempRHS = src;
+    virtual void letTempRhsBe(FloatMatrix &src) {
+		tempRHS = src;
     }
-    virtual FloatArray &letTempSvarsBe(FloatArray &src) {
-        return tempSvars = src;
+    virtual void letTempSvarsBe(FloatArray &src) {
+		tempSvars = src;
     }
     virtual const FloatArray &giveStateVector() const {
         return svars;

@@ -133,9 +133,9 @@ void AbaqusUserElement :: postInitialize()
 {
     NLStructuralElement :: postInitialize();
 
-    this->ndofel = this->numberOfDofMans * this->nCoords;
+    this->ndofel = this->numberOfDofMans * this->dofs.giveSize();
     this->mlvarx = this->ndofel;
-    this->nrhs = 2;
+    this->nrhs = 1;
     this->rhs.resize(this->ndofel, this->nrhs);
     this->amatrx.resize(this->ndofel, this->ndofel);
     this->svars.resize(this->numSvars);
@@ -147,8 +147,22 @@ void AbaqusUserElement :: postInitialize()
     this->A.resize(this->ndofel);
     this->DU.resize(this->ndofel, this->nrhs);
 
-    if ( !this->coords.isNotEmpty() ) {
-        this->coords.resize(this->numberOfDofMans, this->mcrd);
+	if (!this->coords.isNotEmpty()) {
+		this->mcrd = 0;
+		for (auto j : this->dofs)
+		{
+			switch ((DofIDItem)j)
+			{
+			case D_u:
+			case D_v:
+			case D_w:
+				this->mcrd = max(this->mcrd, j);
+			}
+		}
+
+		this->mcrd = max(this->mcrd, this->nCoords);
+
+		this->coords.resize(this->mcrd, this->numberOfDofMans);
         for ( int j = 1; j <= numberOfDofMans; j++ ) {
             Node *dm = this->giveNode(j);
             for ( int i = 1; i <= mcrd; i++ ) {
@@ -186,7 +200,7 @@ void AbaqusUserElement :: computeStiffnessMatrix(FloatMatrix &answer, MatRespons
     if ( !hasTangent() ) {
         // use uel to calculate the tangent
         FloatArray forces;
-        giveInternalForcesVector(forces, tStep, U, DU, 0);
+        giveInternalForcesVector(forces, tStep, 0);
     }
     // give tangent
     answer = giveTempTangent();
@@ -211,11 +225,11 @@ void AbaqusUserElement :: updateInternalState(TimeStep *tStep)
 void AbaqusUserElement :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord)
 {
     // init U vector
-    this->computeVectorOf(VM_Total, tStep, U);
+    this->computeVectorOf(this->dofs, VM_Total, tStep, U);
     FloatArray tempIntVect;
     // init DU vector
-    computeVectorOf(VM_Incremental, tStep, tempIntVect);
-    this->giveDomain()->giveClassName();
+    this->computeVectorOf(this->dofs, VM_Incremental, tStep, tempIntVect);
+    //this->giveDomain()->giveClassName();
     DU.zero();
     DU.setColumn(tempIntVect, 1);
     //this->computeVectorOf(VM_Total, tStep, DU);
@@ -225,6 +239,7 @@ void AbaqusUserElement :: giveInternalForcesVector(FloatArray &answer, TimeStep 
 void AbaqusUserElement :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, 
                                             FloatArray &U, FloatMatrix &DU, int useUpdatedGpRecord)
 {
+	answer.clear();
     if ( useUpdatedGpRecord ) {
         this->rhs.copyColumn(answer, 1);
     } else {
@@ -291,7 +306,7 @@ void AbaqusUserElement :: giveInternalForcesVector(FloatArray &answer, TimeStep 
         //this->rhs.copyColumn(answer, 1);
         //answer.negated();
         loc_rhs.negated();                      //really needed???
-        loc_rhs.copyColumn(answer, 1);
+		loc_rhs.copyColumn(answer, 1);
         letTempRhsBe(loc_rhs);
         letTempTangentBe(loc_amatrx);
         letTempSvarsBe(loc_svars);
@@ -334,6 +349,7 @@ AbaqusUserElement::printOutputAt(FILE *File, TimeStep *tStep)
 	{
 		fprintf(File, " %.4e", this->svars.at(i));
 	}
+	fprintf(File, "\n");
 }
 
 }       // namespace oofem
