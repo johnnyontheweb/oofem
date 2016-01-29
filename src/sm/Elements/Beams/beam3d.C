@@ -775,7 +775,7 @@ namespace oofem {
 	{
 		FloatArray rl, Fl;
 
-		fprintf(File, "beam element %d :\n", number);
+		fprintf(File, "beam element %d (%8d) :\n", this->giveLabel(), this->giveNumber());
 
 		// ask for global element displacement vector
 		this->computeVectorOf(VM_Total, tStep, rl);
