@@ -75,6 +75,11 @@ namespace oofem {
 		dst.at(6) -= src.at(2) * (pos) / 2 * (len - pos);
 	}
 
+	int checkValidType(const char* name)
+	{
+		return (strcmp(name, "Beam3d") == 0) || (strcmp(name, "Beam2d") == 0) || (strcmp(name, "beam3d") == 0) || (strcmp(name, "beam2d") == 0);
+	}
+
 	void
 		BeamExportModule::doOutput(TimeStep *tStep, bool forcedOutput)
 	{
@@ -88,7 +93,7 @@ namespace oofem {
 		// loop through the beam elements
 		Domain *d = emodel->giveDomain(1);
 		for (auto &elem : d->giveElements()) {
-			if (strcmp(elem->giveClassName(), "Beam3d") == 0 || strcmp(elem->giveClassName(), "Beam2d") == 0 || strcmp(elem->giveClassName(), "beam3d") == 0 || strcmp(elem->giveClassName(), "beam2d") == 0) {   // check if elem is beam (LIbeam?)
+			if (checkValidType(elem->giveClassName())) {   // check if elem is beam (LIbeam?)
 				// store IDs of known beams
 				// beamIDs.push_back( elem->giveNumber() );
 				beamIDs.push_back(elem->giveLabel());
@@ -97,7 +102,7 @@ namespace oofem {
 				int elNum;
 				// elNum = elem->giveNumber();
 				elNum = elem->giveLabel();
-				SElem = static_cast< StructuralElement * >(elem.get());
+				SElem = static_cast<StructuralElement *>(elem.get());
 
 				double ksi, l = elem->computeLength();
 				FloatArray Fl, loadEndForces;
@@ -213,7 +218,7 @@ namespace oofem {
 				// int bType = bc->giveBCValType(); // UNUSED: ConstantEdgeLoad is never == 2, they're all == 0 == unknown
 				//if (bc->giveBCValType() == ForceLoadBVT) {
 				if (strcmp(bc->giveClassName(), "ConstantEdgeLoad") == 0) {
-					ConstantEdgeLoad *CLoad = static_cast< ConstantEdgeLoad * >(bc.get());
+					ConstantEdgeLoad *CLoad = static_cast<ConstantEdgeLoad *>(bc.get());
 
 					// is it in a set?
 					int nSet = CLoad->giveSetNumber();
@@ -221,13 +226,18 @@ namespace oofem {
 						Set *mySet = d->giveSet(nSet);
 						// contains any of our beams?
 						const IntArray &EdgeList = mySet->giveEdgeList();
-						int numEdges = EdgeList.giveSize() / 2;
+						int numEdges = EdgeList.giveSize();
 
 						int c = 1;
 						while (c <= numEdges) {
 							FloatArray compArr, tempArr;
 							FloatMatrix T;
-							int elNum = EdgeList.at(c); // , edgeNum = EdgeList.at(++c)
+							int elNum = EdgeList.at(c);
+							c += 2; // increment counter in interleaved array
+
+							Element* ele = d->giveElement(elNum);
+							if (!checkValidType(ele->giveClassName())) continue;
+
 							const FloatArray coords;
 
 							// CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
@@ -294,6 +304,7 @@ namespace oofem {
 
 		fflush(this->stream);
 	}
+
 
 	void
 		BeamExportModule::initialize()
