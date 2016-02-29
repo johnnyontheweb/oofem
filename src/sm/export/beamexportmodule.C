@@ -43,6 +43,7 @@
 #include "classfactory.h"
 #include "generalboundarycondition.h"
 #include "constantedgeload.h"
+#include "fei3dlinelin.h"
 
 namespace oofem {
 	REGISTER_ExportModule(BeamExportModule)
@@ -89,6 +90,8 @@ namespace oofem {
 
 		std::vector< int >beamIDs;
 		std::map< int, std::map< double, FloatArray > >BeamForces;
+		std::map< int, std::map< double, FloatArray > >BeamDisplacements;
+		std::map<int, std::pair< double, double > >BeamLoads;
 		IntArray temp;
 		// loop through the beam elements
 		Domain *d = emodel->giveDomain(1);
@@ -115,8 +118,8 @@ namespace oofem {
 					Fl.subtract(loadEndForces);
 				}
 
-				std::map< double, FloatArray >Dict;
-				FloatArray I, E, Diff;
+				std::map< double, FloatArray >ForceDict;
+				FloatArray I, E, Diff, dI, dE;
 
 				I.resize(6);
 
@@ -173,11 +176,13 @@ namespace oofem {
 				}
 
 				addComponents(I, FinalLoads, 0.0, l, true);
-				Dict[0.0] = I;
+				ForceDict[0.0] = I;
+
 				for (GaussPoint *gp : *elem->giveDefaultIntegrationRulePtr()) {
 					//double dV = elem->computeVolumeAround(gp);
 					FloatArray ipState;
 					double pos;
+
 					ksi = 0.5 + 0.5 * gp->giveNaturalCoordinate(1);
 					pos = ksi*l;
 
@@ -189,14 +194,21 @@ namespace oofem {
 
 					addComponents(ipState, FinalLoads, pos, l, true);
 
-					Dict[pos] = ipState;
+					ForceDict[pos] = ipState;
 				}
 
 				addComponents(E, FinalLoads, l, l, true);
-				Dict[l] = E;
+				ForceDict[l] = E;
 
-				// BeamForces [ elem->giveNumber() ] = Dict;
-				BeamForces[elem->giveLabel()] = Dict;
+				// BeamForces [ elem->giveNumber() ] = ForceDict;
+				BeamForces[elem->giveLabel()] = ForceDict;
+
+				std::pair <double, double> loadPair;
+				loadPair.first = FinalLoads.at(2);
+				loadPair.second = FinalLoads.at(3);
+
+				// save loads
+				BeamLoads[elem->giveLabel()] = loadPair;
 
 				//elem->giveBodyLoadArray
 			}
@@ -249,6 +261,10 @@ namespace oofem {
 							T.resizeWithData(6, 6);
 							compArr.rotatedWith(T, 'n');
 
+							// add forces to our map
+							BeamLoads[elNum].first += compArr.at(2);
+							BeamLoads[elNum].second += compArr.at(3);
+
 							// compute contribution to internal forces
 							std::map< double, FloatArray >Dst = BeamForces[elNum];
 							for (auto &PointVals : Dst) {
@@ -270,6 +286,121 @@ namespace oofem {
 			}
 		}
 
+		for (auto beamPair : BeamForces)
+		{
+			int elNum = beamPair.first;
+			Element *elem = d->giveElement(elNum);
+			FloatArray rl, dI, dE;
+			std::map< double, FloatArray >DispDict;
+			double l = elem->computeLength();
+			double l_2 = l*l;
+			double ksi;
+			//FloatMatrix shapeFunctions(2, 12);
+			bool calc = false;
+			//double phiy, phiz;
+
+			elem->computeVectorOf(VM_Total, tStep, rl);
+			temp.resize(6);
+			temp.at(1) = 1;
+			temp.at(2) = 2;
+			temp.at(3) = 3;
+			temp.at(4) = 4;
+			temp.at(5) = 5;
+			temp.at(6) = 6;
+
+			FloatMatrix T;
+			elem->computeGtoLRotationMatrix(T);
+			T.resizeWithData(6, 6);
+
+			dI.beSubArrayOf(rl, temp);
+			dI.rotatedWith(T, 'n');
+			dE.beSubArrayOf(rl, temp);
+			dE.rotatedWith(T, 'n');
+			DispDict[0.0] = dI;
+
+			CrossSection *Sect = elem->giveCrossSection();
+			StructuralCrossSection *SCSect = static_cast<StructuralCrossSection *>(Sect);
+			FloatMatrix MatStiffness;
+
+			double EJyy, EJzz;
+			double ay, by, cy, dy, ey;
+			double az, bz, cz, dz, ez;
+
+			for (GaussPoint *gp : *elem->giveDefaultIntegrationRulePtr()) {
+				FloatArray ipState;
+				double pos, pos_2, pos_3, pos_4;
+
+				ksi = 0.5 + 0.5 * gp->giveNaturalCoordinate(1);
+				pos = ksi*l;
+
+				pos_2 = pos*pos;
+				pos_3 = pos_2*pos;
+				pos_4 = pos_2*pos_2;
+
+				// calculate this stuff on the first pass. Section are supposed prismatic (constant section)
+				if (!calc){
+					SCSect->give3dBeamStiffMtrx(MatStiffness, ElasticStiffness, gp, tStep);
+
+					EJzz = MatStiffness.at(6, 6);
+					EJyy = MatStiffness.at(5, 5);
+
+					double vy_0, vy_l, vz_0, vz_l;
+					double phiy_0, phiy_l, phiz_0, phiz_l;
+					double By, Ay, Bz, Az;
+
+					//std::map<double, FloatArray> &td = BeamDisplacements[elNum];
+					std::pair<double,double> &bl = BeamLoads[elNum];
+					FloatArray &disps = dI;
+					vy_0 = disps.at(2);
+					vz_0 = disps.at(3);
+					phiy_0 = disps.at(5);
+					phiz_0 = disps.at(6);
+					disps = dE;
+					vy_l = disps.at(2);
+					vz_l = disps.at(3);
+					phiy_l = disps.at(5);
+					phiz_l = disps.at(6);
+
+					ey = vy_0;
+					dy = phiz_0;
+					ay = bl.first / 24 / EJzz;
+
+					Ay = (vy_l - vy_0) / l_2 - ay*l_2 - dy / l;
+					By = (phiz_l - phiz_0) / l - ay*l_2 * 4;
+
+					by = (By - 2 * Ay) / l;
+					cy = 3 * Ay - By;
+
+
+					ez = vz_0;
+					dz = -phiy_0; // inverted signs for angles
+					az = bl.second / 24 / EJyy;
+
+					Az = (vz_l - vz_0) / l_2 - az*l_2 - dz / l;
+					Bz = (-phiy_l + phiy_0) / l - az*l_2 * 4; // inverted signs for angles
+
+					bz = (Bz - 2 * Az) / l;
+					cz = 3 * Az - Bz;
+
+					calc = true;
+				}
+
+				FloatArray disps(6);
+				disps.at(2) = ay*pos_4 + by*pos_3 + cy*pos_2 + dy*pos + ey;
+				disps.at(3) = az*pos_4 + bz*pos_3 + cz*pos_2 + dz*pos + ez;
+
+				DispDict[pos] = disps;
+
+				//ipDisp.beProductOf(shapeFunctions, rl);
+			}
+
+			DispDict[l] = dE;
+
+			// save the displacements
+			BeamDisplacements[elem->giveLabel()] = DispDict;
+
+		}
+
 		//for (auto &set : d->giveSets()) {
 		//	IntArray &ElEdges = set->giveEdgeList();
 		//}
@@ -277,20 +408,52 @@ namespace oofem {
 		//	d->giveSets or d->giveLoad ?
 
 		double curTime = tStep->giveTargetTime();
+		std::map<int, std::map<double, FloatArray>>::iterator BForces_it = BeamForces.begin();
+		std::map<int, std::map<double, FloatArray>>::iterator BDisps_it = BeamDisplacements.begin();
+		for (;
+			BForces_it != BeamForces.end();
+			++BForces_it, ++BDisps_it)
+		{
+			std::map< double, FloatArray > &BForces = BForces_it->second;
+			std::map< double, FloatArray > &BDisps = BDisps_it->second;
+			int ID = BForces_it->first;
 
-		for (auto &bForces : BeamForces) {
-			std::map< double, FloatArray >pForces = bForces.second;
-			int ID = bForces.first;
-			for (auto &vals : pForces) {
-				double pos = vals.first;
-				FloatArray forces = vals.second;
+			std::map<double, FloatArray >::iterator forces_it = BForces.begin();
+			std::map<double, FloatArray >::iterator disps_it = BDisps.begin();
+
+			for (;
+				forces_it != BForces.end();
+				++forces_it, ++disps_it)
+			{
+				double pos = forces_it->first;
+				FloatArray forces = forces_it->second;
+				FloatArray disps = disps_it->second;
 				fprintf(this->stream, "%10.3e;%d;%10.3e;", curTime, ID, pos);
+
 				for (auto &val : forces) {
+					fprintf(this->stream, "%10.3e;", val);
+				}
+				for (auto &val : disps) {
 					fprintf(this->stream, "%10.3e;", val);
 				}
 				fprintf(this->stream, "\n");
 			}
+
 		}
+
+		//for (auto &bForces : BeamForces) {
+		//	std::map< double, FloatArray >pForces = bForces.second;
+		//	int ID = bForces.first;
+		//	for (auto &vals : pForces) {
+		//		double pos = vals.first;
+		//		FloatArray forces = vals.second;
+		//		fprintf(this->stream, "%10.3e;%d;%10.3e;", curTime, ID, pos);
+		//		for (auto &val : forces) {
+		//			fprintf(this->stream, "%10.3e;", val);
+		//		}
+		//		fprintf(this->stream, "\n");
+		//	}
+		//}
 
 		// write file in the format:
 		// elementNumber distanceFromIend N_x T_z T_y M_x M_y M_z
@@ -314,7 +477,7 @@ namespace oofem {
 			OOFEM_ERROR("failed to open file %s", fileName.c_str());
 		}
 		// ";" as separator
-		fprintf(this->stream, "#Time;BeamNo;DistanceFromI;N_x;T_y;T_z;M_x;M_y;M_z;");
+		fprintf(this->stream, "#Time;BeamNo;DistanceFromI;N_x;T_y;T_z;M_x;M_y;M_z;dx;dy;dz;rx;ry;rz;");
 		//for ( int var: this->ists ) {
 		//    fprintf(this->stream, "%s    ", __InternalStateTypeToString( ( InternalStateType ) var) );
 		//}
