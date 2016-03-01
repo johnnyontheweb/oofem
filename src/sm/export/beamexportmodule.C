@@ -313,9 +313,10 @@ namespace oofem {
 			T.resizeWithData(6, 6);
 
 			dI.beSubArrayOf(rl, temp);
-			dI.rotatedWith(T, 'n');
+			//dI.rotatedWith(T, 'n');
+			for (int i = 1; i <= 6; i++) temp.at(i) += 6;
 			dE.beSubArrayOf(rl, temp);
-			dE.rotatedWith(T, 'n');
+			//dE.rotatedWith(T, 'n');
 			DispDict[0.0] = dI;
 
 			CrossSection *Sect = elem->giveCrossSection();
@@ -350,16 +351,16 @@ namespace oofem {
 
 					//std::map<double, FloatArray> &td = BeamDisplacements[elNum];
 					std::pair<double,double> &bl = BeamLoads[elNum];
-					FloatArray &disps = dI;
-					vy_0 = disps.at(2);
-					vz_0 = disps.at(3);
-					phiy_0 = disps.at(5);
-					phiz_0 = disps.at(6);
-					disps = dE;
-					vy_l = disps.at(2);
-					vz_l = disps.at(3);
-					phiy_l = disps.at(5);
-					phiz_l = disps.at(6);
+					FloatArray *disps = &dI;
+					vy_0 = disps->at(2);
+					vz_0 = disps->at(3);
+					phiy_0 = disps->at(5);
+					phiz_0 = disps->at(6);
+					disps = &dE;
+					vy_l = disps->at(2);
+					vz_l = disps->at(3);
+					phiy_l = disps->at(5);
+					phiz_l = disps->at(6);
 
 					ey = vy_0;
 					dy = phiz_0;
