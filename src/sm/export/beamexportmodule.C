@@ -97,14 +97,17 @@ namespace oofem {
 		Domain *d = emodel->giveDomain(1);
 		for (auto &elem : d->giveElements()) {
 			if (checkValidType(elem->giveClassName())) {   // check if elem is beam (LIbeam?)
+
+				int elNum;
+				elNum = elem->giveNumber();
+				//elNum = elem->giveLabel();
+
 				// store IDs of known beams
-				// beamIDs.push_back( elem->giveNumber() );
-				beamIDs.push_back(elem->giveLabel());
+				beamIDs.push_back( elNum );
+				//beamIDs.push_back(elNum);
 
 				StructuralElement *SElem;
-				int elNum;
-				// elNum = elem->giveNumber();
-				elNum = elem->giveLabel();
+
 				SElem = static_cast<StructuralElement *>(elem.get());
 
 				double ksi, l = elem->computeLength();
@@ -200,15 +203,15 @@ namespace oofem {
 				addComponents(E, FinalLoads, l, l, true);
 				ForceDict[l] = E;
 
-				// BeamForces [ elem->giveNumber() ] = ForceDict;
-				BeamForces[elem->giveLabel()] = ForceDict;
+				BeamForces [ elem->giveNumber() ] = ForceDict;
+				//BeamForces[elem->giveLabel()] = ForceDict;
 
 				std::pair <double, double> loadPair;
 				loadPair.first = FinalLoads.at(2);
 				loadPair.second = FinalLoads.at(3);
 
 				// save loads
-				BeamLoads[elem->giveLabel()] = loadPair;
+				BeamLoads[elem->giveNumber()] = loadPair;
 
 				//elem->giveBodyLoadArray
 			}
@@ -398,7 +401,8 @@ namespace oofem {
 			DispDict[l] = dE;
 
 			// save the displacements
-			BeamDisplacements[elem->giveLabel()] = DispDict;
+			BeamDisplacements[elem->giveNumber()] = DispDict;
+			//BeamDisplacements[elem->giveLabel()] = DispDict;
 
 		}
 
