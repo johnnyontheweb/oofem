@@ -421,7 +421,8 @@ namespace oofem {
 		{
 			std::map< double, FloatArray > &BForces = BForces_it->second;
 			std::map< double, FloatArray > &BDisps = BDisps_it->second;
-			int ID = BForces_it->first;
+			Element* elem = d->giveElement(BForces_it->first);
+			int ID = elem->giveLabel();
 
 			std::map<double, FloatArray >::iterator forces_it = BForces.begin();
 			std::map<double, FloatArray >::iterator disps_it = BDisps.begin();
