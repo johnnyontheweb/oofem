@@ -293,7 +293,9 @@ namespace oofem {
 		{
 			int elNum = beamPair.first;
 			Element *elem = d->giveElement(elNum);
-			FloatArray rl, dI, dE;
+			FloatArray rl, dI, dE; // used to store element end displacements
+			//FloatArray dNI, dNE; // used to store nodal displacements - may be different from the previous because of releases.
+			FloatArray ddN; // used to store the difference between the ends.
 			std::map< double, FloatArray >DispDict;
 			double l = elem->computeLength();
 			double l_2 = l*l;
@@ -316,11 +318,35 @@ namespace oofem {
 			T.resizeWithData(6, 6);
 
 			dI.beSubArrayOf(rl, temp);
-			//dI.rotatedWith(T, 'n');
+			//dI.rotatedWith(T, 'n');  // no need?
+
+			//DofManager *dofMan = elem->giveDofManager(1);
+			//dofMan->giveCompleteUnknownVector(dNI, VM_Acceleration, tStep);
+			//FloatMatrix N;
+			//if (dofMan->computeL2GTransformation(N, NULL))
+			//{
+			//	dNI.rotatedWith(N, 'n'); // rotate to global c.s.
+			//}
+			//dNI.rotatedWith(T, 'n');	// rotate to element c.s.
+
+			//dofMan = elem->giveDofManager(2);
+			//dofMan->giveCompleteUnknownVector(dNE, VM_Acceleration, tStep);
+			//if (dofMan->computeL2GTransformation(N, NULL))
+			//{
+			//	dNE.rotatedWith(N, 'n'); // rotate to global c.s.
+			//}
+			//dNE.rotatedWith(T, 'n');	// rotate to element c.s.
+
+			//ddN = dNE - dNI;
+
+			// increment id array
 			for (int i = 1; i <= 6; i++) temp.at(i) += 6;
 			dE.beSubArrayOf(rl, temp);
 			//dE.rotatedWith(T, 'n');
-			DispDict[0.0] = dI;
+
+			ddN = dE - dI;
+
+			DispDict[0.0] = dI; // -dNI;
 
 			CrossSection *Sect = elem->giveCrossSection();
 			StructuralCrossSection *SCSect = static_cast<StructuralCrossSection *>(Sect);
@@ -393,12 +419,14 @@ namespace oofem {
 				disps.at(2) = ay*pos_4 + by*pos_3 + cy*pos_2 + dy*pos + ey;
 				disps.at(3) = az*pos_4 + bz*pos_3 + cz*pos_2 + dz*pos + ez;
 
+				disps -= (ddN*ksi);
+
 				DispDict[pos] = disps;
 
 				//ipDisp.beProductOf(shapeFunctions, rl);
 			}
 
-			DispDict[l] = dE;
+			DispDict[l] = dE; // -dNE;
 
 			// save the displacements
 			BeamDisplacements[elem->giveNumber()] = DispDict;
