@@ -344,7 +344,7 @@ namespace oofem {
 			dE.beSubArrayOf(rl, temp);
 			//dE.rotatedWith(T, 'n');
 
-			ddN = dE - dI;
+			//ddN = dE - dI;
 
 			DispDict[0.0] = dI -dNI;
 
