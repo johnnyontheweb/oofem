@@ -498,7 +498,8 @@ namespace oofem {
 
 			help.at(3) = 1.0;         // up-vector
 			// here is ly is used as a temp var
-			if (acos(lx.dotProduct(help)) < 0.001) { // Check if it is vertical
+			double prvect = acos(lx.dotProduct(help));
+			if (prvect < 0.001 || prvect > M_PI - 0.001) { // Check if it is vertical
 				ly = { 0., 1., 0. };
 			}
 			else {
