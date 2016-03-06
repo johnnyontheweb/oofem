@@ -419,7 +419,7 @@ namespace oofem {
 				disps.at(2) = ay*pos_4 + by*pos_3 + cy*pos_2 + dy*pos + ey;
 				disps.at(3) = az*pos_4 + bz*pos_3 + cz*pos_2 + dz*pos + ez;
 
-				disps -= (ddN*ksi);
+				disps -= (dI+ddN*ksi);
 
 				DispDict[pos] = disps;
 
