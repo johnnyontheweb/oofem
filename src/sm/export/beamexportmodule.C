@@ -91,7 +91,7 @@ namespace oofem {
 		std::vector< int >beamIDs;
 		std::map< int, std::map< double, FloatArray > >BeamForces;
 		std::map< int, std::map< double, FloatArray > >BeamDisplacements;
-		std::map<int, std::pair< double, double > >BeamLoads;
+		std::map<int, FloatArray >BeamLoads;
 		IntArray temp;
 		// loop through the beam elements
 		Domain *d = emodel->giveDomain(1);
@@ -206,12 +206,12 @@ namespace oofem {
 				BeamForces [ elem->giveNumber() ] = ForceDict;
 				//BeamForces[elem->giveLabel()] = ForceDict;
 
-				std::pair <double, double> loadPair;
-				loadPair.first = FinalLoads.at(2);
-				loadPair.second = FinalLoads.at(3);
+				//std::pair <double, double> loadPair;
+				//loadPair.first = FinalLoads.at(2);
+				//loadPair.second = FinalLoads.at(3);
 
 				// save loads
-				BeamLoads[elem->giveNumber()] = loadPair;
+				BeamLoads[elem->giveNumber()] = FinalLoads;
 
 				//elem->giveBodyLoadArray
 			}
@@ -264,9 +264,10 @@ namespace oofem {
 							T.resizeWithData(6, 6);
 							compArr.rotatedWith(T, 'n');
 
-							// add forces to our map
-							BeamLoads[elNum].first += compArr.at(2);
-							BeamLoads[elNum].second += compArr.at(3);
+							// add loads to our map
+							BeamLoads[elNum] += compArr;
+							//BeamLoads[elNum].first += compArr.at(2);
+							//BeamLoads[elNum].second += compArr.at(3);
 
 							// compute contribution to internal forces
 							std::map< double, FloatArray >Dst = BeamForces[elNum];
@@ -352,8 +353,9 @@ namespace oofem {
 			StructuralCrossSection *SCSect = static_cast<StructuralCrossSection *>(Sect);
 			FloatMatrix MatStiffness;
 
-			double EJyy, EJzz;
+			double EJyy, EJzz, EA, GJ;
 			double ay, by, cy, dy, ey;
+			double anx, bnx, cnx;
 			double az, bz, cz, dz, ez;
 
 			for (GaussPoint *gp : *elem->giveDefaultIntegrationRulePtr()) {
@@ -371,29 +373,35 @@ namespace oofem {
 				if (!calc){
 					SCSect->give3dBeamStiffMtrx(MatStiffness, ElasticStiffness, gp, tStep);
 
+					EA = MatStiffness.at(1, 1);
+					GJ = MatStiffness.at(4, 4);
 					EJzz = MatStiffness.at(6, 6);
 					EJyy = MatStiffness.at(5, 5);
 
 					double vy_0, vy_l, vz_0, vz_l;
 					double phiy_0, phiy_l, phiz_0, phiz_l;
 					double By, Ay, Bz, Az;
+					double dx_0, dx_l;
 
 					//std::map<double, FloatArray> &td = BeamDisplacements[elNum];
-					std::pair<double,double> &bl = BeamLoads[elNum];
+					FloatArray &bl = BeamLoads[elNum];
 					FloatArray *disps = &dI;
 					vy_0 = disps->at(2);
 					vz_0 = disps->at(3);
 					phiy_0 = disps->at(5);
 					phiz_0 = disps->at(6);
+					dx_0 = disps->at(1);
+
 					disps = &dE;
 					vy_l = disps->at(2);
 					vz_l = disps->at(3);
 					phiy_l = disps->at(5);
 					phiz_l = disps->at(6);
+					dx_l = disps->at(1);
 
 					ey = vy_0;
 					dy = phiz_0;
-					ay = bl.first / 24 / EJzz;
+					ay = bl.at(2) / 24 / EJzz;
 
 					Ay = (vy_l - vy_0) / l_2 - ay*l_2 - dy / l;
 					By = (phiz_l - phiz_0) / l - ay*l_2 * 4;
@@ -404,7 +412,7 @@ namespace oofem {
 
 					ez = vz_0;
 					dz = -phiy_0; // inverted signs for angles
-					az = bl.second / 24 / EJyy;
+					az = bl.at(3) / 24 / EJyy;
 
 					Az = (vz_l - vz_0) / l_2 - az*l_2 - dz / l;
 					Bz = (-phiy_l + phiy_0) / l - az*l_2 * 4; // inverted signs for angles
@@ -412,10 +420,16 @@ namespace oofem {
 					bz = (Bz - 2 * Az) / l;
 					cz = 3 * Az - Bz;
 
+
+					cnx = dx_0;
+					anx = -bl.at(1) / 2 / EA;
+					bnx = (dx_l - dx_0) / l - anx*l;
+
 					calc = true;
 				}
 
 				FloatArray disps(6);
+				disps.at(1) = anx*pos_2 + bnx*pos + cnx;
 				disps.at(2) = ay*pos_4 + by*pos_3 + cy*pos_2 + dy*pos + ey;
 				disps.at(3) = az*pos_4 + bz*pos_3 + cz*pos_2 + dz*pos + ez;
 
