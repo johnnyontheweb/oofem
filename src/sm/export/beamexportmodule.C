@@ -300,6 +300,8 @@ namespace oofem {
 			std::map< double, FloatArray >DispDict;
 			double l = elem->computeLength();
 			double l_2 = l*l;
+			double l_3 = l_2*l;
+			double l_4 = l_2*l_2;
 			double ksi;
 			//FloatMatrix shapeFunctions(2, 12);
 			bool calc = false;
@@ -353,7 +355,7 @@ namespace oofem {
 			StructuralCrossSection *SCSect = static_cast<StructuralCrossSection *>(Sect);
 			FloatMatrix MatStiffness;
 
-			double EJyy, EJzz, EA, GJ;
+			double EJyy, EJzz, EA, GJ, GKyAy, GKzAz;
 			double ay, by, cy, dy, ey;
 			double anx, bnx, cnx;
 			double az, bz, cz, dz, ez;
@@ -377,6 +379,8 @@ namespace oofem {
 					GJ = MatStiffness.at(4, 4);
 					EJzz = MatStiffness.at(6, 6);
 					EJyy = MatStiffness.at(5, 5);
+					GKyAy = MatStiffness.at(2, 2);
+					GKzAz = MatStiffness.at(3, 3);
 
 					double vy_0, vy_l, vz_0, vz_l;
 					double phiy_0, phiy_l, phiz_0, phiz_l;
@@ -388,39 +392,58 @@ namespace oofem {
 					FloatArray *disps = &dI;
 					vy_0 = disps->at(2);
 					vz_0 = disps->at(3);
-					phiy_0 = disps->at(5);
+					phiy_0 = -disps->at(5); // inverted signs for angles about y - phi is used as first derivative
 					phiz_0 = disps->at(6);
 					dx_0 = disps->at(1);
 
 					disps = &dE;
 					vy_l = disps->at(2);
 					vz_l = disps->at(3);
-					phiy_l = disps->at(5);
+					phiy_l = -disps->at(5); // inverted signs for angles about y - phi is used as first derivative
 					phiz_l = disps->at(6);
 					dx_l = disps->at(1);
 
-					ey = vy_0;
-					dy = phiz_0;
+
+					// euler-bernoulli formulation
+					//ey = vy_0;
+					//dy = phiz_0;
+					//ay = bl.at(2) / 24 / EJzz;
+
+					//Ay = (vy_l - vy_0) / l_2 - ay*l_2 - dy / l;
+					//By = (phiz_l - phiz_0) / l - ay*l_2 * 4;
+
+					//by = (By - 2 * Ay) / l;
+					//cy = 3 * Ay - By;
+
+
+					//ez = vz_0;
+					//dz = -phiy_0; // inverted signs for angles
+					//az = bl.at(3) / 24 / EJyy;
+
+					//Az = (vz_l - vz_0) / l_2 - az*l_2 - dz / l;
+					//Bz = (-phiy_l + phiy_0) / l - az*l_2 * 4; // inverted signs for angles
+
+					//bz = (Bz - 2 * Az) / l;
+					//cz = 3 * Az - Bz;
+
+
+
+					// timoshenko formulation for transversal displacements
+
+					double psi_y, psi_z;
+					psi_y = EJzz / GKyAy;
+					psi_z = EJyy / GKzAz;
+
 					ay = bl.at(2) / 24 / EJzz;
-
-					Ay = (vy_l - vy_0) / l_2 - ay*l_2 - dy / l;
-					By = (phiz_l - phiz_0) / l - ay*l_2 * 4;
-
-					by = (By - 2 * Ay) / l;
-					cy = 3 * Ay - By;
+					dy = phiz_0;
+					by = (phiz_l - phiz_0) - ay*l_3 * 4 - 2 / l*(vy_l - vy_0 + psi_y*ay * 12 * l_2 - ay*l_4);
 
 
-					ez = vz_0;
-					dz = -phiy_0; // inverted signs for angles
 					az = bl.at(3) / 24 / EJyy;
-
-					Az = (vz_l - vz_0) / l_2 - az*l_2 - dz / l;
-					Bz = (-phiy_l + phiy_0) / l - az*l_2 * 4; // inverted signs for angles
-
-					bz = (Bz - 2 * Az) / l;
-					cz = 3 * Az - Bz;
+					dz = phiy_0; 
 
 
+					// axial displacements
 					cnx = dx_0;
 					anx = -bl.at(1) / 2 / EA;
 					bnx = (dx_l - dx_0) / l - anx*l;
