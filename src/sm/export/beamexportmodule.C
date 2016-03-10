@@ -356,6 +356,7 @@ namespace oofem {
 			FloatMatrix MatStiffness;
 
 			double EJyy, EJzz, EA, GJ, GKyAy, GKzAz;
+			double psi_y, psi_z;
 			double ay, by, cy, dy, ey;
 			double anx, bnx, cnx;
 			double az, bz, cz, dz, ez;
@@ -382,9 +383,12 @@ namespace oofem {
 					GKyAy = MatStiffness.at(2, 2);
 					GKzAz = MatStiffness.at(3, 3);
 
+					psi_y = EJzz / GKyAy;
+					psi_z = EJyy / GKzAz;
+
 					double vy_0, vy_l, vz_0, vz_l;
 					double phiy_0, phiy_l, phiz_0, phiz_l;
-					double By, Ay, Bz, Az;
+					//double By, Ay, Bz, Az;
 					double dx_0, dx_l;
 
 					//std::map<double, FloatArray> &td = BeamDisplacements[elNum];
@@ -430,17 +434,20 @@ namespace oofem {
 
 					// timoshenko formulation for transversal displacements
 
-					double psi_y, psi_z;
-					psi_y = EJzz / GKyAy;
-					psi_z = EJyy / GKzAz;
+
 
 					ay = bl.at(2) / 24 / EJzz;
 					dy = phiz_0;
-					by = (phiz_l - phiz_0) - ay*l_3 * 4 - 2 / l*(vy_l - vy_0 + psi_y*ay * 12 * l_2 - ay*l_4);
+					by = ((phiz_l - phiz_0) - ay*l_3 * 4 - 2 / l*(vy_l - vy_0 + psi_y*ay * 12 * l_2 - ay*l_4))/(l_2+12*psi_y);
+					cy = (vy_l - vy_0 + ay*(12 * l_2*psi_y - l_4) - by*(l_3 - psi_y * 6 * l)) / l_2;
+					ey = vy_0 - 2 * cy*psi_y;
 
 
 					az = bl.at(3) / 24 / EJyy;
 					dz = phiy_0; 
+					bz = ((phiy_l - phiy_0) - az*l_3 * 4 - 2 / l*(vz_l - vz_0 + psi_z*az * 12 * l_2 - az*l_4)) / (l_2 + 12 * psi_z);
+					cz = (vz_l - vz_0 + az*(12 * l_2*psi_z - l_4) - bz*(l_3 - psi_z * 6 * l)) / l_2;
+					ez = vz_0 - 2 * cz*psi_z;
 
 
 					// axial displacements
@@ -453,8 +460,8 @@ namespace oofem {
 
 				FloatArray disps(6);
 				disps.at(1) = anx*pos_2 + bnx*pos + cnx;
-				disps.at(2) = ay*pos_4 + by*pos_3 + cy*pos_2 + dy*pos + ey;
-				disps.at(3) = az*pos_4 + bz*pos_3 + cz*pos_2 + dz*pos + ez;
+				disps.at(2) = ay*pos_4 + by*pos_3 + (cy-12*ay*psi_y)*pos_2 + (dy-6*by*psi_y)*pos + (ey-2*cy*psi_y);
+				disps.at(3) = az*pos_4 + bz*pos_3 + (cz-12*az*psi_z)*pos_2 + (dz-6*bz*psi_z)*pos + (ez-2*cz*psi_z);
 
 				disps -= (dI+ddN*ksi);
 
