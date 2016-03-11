@@ -438,15 +438,15 @@ namespace oofem {
 
 					ay = bl.at(2) / 24 / EJzz;
 					dy = phiz_0;
-					by = ((phiz_l - phiz_0) - ay*l_3 * 4 - 2 / l*(vy_l - vy_0 + psi_y*ay * 12 * l_2 - ay*l_4))/(l_2+12*psi_y);
-					cy = (vy_l - vy_0 + ay*(12 * l_2*psi_y - l_4) - by*(l_3 - psi_y * 6 * l)) / l_2;
+					by = (2 / l*(vy_0 - vy_l) - (phiz_l + phiz_0)/l )/(l_2+12*psi_y) - 2*ay*l;
+					cy = (3 *(vy_0 - vy_l) + 6*psi_y/l*(phiz_l - phiz_0) -(2*phiz_0+phiz_l) )/(l_2+12*psi_y) +ay*l_2;
 					ey = vy_0 - 2 * cy*psi_y;
 
 
 					az = bl.at(3) / 24 / EJyy;
-					dz = phiy_0; 
-					bz = ((phiy_l - phiy_0) - az*l_3 * 4 - 2 / l*(vz_l - vz_0 + psi_z*az * 12 * l_2 - az*l_4)) / (l_2 + 12 * psi_z);
-					cz = (vz_l - vz_0 + az*(12 * l_2*psi_z - l_4) - bz*(l_3 - psi_z * 6 * l)) / l_2;
+					dz = phiy_0;
+					bz = (2 / l*(vz_0 - vz_l) - (phiy_l + phiy_0)/l )/(l_2+12*psi_z) - 2*az*l;
+					cz = (3 *(vz_0 - vz_l) + 6*psi_z/l*(phiy_l - phiy_0) -(2*phiy_0+phiy_l) )/(l_2+12*psi_z) +az*l_2;
 					ez = vz_0 - 2 * cz*psi_z;
 
 
