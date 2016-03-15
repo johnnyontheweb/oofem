@@ -357,9 +357,9 @@ namespace oofem {
 
 			double EJyy, EJzz, EA, GJ, GKyAy, GKzAz;
 			double psi_y, psi_z;
-			double ay, by, cy, dy, ey;
+			double ay, by, cy, dy, fy;
 			double anx, bnx, cnx;
-			double az, bz, cz, dz, ez;
+			double az, bz, cz, dz, fz;
 
 			for (GaussPoint *gp : *elem->giveDefaultIntegrationRulePtr()) {
 				FloatArray ipState;
@@ -396,14 +396,14 @@ namespace oofem {
 					FloatArray *disps = &dI;
 					vy_0 = disps->at(2);
 					vz_0 = disps->at(3);
-					phiy_0 = -disps->at(5); // inverted signs for angles about y - phi is used as first derivative
+					phiy_0 = -disps->at(5); // inverted signs for angles about y. in this case phi is used as first derivative
 					phiz_0 = disps->at(6);
 					dx_0 = disps->at(1);
 
 					disps = &dE;
 					vy_l = disps->at(2);
 					vz_l = disps->at(3);
-					phiy_l = -disps->at(5); // inverted signs for angles about y - phi is used as first derivative
+					phiy_l = -disps->at(5); // inverted signs for angles about y. in this case phi is used as first derivative
 					phiz_l = disps->at(6);
 					dx_l = disps->at(1);
 
@@ -438,16 +438,18 @@ namespace oofem {
 
 					ay = bl.at(2) / 24 / EJzz;
 					dy = phiz_0;
-					by = (2 / l*(vy_0 - vy_l) - (phiz_l + phiz_0)/l )/(l_2+12*psi_y) - 2*ay*l;
-					cy = (3 *(vy_0 - vy_l) + 6*psi_y/l*(phiz_l - phiz_0) -(2*phiz_0+phiz_l) )/(l_2+12*psi_y) +ay*l_2;
-					ey = vy_0 - 2 * cy*psi_y;
+					fy = vy_0;
+					by = (2 / l*(vy_0 - vy_l) + (phiz_l + phiz_0)) / (l_2 + 12 * psi_y) - 2 * ay*l;
+					cy = ay*l_2 - (3 * (vy_l - vy_0) + 2 * dy*(l_2 + 3 * psi_y) / l + phiy_l*(l_2 - 6 * psi_y)) / (l_2 + 12 * psi_y);
+
 
 
 					az = bl.at(3) / 24 / EJyy;
 					dz = phiy_0;
-					bz = (2 / l*(vz_0 - vz_l) - (phiy_l + phiy_0)/l )/(l_2+12*psi_z) - 2*az*l;
-					cz = (3 *(vz_0 - vz_l) + 6*psi_z/l*(phiy_l - phiy_0) -(2*phiy_0+phiy_l) )/(l_2+12*psi_z) +az*l_2;
-					ez = vz_0 - 2 * cz*psi_z;
+					fz = vz_0;
+					bz = (2 / l*(vz_0 - vz_l) + (phiy_l + phiy_0)) / (l_2 + 12 * psi_z) - 2 * az*l;
+					cz = az*l_2 - (3 * (vz_l - vz_0) + 2 * dz*(l_2 + 3 * psi_z) / l + phiz_l*(l_2 - 6 * psi_z)) / (l_2 + 12 * psi_z);
+
 
 
 					// axial displacements
@@ -460,8 +462,8 @@ namespace oofem {
 
 				FloatArray disps(6);
 				disps.at(1) = anx*pos_2 + bnx*pos + cnx;
-				disps.at(2) = ay*pos_4 + by*pos_3 + (cy-12*ay*psi_y)*pos_2 + (dy-6*by*psi_y)*pos + (ey-2*cy*psi_y);
-				disps.at(3) = az*pos_4 + bz*pos_3 + (cz-12*az*psi_z)*pos_2 + (dz-6*bz*psi_z)*pos + (ez-2*cz*psi_z);
+				disps.at(2) = ay*pos_4 + by*pos_3 + (cy-12*ay*psi_y)*pos_2 + (dy-6*by*psi_y)*pos + fy;
+				disps.at(3) = az*pos_4 + bz*pos_3 + (cz-12*az*psi_z)*pos_2 + (dz-6*bz*psi_z)*pos + fz;
 
 				disps -= (dI+ddN*ksi);
 
