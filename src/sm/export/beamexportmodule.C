@@ -349,7 +349,7 @@ namespace oofem {
 
 			//ddN = dE - dI;
 
-			DispDict[0.0] = dI -dNI;
+			DispDict[0.0] = dI; // -dNI;
 
 			CrossSection *Sect = elem->giveCrossSection();
 			StructuralCrossSection *SCSect = static_cast<StructuralCrossSection *>(Sect);
@@ -440,7 +440,7 @@ namespace oofem {
 					dy = phiz_0;
 					fy = vy_0;
 					by = (2 / l*(vy_0 - vy_l) + (phiz_l + phiz_0)) / (l_2 + 12 * psi_y) - 2 * ay*l;
-					cy = ay*l_2 - (3 * (vy_l - vy_0) + 2 * dy*(l_2 + 3 * psi_y) / l + phiy_l*(l_2 - 6 * psi_y)) / (l_2 + 12 * psi_y);
+					cy = -(72 * EJzz*GKyAy*l* (vy_0 - vy_l) + GKyAy*l_2*(24 * EJzz*(2 * phiz_0 + phiz_l) - l_3*bl.at(2)) + 12 * EJzz*(12 * EJzz*(phiz_0 - phiz_l) - l_3*bl.at(2))) / (24 * EJzz*l* (GKyAy*l_2 + 12 * EJzz));
 
 
 
@@ -448,9 +448,7 @@ namespace oofem {
 					dz = phiy_0;
 					fz = vz_0;
 					bz = (2 / l*(vz_0 - vz_l) + (phiy_l + phiy_0)) / (l_2 + 12 * psi_z) - 2 * az*l;
-					cz = az*l_2 - (3 * (vz_l - vz_0) + 2 * dz*(l_2 + 3 * psi_z) / l + phiz_l*(l_2 - 6 * psi_z)) / (l_2 + 12 * psi_z);
-
-
+					cz = -(72 * EJyy*GKzAz*l* (vz_0 - vz_l) + GKzAz*l_2*(24 * EJyy*(2 * phiy_0 + phiy_l) - l_3*bl.at(3)) + 12 * EJyy*(12 * EJyy*(phiy_0 - phiy_l) - l_3*bl.at(3))) / (24 * EJyy*l* (GKzAz*l_2 + 12 * EJyy));
 
 					// axial displacements
 					cnx = dx_0;
@@ -465,14 +463,14 @@ namespace oofem {
 				disps.at(2) = ay*pos_4 + by*pos_3 + (cy-12*ay*psi_y)*pos_2 + (dy-6*by*psi_y)*pos + fy;
 				disps.at(3) = az*pos_4 + bz*pos_3 + (cz-12*az*psi_z)*pos_2 + (dz-6*bz*psi_z)*pos + fz;
 
-				disps -= (dI+ddN*ksi);
+				//disps -= (dI+ddN*ksi);
 
 				DispDict[pos] = disps;
 
 				//ipDisp.beProductOf(shapeFunctions, rl);
 			}
 
-			DispDict[l] = dE - dNE;
+			DispDict[l] = dE; // -dNE;
 
 			// save the displacements
 			BeamDisplacements[elem->giveNumber()] = DispDict;
