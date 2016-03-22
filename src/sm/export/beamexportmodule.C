@@ -360,6 +360,7 @@ namespace oofem {
 			double ay, by, cy, dy, fy;
 			double anx, bnx, cnx;
 			double az, bz, cz, dz, fz;
+			double atx, btx, ctx;
 
 			for (GaussPoint *gp : *elem->giveDefaultIntegrationRulePtr()) {
 				FloatArray ipState;
@@ -386,10 +387,11 @@ namespace oofem {
 					psi_y = EJzz / GKyAy;
 					psi_z = EJyy / GKzAz;
 
-					double vy_0, vy_l, vz_0, vz_l;
-					double phiy_0, phiy_l, phiz_0, phiz_l;
+					double vy_0, vy_l, vz_0, vz_l;			// transversal displacements
+					double phiy_0, phiy_l, phiz_0, phiz_l;	// rotation / first derivatives
 					//double By, Ay, Bz, Az;
-					double dx_0, dx_l;
+					double dx_0, dx_l;						// axial displacements
+					double tx_0, tx_l;						// torsional rotations
 
 					//std::map<double, FloatArray> &td = BeamDisplacements[elNum];
 					FloatArray &bl = BeamLoads[elNum];
@@ -399,6 +401,7 @@ namespace oofem {
 					phiy_0 = -disps->at(5); // inverted signs for angles about y. in this case phi is used as first derivative
 					phiz_0 = disps->at(6);
 					dx_0 = disps->at(1);
+					tx_0 = disps->at(4);
 
 					disps = &dE;
 					vy_l = disps->at(2);
@@ -406,6 +409,7 @@ namespace oofem {
 					phiy_l = -disps->at(5); // inverted signs for angles about y. in this case phi is used as first derivative
 					phiz_l = disps->at(6);
 					dx_l = disps->at(1);
+					tx_l = disps->at(4);
 
 
 					// euler-bernoulli formulation
@@ -455,13 +459,21 @@ namespace oofem {
 					anx = -bl.at(1) / 2 / EA;
 					bnx = (dx_l - dx_0) / l - anx*l;
 
+					// torsional rotations
+					ctx = tx_0;
+					atx = -bl.at(4) / 2 / GJ;
+					btx = (tx_l - tx_0) / l - atx*l;
+
 					calc = true;
 				}
 
 				FloatArray disps(6);
 				disps.at(1) = anx*pos_2 + bnx*pos + cnx;
-				disps.at(2) = ay*pos_4 + by*pos_3 + (cy-12*ay*psi_y)*pos_2 + (dy-6*by*psi_y)*pos + fy;
-				disps.at(3) = az*pos_4 + bz*pos_3 + (cz-12*az*psi_z)*pos_2 + (dz-6*bz*psi_z)*pos + fz;
+				disps.at(2) = ay*pos_4 + by*pos_3 + (cy - 12 * ay*psi_y)*pos_2 + (dy - 6 * by*psi_y)*pos + fy;
+				disps.at(3) = az*pos_4 + bz*pos_3 + (cz - 12 * az*psi_z)*pos_2 + (dz - 6 * bz*psi_z)*pos + fz;
+				disps.at(4) = atx*pos_2 + btx*pos + ctx;
+				disps.at(5) = -(4 * az*pos_3 + 3 * bz*pos_2 + 2 * cz*pos + dz);  // inverted signs for rotations about y.
+				disps.at(6) = 4 * ay*pos_3 + 3 * by*pos_2 + 2 * cy*pos + dy;
 
 				//disps -= (dI+ddN*ksi);
 
