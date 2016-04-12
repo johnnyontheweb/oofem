@@ -1054,8 +1054,8 @@ void EngngModel :: assembleVectorFromBC(FloatArray &answer, TimeStep *tStep,
                             charVec.rotatedWith(R, 't');
                         }
 
-                        va.locationFromElement(loc, *element, s, & dofids);
-                        answer.assemble(charVec, loc);
+						va.locationFromElementNodes(loc, *element, bNodes, s, & dofids);
+						answer.assemble(charVec, loc);
 
                         if ( eNorms ) {
                             eNorms->assembleSquared(charVec, dofids);
