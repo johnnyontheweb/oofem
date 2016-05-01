@@ -278,7 +278,7 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 			int c = 1;
 			for (int dof : masterDofIDs)
 			{
-				coordArray.at(c++) = element->giveNode(i)->giveCoordinate(dof);
+				coordArray.at(c++) = element->giveInternalDofManager(i)->giveCoordinate(dof);
 			}
 			tempCoord.append(coordArray);
 		}
@@ -302,10 +302,6 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 	// end of creation of translational unit displacement vectors
 
 
-	//
-	// calculate participation factors and mass participation
-	//
-
 	// may be better to implement a SparseMatrix - FloatMatrix function to condense the following...
 	for (int i = 1; i <= 3; i++)
 	{
@@ -316,6 +312,80 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 		tempCol->beColumnOf(tempMat2, i);	// fetch coordinates in i-th direction
 		centroid.at(i) = tempCol->dotProduct(*tempCol2) / totMass.at(i);  // dot multiply to get first moment, then divide by total mass in i-th direction to get i-th coordinate of the centroid
 	}
+
+	// we have the centroid. we can now calculate rotational components
+	for (std::unique_ptr<DofManager> &node : domain->giveDofManagers()) {
+		//node->giveLocationArray(dofIDArry, loc, EModelDefaultEquationNumbering());
+		if (!node->giveNumberOfDofs()) continue;
+
+		FloatArray* nodeCoords = node->giveCoordinates();
+		if (nodeCoords){
+			for (int dType = R_u; dType <= R_w; dType++)
+			{
+				auto myDof = node->findDofWithDofId((DofIDItem)dType);
+				if (myDof == node->end()) {
+					//OOFEM_ERROR("incompatible dof (%d) requested", dType);
+				}
+
+				int eqN = EModelDefaultEquationNumbering().giveDofEquationNumber(*myDof);
+
+				// save unit displacement and coordinate
+				if (eqN > 0)
+				{
+					unitDisp->at(eqN, dType) = 1.0;
+					tempMat2.at(eqN, dType) = node->giveCoordinate(dType);
+				}
+
+			}
+		}
+	} // end of search among nodes
+
+	// then from internaldof managers
+	for (int ielem = 1; ielem <= nelem; ielem++) {
+		Element *element = domain->giveElement(ielem);
+		locationArray.clear();
+		tempCoord.clear();
+
+		// retrieve internal dof managers and location array
+		for (int i = 1; i <= element->giveNumberOfInternalDofManagers(); i++) {
+			element->giveInternalDofManDofIDMask(i, ids);
+			element->giveInternalDofManager(i)->giveLocationArray(ids, nodalArray, EModelDefaultEquationNumbering());
+			locationArray.followedBy(nodalArray);
+			if (dofIdArray) {
+				element->giveInternalDofManager(i)->giveMasterDofIDArray(ids, masterDofIDs);
+				dofIdArray->followedBy(masterDofIDs);
+			}
+			coordArray.resize(masterDofIDs.giveSize());
+			int c = 1;
+			for (int dof : masterDofIDs)
+			{
+				coordArray.at(c++) = element->giveInternalDofManager(i)->giveCoordinate(dof);
+			}
+			tempCoord.append(coordArray);
+		}
+
+		// search for our dofs in there
+		for (int dType = R_u; dType <= R_w; dType++)
+		{
+			int myDof = dofIdArray->findFirstIndexOf(dType);
+			if (myDof == 0) continue;
+
+			int eqN = locationArray.at(myDof);
+
+			// save unit displacement and coordinate
+			if (eqN > 0)
+			{
+				unitDisp->at(eqN, dType) = 1.0;
+				tempMat2.at(eqN, dType) = tempCoord.at(myDof);
+			}
+		}
+	}  // end of search among internal dof managers
+	// end of creation of translational unit displacement vectors
+
+
+	//
+	// calculate participation factors and mass participation
+	//
 
 	// participation factors
 	partFact.beTProductOf(eigVec, tempMat);
