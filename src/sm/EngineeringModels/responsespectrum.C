@@ -204,11 +204,11 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 	int nelem = domain->giveNumberOfElements();
 
 	// matrix and array initialization
-	totMass.resize(3);		// 3 are the translational dofs - enough for the moment
+	totMass.resize(6);		// 3 are the translational dofs - enough for the moment
 	centroid.resize(3);
-	partFact.resize(numberOfRequiredEigenValues, 3);	
-	massPart.resize(numberOfRequiredEigenValues, 3);
-	unitDisp->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 3);
+	partFact.resize(numberOfRequiredEigenValues, 6);	
+	massPart.resize(numberOfRequiredEigenValues, 6);
+	unitDisp->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 6);
 	tempCol->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
 	tempCol2->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
 
@@ -230,8 +230,8 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 
 	FloatMatrix tempMat, tempMat2;
 	FloatArray tempCoord, coordArray;
-	tempMat.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 3);
-	tempMat2.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 3);
+	tempMat.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 6);
+	tempMat2.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 6);
 
 	//
 	// create unit displacement vectors
@@ -393,7 +393,7 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 	// mass participation ratios
 	for (int i = 1; i <= numberOfRequiredEigenValues; i++)
 	{
-		for (int j = 1; j <= 3; j++)
+		for (int j = 1; j <= 6; j++)
 		{
 			massPart.at(i, j) = pow(partFact.at(i, j), 2) / totMass.at(j);
 		}
