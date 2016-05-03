@@ -1,4 +1,4 @@
-eigen_beam3d_2.out
+eigen_beam3d_3.out
 eigen vibration analysis of simple suported beam
 EigenValueDynamic nroot 6 rtolv 1.e-6 nmodules 1
 #ResponseSpectrum nroot 6 rtolv 1.e-6 nmodules 1
@@ -24,7 +24,7 @@ node 15 coords 3 0.   0.0   3.50
 node 16 coords 3 0.0  0.0   3.75
 node 17 coords 3 0.   0.0   4.00
 node 18 coords 3 1.0  0.0   0.00
-node 19 coords 3 0.  0.  0.  dofidmask 6 1 2 3 4 5 6 masterMask 6 1 1 1 0 0 1 doftype 6 1 1 1 0 0 1
+node 19 coords 3 0.  0.  0.    dofidmask 6 1 2 3 4 5 6 masterMask 6 1 1 1 0 0 1 doftype 6 1 1 1 0 0 1
 node 20 coords 3 0.  0.  4.00  dofidmask 6 1 2 3 4 5 6 masterMask 6 17 17 17 0 0 17 doftype 6 1 1 1 0 0 1
 #
 Beam3d 1 nodes 2 1 2 refNode 18
@@ -59,5 +59,3 @@ Set 2 nodes 3 18 19 20
 #EIGVAL tStep 1 EigNum 2 value 2.85378786e+03
 #EIGVAL tStep 1 EigNum 3 value 2.10785640e+04
 #%END_CHECK%
-
-
