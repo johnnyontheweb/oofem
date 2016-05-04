@@ -246,12 +246,13 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 			auto myDof = node->findDofWithDofId((DofIDItem)dType);
 			if (myDof == node->end()) {
 				//OOFEM_ERROR("incompatible dof (%d) requested", dType);
+				continue;
 			}
 
 			int eqN = EModelDefaultEquationNumbering().giveDofEquationNumber(*myDof);
 
 			// save unit displacement and coordinate
-			if (eqN > 0)
+			if (eqN)
 			{
 				unitDisp->at(eqN, dType) = 1.0;
 				tempMat2.at(eqN, dType) = node->giveCoordinate(dType);
@@ -270,10 +271,10 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 			element->giveInternalDofManDofIDMask(i, ids);
 			element->giveInternalDofManager(i)->giveLocationArray(ids, nodalArray, EModelDefaultEquationNumbering());
 			locationArray.followedBy(nodalArray);
-			if (dofIdArray) {
-				element->giveInternalDofManager(i)->giveMasterDofIDArray(ids, masterDofIDs);
-				dofIdArray->followedBy(masterDofIDs);
-			}
+			
+			element->giveInternalDofManager(i)->giveMasterDofIDArray(ids, masterDofIDs);
+			dofIdArray->followedBy(masterDofIDs);
+
 			coordArray.resize(masterDofIDs.giveSize());
 			int c = 1;
 			for (int dof : masterDofIDs)
@@ -283,19 +284,21 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 			tempCoord.append(coordArray);
 		}
 
-		// search for our dofs in there
-		for (int dType = D_u; dType <= D_w; dType++)
-		{
-			int myDof = dofIdArray->findFirstIndexOf(dType);
-			if (myDof == 0) continue;
-
-			int eqN = locationArray.at(myDof);
-
-			// save unit displacement and coordinate
-			if (eqN > 0)
+		if (locationArray.giveSize()) {
+			// search for our dofs in there
+			for (int dType = D_u; dType <= D_w; dType++)
 			{
-				unitDisp->at(eqN, dType) = 1.0;
-				tempMat2.at(eqN, dType) = tempCoord.at(myDof);
+				int myDof = dofIdArray->findFirstIndexOf(dType);
+				if (myDof == 0) continue;
+
+				int eqN = locationArray.at(myDof);
+
+				// save unit displacement and coordinate
+				if (eqN)
+				{
+					unitDisp->at(eqN, dType) = 1.0;
+					tempMat2.at(eqN, dType) = tempCoord.at(myDof);
+				}
 			}
 		}
 	}  // end of search among internal dof managers
@@ -325,12 +328,13 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 				auto myDof = node->findDofWithDofId((DofIDItem)dType);
 				if (myDof == node->end()) {
 					//OOFEM_ERROR("incompatible dof (%d) requested", dType);
+					continue;
 				}
 
 				int eqN = EModelDefaultEquationNumbering().giveDofEquationNumber(*myDof);
 
 				// save unit displacement and coordinate
-				if (eqN > 0)
+				if (eqN)
 				{
 					unitDisp->at(eqN, dType) = 1.0;
 					tempMat2.at(eqN, dType) = node->giveCoordinate(dType);
@@ -351,10 +355,10 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 			element->giveInternalDofManDofIDMask(i, ids);
 			element->giveInternalDofManager(i)->giveLocationArray(ids, nodalArray, EModelDefaultEquationNumbering());
 			locationArray.followedBy(nodalArray);
-			if (dofIdArray) {
-				element->giveInternalDofManager(i)->giveMasterDofIDArray(ids, masterDofIDs);
-				dofIdArray->followedBy(masterDofIDs);
-			}
+
+			element->giveInternalDofManager(i)->giveMasterDofIDArray(ids, masterDofIDs);
+			dofIdArray->followedBy(masterDofIDs);
+
 			coordArray.resize(masterDofIDs.giveSize());
 			int c = 1;
 			for (int dof : masterDofIDs)
@@ -364,19 +368,21 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 			tempCoord.append(coordArray);
 		}
 
-		// search for our dofs in there
-		for (int dType = R_u; dType <= R_w; dType++)
-		{
-			int myDof = dofIdArray->findFirstIndexOf(dType);
-			if (myDof == 0) continue;
-
-			int eqN = locationArray.at(myDof);
-
-			// save unit displacement and coordinate
-			if (eqN > 0)
+		if (locationArray.giveSize()){
+			// search for our dofs in there
+			for (int dType = R_u; dType <= R_w; dType++)
 			{
-				unitDisp->at(eqN, dType) = 1.0;
-				tempMat2.at(eqN, dType) = tempCoord.at(myDof);
+				int myDof = dofIdArray->findFirstIndexOf(dType);
+				if (myDof == 0) continue;
+
+				int eqN = locationArray.at(myDof);
+
+				// save unit displacement and coordinate
+				if (eqN)
+				{
+					unitDisp->at(eqN, dType) = 1.0;
+					tempMat2.at(eqN, dType) = tempCoord.at(myDof);
+				}
 			}
 		}
 	}  // end of search among internal dof managers
