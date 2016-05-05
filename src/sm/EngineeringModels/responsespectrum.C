@@ -316,13 +316,44 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 		centroid.at(i) = tempCol->dotProduct(*tempCol2) / totMass.at(i);  // dot multiply to get first moment, then divide by total mass in i-th direction to get i-th coordinate of the centroid
 	}
 
-	// we have the centroid. we can now calculate rotational components
+	// we have the centroid. we can now calculate rotational components. first from nodes.
 	for (std::unique_ptr<DofManager> &node : domain->giveDofManagers()) {
 		//node->giveLocationArray(dofIDArry, loc, EModelDefaultEquationNumbering());
 		if (!node->giveNumberOfDofs()) continue;
 
 		FloatArray* nodeCoords = node->giveCoordinates();
 		if (nodeCoords){
+			FloatArray vk(3);
+			IntArray eq(3);
+			for (int dType = D_u; dType <= D_w; dType++)
+			{
+				auto myDof = node->findDofWithDofId((DofIDItem)dType);
+				if (myDof == node->end()){
+					vk.at(dType) = 0.0;
+					eq.at(dType) = 0;
+					continue;
+				}
+				vk.at(dType) = node->giveCoordinate(dType) - centroid.at(dType);
+				eq.at(dType) = EModelDefaultEquationNumbering().giveDofEquationNumber(*myDof);
+			}
+
+			// set mixed contribution due to rotation about centroid
+			if (eq.at(1)){
+				unitDisp->at(eq.at(1), 5) = vk.at(3);
+				unitDisp->at(eq.at(1), 6) = -vk.at(2);
+			}
+
+			if (eq.at(2)){
+				unitDisp->at(eq.at(2), 4) = -vk.at(3);
+				unitDisp->at(eq.at(2), 6) = vk.at(1);
+			}
+
+			if (eq.at(3)){
+				unitDisp->at(eq.at(3), 4) = vk.at(2);
+				unitDisp->at(eq.at(3), 5) = -vk.at(1);
+			}
+
+			// set pure rotational contribution
 			for (int dType = R_u; dType <= R_w; dType++)
 			{
 				auto myDof = node->findDofWithDofId((DofIDItem)dType);
@@ -369,6 +400,38 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 		}
 
 		if (locationArray.giveSize()){
+
+			FloatArray vk(3);
+			IntArray eq(3);
+			for (int dType = D_u; dType <= D_w; dType++)
+			{
+				int myDof = dofIdArray->findFirstIndexOf((DofIDItem)dType);
+				if (myDof == 0){
+					vk.at(dType) = 0.0;
+					eq.at(dType) = 0;
+					continue;
+				}
+				vk.at(dType) = tempCoord.at(myDof) - centroid.at(dType);
+				eq.at(dType) = locationArray.at(myDof);
+			}
+
+			// set mixed contribution due to rotation about centroid
+			if (eq.at(1)){
+				unitDisp->at(eq.at(1), 5) = vk.at(3);
+				unitDisp->at(eq.at(1), 6) = -vk.at(2);
+			}
+
+			if (eq.at(2)){
+				unitDisp->at(eq.at(2), 4) = -vk.at(3);
+				unitDisp->at(eq.at(2), 6) = vk.at(1);
+			}
+
+			if (eq.at(3)){
+				unitDisp->at(eq.at(3), 4) = vk.at(2);
+				unitDisp->at(eq.at(3), 5) = -vk.at(1);
+			}
+
+
 			// search for our dofs in there
 			for (int dType = R_u; dType <= R_w; dType++)
 			{
