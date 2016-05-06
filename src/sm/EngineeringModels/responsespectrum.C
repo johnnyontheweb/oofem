@@ -451,6 +451,14 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 	}  // end of search among internal dof managers
 	// end of creation of translational unit displacement vectors
 
+	for (int i = 4; i <= 6; i++)
+	{
+		tempCol->beColumnOf(*unitDisp, i);
+		massMatrix->times(*tempCol, *tempCol2);  // now tempCol2 has only the masses pertaining the i-th direction
+		tempMat.setColumn(*tempCol2, i);
+		totMass.at(i) = tempCol->dotProduct(*tempCol2);  // total mass for direction i-th direction
+		tempCol->beColumnOf(tempMat2, i);	// fetch coordinates in i-th direction
+	}
 
 	//
 	// calculate participation factors and mass participation

@@ -1,6 +1,6 @@
 rs_beam3d.out
 response spectrum analysis of simple suported beam
-responsespectrum nroot 4 rtolv 1.e-6 nmodules 1
+responsespectrum nroot 6 rtolv 1.e-6 nmodules 1
 bem tstep_all domain_all
 domain 3dShell
 OutputManager tstep_all dofman_all element_all
