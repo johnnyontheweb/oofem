@@ -261,47 +261,47 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 	}  // end of search among nodes
 
 	// then from internaldof managers
-	for (int ielem = 1; ielem <= nelem; ielem++) {
-		Element *element = domain->giveElement(ielem);
-		locationArray.clear();
-		tempCoord.clear();
+	//for (int ielem = 1; ielem <= nelem; ielem++) {
+	//	Element *element = domain->giveElement(ielem);
+	//	locationArray.clear();
+	//	tempCoord.clear();
 
-		// retrieve internal dof managers and location array
-		for (int i = 1; i <= element->giveNumberOfInternalDofManagers(); i++) {
-			element->giveInternalDofManDofIDMask(i, ids);
-			element->giveInternalDofManager(i)->giveLocationArray(ids, nodalArray, EModelDefaultEquationNumbering());
-			locationArray.followedBy(nodalArray);
-			
-			element->giveInternalDofManager(i)->giveMasterDofIDArray(ids, masterDofIDs);
-			dofIdArray->followedBy(masterDofIDs);
+	//	// retrieve internal dof managers and location array
+	//	for (int i = 1; i <= element->giveNumberOfInternalDofManagers(); i++) {
+	//		element->giveInternalDofManDofIDMask(i, ids);
+	//		element->giveInternalDofManager(i)->giveLocationArray(ids, nodalArray, EModelDefaultEquationNumbering());
+	//		locationArray.followedBy(nodalArray);
+	//		
+	//		element->giveInternalDofManager(i)->giveMasterDofIDArray(ids, masterDofIDs);
+	//		dofIdArray->followedBy(masterDofIDs);
 
-			coordArray.resize(masterDofIDs.giveSize());
-			int c = 1;
-			for (int dof : masterDofIDs)
-			{
-				coordArray.at(c++) = element->giveInternalDofManager(i)->giveCoordinate(dof);
-			}
-			tempCoord.append(coordArray);
-		}
+	//		coordArray.resize(masterDofIDs.giveSize());
+	//		int c = 1;
+	//		for (int dof : masterDofIDs)
+	//		{
+	//			coordArray.at(c++) = element->giveInternalDofManager(i)->giveCoordinate(dof);
+	//		}
+	//		tempCoord.append(coordArray);
+	//	}
 
-		if (locationArray.giveSize()) {
-			// search for our dofs in there
-			for (int dType = D_u; dType <= D_w; dType++)
-			{
-				int myDof = dofIdArray->findFirstIndexOf(dType);
-				if (myDof == 0) continue;
+	//	if (locationArray.giveSize()) {
+	//		// search for our dofs in there
+	//		for (int dType = D_u; dType <= D_w; dType++)
+	//		{
+	//			int myDof = dofIdArray->findFirstIndexOf(dType);
+	//			if (myDof == 0) continue;
 
-				int eqN = locationArray.at(myDof);
+	//			int eqN = locationArray.at(myDof);
 
-				// save unit displacement and coordinate
-				if (eqN)
-				{
-					unitDisp->at(eqN, dType) = 1.0;
-					tempMat2.at(eqN, dType) = tempCoord.at(myDof);
-				}
-			}
-		}
-	}  // end of search among internal dof managers
+	//			// save unit displacement and coordinate
+	//			if (eqN)
+	//			{
+	//				unitDisp->at(eqN, dType) = 1.0;
+	//				tempMat2.at(eqN, dType) = tempCoord.at(myDof);
+	//			}
+	//		}
+	//	}
+	//}  // end of search among internal dof managers
 	// end of creation of translational unit displacement vectors
 
 
@@ -376,79 +376,79 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 	} // end of search among nodes
 
 	// then from internaldof managers
-	for (int ielem = 1; ielem <= nelem; ielem++) {
-		Element *element = domain->giveElement(ielem);
-		locationArray.clear();
-		tempCoord.clear();
+	//for (int ielem = 1; ielem <= nelem; ielem++) {
+	//	Element *element = domain->giveElement(ielem);
+	//	locationArray.clear();
+	//	tempCoord.clear();
 
-		// retrieve internal dof managers and location array
-		for (int i = 1; i <= element->giveNumberOfInternalDofManagers(); i++) {
-			element->giveInternalDofManDofIDMask(i, ids);
-			element->giveInternalDofManager(i)->giveLocationArray(ids, nodalArray, EModelDefaultEquationNumbering());
-			locationArray.followedBy(nodalArray);
+	//	// retrieve internal dof managers and location array
+	//	for (int i = 1; i <= element->giveNumberOfInternalDofManagers(); i++) {
+	//		element->giveInternalDofManDofIDMask(i, ids);
+	//		element->giveInternalDofManager(i)->giveLocationArray(ids, nodalArray, EModelDefaultEquationNumbering());
+	//		locationArray.followedBy(nodalArray);
 
-			element->giveInternalDofManager(i)->giveMasterDofIDArray(ids, masterDofIDs);
-			dofIdArray->followedBy(masterDofIDs);
+	//		element->giveInternalDofManager(i)->giveMasterDofIDArray(ids, masterDofIDs);
+	//		dofIdArray->followedBy(masterDofIDs);
 
-			coordArray.resize(masterDofIDs.giveSize());
-			int c = 1;
-			for (int dof : masterDofIDs)
-			{
-				coordArray.at(c++) = element->giveInternalDofManager(i)->giveCoordinate(dof);
-			}
-			tempCoord.append(coordArray);
-		}
+	//		coordArray.resize(masterDofIDs.giveSize());
+	//		int c = 1;
+	//		for (int dof : masterDofIDs)
+	//		{
+	//			coordArray.at(c++) = element->giveInternalDofManager(i)->giveCoordinate(dof);
+	//		}
+	//		tempCoord.append(coordArray);
+	//	}
 
-		if (locationArray.giveSize()){
+	//	if (locationArray.giveSize()){
 
-			FloatArray vk(3);
-			IntArray eq(3);
-			for (int dType = D_u; dType <= D_w; dType++)
-			{
-				int myDof = dofIdArray->findFirstIndexOf((DofIDItem)dType);
-				if (myDof == 0){
-					vk.at(dType) = 0.0;
-					eq.at(dType) = 0;
-					continue;
-				}
-				vk.at(dType) = tempCoord.at(myDof) - centroid.at(dType);
-				eq.at(dType) = locationArray.at(myDof);
-			}
+	//		FloatArray vk(3);
+	//		IntArray eq(3);
+	//		for (int dType = D_u; dType <= D_w; dType++)
+	//		{
+	//			int myDof = dofIdArray->findFirstIndexOf((DofIDItem)dType);
+	//			if (myDof == 0){
+	//				vk.at(dType) = 0.0;
+	//				eq.at(dType) = 0;
+	//				continue;
+	//			}
+	//			vk.at(dType) = tempCoord.at(myDof) - centroid.at(dType);
+	//			eq.at(dType) = locationArray.at(myDof);
+	//		}
 
-			// set mixed contribution due to rotation about centroid
-			if (eq.at(1)){
-				unitDisp->at(eq.at(1), 5) = vk.at(3);
-				unitDisp->at(eq.at(1), 6) = -vk.at(2);
-			}
+	//		// set mixed contribution due to rotation about centroid
+	//		if (eq.at(1)){
+	//			unitDisp->at(eq.at(1), 5) = vk.at(3);
+	//			unitDisp->at(eq.at(1), 6) = -vk.at(2);
+	//		}
 
-			if (eq.at(2)){
-				unitDisp->at(eq.at(2), 4) = -vk.at(3);
-				unitDisp->at(eq.at(2), 6) = vk.at(1);
-			}
+	//		if (eq.at(2)){
+	//			unitDisp->at(eq.at(2), 4) = -vk.at(3);
+	//			unitDisp->at(eq.at(2), 6) = vk.at(1);
+	//		}
 
-			if (eq.at(3)){
-				unitDisp->at(eq.at(3), 4) = vk.at(2);
-				unitDisp->at(eq.at(3), 5) = -vk.at(1);
-			}
+	//		if (eq.at(3)){
+	//			unitDisp->at(eq.at(3), 4) = vk.at(2);
+	//			unitDisp->at(eq.at(3), 5) = -vk.at(1);
+	//		}
 
 
-			// search for our dofs in there
-			for (int dType = R_u; dType <= R_w; dType++)
-			{
-				int myDof = dofIdArray->findFirstIndexOf(dType);
-				if (myDof == 0) continue;
+	//		// search for our dofs in there
+	//		for (int dType = R_u; dType <= R_w; dType++)
+	//		{
+	//			int myDof = dofIdArray->findFirstIndexOf(dType);
+	//			if (myDof == 0) continue;
 
-				int eqN = locationArray.at(myDof);
+	//			int eqN = locationArray.at(myDof);
 
-				// save unit displacement and coordinate
-				if (eqN)
-				{
-					unitDisp->at(eqN, dType) = 1.0;
-					tempMat2.at(eqN, dType) = tempCoord.at(myDof);
-				}
-			}
-		}
-	}  // end of search among internal dof managers
+	//			// save unit displacement and coordinate
+	//			if (eqN)
+	//			{
+	//				unitDisp->at(eqN, dType) = 1.0;
+	//				tempMat2.at(eqN, dType) = tempCoord.at(myDof);
+	//			}
+	//		}
+	//	}
+	//}  // end of search among internal dof managers
 	// end of creation of translational unit displacement vectors
 
 	for (int i = 4; i <= 6; i++)
@@ -472,7 +472,14 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 	{
 		for (int j = 1; j <= 6; j++)
 		{
-			massPart.at(i, j) = pow(partFact.at(i, j), 2) / totMass.at(j);
+			if (totMass.at(j) != 0.0)
+			{
+				massPart.at(i, j) = pow(partFact.at(i, j), 2) / totMass.at(j);
+			}
+			//else
+			//{
+			//	massPart.at(i, j) = 0.0;
+			//}
 		}
 	}
 
@@ -517,7 +524,7 @@ void ResponseSpectrum::terminate(TimeStep *tStep)
 		fprintf(outputStream, "%10.3e ", centroid.at(i));
 	}
 	
-	fprintf(outputStream, "\n\nParticipation Factors are:\n-----------------\n\tDx\t|\tDy\t|\tDz\n");
+	fprintf(outputStream, "\n\nParticipation Factors are:\n-----------------\n\tDx\t|\tDy\t|\tDz\t|\tRx\t|\tRy\t|\tRz\n");
 	for (int i = 1; i <= partFact.giveNumberOfRows(); ++i) {
 		for (int j = 1; j <= partFact.giveNumberOfColumns(); ++j) {
 			fprintf(outputStream, "%10.3e ", partFact.at(i,j));
@@ -525,12 +532,12 @@ void ResponseSpectrum::terminate(TimeStep *tStep)
 		fprintf(outputStream, "\n");
 	}
 
-	fprintf(outputStream, "\n\nTotal Masses are:\n-----------------\n\tDx\t|\tDy\t|\tDz\n");
+	fprintf(outputStream, "\n\nTotal Masses are:\n-----------------\n\tDx\t|\tDy\t|\tDz\t|\tRx\t|\tRy\t|\tRz\n");
 	for (int i = 1; i <= totMass.giveSize(); ++i) {
 		fprintf(outputStream, "%10.3e ", totMass.at(i));
 	}
 
-	fprintf(outputStream, "\n\nMass Ratios are:\n-----------------\n\tDx\t|\tDy\t|\tDz\n");
+	fprintf(outputStream, "\n\nMass Ratios are:\n-----------------\n\tDx\t|\tDy\t|\tDz\t|\tRx\t|\tRy\t|\tRz\n");
 	for (int i = 1; i <= massPart.giveNumberOfRows(); ++i) {
 		for (int j = 1; j <= massPart.giveNumberOfColumns(); ++j) {
 			fprintf(outputStream, "%10.3e ", massPart.at(i,j));
