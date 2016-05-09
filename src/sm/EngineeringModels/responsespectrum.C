@@ -217,7 +217,8 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 	{
 		tempCol->beColumnOf(eigVec, i);
 		massMatrix->times(*tempCol, *tempCol2);
-		double m = 1/sqrt(tempCol->dotProduct(*tempCol2));
+		double m = tempCol->dotProduct(*tempCol2);
+		if (m!=0.0) m = 1/sqrt(m);
 		tempCol->times(m);
 		eigVec.setColumn(*tempCol, i);
 	}
@@ -305,7 +306,6 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 	// end of creation of translational unit displacement vectors
 
 
-	// may be better to implement a SparseMatrix - FloatMatrix function to condense the following...
 	for (int i = 1; i <= 3; i++)
 	{
 		tempCol->beColumnOf(*unitDisp, i);
@@ -313,7 +313,7 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 		tempMat.setColumn(*tempCol2, i);
 		totMass.at(i) = tempCol->dotProduct(*tempCol2);  // total mass for direction i-th direction
 		tempCol->beColumnOf(tempMat2, i);	// fetch coordinates in i-th direction
-		centroid.at(i) = tempCol->dotProduct(*tempCol2) / totMass.at(i);  // dot multiply to get first moment, then divide by total mass in i-th direction to get i-th coordinate of the centroid
+		if (totMass.at(i)!=0.0) centroid.at(i) = tempCol->dotProduct(*tempCol2) / totMass.at(i);  // dot multiply to get first moment, then divide by total mass in i-th direction to get i-th coordinate of the centroid
 	}
 
 	// we have the centroid. we can now calculate rotational components. first from nodes.
@@ -519,10 +519,12 @@ void ResponseSpectrum::terminate(TimeStep *tStep)
     }
 	
 	
-	fprintf(outputStream, "\n\nCentroid Coordinates are:\n-----------------\n\tX\t|\tY\t|\tZ\n");
+	fprintf(outputStream, "\n\n\nCentroid Coordinates are:\n-----------------\n\tX\t|\tY\t|\tZ\n");
 	for (int i = 1; i <= centroid.giveSize(); ++i) {
 		fprintf(outputStream, "%10.3e ", centroid.at(i));
 	}
+
+	fprintf(outputStream, "\n");
 	
 	fprintf(outputStream, "\n\nParticipation Factors are:\n-----------------\n\tDx\t|\tDy\t|\tDz\t|\tRx\t|\tRy\t|\tRz\n");
 	for (int i = 1; i <= partFact.giveNumberOfRows(); ++i) {
@@ -536,6 +538,8 @@ void ResponseSpectrum::terminate(TimeStep *tStep)
 	for (int i = 1; i <= totMass.giveSize(); ++i) {
 		fprintf(outputStream, "%10.3e ", totMass.at(i));
 	}
+
+	fprintf(outputStream, "\n");
 
 	fprintf(outputStream, "\n\nMass Ratios are:\n-----------------\n\tDx\t|\tDy\t|\tDz\t|\tRx\t|\tRy\t|\tRz\n");
 	for (int i = 1; i <= massPart.giveNumberOfRows(); ++i) {
