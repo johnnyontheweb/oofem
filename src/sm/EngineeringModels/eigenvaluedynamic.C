@@ -46,6 +46,8 @@
 #include "dofmanager.h"
 #include "dof.h"
 #include "domain.h"
+#include "element.h"
+#include "node.h"
 #include "unknownnumberingscheme.h"
 
 #ifdef __OOFEG
@@ -192,8 +194,306 @@ void EigenValueDynamic :: solveYourselfAt(TimeStep *tStep)
 
     nMethod->solve(*stiffnessMatrix, *massMatrix, eigVal, eigVec, rtolv, numberOfRequiredEigenValues);
 
+	FloatMatrix *unitDisp = new FloatMatrix();
+	FloatArray *tempCol = new FloatArray();
+	FloatArray *tempCol2 = new FloatArray();
+
+	Domain *domain = this->giveDomain(1);
+	IntArray dofIDArry, loc;
+	dofIDArry = domain->giveDefaultNodeDofIDArry();
+	int nelem = domain->giveNumberOfElements();
+
+	// matrix and array initialization
+	totMass.resize(6);		// 3 are the translational dofs - enough for the moment
+	centroid.resize(3);
+	partFact.resize(numberOfRequiredEigenValues, 6);
+	massPart.resize(numberOfRequiredEigenValues, 6);
+	unitDisp->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 6);
+	tempCol->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
+	tempCol2->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
+
+	// mass normalization
+	for (int i = 1; i <= numberOfRequiredEigenValues; i++)
+	{
+		tempCol->beColumnOf(eigVec, i);
+		massMatrix->times(*tempCol, *tempCol2);
+		double m = tempCol->dotProduct(*tempCol2);
+		if (m != 0.0) m = 1 / sqrt(m);
+		tempCol->times(m);
+		eigVec.setColumn(*tempCol, i);
+	}
+	// eigVec has been normalized
+
+	IntArray masterDofIDs, nodalArray, ids;
+	IntArray locationArray;
+	IntArray *dofIdArray = new IntArray();
+	dofIdArray->clear();
+
+	FloatMatrix tempMat, tempMat2;
+	FloatArray tempCoord, coordArray;
+	tempMat.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 6);
+	tempMat2.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 6);
+
+	//
+	// create unit displacement vectors
+	//
+	// first from nodes themselves
+	for (std::unique_ptr<DofManager> &node : domain->giveDofManagers()) {
+		//node->giveLocationArray(dofIDArry, loc, EModelDefaultEquationNumbering());
+		if (!node->giveNumberOfDofs()) continue;
+
+		for (int dType = D_u; dType <= D_w; dType++)
+		{
+			auto myDof = node->findDofWithDofId((DofIDItem)dType);
+			if (myDof == node->end()) {
+				//OOFEM_ERROR("incompatible dof (%d) requested", dType);
+				continue;
+			}
+
+			int eqN = EModelDefaultEquationNumbering().giveDofEquationNumber(*myDof);
+
+			// save unit displacement and coordinate
+			if (eqN)
+			{
+				unitDisp->at(eqN, dType) = 1.0;
+				tempMat2.at(eqN, dType) = node->giveCoordinate(dType);
+			}
+		}
+	}  // end of search among nodes
+
+	// then from internaldof managers
+	//for (int ielem = 1; ielem <= nelem; ielem++) {
+	//	Element *element = domain->giveElement(ielem);
+	//	locationArray.clear();
+	//	tempCoord.clear();
+
+	//	// retrieve internal dof managers and location array
+	//	for (int i = 1; i <= element->giveNumberOfInternalDofManagers(); i++) {
+	//		element->giveInternalDofManDofIDMask(i, ids);
+	//		element->giveInternalDofManager(i)->giveLocationArray(ids, nodalArray, EModelDefaultEquationNumbering());
+	//		locationArray.followedBy(nodalArray);
+	//		
+	//		element->giveInternalDofManager(i)->giveMasterDofIDArray(ids, masterDofIDs);
+	//		dofIdArray->followedBy(masterDofIDs);
+
+	//		coordArray.resize(masterDofIDs.giveSize());
+	//		int c = 1;
+	//		for (int dof : masterDofIDs)
+	//		{
+	//			coordArray.at(c++) = element->giveInternalDofManager(i)->giveCoordinate(dof);
+	//		}
+	//		tempCoord.append(coordArray);
+	//	}
+
+	//	if (locationArray.giveSize()) {
+	//		// search for our dofs in there
+	//		for (int dType = D_u; dType <= D_w; dType++)
+	//		{
+	//			int myDof = dofIdArray->findFirstIndexOf(dType);
+	//			if (myDof == 0) continue;
+
+	//			int eqN = locationArray.at(myDof);
+
+	//			// save unit displacement and coordinate
+	//			if (eqN)
+	//			{
+	//				unitDisp->at(eqN, dType) = 1.0;
+	//				tempMat2.at(eqN, dType) = tempCoord.at(myDof);
+	//			}
+	//		}
+	//	}
+	//}  // end of search among internal dof managers
+	// end of creation of translational unit displacement vectors
+
+
+	for (int i = 1; i <= 3; i++)
+	{
+		tempCol->beColumnOf(*unitDisp, i);
+		massMatrix->times(*tempCol, *tempCol2);  // now tempCol2 has only the masses pertaining the i-th direction
+		tempMat.setColumn(*tempCol2, i);
+		totMass.at(i) = tempCol->dotProduct(*tempCol2);  // total mass for direction i-th direction
+		tempCol->beColumnOf(tempMat2, i);	// fetch coordinates in i-th direction
+		if (totMass.at(i) != 0.0) centroid.at(i) = tempCol->dotProduct(*tempCol2) / totMass.at(i);  // dot multiply to get first moment, then divide by total mass in i-th direction to get i-th coordinate of the centroid
+	}
+
+	// we have the centroid. we can now calculate rotational components. first from nodes.
+	for (std::unique_ptr<DofManager> &node : domain->giveDofManagers()) {
+		//node->giveLocationArray(dofIDArry, loc, EModelDefaultEquationNumbering());
+		if (!node->giveNumberOfDofs()) continue;
+
+		FloatArray* nodeCoords = node->giveCoordinates();
+		if (nodeCoords){
+			FloatArray vk(3);
+			IntArray eq(3);
+			for (int dType = D_u; dType <= D_w; dType++)
+			{
+				auto myDof = node->findDofWithDofId((DofIDItem)dType);
+				if (myDof == node->end()){
+					vk.at(dType) = 0.0;
+					eq.at(dType) = 0;
+					continue;
+				}
+				vk.at(dType) = node->giveCoordinate(dType) - centroid.at(dType);
+				eq.at(dType) = EModelDefaultEquationNumbering().giveDofEquationNumber(*myDof);
+			}
+
+			// set mixed contribution due to rotation about centroid
+			if (eq.at(1)){
+				unitDisp->at(eq.at(1), 5) = vk.at(3);
+				unitDisp->at(eq.at(1), 6) = -vk.at(2);
+			}
+
+			if (eq.at(2)){
+				unitDisp->at(eq.at(2), 4) = -vk.at(3);
+				unitDisp->at(eq.at(2), 6) = vk.at(1);
+			}
+
+			if (eq.at(3)){
+				unitDisp->at(eq.at(3), 4) = vk.at(2);
+				unitDisp->at(eq.at(3), 5) = -vk.at(1);
+			}
+
+			// set pure rotational contribution
+			for (int dType = R_u; dType <= R_w; dType++)
+			{
+				auto myDof = node->findDofWithDofId((DofIDItem)dType);
+				if (myDof == node->end()) {
+					//OOFEM_ERROR("incompatible dof (%d) requested", dType);
+					continue;
+				}
+
+				int eqN = EModelDefaultEquationNumbering().giveDofEquationNumber(*myDof);
+
+				// save unit displacement and coordinate
+				if (eqN)
+				{
+					unitDisp->at(eqN, dType) = 1.0;
+					tempMat2.at(eqN, dType) = node->giveCoordinate(dType);
+				}
+
+			}
+		}
+	} // end of search among nodes
+
+	// then from internaldof managers
+	//for (int ielem = 1; ielem <= nelem; ielem++) {
+	//	Element *element = domain->giveElement(ielem);
+	//	locationArray.clear();
+	//	tempCoord.clear();
+
+	//	// retrieve internal dof managers and location array
+	//	for (int i = 1; i <= element->giveNumberOfInternalDofManagers(); i++) {
+	//		element->giveInternalDofManDofIDMask(i, ids);
+	//		element->giveInternalDofManager(i)->giveLocationArray(ids, nodalArray, EModelDefaultEquationNumbering());
+	//		locationArray.followedBy(nodalArray);
+
+	//		element->giveInternalDofManager(i)->giveMasterDofIDArray(ids, masterDofIDs);
+	//		dofIdArray->followedBy(masterDofIDs);
+
+	//		coordArray.resize(masterDofIDs.giveSize());
+	//		int c = 1;
+	//		for (int dof : masterDofIDs)
+	//		{
+	//			coordArray.at(c++) = element->giveInternalDofManager(i)->giveCoordinate(dof);
+	//		}
+	//		tempCoord.append(coordArray);
+	//	}
+
+	//	if (locationArray.giveSize()){
+
+	//		FloatArray vk(3);
+	//		IntArray eq(3);
+	//		for (int dType = D_u; dType <= D_w; dType++)
+	//		{
+	//			int myDof = dofIdArray->findFirstIndexOf((DofIDItem)dType);
+	//			if (myDof == 0){
+	//				vk.at(dType) = 0.0;
+	//				eq.at(dType) = 0;
+	//				continue;
+	//			}
+	//			vk.at(dType) = tempCoord.at(myDof) - centroid.at(dType);
+	//			eq.at(dType) = locationArray.at(myDof);
+	//		}
+
+	//		// set mixed contribution due to rotation about centroid
+	//		if (eq.at(1)){
+	//			unitDisp->at(eq.at(1), 5) = vk.at(3);
+	//			unitDisp->at(eq.at(1), 6) = -vk.at(2);
+	//		}
+
+	//		if (eq.at(2)){
+	//			unitDisp->at(eq.at(2), 4) = -vk.at(3);
+	//			unitDisp->at(eq.at(2), 6) = vk.at(1);
+	//		}
+
+	//		if (eq.at(3)){
+	//			unitDisp->at(eq.at(3), 4) = vk.at(2);
+	//			unitDisp->at(eq.at(3), 5) = -vk.at(1);
+	//		}
+
+
+	//		// search for our dofs in there
+	//		for (int dType = R_u; dType <= R_w; dType++)
+	//		{
+	//			int myDof = dofIdArray->findFirstIndexOf(dType);
+	//			if (myDof == 0) continue;
+
+	//			int eqN = locationArray.at(myDof);
+
+	//			// save unit displacement and coordinate
+	//			if (eqN)
+	//			{
+	//				unitDisp->at(eqN, dType) = 1.0;
+	//				tempMat2.at(eqN, dType) = tempCoord.at(myDof);
+	//			}
+	//		}
+	//	}
+	//}  // end of search among internal dof managers
+	// end of creation of translational unit displacement vectors
+
+	for (int i = 4; i <= 6; i++)
+	{
+		tempCol->beColumnOf(*unitDisp, i);
+		massMatrix->times(*tempCol, *tempCol2);  // now tempCol2 has only the masses pertaining the i-th direction
+		tempMat.setColumn(*tempCol2, i);
+		totMass.at(i) = tempCol->dotProduct(*tempCol2);  // total mass for direction i-th direction
+		tempCol->beColumnOf(tempMat2, i);	// fetch coordinates in i-th direction
+	}
+
+	//
+	// calculate participation factors and mass participation
+	//
+
+	// participation factors
+	partFact.beTProductOf(eigVec, tempMat);
+
+	// mass participation ratios
+	for (int i = 1; i <= numberOfRequiredEigenValues; i++)
+	{
+		for (int j = 1; j <= 6; j++)
+		{
+			if (totMass.at(j) != 0.0)
+			{
+				massPart.at(i, j) = pow(partFact.at(i, j), 2) / totMass.at(j);
+			}
+			//else
+			//{
+			//	massPart.at(i, j) = 0.0;
+			//}
+		}
+	}
+
+	//
+	// zero matrix
+	//
     stiffnessMatrix.reset(NULL);
     massMatrix.reset(NULL);
+
+	// dispose the rest of the stuff
+	delete unitDisp;
+	delete tempCol;
+	delete tempCol2;
+	delete dofIdArray;
 }
 
 
@@ -217,6 +517,37 @@ void EigenValueDynamic :: terminate(TimeStep *tStep)
             fprintf(outputStream, "\n");
         }
     }
+
+
+	fprintf(outputStream, "\n\n\nCentroid Coordinates are:\n-----------------\n\tX\t|\tY\t|\tZ\n");
+	for (int i = 1; i <= centroid.giveSize(); ++i) {
+		fprintf(outputStream, "%10.3e ", centroid.at(i));
+	}
+
+	fprintf(outputStream, "\n");
+
+	fprintf(outputStream, "\n\nParticipation Factors are:\n-----------------\n\tDx\t|\tDy\t|\tDz\t|\tRx\t|\tRy\t|\tRz\n");
+	for (int i = 1; i <= partFact.giveNumberOfRows(); ++i) {
+		for (int j = 1; j <= partFact.giveNumberOfColumns(); ++j) {
+			fprintf(outputStream, "%10.3e ", partFact.at(i, j));
+		}
+		fprintf(outputStream, "\n");
+	}
+
+	fprintf(outputStream, "\n\nTotal Masses are:\n-----------------\n\tDx\t|\tDy\t|\tDz\t|\tRx\t|\tRy\t|\tRz\n");
+	for (int i = 1; i <= totMass.giveSize(); ++i) {
+		fprintf(outputStream, "%10.3e ", totMass.at(i));
+	}
+
+	fprintf(outputStream, "\n");
+
+	fprintf(outputStream, "\n\nMass Ratios are:\n-----------------\n\tDx\t|\tDy\t|\tDz\t|\tRx\t|\tRy\t|\tRz\n");
+	for (int i = 1; i <= massPart.giveNumberOfRows(); ++i) {
+		for (int j = 1; j <= massPart.giveNumberOfColumns(); ++j) {
+			fprintf(outputStream, "%10.3e ", massPart.at(i, j));
+		}
+		fprintf(outputStream, "\n");
+	}
 
     fprintf(outputStream, "\n\n");
 
