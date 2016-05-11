@@ -565,7 +565,7 @@ namespace oofem {
 				}
 				else {
 					if (ghostNodes[1] == NULL) {
-						ghostNodes[1] = new ElementDofManager(1, giveDomain(), this);
+						ghostNodes[1] = new ElementDofManager(2, giveDomain(), this);
 					}
 					ghostNodes[1]->appendDof(new MasterDof(ghostNodes[1], mask[val.at(i) - 7]));
 				}
