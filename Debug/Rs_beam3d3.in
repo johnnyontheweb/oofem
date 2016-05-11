@@ -1,5 +1,5 @@
 rs_beam3d3.out
-response spectrum analysis of simple suported beam
+response spectrum analysis of simple supported beam
 eigenvaluedynamic nroot 6 rtolv 1.e-6
 domain 3dShell
 OutputManager tstep_all dofman_all element_all

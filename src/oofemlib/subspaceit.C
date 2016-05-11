@@ -136,6 +136,13 @@ SubspaceIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Floa
     eigv.resize(nc);
     eigv.zero();
 
+	// control of diagonal zeroes in mass matrix, to be avoided
+	for (i = 1; i <= nc; i++) {
+		if (b.at(i, i) == 0) {
+			b.at(i, i) = 1.0e-12;
+		}
+	}
+
     FloatArray h(nn);
     for ( i = 1; i <= nn; i++ ) {
         h.at(i) = 1.0;
