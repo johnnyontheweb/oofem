@@ -194,7 +194,7 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 
     nMethod->solve(*stiffnessMatrix, *massMatrix, eigVal, eigVec, rtolv, numberOfRequiredEigenValues);
 
-	FloatMatrix *unitDisp = new FloatMatrix();
+		FloatMatrix *unitDisp = new FloatMatrix();
 	FloatArray *tempCol = new FloatArray();
 	FloatArray *tempCol2 = new FloatArray();
 
@@ -206,7 +206,7 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 	// matrix and array initialization
 	totMass.resize(6);		// 3 are the translational dofs - enough for the moment
 	centroid.resize(3);
-	partFact.resize(numberOfRequiredEigenValues, 6);	
+	partFact.resize(numberOfRequiredEigenValues, 6);
 	massPart.resize(numberOfRequiredEigenValues, 6);
 	unitDisp->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 6);
 	tempCol->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
@@ -218,7 +218,7 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 		tempCol->beColumnOf(eigVec, i);
 		massMatrix->times(*tempCol, *tempCol2);
 		double m = tempCol->dotProduct(*tempCol2);
-		if (m!=0.0) m = 1/sqrt(m);
+		if (m != 0.0) m = 1 / sqrt(m);
 		tempCol->times(m);
 		eigVec.setColumn(*tempCol, i);
 	}
@@ -252,7 +252,8 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 
 			int eqN = EModelDefaultEquationNumbering().giveDofEquationNumber(*myDof);
 
-			// save unit displacement and coordinate
+			// save unit displacement and coordinate.
+			// TODO consider the fact that nodes may have own UCS.
 			if (eqN)
 			{
 				unitDisp->at(eqN, dType) = 1.0;
@@ -262,47 +263,62 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 	}  // end of search among nodes
 
 	// then from internaldof managers
-	//for (int ielem = 1; ielem <= nelem; ielem++) {
-	//	Element *element = domain->giveElement(ielem);
-	//	locationArray.clear();
-	//	tempCoord.clear();
+	for (int ielem = 1; ielem <= nelem; ielem++) {
+		Element *element = domain->giveElement(ielem);
 
-	//	// retrieve internal dof managers and location array
-	//	for (int i = 1; i <= element->giveNumberOfInternalDofManagers(); i++) {
-	//		element->giveInternalDofManDofIDMask(i, ids);
-	//		element->giveInternalDofManager(i)->giveLocationArray(ids, nodalArray, EModelDefaultEquationNumbering());
-	//		locationArray.followedBy(nodalArray);
-	//		
-	//		element->giveInternalDofManager(i)->giveMasterDofIDArray(ids, masterDofIDs);
-	//		dofIdArray->followedBy(masterDofIDs);
+		// the following may be simplified.
+		// retrieve internal dof managers and location array
+		for (int i = 1; i <= element->giveNumberOfInternalDofManagers(); i++) {
+			DofManager *intDofMan = element->giveInternalDofManager(i);
 
-	//		coordArray.resize(masterDofIDs.giveSize());
-	//		int c = 1;
-	//		for (int dof : masterDofIDs)
-	//		{
-	//			coordArray.at(c++) = element->giveInternalDofManager(i)->giveCoordinate(dof);
-	//		}
-	//		tempCoord.append(coordArray);
-	//	}
+			if (!intDofMan) continue; // you may never know...
 
-	//	if (locationArray.giveSize()) {
-	//		// search for our dofs in there
-	//		for (int dType = D_u; dType <= D_w; dType++)
-	//		{
-	//			int myDof = dofIdArray->findFirstIndexOf(dType);
-	//			if (myDof == 0) continue;
+			locationArray.clear();
+			tempCoord.clear();
 
-	//			int eqN = locationArray.at(myDof);
+			element->giveInternalDofManDofIDMask(i, ids);
+			intDofMan->giveLocationArray(ids, nodalArray, EModelDefaultEquationNumbering());
+			locationArray.followedBy(nodalArray);
 
-	//			// save unit displacement and coordinate
-	//			if (eqN)
-	//			{
-	//				unitDisp->at(eqN, dType) = 1.0;
-	//				tempMat2.at(eqN, dType) = tempCoord.at(myDof);
-	//			}
-	//		}
-	//	}
-	//}  // end of search among internal dof managers
+			intDofMan->giveMasterDofIDArray(ids, masterDofIDs);
+			dofIdArray->followedBy(masterDofIDs);
+
+			coordArray.resize(masterDofIDs.giveSize());
+			int c = 1;
+			for (int dof : masterDofIDs)
+			{
+				if (intDofMan->hasCoordinates()) {
+					coordArray.at(c) = intDofMan->giveCoordinate(dof);
+				}
+				else
+				{
+					// get the number. ghostNode FEMComponent number is changed on purpose.
+					int tempN = intDofMan->giveNumber();
+					//element->giveDofManager(tempN)->requiresTransformation()
+					coordArray.at(c) = element->giveDofManager(tempN)->giveCoordinate(dof);
+				}
+				c++; // Increment the counter in any case. The position index must match the index in masterDofIDs. We'll sort the dofs needed hereafter
+			}
+			tempCoord.append(coordArray);
+
+			int partialDofCount = locationArray.giveSize();
+			if (partialDofCount) {
+				// search for our dofs in there
+				for (int myDofIndex = 1; myDofIndex <= partialDofCount; myDofIndex++)
+				{
+					int dType = dofIdArray->at(myDofIndex);
+					int eqN = locationArray.at(myDofIndex);
+
+					if ((dType >= D_u) && (dType <= D_w) && eqN) {
+						// save unit displacement and coordinate
+
+						unitDisp->at(eqN, dType) = 1.0;
+						tempMat2.at(eqN, dType) = tempCoord.at(myDofIndex);
+					}
+				}
+			}
+		}
+	}  // end of search among internal dof managers
 	// end of creation of translational unit displacement vectors
 
 
@@ -313,8 +329,9 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 		tempMat.setColumn(*tempCol2, i);
 		totMass.at(i) = tempCol->dotProduct(*tempCol2);  // total mass for direction i-th direction
 		tempCol->beColumnOf(tempMat2, i);	// fetch coordinates in i-th direction
-		if (totMass.at(i)!=0.0) centroid.at(i) = tempCol->dotProduct(*tempCol2) / totMass.at(i);  // dot multiply to get first moment, then divide by total mass in i-th direction to get i-th coordinate of the centroid
+		if (totMass.at(i) != 0.0) centroid.at(i) = tempCol->dotProduct(*tempCol2) / totMass.at(i);  // dot multiply to get first moment, then divide by total mass in i-th direction to get i-th coordinate of the centroid
 	}
+
 
 	// we have the centroid. we can now calculate rotational components. first from nodes.
 	for (std::unique_ptr<DofManager> &node : domain->giveDofManagers()) {
@@ -325,6 +342,8 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 		if (nodeCoords){
 			FloatArray vk(3);
 			IntArray eq(3);
+
+			// TODO consider own UCS if present
 			for (int dType = D_u; dType <= D_w; dType++)
 			{
 				auto myDof = node->findDofWithDofId((DofIDItem)dType);
@@ -365,6 +384,7 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 				int eqN = EModelDefaultEquationNumbering().giveDofEquationNumber(*myDof);
 
 				// save unit displacement and coordinate
+				// TODO consider own UCS if present
 				if (eqN)
 				{
 					unitDisp->at(eqN, dType) = 1.0;
@@ -376,79 +396,96 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 	} // end of search among nodes
 
 	// then from internaldof managers
-	//for (int ielem = 1; ielem <= nelem; ielem++) {
-	//	Element *element = domain->giveElement(ielem);
-	//	locationArray.clear();
-	//	tempCoord.clear();
+	for (int ielem = 1; ielem <= nelem; ielem++) {
+		Element *element = domain->giveElement(ielem);
 
-	//	// retrieve internal dof managers and location array
-	//	for (int i = 1; i <= element->giveNumberOfInternalDofManagers(); i++) {
-	//		element->giveInternalDofManDofIDMask(i, ids);
-	//		element->giveInternalDofManager(i)->giveLocationArray(ids, nodalArray, EModelDefaultEquationNumbering());
-	//		locationArray.followedBy(nodalArray);
+		// the following may be simplified
+		//	retrieve internal dof managers and location array
+		for (int i = 1; i <= element->giveNumberOfInternalDofManagers(); i++) {
+			DofManager *intDofMan = element->giveInternalDofManager(i);
 
-	//		element->giveInternalDofManager(i)->giveMasterDofIDArray(ids, masterDofIDs);
-	//		dofIdArray->followedBy(masterDofIDs);
+			if (!intDofMan) continue; // you may never know...
 
-	//		coordArray.resize(masterDofIDs.giveSize());
-	//		int c = 1;
-	//		for (int dof : masterDofIDs)
-	//		{
-	//			coordArray.at(c++) = element->giveInternalDofManager(i)->giveCoordinate(dof);
-	//		}
-	//		tempCoord.append(coordArray);
-	//	}
+			locationArray.clear();
+			tempCoord.clear();
 
-	//	if (locationArray.giveSize()){
+			element->giveInternalDofManDofIDMask(i, ids);
+			intDofMan->giveLocationArray(ids, nodalArray, EModelDefaultEquationNumbering());
+			locationArray.followedBy(nodalArray);
 
-	//		FloatArray vk(3);
-	//		IntArray eq(3);
-	//		for (int dType = D_u; dType <= D_w; dType++)
-	//		{
-	//			int myDof = dofIdArray->findFirstIndexOf((DofIDItem)dType);
-	//			if (myDof == 0){
-	//				vk.at(dType) = 0.0;
-	//				eq.at(dType) = 0;
-	//				continue;
-	//			}
-	//			vk.at(dType) = tempCoord.at(myDof) - centroid.at(dType);
-	//			eq.at(dType) = locationArray.at(myDof);
-	//		}
+			intDofMan->giveMasterDofIDArray(ids, masterDofIDs);
+			dofIdArray->followedBy(masterDofIDs);
 
-	//		// set mixed contribution due to rotation about centroid
-	//		if (eq.at(1)){
-	//			unitDisp->at(eq.at(1), 5) = vk.at(3);
-	//			unitDisp->at(eq.at(1), 6) = -vk.at(2);
-	//		}
+			coordArray.resize(masterDofIDs.giveSize());
+			int c = 1;
+			for (int dof : masterDofIDs)
+			{
+				if (intDofMan->hasCoordinates()) {
+					coordArray.at(c) = intDofMan->giveCoordinate(dof);
+				}
+				else
+				{
+					// get the number. ghostNode FEMComponent number is changed on purpose.
+					int tempN = intDofMan->giveNumber();
+					//element->giveDofManager(tempN)->requiresTransformation()
+					coordArray.at(c) = element->giveDofManager(tempN)->giveCoordinate(dof);
+				}
+				c++; // Increment the counter in any case. The position index must match the index in masterDofIDs. We'll sort the dofs needed hereafter
+			}
+			tempCoord.append(coordArray);
 
-	//		if (eq.at(2)){
-	//			unitDisp->at(eq.at(2), 4) = -vk.at(3);
-	//			unitDisp->at(eq.at(2), 6) = vk.at(1);
-	//		}
+			// TODO should element CS be considered even with internal dof managers
+			if (locationArray.giveSize()){
 
-	//		if (eq.at(3)){
-	//			unitDisp->at(eq.at(3), 4) = vk.at(2);
-	//			unitDisp->at(eq.at(3), 5) = -vk.at(1);
-	//		}
+				FloatArray vk(3);
+				IntArray eq(3);
+				for (int dType = D_u; dType <= D_w; dType++)
+				{
+					int myDof = dofIdArray->findFirstIndexOf((DofIDItem)dType);
+					if (myDof == 0){
+						vk.at(dType) = 0.0;
+						eq.at(dType) = 0;
+						continue;
+					}
+					vk.at(dType) = tempCoord.at(myDof) - centroid.at(dType);
+					eq.at(dType) = locationArray.at(myDof);
+				}
+
+				// set mixed contribution due to rotation about centroid
+				if (eq.at(1)){
+					unitDisp->at(eq.at(1), 5) = vk.at(3);
+					unitDisp->at(eq.at(1), 6) = -vk.at(2);
+				}
+
+				if (eq.at(2)){
+					unitDisp->at(eq.at(2), 4) = -vk.at(3);
+					unitDisp->at(eq.at(2), 6) = vk.at(1);
+				}
+
+				if (eq.at(3)){
+					unitDisp->at(eq.at(3), 4) = vk.at(2);
+					unitDisp->at(eq.at(3), 5) = -vk.at(1);
+				}
 
 
-	//		// search for our dofs in there
-	//		for (int dType = R_u; dType <= R_w; dType++)
-	//		{
-	//			int myDof = dofIdArray->findFirstIndexOf(dType);
-	//			if (myDof == 0) continue;
+				// search for our dofs in there
+				for (int dType = R_u; dType <= R_w; dType++)
+				{
+					int myDof = dofIdArray->findFirstIndexOf(dType);
+					if (myDof == 0) continue;
 
-	//			int eqN = locationArray.at(myDof);
+					int eqN = locationArray.at(myDof);
 
-	//			// save unit displacement and coordinate
-	//			if (eqN)
-	//			{
-	//				unitDisp->at(eqN, dType) = 1.0;
-	//				tempMat2.at(eqN, dType) = tempCoord.at(myDof);
-	//			}
-	//		}
-	//	}
-	//}  // end of search among internal dof managers
+					// save unit displacement and coordinate
+					if (eqN)
+					{
+						unitDisp->at(eqN, dType) = 1.0;
+						tempMat2.at(eqN, dType) = tempCoord.at(myDof);
+					}
+				}
+			}
+		}  // end of search among internal dof managers
+		}
 	// end of creation of translational unit displacement vectors
 
 	for (int i = 4; i <= 6; i++)
@@ -494,6 +531,7 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 	delete tempCol;
 	delete tempCol2;
 	delete dofIdArray;
+}
 }
 
 
