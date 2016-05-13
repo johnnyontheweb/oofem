@@ -192,6 +192,11 @@ void EigenValueDynamic :: solveYourselfAt(TimeStep *tStep)
     OOFEM_LOG_INFO("Solving ...\n");
 #endif
 
+#ifdef DEBUG
+	stiffnessMatrix->writeToFile("K.dat");
+	massMatrix->writeToFile("M.dat");
+#endif
+
     nMethod->solve(*stiffnessMatrix, *massMatrix, eigVal, eigVec, rtolv, numberOfRequiredEigenValues);
 
 	FloatMatrix *unitDisp = new FloatMatrix();
