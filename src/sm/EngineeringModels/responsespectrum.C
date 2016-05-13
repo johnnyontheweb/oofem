@@ -532,7 +532,6 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 	delete tempCol2;
 	delete dofIdArray;
 }
-}
 
 
 void ResponseSpectrum::updateYourself(TimeStep *tStep)
