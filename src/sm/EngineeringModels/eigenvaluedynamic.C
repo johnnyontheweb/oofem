@@ -92,7 +92,7 @@ EigenValueDynamic :: initializeFrom(InputRecord *ir)
         rtolv =  0.01;
     }
 
-    int val = 0;
+    int val = 1; // inverseit
     IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_EigenValueDynamic_stype);
     solverType = ( GenEigvalSolverType ) val;
 
