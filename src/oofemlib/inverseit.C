@@ -85,7 +85,8 @@ InverseIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Float
         z[j].add(1.0);
     }
 
-    for ( int i = 0; i < nitem; i++ ) {
+    int it;
+    for ( it = 0; it < nitem; it++ ) {
         /*  copy zz=z  */
         for ( int j = 0; j < nc; j++ ) {
             zz[j] = z[j];
@@ -120,7 +121,7 @@ InverseIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Float
             ww.at(j) = w.at(j);
         }
 
-        //printf ("\n iteration  %d   %d",i,ac);
+        //printf ("\n iteration  %d   %d",it,ac);
         //w.printYourself();
 
         /*  Gramm-Schmidt ortogonalization   */
@@ -148,17 +149,21 @@ InverseIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Float
     }
 
     // copy results
+    IntArray order;
+    order.enumerate(w.giveSize());
+    std :: sort(order.begin(), order.end(), [&w](int a, int b) { return w.at(a) < w.at(b); });
+
     _eigv.resize(nroot);
     _r.resize(nn, nroot);
-    for ( i = 1; i <= nroot; i++ ) {
-        _eigv.at(i) = w.at(i);
-        _r.setColumn(x[i - 1], i);
+    for ( int i = 1; i <= nroot; i++ ) {
+        _eigv.at(i) = w.at(order.at(i));
+        _r.setColumn(x[order.at(i) - 1], i);
     }
 
-    if ( i < nitem ) {
-		fprintf(outStream, "InverseIteration :: convergence reached in %d iterations\n", i);
+    if ( it < nitem ) {
+		fprintf(outStream, "InverseIteration :: convergence reached in %d iterations\n", it);
     } else {
-		fprintf(outStream, "InverseIteration :: convergence not reached after %d iterations\n", i);
+		fprintf(outStream, "InverseIteration :: convergence not reached after %d iterations\n", it);
     }
 
     return NM_Success;

@@ -310,3 +310,9 @@ tests/sm/t3d.bmf
 /src/sm/sm.vcxproj.user
 /src/tm/tm.vcxproj.user
 /tests.vcxproj.user
+/src/oofemlib/inverseit.C.bak
+/src/oofemlib/inverseitMik.C
+/src/oofemlib/inverseitMik.C.bak
+/src/oofemlib/subspaceit.C.bak
+/src/oofemlib/subspaceitMik.C
+/src/oofemlib/subspaceitMik.C.bak
