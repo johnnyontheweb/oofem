@@ -39,6 +39,8 @@
 #include "mathfem.h"
 #include "sparselinsystemnm.h"
 #include "classfactory.h"
+#include "domain.h"
+#include "engngm.h"
 
 namespace oofem {
 
@@ -54,6 +56,7 @@ InverseIteration :: ~InverseIteration() { }
 NM_Status
 InverseIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatrix &_r, double rtol, int nroot)
 {
+	FILE *outStream;
     if ( a.giveNumberOfColumns() != b.giveNumberOfColumns() ) {
         OOFEM_ERROR("matrices size mismatch");
     }
@@ -74,6 +77,7 @@ InverseIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Float
 
     FloatArray w(nc), ww(nc), t;
     std :: vector< FloatArray > z(nc, nn), zz(nc, nn), x(nc, nn);
+	outStream = domain->giveEngngModel()->giveOutputStream();
 
     /*  initial setting  */
     ww.add(1.0);
@@ -152,9 +156,9 @@ InverseIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Float
     }
 
     if ( i < nitem ) {
-        OOFEM_LOG_INFO("InverseIt info: convergence reached in %d iterations\n", i);
+		fprintf(outStream, "InverseIteration :: convergence reached in %d iterations\n", i);
     } else {
-        OOFEM_WARNING("convergence not reached after %d iterations\n", i);
+		fprintf(outStream, "InverseIteration :: convergence not reached after %d iterations\n", i);
     }
 
     return NM_Success;

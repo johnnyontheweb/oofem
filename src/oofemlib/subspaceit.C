@@ -62,7 +62,8 @@ SubspaceIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Floa
 // jacobi iteration
 //
 {
-    if ( a.giveNumberOfColumns() != b.giveNumberOfColumns() ) {
+	FILE *outStream;
+	if ( a.giveNumberOfColumns() != b.giveNumberOfColumns() ) {
         OOFEM_ERROR("matrices size mismatch");
     }
 
@@ -74,6 +75,7 @@ SubspaceIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Floa
     SparseLinearSystemNM *solver = GiveClassFactory().createSparseLinSolver(ST_Direct, domain, engngModel);
 
     GJacobi mtd(domain, engngModel);
+	outStream = domain->giveEngngModel()->giveOutputStream();
     int nc = min(2 * nroot, nroot + 8);
     nn = a.giveNumberOfColumns();
     if ( nc > nn ) {
@@ -367,11 +369,11 @@ SubspaceIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Floa
             }
         }
 
-        OOFEM_LOG_INFO("SubspaceIteration :: solveYourselfAt: Convergence reached for RTOL=%20.15f", rtol);
+		fprintf(outStream, "SubspaceIteration :: solveYourselfAt: Convergence reached for RTOL=%20.15f", rtol);
         break;
 label400:
         if ( nite >= nitem ) {
-            OOFEM_WARNING("SubspaceIteration :: solveYourselfAt: Convergence not reached in %d iteration - using current values", nitem);
+			fprintf(outStream, "SubspaceIteration :: solveYourselfAt: Convergence not reached in %d iteration - using current values", nitem);
             break;
         }
 
