@@ -100,7 +100,28 @@ ResponseSpectrum::initializeFrom(InputRecord *ir)
     IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_EngngModel_smtype);
     sparseMtrxType = ( SparseMtrxType ) val;
 
+	IR_GIVE_FIELD(ir, val, _IFT_ResponseSpectrum_func);
+	func = (int)val; // we'll check in postInitialize whether this id exists or not
+
+	IR_GIVE_FIELD(ir, val, _IFT_ResponseSpectrum_dir);
+	dir = (int)val;
+	if (dir < D_u && dir > D_w){
+		OOFEM_ERROR("Invalid direction. Currently 1 to 3 are supported");
+	}
+
     return IRRT_OK;
+}
+
+
+void ResponseSpectrum::postInitialize()
+{
+	EngngModel::postInitialize();
+
+	// we check whether
+	Domain *d = this->giveDomain(1);
+	Function *f = d->giveFunction(func);
+
+	if (f == NULL) OOFEM_ERROR("Invalid function given");
 }
 
 
@@ -518,6 +539,20 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 			//	massPart.at(i, j) = 0.0;
 			//}
 		}
+	}
+
+	//
+	// start creating loaded models
+	//
+#ifdef VERBOSE
+	OOFEM_LOG_INFO("Starting creation of loaded models ...\n");
+#endif
+	for (int dN = 1; dN <= numberOfRequiredEigenValues; dN++)
+	{
+		OOFEM_LOG_INFO("Creation of loaded model %d...\n", dN);
+
+		Domain *d2 = domain->Clone();
+		//d2->
 	}
 
 	//

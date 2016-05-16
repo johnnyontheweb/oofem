@@ -167,6 +167,7 @@ namespace oofem {
 		// definition & identification
 		virtual const char *giveClassName() const { return "Beam3d"; }
 		virtual const char *giveInputRecordName() const { return _IFT_Beam3d_Name; }
+		virtual void giveInputRecord(DynamicInputRecord &input);
 		virtual IRResultType initializeFrom(InputRecord *ir);
 		///@todo Introduce interpolator and remove these two:
 		virtual integrationDomain giveIntegrationDomain() const { return _Line; }

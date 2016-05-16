@@ -48,6 +48,8 @@
 #define _IFT_ResponseSpectrum_nroot "nroot"
 #define _IFT_ResponseSpectrum_rtolv "rtolv"
 #define _IFT_ResponseSpectrum_stype "stype"
+#define _IFT_ResponseSpectrum_func "func"
+#define _IFT_ResponseSpectrum_dir "dir"
 //@}
 
 namespace oofem {
@@ -78,6 +80,8 @@ private:
     /// Numerical method used to solve the problem.
     std :: unique_ptr< SparseGeneralEigenValueSystemNM > nMethod;
     GenEigvalSolverType solverType;
+	int func;
+	int dir;
 
 public:
 	ResponseSpectrum(int i, EngngModel * _master = NULL) : EngngModel(i, _master)
@@ -101,6 +105,8 @@ public:
     virtual int resolveCorrespondingEigenStepNumber(void *obj);
 
     virtual double giveEigenValue(int eigNum) { return eigVal.at(eigNum); }
+
+	virtual void postInitialize();
 
     // identification
     virtual const char *giveClassName() const { return "ResponseSpectrum"; }
