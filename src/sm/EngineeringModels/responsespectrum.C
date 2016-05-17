@@ -117,7 +117,7 @@ void ResponseSpectrum::postInitialize()
 {
 	EngngModel::postInitialize();
 
-	// we check whether
+	// we check whether the spectrum function exists or not.
 	Domain *d = this->giveDomain(1);
 	Function *f = d->giveFunction(func);
 
@@ -547,12 +547,25 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 #ifdef VERBOSE
 	OOFEM_LOG_INFO("Starting creation of loaded models ...\n");
 #endif
+	
 	for (int dN = 1; dN <= numberOfRequiredEigenValues; dN++)
 	{
 		OOFEM_LOG_INFO("Creation of loaded model %d...\n", dN);
 
+		std::stringstream outName;
+		FILE *outputContext;
+
+		outName << this->giveOutputBaseFileName().c_str() << dN;
+
 		Domain *d2 = domain->Clone();
-		//d2->
+
+		if ((outputContext = fopen(outName.str().c_str(), "w")) == NULL) {
+			OOFEM_ERROR("Can't open output file %s", outName.str().c_str());
+		}
+
+		FileDataStream outputContextStream(outputContext);
+
+		d2->saveContext(outputContextStream, CM_Definition);
 	}
 
 	//

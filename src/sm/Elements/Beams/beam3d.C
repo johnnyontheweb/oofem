@@ -598,7 +598,6 @@ namespace oofem {
 		IntArray dofsTC;
 		// now rebuild the dofstocondense list
 		if (numberOfCondensedDofs){
-			input.setField(referenceNode, _IFT_Beam3d_dofstocondense);
 
 			if (ghostNodes[0] != NULL)
 			{
@@ -617,6 +616,8 @@ namespace oofem {
 				}
 				dofsTC.followedBy(tempArray);
 			}
+
+			input.setField(dofsTC, _IFT_Beam3d_dofstocondense);
 		}
 
 	}
