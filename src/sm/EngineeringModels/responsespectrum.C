@@ -49,6 +49,7 @@
 #include "element.h"
 #include "node.h"
 #include "unknownnumberingscheme.h"
+#include "function.h"
 
 #ifdef __OOFEG
  #include "oofeggraphiccontext.h"
@@ -166,6 +167,14 @@ TimeStep *ResponseSpectrum::giveNextStep()
 }
 
 
+// gets the Spectral acceleration from the function given in input
+double ResponseSpectrum::calcSpectrumOrdinate(double period)
+{
+	Function *f = this->giveDomain(1)->giveFunction(this->func);
+	return f->evaluateAtTime(period);
+}
+
+
 void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 {
     //
@@ -219,6 +228,8 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 	FloatArray *tempCol = new FloatArray();
 	FloatArray *tempCol2 = new FloatArray();
 
+	
+
 	Domain *domain = this->giveDomain(1);
 	IntArray dofIDArry, loc;
 	dofIDArry = domain->giveDefaultNodeDofIDArry();
@@ -242,6 +253,7 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 		if (m != 0.0) m = 1 / sqrt(m);
 		tempCol->times(m);
 		eigVec.setColumn(*tempCol, i);
+		periods.at(i)= 2 * M_PI / sqrt(eigVal.at(i));
 	}
 	// eigVec has been normalized
 
@@ -552,20 +564,28 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 	{
 		OOFEM_LOG_INFO("Creation of loaded model %d...\n", dN);
 
-		std::stringstream outName;
-		FILE *outputContext;
+		double sAcc = calcSpectrumOrdinate(periods.at(dN));
 
-		outName << this->giveOutputBaseFileName().c_str() << dN;
+		FloatArray appliedForces;
+		appliedForces.beColumnOf(eigVec, dN);
+		appliedForces *= (sAcc * partFact.at(dN, dir));
 
-		Domain *d2 = domain->Clone();
+		
 
-		if ((outputContext = fopen(outName.str().c_str(), "w")) == NULL) {
-			OOFEM_ERROR("Can't open output file %s", outName.str().c_str());
-		}
+		//std::stringstream outName;
+		//FILE *outputContext;
 
-		FileDataStream outputContextStream(outputContext);
+		//outName << this->giveOutputBaseFileName().c_str() << dN;
 
-		d2->saveContext(outputContextStream, CM_Definition);
+		//Domain *d2 = domain->Clone();
+
+		//if ((outputContext = fopen(outName.str().c_str(), "w")) == NULL) {
+		//	OOFEM_ERROR("Can't open output file %s", outName.str().c_str());
+		//}
+
+		//FileDataStream outputContextStream(outputContext);
+
+		//d2->saveContext(outputContextStream, CM_Definition);
 	}
 
 	//

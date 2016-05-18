@@ -68,6 +68,7 @@ private:
     SparseMtrxType sparseMtrxType;
     FloatMatrix eigVec;
     FloatArray eigVal;
+	FloatArray periods;
 	FloatArray centroid;
 	FloatArray totMass;
 	FloatMatrix partFact;
@@ -107,6 +108,8 @@ public:
     virtual double giveEigenValue(int eigNum) { return eigVal.at(eigNum); }
 
 	virtual void postInitialize();
+
+	virtual double calcSpectrumOrdinate(double period);
 
     // identification
     virtual const char *giveClassName() const { return "ResponseSpectrum"; }
