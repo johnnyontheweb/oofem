@@ -41,6 +41,7 @@
 #include "floatmatrix.h"
 #include "floatarray.h"
 #include "geneigvalsolvertype.h"
+#include "linearstatic.h"
 
 ///@name Input fields for ResponseSpectrum
 //@{
@@ -83,6 +84,8 @@ private:
     GenEigvalSolverType solverType;
 	int func;
 	int dir;
+	FloatArray loadVector;
+	FloatArray dummyDisps;
 
 public:
 	ResponseSpectrum(int i, EngngModel * _master = NULL) : EngngModel(i, _master)
@@ -110,6 +113,10 @@ public:
 	virtual void postInitialize();
 
 	virtual double calcSpectrumOrdinate(double period);
+	virtual void buildReactionTable(IntArray &restrDofMans, IntArray &restrDofs,
+		IntArray &eqn, TimeStep *tStep, int di);
+	virtual void computeReaction(FloatArray &answer, TimeStep *tStep, int di);
+	virtual void updateInternalState(TimeStep *tStep);
 
     // identification
     virtual const char *giveClassName() const { return "ResponseSpectrum"; }

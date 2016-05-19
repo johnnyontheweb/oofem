@@ -50,6 +50,7 @@
 #include "node.h"
 #include "unknownnumberingscheme.h"
 #include "function.h"
+#include "activebc.h"
 
 #ifdef __OOFEG
  #include "oofeggraphiccontext.h"
@@ -243,6 +244,7 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 	unitDisp->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 6);
 	tempCol->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
 	tempCol2->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
+	periods.resize(numberOfRequiredEigenValues);
 
 	// mass normalization
 	for (int i = 1; i <= numberOfRequiredEigenValues; i++)
@@ -559,6 +561,24 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 #ifdef VERBOSE
 	OOFEM_LOG_INFO("Starting creation of loaded models ...\n");
 #endif
+
+
+	// create linear solver
+	std::unique_ptr< SparseLinearSystemNM > nLinMethod; // = NULL;
+
+	if (!nLinMethod) {
+		if (isParallel()) {
+			if ((solverType == ST_Petsc) || (solverType == ST_Feti)) {
+				nLinMethod.reset(classFactory.createSparseLinSolver(ST_Direct , this->giveDomain(1), this));
+			}
+		}
+		else {
+			nLinMethod.reset(classFactory.createSparseLinSolver(ST_Direct , this->giveDomain(1), this));
+		}
+		if (!nLinMethod) {
+			OOFEM_ERROR("linear solver creation failed for lstype %d", solverType);
+		}
+	}
 	
 	for (int dN = 1; dN <= numberOfRequiredEigenValues; dN++)
 	{
@@ -566,11 +586,21 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 
 		double sAcc = calcSpectrumOrdinate(periods.at(dN));
 
-		FloatArray appliedForces;
-		appliedForces.beColumnOf(eigVec, dN);
-		appliedForces *= (sAcc * partFact.at(dN, dir));
+		loadVector.beColumnOf(eigVec, dN);
+		loadVector *= (sAcc * partFact.at(dN, dir)); // scaled forces
 
-		
+		// this shouldn't be needed...
+		//NM_Status s = nLinMethod->solve(*stiffnessMatrix, loadVector, dummyDisps);  // solve linear system
+		//if (!(s & NM_Success)) {
+		//	OOFEM_ERROR("No success in solving system.");
+		//}
+
+		FloatArray reactions;
+		IntArray dofManMap, dofidMap, eqnMap;
+		this->buildReactionTable(dofManMap, dofidMap, eqnMap, tStep, 1);
+
+		// compute reaction forces
+		this->computeReaction(reactions, tStep, 1);
 
 		//std::stringstream outName;
 		//FILE *outputContext;
@@ -578,6 +608,7 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 		//outName << this->giveOutputBaseFileName().c_str() << dN;
 
 		//Domain *d2 = domain->Clone();
+		
 
 		//if ((outputContext = fopen(outName.str().c_str(), "w")) == NULL) {
 		//	OOFEM_ERROR("Can't open output file %s", outName.str().c_str());
@@ -602,8 +633,103 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 }
 
 
+void ResponseSpectrum::buildReactionTable(IntArray &restrDofMans, IntArray &restrDofs,
+	IntArray &eqn, TimeStep *tStep, int di)
+{
+	// determine number of restrained dofs
+	Domain *domain = this->giveDomain(di);
+	int numRestrDofs = this->giveNumberOfDomainEquations(di, EModelDefaultPrescribedEquationNumbering());
+	int ndofMan = domain->giveNumberOfDofManagers();
+	int rindex, count = 0;
+
+	// initialize corresponding dofManagers and dofs for each restrained dof
+	restrDofMans.resize(numRestrDofs);
+	restrDofs.resize(numRestrDofs);
+	eqn.resize(numRestrDofs);
+
+	for (int i = 1; i <= ndofMan; i++) {
+		DofManager *inode = domain->giveDofManager(i);
+		for (Dof *jdof : *inode) {
+			if (jdof->isPrimaryDof() && (jdof->hasBc(tStep))) { // skip slave dofs
+				rindex = jdof->__givePrescribedEquationNumber();
+				if (rindex) {
+					count++;
+					restrDofMans.at(count) = i;
+					restrDofs.at(count) = jdof->giveDofID();
+					eqn.at(count) = rindex;
+				}
+				else {
+					// NullDof has no equation number and no prescribed equation number
+					//_error("No prescribed equation number assigned to supported DOF");
+				}
+			}
+		}
+	}
+	// Trim to size.
+	restrDofMans.resizeWithValues(count);
+	restrDofs.resizeWithValues(count);
+	eqn.resizeWithValues(count);
+}
+
+void
+ResponseSpectrum::computeReaction(FloatArray &answer, TimeStep *tStep, int di)
+{
+	//FloatArray contribution;
+
+	answer.resize(this->giveNumberOfDomainEquations(di, EModelDefaultPrescribedEquationNumbering()));
+	answer.zero();
+
+	// Add internal forces
+	this->assembleVector(answer, tStep, LastEquilibratedInternalForceAssembler(), VM_Total,
+		EModelDefaultPrescribedEquationNumbering(), this->giveDomain(di));
+	// Subtract external loading
+	///@todo All engineering models should be using this (for consistency)
+	//this->assembleVector( answer, tStep, ExternalForceAssembler(), VM_Total,
+	//                    EModelDefaultPrescribedEquationNumbering(), this->giveDomain(di) );
+	///@todo This method is overloaded in some functions, it needs to be generalized.
+	//this->computeExternalLoadReactionContribution(contribution, tStep, di); changed to loadVector
+	answer.subtract(loadVector);
+	this->updateSharedDofManagers(answer, EModelDefaultPrescribedEquationNumbering(), ReactionExchangeTag);
+}
+
+
+void
+ResponseSpectrum::updateInternalState(TimeStep *tStep)
+{
+	for (auto &domain : domainList) {
+		if (requiresUnknownsDictionaryUpdate()) {
+			for (auto &dman : domain->giveDofManagers()) {
+				this->updateDofUnknownsDictionary(dman.get(), tStep);
+			}
+		}
+
+		for (auto &bc : domain->giveBcs()) {
+			ActiveBoundaryCondition *abc;
+
+			if ((abc = dynamic_cast< ActiveBoundaryCondition * >(bc.get()))) {
+				int ndman = abc->giveNumberOfInternalDofManagers();
+				for (int j = 1; j <= ndman; j++) {
+					this->updateDofUnknownsDictionary(abc->giveInternalDofManager(j), tStep);
+				}
+			}
+		}
+
+		if (true) { //internalVarUpdateStamp != tStep->giveSolutionStateCounter()
+			for (auto &elem : domain->giveElements()) {
+				elem->updateInternalState(tStep);
+			}
+
+			//internalVarUpdateStamp = tStep->giveSolutionStateCounter();
+		}
+	}
+}
+
+
 void ResponseSpectrum::updateYourself(TimeStep *tStep)
-{ }
+{
+	this->updateInternalState(tStep);
+	EngngModel::updateYourself(tStep);
+}
 
 
 void ResponseSpectrum::terminate(TimeStep *tStep)
@@ -668,7 +794,6 @@ void ResponseSpectrum::terminate(TimeStep *tStep)
                 this->updateDofUnknownsDictionary(dman.get(), tStep);
             }
         }
-
 
         for ( auto &dman : domain->giveDofManagers() ) {
             dman->updateYourself(tStep);
