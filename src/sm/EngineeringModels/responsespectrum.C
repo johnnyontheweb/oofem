@@ -245,6 +245,7 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 	tempCol->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
 	tempCol2->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
 	periods.resize(numberOfRequiredEigenValues);
+	combReactions.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
 
 	// mass normalization
 	for (int i = 1; i <= numberOfRequiredEigenValues; i++)
@@ -602,6 +603,34 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 		// compute reaction forces
 		this->computeReaction(reactions, tStep, 1);
 
+		//SRSS
+		for (int z=1; z<=reactions.giveSize();z++)
+		{
+			combReactions.at(z) += pow(reactions.at(z),2);
+		}
+
+		// ADD HERE STUFF TO SUM NODAL DISPLACEMENTS
+
+		//update elements to we can get internal state!!!
+		this->updateInternalState(tStep);
+		EngngModel::updateYourself(tStep);
+
+		for (auto &elem : domain->giveElements()) {
+			// test for remote element in parallel mode
+			if (elem->giveParallelMode() == Element_remote) {
+				continue;
+			}
+
+			//elem->printOutputAt(file, tStep);
+			// ADD ELEMENT STUFF HERE
+		}
+
+
+		// call output manager - bem?
+
+
+
+
 		//std::stringstream outName;
 		//FILE *outputContext;
 
@@ -618,6 +647,8 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 
 		//d2->saveContext(outputContextStream, CM_Definition);
 	}
+
+
 
 	//
 	// zero matrix
@@ -727,8 +758,8 @@ ResponseSpectrum::updateInternalState(TimeStep *tStep)
 
 void ResponseSpectrum::updateYourself(TimeStep *tStep)
 {
-	this->updateInternalState(tStep);
-	EngngModel::updateYourself(tStep);
+	//this->updateInternalState(tStep);
+	//EngngModel::updateYourself(tStep);
 }
 
 

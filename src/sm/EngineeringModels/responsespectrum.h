@@ -85,7 +85,9 @@ private:
 	int func;
 	int dir;
 	FloatArray loadVector;
-	FloatArray dummyDisps;
+	//FloatArray dummyDisps;
+	FloatArray combReactions;
+
 
 public:
 	ResponseSpectrum(int i, EngngModel * _master = NULL) : EngngModel(i, _master)
