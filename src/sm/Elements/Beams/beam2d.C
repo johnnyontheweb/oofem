@@ -48,6 +48,7 @@
 #include "boundaryload.h"
 #include "mathfem.h"
 #include "classfactory.h"
+#include "dynamicinputrecord.h"
 #include "elementinternaldofman.h"
 #include "masterdof.h"
 
@@ -449,6 +450,39 @@ Beam2d :: initializeFrom(InputRecord *ir)
     return IRRT_OK;
 }
 
+
+void
+Beam2d::giveInputRecord(DynamicInputRecord &input)
+{
+	Element::giveInputRecord(input);
+
+	// now let's add what's left, that is the bunch of custom properties
+	IntArray dofsTC;
+	// now rebuild the dofstocondense list
+	if (numberOfCondensedDofs){
+
+		if (ghostNodes[0] != NULL)
+		{
+			IntArray tempArray;
+			ghostNodes[0]->giveCompleteMasterDofIDArray(tempArray);
+			dofsTC.followedBy(tempArray);
+		}
+
+		if (ghostNodes[1] != NULL)
+		{
+			IntArray tempArray;
+			ghostNodes[1]->giveCompleteMasterDofIDArray(tempArray);
+			for (int dID = 1; dID <= tempArray.giveSize(); dID++)
+			{
+				tempArray.at(dID) += 3;
+			}
+			dofsTC.followedBy(tempArray);
+		}
+
+		input.setField(dofsTC, _IFT_Beam2d_dofstocondense);
+	}
+
+}
 
 
 void

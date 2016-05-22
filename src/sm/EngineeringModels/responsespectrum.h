@@ -85,8 +85,9 @@ private:
 	int func;
 	int dir;
 	FloatArray loadVector;
-	//FloatArray dummyDisps;
+	FloatArray dummyDisps;
 	FloatArray combReactions;
+	FloatArray combDisps;
 
 
 public:
@@ -115,6 +116,7 @@ public:
 	virtual void postInitialize();
 
 	virtual double calcSpectrumOrdinate(double period);
+	virtual void computeExternalLoadReactionContribution(FloatArray &reactions, TimeStep *tStep, int di);
 	virtual void buildReactionTable(IntArray &restrDofMans, IntArray &restrDofs,
 		IntArray &eqn, TimeStep *tStep, int di);
 	virtual void computeReaction(FloatArray &answer, TimeStep *tStep, int di);

@@ -137,6 +137,7 @@ public:
 
     virtual const char *giveClassName() const { return "Beam2d"; }
     virtual const char *giveInputRecordName() const { return _IFT_Beam2d_Name; }
+	virtual void giveInputRecord(DynamicInputRecord &input);
     virtual IRResultType initializeFrom(InputRecord *ir);
 
 #ifdef __OOFEG

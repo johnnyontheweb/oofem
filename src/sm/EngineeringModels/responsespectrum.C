@@ -246,6 +246,7 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 	tempCol2->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
 	periods.resize(numberOfRequiredEigenValues);
 	combReactions.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
+	combDisps.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
 
 	// mass normalization
 	for (int i = 1; i <= numberOfRequiredEigenValues; i++)
@@ -590,11 +591,15 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 		loadVector.beColumnOf(eigVec, dN);
 		loadVector *= (sAcc * partFact.at(dN, dir)); // scaled forces
 
-		// this shouldn't be needed...
-		//NM_Status s = nLinMethod->solve(*stiffnessMatrix, loadVector, dummyDisps);  // solve linear system
-		//if (!(s & NM_Success)) {
-		//	OOFEM_ERROR("No success in solving system.");
-		//}
+		// solve linear system
+		NM_Status s = nLinMethod->solve(*stiffnessMatrix, loadVector, dummyDisps);  // solve linear system
+		if (!(s & NM_Success)) {
+			OOFEM_ERROR("No success in solving system.");
+		}
+
+		//update elements to we can get internal state!!!
+		this->updateInternalState(tStep);
+		EngngModel::updateYourself(tStep);
 
 		FloatArray reactions;
 		IntArray dofManMap, dofidMap, eqnMap;
@@ -609,16 +614,26 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 			combReactions.at(z) += pow(reactions.at(z),2);
 		}
 
-		// ADD HERE STUFF TO SUM NODAL DISPLACEMENTS
+		for (int z = 1; z <= dummyDisps.giveSize(); z++)
+		{
+			combDisps.at(z) += pow(dummyDisps.at(z), 2);
+		}
 
-		//update elements to we can get internal state!!!
-		this->updateInternalState(tStep);
-		EngngModel::updateYourself(tStep);
+		// ADD HERE STUFF TO SUM NODAL DISPLACEMENTS
 
 		for (auto &elem : domain->giveElements()) {
 			// test for remote element in parallel mode
 			if (elem->giveParallelMode() == Element_remote) {
 				continue;
+			}
+
+			for (int i = 1; i <= elem->giveNumberOfInternalDofManagers(); ++i) {
+				DofManager *dman = elem->giveInternalDofManager(i);
+				//dman->printOutputAt(file, tStep);
+			}
+
+			for (int i = 1; i <= elem->giveNumberOfIntegrationRules(); i++) {
+				//elem->giveIntegrationRule(i)->printOutputAt(file, tStep);
 			}
 
 			//elem->printOutputAt(file, tStep);
@@ -664,6 +679,16 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 }
 
 
+void
+ResponseSpectrum::computeExternalLoadReactionContribution(FloatArray &reactions, TimeStep *tStep, int di)
+{
+	reactions.resize(this->giveNumberOfDomainEquations(di, EModelDefaultPrescribedEquationNumbering()));
+	reactions.zero();
+	this->assembleVector(reactions, tStep, ExternalForceAssembler(), VM_Total,
+		EModelDefaultPrescribedEquationNumbering(), this->giveDomain(di));
+}
+
+
 void ResponseSpectrum::buildReactionTable(IntArray &restrDofMans, IntArray &restrDofs,
 	IntArray &eqn, TimeStep *tStep, int di)
 {
@@ -705,7 +730,7 @@ void ResponseSpectrum::buildReactionTable(IntArray &restrDofMans, IntArray &rest
 void
 ResponseSpectrum::computeReaction(FloatArray &answer, TimeStep *tStep, int di)
 {
-	//FloatArray contribution;
+	FloatArray contribution;
 
 	answer.resize(this->giveNumberOfDomainEquations(di, EModelDefaultPrescribedEquationNumbering()));
 	answer.zero();
@@ -718,8 +743,8 @@ ResponseSpectrum::computeReaction(FloatArray &answer, TimeStep *tStep, int di)
 	//this->assembleVector( answer, tStep, ExternalForceAssembler(), VM_Total,
 	//                    EModelDefaultPrescribedEquationNumbering(), this->giveDomain(di) );
 	///@todo This method is overloaded in some functions, it needs to be generalized.
-	//this->computeExternalLoadReactionContribution(contribution, tStep, di); changed to loadVector
-	answer.subtract(loadVector);
+	this->computeExternalLoadReactionContribution(contribution, tStep, di);
+	answer.subtract(contribution);
 	this->updateSharedDofManagers(answer, EModelDefaultPrescribedEquationNumbering(), ReactionExchangeTag);
 }
 
@@ -813,31 +838,31 @@ void ResponseSpectrum::terminate(TimeStep *tStep)
 
     fprintf(outputStream, "\n\n");
 
-    for ( int i = 1; i <=  numberOfRequiredEigenValues; i++ ) {
-        fprintf(outputStream, "\nOutput for eigen value no.  %.3e \n", ( double ) i);
-        fprintf( outputStream,
-                "Printing eigen vector no. %d, corresponding eigen value is %15.8e\n\n",
-                i, eigVal.at(i) );
-        tStep->setTime( ( double ) i ); // we use time as intrinsic eigen value index
+    //for ( int i = 1; i <=  numberOfRequiredEigenValues; i++ ) {
+    //    fprintf(outputStream, "\nOutput for eigen value no.  %.3e \n", ( double ) i);
+    //    fprintf( outputStream,
+    //            "Printing eigen vector no. %d, corresponding eigen value is %15.8e\n\n",
+    //            i, eigVal.at(i) );
+    //    tStep->setTime( ( double ) i ); // we use time as intrinsic eigen value index
 
-        if ( this->requiresUnknownsDictionaryUpdate() ) {
-            for ( auto &dman : domain->giveDofManagers() ) {
-                this->updateDofUnknownsDictionary(dman.get(), tStep);
-            }
-        }
+    //    if ( this->requiresUnknownsDictionaryUpdate() ) {
+    //        for ( auto &dman : domain->giveDofManagers() ) {
+    //            this->updateDofUnknownsDictionary(dman.get(), tStep);
+    //        }
+    //    }
 
-        for ( auto &dman : domain->giveDofManagers() ) {
-            dman->updateYourself(tStep);
-            dman->printOutputAt(outputStream, tStep);
-        }
-    }
+    //    for ( auto &dman : domain->giveDofManagers() ) {
+    //        dman->updateYourself(tStep);
+    //        dman->printOutputAt(outputStream, tStep);
+    //    }
+    //}
 
-    for ( int i = 1; i <=  numberOfRequiredEigenValues; i++ ) {
-        // export using export manager
-        tStep->setTime( ( double ) i ); // we use time as intrinsic eigen value index
-        tStep->setNumber(i);
-        exportModuleManager->doOutput(tStep);
-    }
+    //for ( int i = 1; i <=  numberOfRequiredEigenValues; i++ ) {
+    //    // export using export manager
+    //    tStep->setTime( ( double ) i ); // we use time as intrinsic eigen value index
+    //    tStep->setNumber(i);
+    //    exportModuleManager->doOutput(tStep);
+    //}
     fflush( this->giveOutputStream() );
     this->saveStepContext(tStep);
 }
