@@ -42,6 +42,9 @@
 #include "floatarray.h"
 #include "geneigvalsolvertype.h"
 #include "linearstatic.h"
+#include "integrationpointstatus.h"
+#include "integrationrule.h"
+#include "gausspoint.h"
 
 ///@name Input fields for ResponseSpectrum
 //@{
@@ -88,6 +91,7 @@ private:
 	FloatArray dummyDisps;
 	FloatArray combReactions;
 	FloatArray combDisps;
+	IntArray dofManMap, dofidMap, eqnMap;
 
 
 public:
@@ -115,6 +119,9 @@ public:
 
 	virtual void postInitialize();
 
+	virtual void ResponseSpectrum::getGPOutputAt(GaussPoint *gp, TimeStep *tStep);
+	virtual void ResponseSpectrum::getIntRuleOutputAt(IntegrationRule *iRule, TimeStep *tStep);
+	virtual void ResponseSpectrum::getIntPointStatusOutputAt(IntegrationPointStatus *iStatus, TimeStep *tStep, MaterialMode materialMode);
 	virtual double calcSpectrumOrdinate(double period);
 	virtual void computeExternalLoadReactionContribution(FloatArray &reactions, TimeStep *tStep, int di);
 	virtual void buildReactionTable(IntArray &restrDofMans, IntArray &restrDofs,

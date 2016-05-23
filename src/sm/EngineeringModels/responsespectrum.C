@@ -51,366 +51,241 @@
 #include "unknownnumberingscheme.h"
 #include "function.h"
 #include "activebc.h"
+#include "integrationrule.h"
+#include "gausspoint.h"
+#include "structuralms.h"
+#include "structuralmaterial.h"
+#include "outputmanager.h"
+
 
 #ifdef __OOFEG
  #include "oofeggraphiccontext.h"
 #endif
 
 namespace oofem {
-REGISTER_EngngModel(ResponseSpectrum);
+	REGISTER_EngngModel(ResponseSpectrum);
 
-NumericalMethod *ResponseSpectrum :: giveNumericalMethod(MetaStep *mStep)
-{
-    if ( !nMethod ) {
-        nMethod.reset( classFactory.createGeneralizedEigenValueSolver(solverType, this->giveDomain(1), this) );
-        if ( !nMethod ) {
-            OOFEM_ERROR("solver creation failed");
-        }
-    }
+	NumericalMethod *ResponseSpectrum::giveNumericalMethod(MetaStep *mStep)
+	{
+		if (!nMethod) {
+			nMethod.reset(classFactory.createGeneralizedEigenValueSolver(solverType, this->giveDomain(1), this));
+			if (!nMethod) {
+				OOFEM_ERROR("solver creation failed");
+			}
+		}
 
-    return nMethod.get();
-}
-
-IRResultType
-ResponseSpectrum::initializeFrom(InputRecord *ir)
-{
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-    //EngngModel::instanciateFrom (ir);
-
-	IR_GIVE_FIELD(ir, numberOfRequiredEigenValues, _IFT_ResponseSpectrum_nroot);
-
-    // numberOfSteps set artificially to numberOfRequiredEigenValues
-    // in order to allow
-    // use restoreContext function for different eigenValues
-    // numberOfSteps = numberOfRequiredEigenValues;
-    numberOfSteps = 1;
-
-	IR_GIVE_FIELD(ir, rtolv, _IFT_ResponseSpectrum_rtolv);
-    if ( rtolv < 1.e-12 ) {
-        rtolv =  1.e-12;
-    }
-
-    if ( rtolv > 0.01 ) {
-        rtolv =  0.01;
-    }
-
-    int val = 0;
-	IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_ResponseSpectrum_stype);
-    solverType = ( GenEigvalSolverType ) val;
-
-    val = 0; //Default Skyline
-    IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_EngngModel_smtype);
-    sparseMtrxType = ( SparseMtrxType ) val;
-
-	IR_GIVE_FIELD(ir, val, _IFT_ResponseSpectrum_func);
-	func = (int)val; // we'll check in postInitialize whether this id exists or not
-
-	IR_GIVE_FIELD(ir, val, _IFT_ResponseSpectrum_dir);
-	dir = (int)val;
-	if (dir < D_u && dir > D_w){
-		OOFEM_ERROR("Invalid direction. Currently 1 to 3 are supported");
+		return nMethod.get();
 	}
 
-    return IRRT_OK;
-}
+	IRResultType
+		ResponseSpectrum::initializeFrom(InputRecord *ir)
+	{
+		IRResultType result;                // Required by IR_GIVE_FIELD macro
+		//EngngModel::instanciateFrom (ir);
+
+		IR_GIVE_FIELD(ir, numberOfRequiredEigenValues, _IFT_ResponseSpectrum_nroot);
+
+		// numberOfSteps set artificially to numberOfRequiredEigenValues
+		// in order to allow
+		// use restoreContext function for different eigenValues
+		// numberOfSteps = numberOfRequiredEigenValues;
+		numberOfSteps = 1;
+
+		IR_GIVE_FIELD(ir, rtolv, _IFT_ResponseSpectrum_rtolv);
+		if (rtolv < 1.e-12) {
+			rtolv = 1.e-12;
+		}
+
+		if (rtolv > 0.01) {
+			rtolv = 0.01;
+		}
+
+		int val = 0;
+		IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_ResponseSpectrum_stype);
+		solverType = (GenEigvalSolverType)val;
+
+		val = 0; //Default Skyline
+		IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_EngngModel_smtype);
+		sparseMtrxType = (SparseMtrxType)val;
+
+		IR_GIVE_FIELD(ir, val, _IFT_ResponseSpectrum_func);
+		func = (int)val; // we'll check in postInitialize whether this id exists or not
+
+		IR_GIVE_FIELD(ir, val, _IFT_ResponseSpectrum_dir);
+		dir = (int)val;
+		if (dir < D_u && dir > D_w){
+			OOFEM_ERROR("Invalid direction. Currently 1 to 3 are supported");
+		}
+
+		return IRRT_OK;
+	}
 
 
-void ResponseSpectrum::postInitialize()
-{
-	EngngModel::postInitialize();
+	void ResponseSpectrum::postInitialize()
+	{
+		EngngModel::postInitialize();
 
-	// we check whether the spectrum function exists or not.
-	Domain *d = this->giveDomain(1);
-	Function *f = d->giveFunction(func);
+		// we check whether the spectrum function exists or not.
+		Domain *d = this->giveDomain(1);
+		Function *f = d->giveFunction(func);
 
-	if (f == NULL) OOFEM_ERROR("Invalid function given");
-}
+		if (f == NULL) OOFEM_ERROR("Invalid function given");
+	}
 
 
-double ResponseSpectrum::giveUnknownComponent(ValueModeType mode, TimeStep *tStep, Domain *d, Dof *dof)
-// returns unknown quantity like displacement, eigenvalue.
-// This function translates this request to numerical method language
-{
-    int eq = dof->__giveEquationNumber();
+	double ResponseSpectrum::giveUnknownComponent(ValueModeType mode, TimeStep *tStep, Domain *d, Dof *dof)
+		// returns unknown quantity like displacement, eigenvalue.
+		// This function translates this request to numerical method language
+	{
+		int eq = dof->__giveEquationNumber();
 #ifdef DEBUG
-    if ( eq == 0 ) {
-        OOFEM_ERROR("invalid equation number");
-    }
+		if (eq == 0) {
+			OOFEM_ERROR("invalid equation number");
+		}
 #endif
 
-    switch ( mode ) {
-    case VM_Total:  // EigenVector
-    case VM_Incremental:
-        return eigVec.at( eq, ( int ) tStep->giveTargetTime() );
+		switch (mode) {
+		case VM_Total:  // EigenVector
+		case VM_Incremental:
+			return combDisps.at(eq);// , (int)tStep->giveTargetTime());
 
-    default:
-        OOFEM_ERROR("Unknown is of undefined type for this problem");
-    }
+		default:
+			OOFEM_ERROR("Unknown is of undefined type for this problem");
+		}
 
-    return 0.;
-}
-
-
-TimeStep *ResponseSpectrum::giveNextStep()
-{
-    int istep = giveNumberOfFirstStep();
-    StateCounterType counter = 1;
-
-    if ( currentStep ) {
-        istep = currentStep->giveNumber() + 1;
-        counter = currentStep->giveSolutionStateCounter() + 1;
-    }
-
-    previousStep = std :: move(currentStep);
-    currentStep.reset( new TimeStep(istep, this, 1, ( double ) istep, 0., counter) );
-
-    return currentStep.get();
-}
+		return 0.;
+	}
 
 
-// gets the Spectral acceleration from the function given in input
-double ResponseSpectrum::calcSpectrumOrdinate(double period)
-{
-	Function *f = this->giveDomain(1)->giveFunction(this->func);
-	return f->evaluateAtTime(period);
-}
+	TimeStep *ResponseSpectrum::giveNextStep()
+	{
+		int istep = giveNumberOfFirstStep();
+		StateCounterType counter = 1;
+
+		if (currentStep) {
+			istep = currentStep->giveNumber() + 1;
+			counter = currentStep->giveSolutionStateCounter() + 1;
+		}
+
+		previousStep = std::move(currentStep);
+		currentStep.reset(new TimeStep(istep, this, 1, (double)istep, 0., counter));
+
+		return currentStep.get();
+	}
 
 
-void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
-{
-    //
-    // creates system of governing eq's and solves them at given time step
-    //
-    // first assemble problem at current time step
+	// gets the Spectral acceleration from the function given in input
+	double ResponseSpectrum::calcSpectrumOrdinate(double period)
+	{
+		Function *f = this->giveDomain(1)->giveFunction(this->func);
+		return f->evaluateAtTime(period);
+	}
+
+
+	void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
+	{
+		//
+		// creates system of governing eq's and solves them at given time step
+		//
+		// first assemble problem at current time step
 
 #ifdef VERBOSE
-    OOFEM_LOG_INFO("Assembling stiffness and mass matrices\n");
+		OOFEM_LOG_INFO("Assembling stiffness and mass matrices\n");
 #endif
 
-    if ( tStep->giveNumber() == 1 ) {
-        //
-        // first step  assemble stiffness Matrix
-        //
+		if (tStep->giveNumber() == 1) {
+			//
+			// first step  assemble stiffness Matrix
+			//
 
-        stiffnessMatrix.reset( classFactory.createSparseMtrx(sparseMtrxType) );
-        stiffnessMatrix->buildInternalStructure( this, 1, EModelDefaultEquationNumbering() );
+			stiffnessMatrix.reset(classFactory.createSparseMtrx(sparseMtrxType));
+			stiffnessMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
 
-        massMatrix.reset( classFactory.createSparseMtrx(sparseMtrxType) );
-        massMatrix->buildInternalStructure( this, 1, EModelDefaultEquationNumbering() );
+			massMatrix.reset(classFactory.createSparseMtrx(sparseMtrxType));
+			massMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
 
-        this->assemble( *stiffnessMatrix, tStep, TangentAssembler(TangentStiffness),
-                       EModelDefaultEquationNumbering(), this->giveDomain(1) );
-        this->assemble( *massMatrix, tStep, MassMatrixAssembler(),
-                       EModelDefaultEquationNumbering(), this->giveDomain(1) );
-        //
-        // create resulting objects eigVec and eigVal
-        //
-        eigVec.resize(this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ), numberOfRequiredEigenValues);
-        eigVec.zero();
-        eigVal.resize(numberOfRequiredEigenValues);
-        eigVal.zero();
-    }
+			this->assemble(*stiffnessMatrix, tStep, TangentAssembler(TangentStiffness),
+				EModelDefaultEquationNumbering(), this->giveDomain(1));
+			this->assemble(*massMatrix, tStep, MassMatrixAssembler(),
+				EModelDefaultEquationNumbering(), this->giveDomain(1));
+			//
+			// create resulting objects eigVec and eigVal
+			//
+			eigVec.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), numberOfRequiredEigenValues);
+			eigVec.zero();
+			eigVal.resize(numberOfRequiredEigenValues);
+			eigVal.zero();
+		}
 
-    //
-    // set-up numerical model
-    //
-    this->giveNumericalMethod( this->giveMetaStep( tStep->giveMetaStepNumber() ) );
+		//
+		// set-up numerical model
+		//
+		this->giveNumericalMethod(this->giveMetaStep(tStep->giveMetaStepNumber()));
 
-    //
-    // call numerical model to solve arised problem
-    //
+		//
+		// call numerical model to solve arised problem
+		//
 #ifdef VERBOSE
-    OOFEM_LOG_INFO("Solving ...\n");
+		OOFEM_LOG_INFO("Solving ...\n");
 #endif
 
-    nMethod->solve(*stiffnessMatrix, *massMatrix, eigVal, eigVec, rtolv, numberOfRequiredEigenValues);
+		nMethod->solve(*stiffnessMatrix, *massMatrix, eigVal, eigVec, rtolv, numberOfRequiredEigenValues);
 
 		FloatMatrix *unitDisp = new FloatMatrix();
-	FloatArray *tempCol = new FloatArray();
-	FloatArray *tempCol2 = new FloatArray();
+		FloatArray *tempCol = new FloatArray();
+		FloatArray *tempCol2 = new FloatArray();
 
-	
 
-	Domain *domain = this->giveDomain(1);
-	IntArray dofIDArry, loc;
-	dofIDArry = domain->giveDefaultNodeDofIDArry();
-	int nelem = domain->giveNumberOfElements();
 
-	// matrix and array initialization
-	totMass.resize(6);		// 3 are the translational dofs - enough for the moment
-	centroid.resize(3);
-	partFact.resize(numberOfRequiredEigenValues, 6);
-	massPart.resize(numberOfRequiredEigenValues, 6);
-	unitDisp->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 6);
-	tempCol->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
-	tempCol2->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
-	periods.resize(numberOfRequiredEigenValues);
-	combReactions.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
-	combDisps.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
+		Domain *domain = this->giveDomain(1);
+		IntArray dofIDArry, loc;
+		dofIDArry = domain->giveDefaultNodeDofIDArry();
+		int nelem = domain->giveNumberOfElements();
 
-	// mass normalization
-	for (int i = 1; i <= numberOfRequiredEigenValues; i++)
-	{
-		tempCol->beColumnOf(eigVec, i);
-		massMatrix->times(*tempCol, *tempCol2);
-		double m = tempCol->dotProduct(*tempCol2);
-		if (m != 0.0) m = 1 / sqrt(m);
-		tempCol->times(m);
-		eigVec.setColumn(*tempCol, i);
-		periods.at(i)= 2 * M_PI / sqrt(eigVal.at(i));
-	}
-	// eigVec has been normalized
+		// matrix and array initialization
+		totMass.resize(6);		// 3 are the translational dofs - enough for the moment
+		centroid.resize(3);
+		partFact.resize(numberOfRequiredEigenValues, 6);
+		massPart.resize(numberOfRequiredEigenValues, 6);
+		unitDisp->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 6);
+		tempCol->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
+		tempCol2->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
+		periods.resize(numberOfRequiredEigenValues);
+		combReactions.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
+		combDisps.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
 
-	IntArray masterDofIDs, nodalArray, ids;
-	IntArray locationArray;
-	IntArray *dofIdArray = new IntArray();
-	dofIdArray->clear();
-
-	FloatMatrix tempMat, tempMat2;
-	FloatArray tempCoord, coordArray;
-	tempMat.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 6);
-	tempMat2.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 6);
-
-	//
-	// create unit displacement vectors
-	//
-	// first from nodes themselves
-	for (std::unique_ptr<DofManager> &node : domain->giveDofManagers()) {
-		//node->giveLocationArray(dofIDArry, loc, EModelDefaultEquationNumbering());
-		if (!node->giveNumberOfDofs()) continue;
-
-		for (int dType = D_u; dType <= D_w; dType++)
+		// mass normalization
+		for (int i = 1; i <= numberOfRequiredEigenValues; i++)
 		{
-			auto myDof = node->findDofWithDofId((DofIDItem)dType);
-			if (myDof == node->end()) {
-				//OOFEM_ERROR("incompatible dof (%d) requested", dType);
-				continue;
-			}
-
-			int eqN = EModelDefaultEquationNumbering().giveDofEquationNumber(*myDof);
-
-			// save unit displacement and coordinate.
-			// TODO consider the fact that nodes may have own UCS.
-			if (eqN)
-			{
-				unitDisp->at(eqN, dType) = 1.0;
-				tempMat2.at(eqN, dType) = node->giveCoordinate(dType);
-			}
+			tempCol->beColumnOf(eigVec, i);
+			massMatrix->times(*tempCol, *tempCol2);
+			double m = tempCol->dotProduct(*tempCol2);
+			if (m != 0.0) m = 1 / sqrt(m);
+			tempCol->times(m);
+			eigVec.setColumn(*tempCol, i);
+			periods.at(i) = 2 * M_PI / sqrt(eigVal.at(i));
 		}
-	}  // end of search among nodes
+		// eigVec has been normalized
 
-	// then from internaldof managers
-	for (int ielem = 1; ielem <= nelem; ielem++) {
-		Element *element = domain->giveElement(ielem);
+		IntArray masterDofIDs, nodalArray, ids;
+		IntArray locationArray;
+		IntArray *dofIdArray = new IntArray();
+		dofIdArray->clear();
 
-		// the following may be simplified.
-		// retrieve internal dof managers and location array
-		for (int i = 1; i <= element->giveNumberOfInternalDofManagers(); i++) {
-			DofManager *intDofMan = element->giveInternalDofManager(i);
+		FloatMatrix tempMat, tempMat2;
+		FloatArray tempCoord, coordArray;
+		tempMat.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 6);
+		tempMat2.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 6);
 
-			if (!intDofMan) continue; // you may never know...
+		//
+		// create unit displacement vectors
+		//
+		// first from nodes themselves
+		for (std::unique_ptr<DofManager> &node : domain->giveDofManagers()) {
+			//node->giveLocationArray(dofIDArry, loc, EModelDefaultEquationNumbering());
+			if (!node->giveNumberOfDofs()) continue;
 
-			locationArray.clear();
-			tempCoord.clear();
-
-			element->giveInternalDofManDofIDMask(i, ids);
-			intDofMan->giveLocationArray(ids, nodalArray, EModelDefaultEquationNumbering());
-			locationArray.followedBy(nodalArray);
-
-			intDofMan->giveMasterDofIDArray(ids, masterDofIDs);
-			dofIdArray->followedBy(masterDofIDs);
-
-			coordArray.resize(masterDofIDs.giveSize());
-			int c = 1;
-			for (int dof : masterDofIDs)
-			{
-				if (intDofMan->hasCoordinates()) {
-					coordArray.at(c) = intDofMan->giveCoordinate(dof);
-				}
-				else
-				{
-					// get the number. ghostNode FEMComponent number is changed on purpose.
-					int tempN = intDofMan->giveNumber();
-					//element->giveDofManager(tempN)->requiresTransformation()
-					coordArray.at(c) = element->giveDofManager(tempN)->giveCoordinate(dof);
-				}
-				c++; // Increment the counter in any case. The position index must match the index in masterDofIDs. We'll sort the dofs needed hereafter
-			}
-			tempCoord.append(coordArray);
-
-			int partialDofCount = locationArray.giveSize();
-			if (partialDofCount) {
-				// search for our dofs in there
-				for (int myDofIndex = 1; myDofIndex <= partialDofCount; myDofIndex++)
-				{
-					int dType = dofIdArray->at(myDofIndex);
-					int eqN = locationArray.at(myDofIndex);
-
-					if ((dType >= D_u) && (dType <= D_w) && eqN) {
-						// save unit displacement and coordinate
-
-						unitDisp->at(eqN, dType) = 1.0;
-						tempMat2.at(eqN, dType) = tempCoord.at(myDofIndex);
-					}
-				}
-			}
-		}
-	}  // end of search among internal dof managers
-	// end of creation of translational unit displacement vectors
-
-
-	for (int i = 1; i <= 3; i++)
-	{
-		tempCol->beColumnOf(*unitDisp, i);
-		massMatrix->times(*tempCol, *tempCol2);  // now tempCol2 has only the masses pertaining the i-th direction
-		tempMat.setColumn(*tempCol2, i);
-		totMass.at(i) = tempCol->dotProduct(*tempCol2);  // total mass for direction i-th direction
-		tempCol->beColumnOf(tempMat2, i);	// fetch coordinates in i-th direction
-		if (totMass.at(i) != 0.0) centroid.at(i) = tempCol->dotProduct(*tempCol2) / totMass.at(i);  // dot multiply to get first moment, then divide by total mass in i-th direction to get i-th coordinate of the centroid
-	}
-
-
-	// we have the centroid. we can now calculate rotational components. first from nodes.
-	for (std::unique_ptr<DofManager> &node : domain->giveDofManagers()) {
-		//node->giveLocationArray(dofIDArry, loc, EModelDefaultEquationNumbering());
-		if (!node->giveNumberOfDofs()) continue;
-
-		FloatArray* nodeCoords = node->giveCoordinates();
-		if (nodeCoords){
-			FloatArray vk(3);
-			IntArray eq(3);
-
-			// TODO consider own UCS if present
 			for (int dType = D_u; dType <= D_w; dType++)
-			{
-				auto myDof = node->findDofWithDofId((DofIDItem)dType);
-				if (myDof == node->end()){
-					vk.at(dType) = 0.0;
-					eq.at(dType) = 0;
-					continue;
-				}
-				vk.at(dType) = node->giveCoordinate(dType) - centroid.at(dType);
-				eq.at(dType) = EModelDefaultEquationNumbering().giveDofEquationNumber(*myDof);
-			}
-
-			// set mixed contribution due to rotation about centroid
-			if (eq.at(1)){
-				unitDisp->at(eq.at(1), 5) = vk.at(3);
-				unitDisp->at(eq.at(1), 6) = -vk.at(2);
-			}
-
-			if (eq.at(2)){
-				unitDisp->at(eq.at(2), 4) = -vk.at(3);
-				unitDisp->at(eq.at(2), 6) = vk.at(1);
-			}
-
-			if (eq.at(3)){
-				unitDisp->at(eq.at(3), 4) = vk.at(2);
-				unitDisp->at(eq.at(3), 5) = -vk.at(1);
-			}
-
-			// set pure rotational contribution
-			for (int dType = R_u; dType <= R_w; dType++)
 			{
 				auto myDof = node->findDofWithDofId((DofIDItem)dType);
 				if (myDof == node->end()) {
@@ -420,72 +295,108 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 
 				int eqN = EModelDefaultEquationNumbering().giveDofEquationNumber(*myDof);
 
-				// save unit displacement and coordinate
-				// TODO consider own UCS if present
+				// save unit displacement and coordinate.
+				// TODO consider the fact that nodes may have own UCS.
 				if (eqN)
 				{
 					unitDisp->at(eqN, dType) = 1.0;
 					tempMat2.at(eqN, dType) = node->giveCoordinate(dType);
 				}
-
 			}
-		}
-	} // end of search among nodes
+		}  // end of search among nodes
 
-	// then from internaldof managers
-	for (int ielem = 1; ielem <= nelem; ielem++) {
-		Element *element = domain->giveElement(ielem);
+		// then from internaldof managers
+		for (int ielem = 1; ielem <= nelem; ielem++) {
+			Element *element = domain->giveElement(ielem);
 
-		// the following may be simplified
-		//	retrieve internal dof managers and location array
-		for (int i = 1; i <= element->giveNumberOfInternalDofManagers(); i++) {
-			DofManager *intDofMan = element->giveInternalDofManager(i);
+			// the following may be simplified.
+			// retrieve internal dof managers and location array
+			for (int i = 1; i <= element->giveNumberOfInternalDofManagers(); i++) {
+				DofManager *intDofMan = element->giveInternalDofManager(i);
 
-			if (!intDofMan) continue; // you may never know...
+				if (!intDofMan) continue; // you may never know...
 
-			locationArray.clear();
-			tempCoord.clear();
+				locationArray.clear();
+				tempCoord.clear();
 
-			element->giveInternalDofManDofIDMask(i, ids);
-			intDofMan->giveLocationArray(ids, nodalArray, EModelDefaultEquationNumbering());
-			locationArray.followedBy(nodalArray);
+				element->giveInternalDofManDofIDMask(i, ids);
+				intDofMan->giveLocationArray(ids, nodalArray, EModelDefaultEquationNumbering());
+				locationArray.followedBy(nodalArray);
 
-			intDofMan->giveMasterDofIDArray(ids, masterDofIDs);
-			dofIdArray->followedBy(masterDofIDs);
+				intDofMan->giveMasterDofIDArray(ids, masterDofIDs);
+				dofIdArray->followedBy(masterDofIDs);
 
-			coordArray.resize(masterDofIDs.giveSize());
-			int c = 1;
-			for (int dof : masterDofIDs)
-			{
-				if (intDofMan->hasCoordinates()) {
-					coordArray.at(c) = intDofMan->giveCoordinate(dof);
-				}
-				else
+				coordArray.resize(masterDofIDs.giveSize());
+				int c = 1;
+				for (int dof : masterDofIDs)
 				{
-					// get the number. ghostNode FEMComponent number is changed on purpose.
-					int tempN = intDofMan->giveNumber();
-					//element->giveDofManager(tempN)->requiresTransformation()
-					coordArray.at(c) = element->giveDofManager(tempN)->giveCoordinate(dof);
+					if (intDofMan->hasCoordinates()) {
+						coordArray.at(c) = intDofMan->giveCoordinate(dof);
+					}
+					else
+					{
+						// get the number. ghostNode FEMComponent number is changed on purpose.
+						int tempN = intDofMan->giveNumber();
+						//element->giveDofManager(tempN)->requiresTransformation()
+						coordArray.at(c) = element->giveDofManager(tempN)->giveCoordinate(dof);
+					}
+					c++; // Increment the counter in any case. The position index must match the index in masterDofIDs. We'll sort the dofs needed hereafter
 				}
-				c++; // Increment the counter in any case. The position index must match the index in masterDofIDs. We'll sort the dofs needed hereafter
+				tempCoord.append(coordArray);
+
+				int partialDofCount = locationArray.giveSize();
+				if (partialDofCount) {
+					// search for our dofs in there
+					for (int myDofIndex = 1; myDofIndex <= partialDofCount; myDofIndex++)
+					{
+						int dType = dofIdArray->at(myDofIndex);
+						int eqN = locationArray.at(myDofIndex);
+
+						if ((dType >= D_u) && (dType <= D_w) && eqN) {
+							// save unit displacement and coordinate
+
+							unitDisp->at(eqN, dType) = 1.0;
+							tempMat2.at(eqN, dType) = tempCoord.at(myDofIndex);
+						}
+					}
+				}
 			}
-			tempCoord.append(coordArray);
+		}  // end of search among internal dof managers
+		// end of creation of translational unit displacement vectors
 
-			// TODO should element CS be considered even with internal dof managers
-			if (locationArray.giveSize()){
 
+		for (int i = 1; i <= 3; i++)
+		{
+			tempCol->beColumnOf(*unitDisp, i);
+			massMatrix->times(*tempCol, *tempCol2);  // now tempCol2 has only the masses pertaining the i-th direction
+			tempMat.setColumn(*tempCol2, i);
+			totMass.at(i) = tempCol->dotProduct(*tempCol2);  // total mass for direction i-th direction
+			tempCol->beColumnOf(tempMat2, i);	// fetch coordinates in i-th direction
+			if (totMass.at(i) != 0.0) centroid.at(i) = tempCol->dotProduct(*tempCol2) / totMass.at(i);  // dot multiply to get first moment, then divide by total mass in i-th direction to get i-th coordinate of the centroid
+		}
+
+
+		// we have the centroid. we can now calculate rotational components. first from nodes.
+		for (std::unique_ptr<DofManager> &node : domain->giveDofManagers()) {
+			//node->giveLocationArray(dofIDArry, loc, EModelDefaultEquationNumbering());
+			if (!node->giveNumberOfDofs()) continue;
+
+			FloatArray* nodeCoords = node->giveCoordinates();
+			if (nodeCoords){
 				FloatArray vk(3);
 				IntArray eq(3);
+
+				// TODO consider own UCS if present
 				for (int dType = D_u; dType <= D_w; dType++)
 				{
-					int myDof = dofIdArray->findFirstIndexOf((DofIDItem)dType);
-					if (myDof == 0){
+					auto myDof = node->findDofWithDofId((DofIDItem)dType);
+					if (myDof == node->end()){
 						vk.at(dType) = 0.0;
 						eq.at(dType) = 0;
 						continue;
 					}
-					vk.at(dType) = tempCoord.at(myDof) - centroid.at(dType);
-					eq.at(dType) = locationArray.at(myDof);
+					vk.at(dType) = node->giveCoordinate(dType) - centroid.at(dType);
+					eq.at(dType) = EModelDefaultEquationNumbering().giveDofEquationNumber(*myDof);
 				}
 
 				// set mixed contribution due to rotation about centroid
@@ -504,190 +415,343 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 					unitDisp->at(eq.at(3), 5) = -vk.at(1);
 				}
 
-
-				// search for our dofs in there
+				// set pure rotational contribution
 				for (int dType = R_u; dType <= R_w; dType++)
 				{
-					int myDof = dofIdArray->findFirstIndexOf(dType);
-					if (myDof == 0) continue;
+					auto myDof = node->findDofWithDofId((DofIDItem)dType);
+					if (myDof == node->end()) {
+						//OOFEM_ERROR("incompatible dof (%d) requested", dType);
+						continue;
+					}
 
-					int eqN = locationArray.at(myDof);
+					int eqN = EModelDefaultEquationNumbering().giveDofEquationNumber(*myDof);
 
 					// save unit displacement and coordinate
+					// TODO consider own UCS if present
 					if (eqN)
 					{
 						unitDisp->at(eqN, dType) = 1.0;
-						tempMat2.at(eqN, dType) = tempCoord.at(myDof);
+						tempMat2.at(eqN, dType) = node->giveCoordinate(dType);
 					}
+
 				}
 			}
-		}  // end of search among internal dof managers
+		} // end of search among nodes
+
+		// then from internaldof managers
+		for (int ielem = 1; ielem <= nelem; ielem++) {
+			Element *element = domain->giveElement(ielem);
+
+			// the following may be simplified
+			//	retrieve internal dof managers and location array
+			for (int i = 1; i <= element->giveNumberOfInternalDofManagers(); i++) {
+				DofManager *intDofMan = element->giveInternalDofManager(i);
+
+				if (!intDofMan) continue; // you may never know...
+
+				locationArray.clear();
+				tempCoord.clear();
+
+				element->giveInternalDofManDofIDMask(i, ids);
+				intDofMan->giveLocationArray(ids, nodalArray, EModelDefaultEquationNumbering());
+				locationArray.followedBy(nodalArray);
+
+				intDofMan->giveMasterDofIDArray(ids, masterDofIDs);
+				dofIdArray->followedBy(masterDofIDs);
+
+				coordArray.resize(masterDofIDs.giveSize());
+				int c = 1;
+				for (int dof : masterDofIDs)
+				{
+					if (intDofMan->hasCoordinates()) {
+						coordArray.at(c) = intDofMan->giveCoordinate(dof);
+					}
+					else
+					{
+						// get the number. ghostNode FEMComponent number is changed on purpose.
+						int tempN = intDofMan->giveNumber();
+						//element->giveDofManager(tempN)->requiresTransformation()
+						coordArray.at(c) = element->giveDofManager(tempN)->giveCoordinate(dof);
+					}
+					c++; // Increment the counter in any case. The position index must match the index in masterDofIDs. We'll sort the dofs needed hereafter
+				}
+				tempCoord.append(coordArray);
+
+				// TODO should element CS be considered even with internal dof managers
+				if (locationArray.giveSize()){
+
+					FloatArray vk(3);
+					IntArray eq(3);
+					for (int dType = D_u; dType <= D_w; dType++)
+					{
+						int myDof = dofIdArray->findFirstIndexOf((DofIDItem)dType);
+						if (myDof == 0){
+							vk.at(dType) = 0.0;
+							eq.at(dType) = 0;
+							continue;
+						}
+						vk.at(dType) = tempCoord.at(myDof) - centroid.at(dType);
+						eq.at(dType) = locationArray.at(myDof);
+					}
+
+					// set mixed contribution due to rotation about centroid
+					if (eq.at(1)){
+						unitDisp->at(eq.at(1), 5) = vk.at(3);
+						unitDisp->at(eq.at(1), 6) = -vk.at(2);
+					}
+
+					if (eq.at(2)){
+						unitDisp->at(eq.at(2), 4) = -vk.at(3);
+						unitDisp->at(eq.at(2), 6) = vk.at(1);
+					}
+
+					if (eq.at(3)){
+						unitDisp->at(eq.at(3), 4) = vk.at(2);
+						unitDisp->at(eq.at(3), 5) = -vk.at(1);
+					}
+
+
+					// search for our dofs in there
+					for (int dType = R_u; dType <= R_w; dType++)
+					{
+						int myDof = dofIdArray->findFirstIndexOf(dType);
+						if (myDof == 0) continue;
+
+						int eqN = locationArray.at(myDof);
+
+						// save unit displacement and coordinate
+						if (eqN)
+						{
+							unitDisp->at(eqN, dType) = 1.0;
+							tempMat2.at(eqN, dType) = tempCoord.at(myDof);
+						}
+					}
+				}
+			}  // end of search among internal dof managers
 		}
-	// end of creation of translational unit displacement vectors
+		// end of creation of translational unit displacement vectors
 
-	for (int i = 4; i <= 6; i++)
-	{
-		tempCol->beColumnOf(*unitDisp, i);
-		massMatrix->times(*tempCol, *tempCol2);  // now tempCol2 has only the masses pertaining the i-th direction
-		tempMat.setColumn(*tempCol2, i);
-		totMass.at(i) = tempCol->dotProduct(*tempCol2);  // total mass for direction i-th direction
-		tempCol->beColumnOf(tempMat2, i);	// fetch coordinates in i-th direction
-	}
-
-	//
-	// calculate participation factors and mass participation
-	//
-
-	// participation factors
-	partFact.beTProductOf(eigVec, tempMat);
-
-	// mass participation ratios
-	for (int i = 1; i <= numberOfRequiredEigenValues; i++)
-	{
-		for (int j = 1; j <= 6; j++)
+		for (int i = 4; i <= 6; i++)
 		{
-			if (totMass.at(j) != 0.0)
-			{
-				massPart.at(i, j) = pow(partFact.at(i, j), 2) / totMass.at(j);
-			}
-			//else
-			//{
-			//	massPart.at(i, j) = 0.0;
-			//}
+			tempCol->beColumnOf(*unitDisp, i);
+			massMatrix->times(*tempCol, *tempCol2);  // now tempCol2 has only the masses pertaining the i-th direction
+			tempMat.setColumn(*tempCol2, i);
+			totMass.at(i) = tempCol->dotProduct(*tempCol2);  // total mass for direction i-th direction
+			tempCol->beColumnOf(tempMat2, i);	// fetch coordinates in i-th direction
 		}
-	}
 
-	//
-	// start creating loaded models
-	//
+		//
+		// calculate participation factors and mass participation
+		//
+
+		// participation factors
+		partFact.beTProductOf(eigVec, tempMat);
+
+		// mass participation ratios
+		for (int i = 1; i <= numberOfRequiredEigenValues; i++)
+		{
+			for (int j = 1; j <= 6; j++)
+			{
+				if (totMass.at(j) != 0.0)
+				{
+					massPart.at(i, j) = pow(partFact.at(i, j), 2) / totMass.at(j);
+				}
+				//else
+				//{
+				//	massPart.at(i, j) = 0.0;
+				//}
+			}
+		}
+
+		//
+		// start creating loaded models
+		//
 #ifdef VERBOSE
-	OOFEM_LOG_INFO("Starting creation of loaded models ...\n");
+		OOFEM_LOG_INFO("Starting creation of loaded models ...\n");
 #endif
 
 
-	// create linear solver
-	std::unique_ptr< SparseLinearSystemNM > nLinMethod; // = NULL;
+		// create linear solver
+		std::unique_ptr< SparseLinearSystemNM > nLinMethod; // = NULL;
 
-	if (!nLinMethod) {
-		if (isParallel()) {
-			if ((solverType == ST_Petsc) || (solverType == ST_Feti)) {
-				nLinMethod.reset(classFactory.createSparseLinSolver(ST_Direct , this->giveDomain(1), this));
-			}
-		}
-		else {
-			nLinMethod.reset(classFactory.createSparseLinSolver(ST_Direct , this->giveDomain(1), this));
-		}
 		if (!nLinMethod) {
-			OOFEM_ERROR("linear solver creation failed for lstype %d", solverType);
+			if (isParallel()) {
+				if ((solverType == ST_Petsc) || (solverType == ST_Feti)) {
+					nLinMethod.reset(classFactory.createSparseLinSolver(ST_Direct, this->giveDomain(1), this));
+				}
+			}
+			else {
+				nLinMethod.reset(classFactory.createSparseLinSolver(ST_Direct, this->giveDomain(1), this));
+			}
+			if (!nLinMethod) {
+				OOFEM_ERROR("linear solver creation failed for lstype %d", solverType);
+			}
 		}
+
+		for (int dN = 1; dN <= numberOfRequiredEigenValues; dN++)
+		{
+			OOFEM_LOG_INFO("Creation of loaded model %d...\n", dN);
+
+			double sAcc = calcSpectrumOrdinate(periods.at(dN));
+
+			loadVector.beColumnOf(eigVec, dN);
+			loadVector *= (sAcc * partFact.at(dN, dir)); // scaled forces
+
+			// solve linear system
+			NM_Status s = nLinMethod->solve(*stiffnessMatrix, loadVector, dummyDisps);  // solve linear system
+			if (!(s & NM_Success)) {
+				OOFEM_ERROR("No success in solving system.");
+			}
+
+			//update elements to we can get internal state!!!
+			this->updateInternalState(tStep);
+			EngngModel::updateYourself(tStep);
+
+			FloatArray reactions;
+			this->buildReactionTable(dofManMap, dofidMap, eqnMap, tStep, 1);
+
+			// compute reaction forces
+			this->computeReaction(reactions, tStep, 1);
+
+			//SRSS
+			for (int z = 1; z <= reactions.giveSize(); z++)
+			{
+				combReactions.at(z) += pow(reactions.at(z), 2);
+			}
+
+			for (int z = 1; z <= dummyDisps.giveSize(); z++)
+			{
+				combDisps.at(z) += pow(dummyDisps.at(z), 2);
+			}
+
+			// ADD HERE STUFF TO SUM NODAL DISPLACEMENTS
+
+			for (auto &elem : domain->giveElements()) {
+				// test for remote element in parallel mode
+				if (elem->giveParallelMode() == Element_remote) {
+					continue;
+				}
+
+				for (int i = 1; i <= elem->giveNumberOfInternalDofManagers(); ++i) {
+					DofManager *dman = elem->giveInternalDofManager(i);
+					//dman->printOutputAt(file, tStep);
+				}
+
+				for (int i = 0; i < elem->giveNumberOfIntegrationRules(); i++) {
+					this->getIntRuleOutputAt(elem->giveIntegrationRule(i), tStep);
+				}
+
+				//elem->printOutputAt(file, tStep);
+				// ADD ELEMENT STUFF HERE
+			}
+
+
+			// call output manager - bem?
+
+
+
+
+			//std::stringstream outName;
+			//FILE *outputContext;
+
+			//outName << this->giveOutputBaseFileName().c_str() << dN;
+
+			//Domain *d2 = domain->Clone();
+
+
+			//if ((outputContext = fopen(outName.str().c_str(), "w")) == NULL) {
+			//	OOFEM_ERROR("Can't open output file %s", outName.str().c_str());
+			//}
+
+			//FileDataStream outputContextStream(outputContext);
+
+			//d2->saveContext(outputContextStream, CM_Definition);
+		}
+
+		// SRSS
+		for (int z = 1; z <= combReactions.giveSize(); z++)
+		{
+			combReactions.at(z) = sqrt(combReactions.at(z));
+		}
+
+		for (int z = 1; z <= combDisps.giveSize(); z++)
+		{
+			combDisps.at(z) = sqrt(combDisps.at(z));
+		}
+
+
+
+		//
+		// zero matrix
+		//
+		stiffnessMatrix.reset(NULL);
+		massMatrix.reset(NULL);
+
+		// dispose the rest of the stuff
+		delete unitDisp;
+		delete tempCol;
+		delete tempCol2;
+		delete dofIdArray;
 	}
-	
-	for (int dN = 1; dN <= numberOfRequiredEigenValues; dN++)
+
+
+	void ResponseSpectrum::getGPOutputAt(GaussPoint *gp, TimeStep *tStep)
 	{
-		OOFEM_LOG_INFO("Creation of loaded model %d...\n", dN);
+		//int iruleNumber = 0;
 
-		double sAcc = calcSpectrumOrdinate(periods.at(dN));
-
-		loadVector.beColumnOf(eigVec, dN);
-		loadVector *= (sAcc * partFact.at(dN, dir)); // scaled forces
-
-		// solve linear system
-		NM_Status s = nLinMethod->solve(*stiffnessMatrix, loadVector, dummyDisps);  // solve linear system
-		if (!(s & NM_Success)) {
-			OOFEM_ERROR("No success in solving system.");
-		}
-
-		//update elements to we can get internal state!!!
-		this->updateInternalState(tStep);
-		EngngModel::updateYourself(tStep);
-
-		FloatArray reactions;
-		IntArray dofManMap, dofidMap, eqnMap;
-		this->buildReactionTable(dofManMap, dofidMap, eqnMap, tStep, 1);
-
-		// compute reaction forces
-		this->computeReaction(reactions, tStep, 1);
-
-		//SRSS
-		for (int z=1; z<=reactions.giveSize();z++)
-		{
-			combReactions.at(z) += pow(reactions.at(z),2);
-		}
-
-		for (int z = 1; z <= dummyDisps.giveSize(); z++)
-		{
-			combDisps.at(z) += pow(dummyDisps.at(z), 2);
-		}
-
-		// ADD HERE STUFF TO SUM NODAL DISPLACEMENTS
-
-		for (auto &elem : domain->giveElements()) {
-			// test for remote element in parallel mode
-			if (elem->giveParallelMode() == Element_remote) {
-				continue;
-			}
-
-			for (int i = 1; i <= elem->giveNumberOfInternalDofManagers(); ++i) {
-				DofManager *dman = elem->giveInternalDofManager(i);
-				//dman->printOutputAt(file, tStep);
-			}
-
-			for (int i = 1; i <= elem->giveNumberOfIntegrationRules(); i++) {
-				//elem->giveIntegrationRule(i)->printOutputAt(file, tStep);
-			}
-
-			//elem->printOutputAt(file, tStep);
-			// ADD ELEMENT STUFF HERE
-		}
-
-
-		// call output manager - bem?
-
-
-
-
-		//std::stringstream outName;
-		//FILE *outputContext;
-
-		//outName << this->giveOutputBaseFileName().c_str() << dN;
-
-		//Domain *d2 = domain->Clone();
-		
-
-		//if ((outputContext = fopen(outName.str().c_str(), "w")) == NULL) {
-		//	OOFEM_ERROR("Can't open output file %s", outName.str().c_str());
+		//if (gp->irule) {
+		//	iruleNumber = irule->giveNumber();
 		//}
 
-		//FileDataStream outputContextStream(outputContext);
+		//fprintf(File, "  GP %2d.%-2d :", iruleNumber, number);
 
-		//d2->saveContext(outputContextStream, CM_Definition);
+		// invoke printOutputAt method for all managed statuses
+		IntegrationPointStatus *status = gp->giveMaterialStatus();
+		if (status) {
+			this->getIntPointStatusOutputAt(status, tStep, gp->giveMaterialMode());
+		}
+
+		//if (gp->gaussPoints.size() != 0) { // layered material
+		//	fprintf(File, "Layers report \n{\n");
+		//	for (GaussPoint *gp : gaussPoints) {
+		//		gp->printOutputAt(File, tStep);
+		//	}
+
+		//	fprintf(File, "} end layers report\n");
+		//}
 	}
 
-	// SRSS
-	for (int z = 1; z <= combReactions.giveSize(); z++)
+	void
+		ResponseSpectrum::getIntRuleOutputAt(IntegrationRule *iRule, TimeStep *tStep)
 	{
-		combReactions.at(z) = sqrt(combReactions.at(z));
+		for (GaussPoint *gp : *iRule) {
+			this->getGPOutputAt(gp, tStep);
+		}
 	}
 
-	for (int z = 1; z <= combDisps.giveSize(); z++)
+	void
+		ResponseSpectrum::getIntPointStatusOutputAt(IntegrationPointStatus *iStatus, TimeStep *tStep, MaterialMode materialMode)
 	{
-		combDisps.at(z) = sqrt(combDisps.at(z));
+		StructuralMaterialStatus * strMS = dynamic_cast<StructuralMaterialStatus *> (iStatus);
+		if (strMS)
+		{
+			FloatArray helpVec;
+
+			StructuralMaterial::giveFullSymVectorForm(helpVec, strMS->giveStrainVector(), materialMode);
+			//for (auto &var : helpVec) {
+			//	fprintf(File, " %.4e", var);
+			//}
+
+			//fprintf(File, "\n              stresses");
+			StructuralMaterial::giveFullSymVectorForm(helpVec, strMS->giveStressVector(), materialMode);
+
+			//for (auto &var : helpVec) {
+			//	fprintf(File, " %.4e", var);
+			//}
+			//fprintf(File, "\n");
+		}
+
 	}
-
-
-
-	//
-	// zero matrix
-	//
-    stiffnessMatrix.reset(NULL);
-    massMatrix.reset(NULL);
-
-	// dispose the rest of the stuff
-	delete unitDisp;
-	delete tempCol;
-	delete tempCol2;
-	delete dofIdArray;
-}
 
 
 void
@@ -849,6 +913,17 @@ void ResponseSpectrum::terminate(TimeStep *tStep)
 
     fprintf(outputStream, "\n\n");
 
+	fprintf(outputStream, "\n\n\tR E A C T I O N S  O U T P U T:\n\t_______________________________\n\n\n");
+
+	for (int i = 1; i <= dofManMap.giveSize(); i++) {
+		if (domain->giveOutputManager()->testDofManOutput(dofManMap.at(i), tStep)) {
+			fprintf(outputStream, "\tNode %8d iDof %2d reaction % .4e    [bc-id: %d]\n",
+				domain->giveDofManager(dofManMap.at(i))->giveLabel(),
+				dofidMap.at(i), combReactions.at(eqnMap.at(i)),
+				domain->giveDofManager(dofManMap.at(i))->giveDofWithID(dofidMap.at(i))->giveBcId());
+		}
+	}
+
     //for ( int i = 1; i <=  numberOfRequiredEigenValues; i++ ) {
     //    fprintf(outputStream, "\nOutput for eigen value no.  %.3e \n", ( double ) i);
     //    fprintf( outputStream,
@@ -862,10 +937,15 @@ void ResponseSpectrum::terminate(TimeStep *tStep)
     //        }
     //    }
 
-    //    for ( auto &dman : domain->giveDofManagers() ) {
-    //        dman->updateYourself(tStep);
-    //        dman->printOutputAt(outputStream, tStep);
-    //    }
+	fprintf(outputStream, "\n\nDofManager output:\n------------------\n");
+
+	for (auto &dman : domain->giveDofManagers()) {
+		dman->updateYourself(tStep);
+		fprintf(outputStream, "%-8s%8d (%8d):\n", dman->giveClassName(), dman->giveLabel(), dman->giveNumber());
+		for (Dof *dof : *dman) {
+			this->printDofOutputAt(outputStream, dof, tStep);
+		}
+	}
     //}
 
     //for ( int i = 1; i <=  numberOfRequiredEigenValues; i++ ) {
