@@ -663,6 +663,17 @@ void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 		//d2->saveContext(outputContextStream, CM_Definition);
 	}
 
+	// SRSS
+	for (int z = 1; z <= combReactions.giveSize(); z++)
+	{
+		combReactions.at(z) = sqrt(combReactions.at(z));
+	}
+
+	for (int z = 1; z <= combDisps.giveSize(); z++)
+	{
+		combDisps.at(z) = sqrt(combDisps.at(z));
+	}
+
 
 
 	//
