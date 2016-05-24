@@ -594,7 +594,8 @@ namespace oofem {
 
 			double sAcc = calcSpectrumOrdinate(periods.at(dN));
 
-			loadVector.beColumnOf(eigVec, dN);
+			tempCol->beColumnOf(eigVec, dN);
+			massMatrix->times(*tempCol, loadVector);
 			loadVector *= (sAcc * partFact.at(dN, dir)); // scaled forces
 
 			// solve linear system
