@@ -549,7 +549,7 @@ void EigenValueDynamic :: terminate(TimeStep *tStep)
     FILE *outputStream = this->giveOutputStream();
 
     // print loadcase header
-    fprintf(outputStream, "\nOutput for time %.3e \n\n", 1.0);
+    fprintf(outputStream, "\nOutput for Eigen analysis \n\n");
     // print eigen values on output
     fprintf(outputStream, "\n\nEigen Values (Omega^2) are:\n-----------------\n");
 
