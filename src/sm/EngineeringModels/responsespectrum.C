@@ -53,8 +53,8 @@
 #include "activebc.h"
 #include "integrationrule.h"
 #include "gausspoint.h"
-#include "structuralms.h"
-#include "structuralmaterial.h"
+#include "../sm/Materials/structuralms.h"
+#include "../sm/Materials/structuralmaterial.h"
 #include "outputmanager.h"
 
 
