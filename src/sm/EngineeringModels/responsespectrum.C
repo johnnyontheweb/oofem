@@ -147,7 +147,12 @@ namespace oofem {
 		switch (mode) {
 		case VM_Total:  // EigenVector
 		case VM_Incremental:
-			return combDisps.at(eq);// , (int)tStep->giveTargetTime());
+			if (tStep->giveIntrinsicTime() == 0.0) {
+				return combDisps.at(eq);// , (int)tStep->giveTargetTime());
+			} else
+			{
+				return dummyDisps.at(eq);
+			}
 
 		default:
 			OOFEM_ERROR("Unknown is of undefined type for this problem");
@@ -939,6 +944,9 @@ void ResponseSpectrum::terminate(TimeStep *tStep)
     //    }
 
 	fprintf(outputStream, "\n\nDofManager output:\n------------------\n");
+
+	// change tStep to 0 to allow final displacements extraction
+	tStep->setIntrinsicTime(0.0);
 
 	for (auto &dman : domain->giveDofManagers()) {
 		dman->updateYourself(tStep);
