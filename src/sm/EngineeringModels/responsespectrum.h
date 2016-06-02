@@ -92,6 +92,8 @@ private:
 	FloatArray combReactions;
 	FloatArray combDisps;
 	IntArray dofManMap, dofidMap, eqnMap;
+	std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> *elemResponse;
+	std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> combElemResponse;
 
 
 public:
@@ -119,9 +121,9 @@ public:
 
 	virtual void postInitialize();
 
-	virtual void ResponseSpectrum::getGPOutputAt(GaussPoint *gp, TimeStep *tStep);
-	virtual void ResponseSpectrum::getIntRuleOutputAt(IntegrationRule *iRule, TimeStep *tStep);
-	virtual void ResponseSpectrum::getIntPointStatusOutputAt(IntegrationPointStatus *iStatus, TimeStep *tStep, MaterialMode materialMode);
+	virtual void ResponseSpectrum::getGPOutputAt(GaussPoint *gp, TimeStep *tStep, std::map<std::string, FloatArray> *&ips);
+	virtual void ResponseSpectrum::getIntRuleOutputAt(IntegrationRule *iRule, TimeStep *tStep, std::map<int, std::map<std::string, FloatArray>> *&ir);
+	virtual void ResponseSpectrum::getIntPointStatusOutputAt(IntegrationPointStatus *iStatus, TimeStep *tStep, MaterialMode materialMode, std::map<std::string, FloatArray> *&ir);
 	virtual double calcSpectrumOrdinate(double period);
 	virtual void computeExternalLoadReactionContribution(FloatArray &reactions, TimeStep *tStep, int di);
 	virtual void buildReactionTable(IntArray &restrDofMans, IntArray &restrDofs,

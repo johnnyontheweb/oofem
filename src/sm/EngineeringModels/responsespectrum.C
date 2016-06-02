@@ -56,6 +56,9 @@
 #include "../sm/Materials/structuralms.h"
 #include "../sm/Materials/structuralmaterial.h"
 #include "outputmanager.h"
+#include "dynamicdatareader.h"
+#include "dynamicinputrecord.h"
+#include "inputrecord.h"
 
 
 #ifdef __OOFEG
@@ -186,6 +189,9 @@ namespace oofem {
 		return f->evaluateAtTime(period);
 	}
 
+	// forward declaration
+	void addSquared(std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> &answer, std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> &src);
+	void calcRoot(std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> &answer);
 
 	void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 	{
@@ -630,7 +636,7 @@ namespace oofem {
 				combDisps.at(z) += pow(dummyDisps.at(z), 2);
 			}
 
-			// ADD HERE STUFF TO SUM NODAL DISPLACEMENTS
+			elemResponse = new std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>>;
 
 			for (auto &elem : domain->giveElements()) {
 				// test for remote element in parallel mode
@@ -640,41 +646,27 @@ namespace oofem {
 
 				for (int i = 1; i <= elem->giveNumberOfInternalDofManagers(); ++i) {
 					DofManager *dman = elem->giveInternalDofManager(i);
-					//dman->printOutputAt(file, tStep);
+					dman->printOutputAt(outputStream, tStep);
 				}
+
+				std::map<int, std::map<int, std::map<std::string, FloatArray>>> *eir = new std::map<int, std::map<int, std::map<std::string, FloatArray>>>;
 
 				for (int i = 0; i < elem->giveNumberOfIntegrationRules(); i++) {
-					this->getIntRuleOutputAt(elem->giveIntegrationRule(i), tStep);
+					std::map<int, std::map<std::string, FloatArray>> *ir = NULL;
+					this->getIntRuleOutputAt(elem->giveIntegrationRule(i), tStep, ir);
+					if (ir) eir->operator[](i) = *ir;
 				}
 
-				//elem->printOutputAt(file, tStep);
-				// ADD ELEMENT STUFF HERE
+				elemResponse->operator[](elem->giveNumber()) = *eir;
 			}
 
+			addSquared(combElemResponse, *elemResponse);
 
 			// call output manager - bem?
 
-
-
-
-			//std::stringstream outName;
-			//FILE *outputContext;
-
-			//outName << this->giveOutputBaseFileName().c_str() << dN;
-
-			//Domain *d2 = domain->Clone();
-
-
-			//if ((outputContext = fopen(outName.str().c_str(), "w")) == NULL) {
-			//	OOFEM_ERROR("Can't open output file %s", outName.str().c_str());
-			//}
-
-			//FileDataStream outputContextStream(outputContext);
-
-			//d2->saveContext(outputContextStream, CM_Definition);
 		}
 
-		// SRSS
+		// SRSS - going on with square root
 		for (int z = 1; z <= combReactions.giveSize(); z++)
 		{
 			combReactions.at(z) = sqrt(combReactions.at(z));
@@ -685,7 +677,7 @@ namespace oofem {
 			combDisps.at(z) = sqrt(combDisps.at(z));
 		}
 
-
+		calcRoot(combElemResponse);
 
 		//
 		// zero matrix
@@ -701,7 +693,7 @@ namespace oofem {
 	}
 
 
-	void ResponseSpectrum::getGPOutputAt(GaussPoint *gp, TimeStep *tStep)
+	void ResponseSpectrum::getGPOutputAt(GaussPoint *gp, TimeStep *tStep, std::map<std::string, FloatArray> *&ips)
 	{
 		//int iruleNumber = 0;
 
@@ -714,7 +706,7 @@ namespace oofem {
 		// invoke printOutputAt method for all managed statuses
 		IntegrationPointStatus *status = gp->giveMaterialStatus();
 		if (status) {
-			this->getIntPointStatusOutputAt(status, tStep, gp->giveMaterialMode());
+			this->getIntPointStatusOutputAt(status, tStep, gp->giveMaterialMode(), ips);
 		}
 
 		//if (gp->gaussPoints.size() != 0) { // layered material
@@ -728,28 +720,35 @@ namespace oofem {
 	}
 
 	void
-		ResponseSpectrum::getIntRuleOutputAt(IntegrationRule *iRule, TimeStep *tStep)
+		ResponseSpectrum::getIntRuleOutputAt(IntegrationRule *iRule, TimeStep *tStep, std::map<int, std::map<std::string, FloatArray>> *&ir)
 	{
+		std::map<std::string, FloatArray> *igp = NULL;
+		ir = new std::map<int, std::map<std::string, FloatArray>>;
 		for (GaussPoint *gp : *iRule) {
-			this->getGPOutputAt(gp, tStep);
+			this->getGPOutputAt(gp, tStep, igp);
+			if (igp)  ir->operator[](gp->giveNumber()) = *igp;
 		}
 	}
 
 	void
-		ResponseSpectrum::getIntPointStatusOutputAt(IntegrationPointStatus *iStatus, TimeStep *tStep, MaterialMode materialMode)
+		ResponseSpectrum::getIntPointStatusOutputAt(IntegrationPointStatus *iStatus, TimeStep *tStep, MaterialMode materialMode, std::map<std::string, FloatArray> *&ir)
 	{
+		ir = NULL;
 		StructuralMaterialStatus * strMS = dynamic_cast<StructuralMaterialStatus *> (iStatus);
 		if (strMS)
 		{
 			FloatArray helpVec;
+			ir = new std::map<std::string, FloatArray>;
 
 			StructuralMaterial::giveFullSymVectorForm(helpVec, strMS->giveStrainVector(), materialMode);
 			//for (auto &var : helpVec) {
 			//	fprintf(File, " %.4e", var);
 			//}
+			ir->operator[]("strains") = helpVec;
 
 			//fprintf(File, "\n              stresses");
 			StructuralMaterial::giveFullSymVectorForm(helpVec, strMS->giveStressVector(), materialMode);
+			ir->operator[]("stresses") = helpVec;
 
 			//for (auto &var : helpVec) {
 			//	fprintf(File, " %.4e", var);
@@ -758,6 +757,126 @@ namespace oofem {
 		}
 
 	}
+
+void populateElResults(std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> &answer, std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> &src)
+{
+	
+	std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>>::iterator srcElem_it = src.begin();
+	for (; srcElem_it != src.end(); ++srcElem_it)
+	{
+		std::map<int, std::map<int, std::map<std::string, FloatArray>>> *destElIntRuleMap = new std::map<int, std::map<int, std::map<std::string, FloatArray>>>;
+		std::map<int, std::map<int, std::map<std::string, FloatArray>>> &srcElIntRuleMap = srcElem_it->second;
+
+		std::map<int, std::map<int, std::map<std::string, FloatArray>>>::iterator srcElIntRuleMap_it = srcElIntRuleMap.begin();
+		for (; srcElIntRuleMap_it != srcElIntRuleMap.end(); ++srcElIntRuleMap_it)
+		{
+			std::map<int, std::map<std::string, FloatArray>> *destGPMap = new std::map<int, std::map<std::string, FloatArray>>;
+			std::map<int, std::map<std::string, FloatArray>> &srcGPMap = srcElIntRuleMap_it->second;
+
+			std::map<int, std::map<std::string, FloatArray>>::iterator srcGPMap_it = srcGPMap.begin();
+			for (; srcGPMap_it != srcGPMap.end(); ++srcGPMap_it)
+			{
+				std::map<std::string, FloatArray> *destRespMap = new std::map<std::string, FloatArray>;
+				std::map<std::string, FloatArray> &srcRespMap = srcGPMap_it->second;
+
+				std::map<std::string, FloatArray>::iterator srcRespMap_it = srcRespMap.begin();
+				for (; srcRespMap_it != srcRespMap.end(); ++srcRespMap_it)
+				{
+					FloatArray &srcRespArray = srcRespMap_it->second;
+					FloatArray *destRespArray = new FloatArray(srcRespArray.giveSize());
+
+					destRespMap->operator[](srcRespMap_it->first) = *destRespArray;
+				}
+
+				destGPMap->operator[](srcGPMap_it->first) = *destRespMap;
+			}
+
+			destElIntRuleMap->operator[](srcElIntRuleMap_it->first) = *destGPMap;
+		}
+
+		answer[srcElem_it->first] = *destElIntRuleMap;
+	}
+}
+
+void addSquared(std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> &answer, std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> &src)
+{
+	if (answer.size() ==0) {
+		populateElResults(answer, src);
+	}
+
+	// awful iteration
+	std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>>::iterator destElem_it = answer.begin();
+	std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>>::iterator srcElem_it = src.begin();
+	for (; destElem_it != answer.end(); ++destElem_it, ++srcElem_it)
+	{
+		std::map<int, std::map<int, std::map<std::string, FloatArray>>> &destElIntRuleMap = destElem_it->second;
+		std::map<int, std::map<int, std::map<std::string, FloatArray>>> &srcElIntRuleMap = srcElem_it->second;
+
+		std::map<int, std::map<int, std::map<std::string, FloatArray>>>::iterator destElIntRuleMap_it = destElIntRuleMap.begin();
+		std::map<int, std::map<int, std::map<std::string, FloatArray>>>::iterator srcElIntRuleMap_it = srcElIntRuleMap.begin();
+		for (; destElIntRuleMap_it != destElIntRuleMap.end(); ++destElIntRuleMap_it, ++srcElIntRuleMap_it)
+		{
+			std::map<int, std::map<std::string, FloatArray>> &destGPMap = destElIntRuleMap_it->second;
+			std::map<int, std::map<std::string, FloatArray>> &srcGPMap = srcElIntRuleMap_it->second;
+
+			std::map<int, std::map<std::string, FloatArray>>::iterator destGPMap_it = destGPMap.begin();
+			std::map<int, std::map<std::string, FloatArray>>::iterator srcGPMap_it = srcGPMap.begin();
+			for (; destGPMap_it != destGPMap.end(); ++destGPMap_it, ++srcGPMap_it)
+			{
+				std::map<std::string, FloatArray> &destRespMap = destGPMap_it->second;
+				std::map<std::string, FloatArray> &srcRespMap = srcGPMap_it->second;
+
+				std::map<std::string, FloatArray>::iterator destRespMap_it = destRespMap.begin();
+				std::map<std::string, FloatArray>::iterator srcRespMap_it = srcRespMap.begin();
+				for (; destRespMap_it != destRespMap.end(); ++destRespMap_it, ++srcRespMap_it)
+				{
+					FloatArray &destRespArray = destRespMap_it->second;
+					FloatArray &srcRespArray = srcRespMap_it->second;
+
+					for (int i = 1; i <= srcRespArray.giveSize(); i++)
+					{	
+						// square it and add it
+						destRespArray.at(i) += pow(srcRespArray.at(i), 2);
+					}
+				}
+			}
+		}
+	}
+}
+
+void calcRoot(std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> &answer)
+{
+	// another awful iteration
+	std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>>::iterator destElem_it = answer.begin();
+	for (; destElem_it != answer.end(); ++destElem_it)
+	{
+		std::map<int, std::map<int, std::map<std::string, FloatArray>>> &destElIntRuleMap = destElem_it->second;
+
+		std::map<int, std::map<int, std::map<std::string, FloatArray>>>::iterator destElIntRuleMap_it = destElIntRuleMap.begin();
+		for (; destElIntRuleMap_it != destElIntRuleMap.end(); ++destElIntRuleMap_it)
+		{
+			std::map<int, std::map<std::string, FloatArray>> &destGPMap = destElIntRuleMap_it->second;
+
+			std::map<int, std::map<std::string, FloatArray>>::iterator destGPMap_it = destGPMap.begin();
+			for (; destGPMap_it != destGPMap.end(); ++destGPMap_it)
+			{
+				std::map<std::string, FloatArray> &destRespMap = destGPMap_it->second;
+
+				std::map<std::string, FloatArray>::iterator destRespMap_it = destRespMap.begin();
+				for (; destRespMap_it != destRespMap.end(); ++destRespMap_it)
+				{
+					FloatArray &destRespArray = destRespMap_it->second;
+
+					for (int i = 1; i <= destRespArray.giveSize(); i++)
+					{
+						// square it and add it
+						destRespArray.at(i) = sqrt(destRespArray.at(i));
+					}
+				}
+			}
+		}
+	}
+}
 
 
 void
@@ -942,6 +1061,59 @@ void ResponseSpectrum::terminate(TimeStep *tStep)
     //            this->updateDofUnknownsDictionary(dman.get(), tStep);
     //        }
     //    }
+
+
+	fprintf(outputStream, "\n\nElement output:\n---------------\n");
+	
+	for (auto &elem : domain->giveElements()) {
+		// test for remote element in parallel mode
+		if (elem->giveParallelMode() == Element_remote) {
+			continue;
+		}
+
+		std::map<int, std::map<int, std::map<std::string, FloatArray>>> &destElIntRuleMap = combElemResponse[elem->giveNumber()];
+
+		fprintf(outputStream, "element %d (%8d) :\n", elem->giveLabel(), elem->giveNumber());
+
+		for (int i = 1; i <= elem->giveNumberOfInternalDofManagers(); ++i) {
+			DofManager *dman = elem->giveInternalDofManager(i);
+			//dman->printOutputAt(file, tStep);
+		}
+
+		for (int i = 0; i < elem->giveNumberOfIntegrationRules();i++){
+			IntegrationRule *iRule = elem->giveIntegrationRule(i);
+
+			std::map<int, std::map<std::string, FloatArray>> &destGPMap = destElIntRuleMap[i];
+
+			for (GaussPoint *gp : *iRule) {
+				fprintf(outputStream, "  GP %2d.%-2d :", iRule->giveNumber(), gp->giveNumber());
+				IntegrationPointStatus *status = gp->giveMaterialStatus();
+				if (status) {
+					StructuralMaterialStatus * strMS = dynamic_cast<StructuralMaterialStatus *> (status);
+					if (strMS)
+					{
+						std::map<std::string, FloatArray> &destRespMap = destGPMap[gp->giveNumber()];
+
+						fprintf(outputStream, "  strains ");
+						//StructuralMaterial::giveFullSymVectorForm(helpVec, strMS->giveStrainVector(), gp->giveMaterialMode());
+						for (auto &var : destRespMap["strains"]) {
+							fprintf(outputStream, " %.4e", var);
+						}
+
+						fprintf(outputStream, "\n              stresses");
+						//StructuralMaterial::giveFullSymVectorForm(helpVec, strMS->giveStressVector(), gp->giveMaterialMode());
+
+						for (auto &var : destRespMap["stresses"]) {
+							fprintf(outputStream, " %.4e", var);
+						}
+						fprintf(outputStream, "\n");
+					}
+				}
+			}
+		}
+	}
+
+
 
 	fprintf(outputStream, "\n\nDofManager output:\n------------------\n");
 
