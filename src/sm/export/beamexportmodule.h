@@ -41,6 +41,7 @@
 ///@name Input fields for Beam export module
 //@{
 #define _IFT_BeamExportModule_Name "bem"
+#define _IFT_BeamExportModule_IsRespSpec "rspec"
 //@}
 
 namespace oofem {
@@ -59,6 +60,7 @@ protected:
     FILE *stream;
     /// Array for the beam diagrams
     FloatArray *res;
+	bool isRespSpec=false; // tStep -1 does the magic
 public:
     /// Constructor. Creates empty Output Manager.
     BeamExportModule(int n, EngngModel *e);

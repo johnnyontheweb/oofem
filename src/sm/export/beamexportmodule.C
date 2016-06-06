@@ -56,6 +56,7 @@ namespace oofem {
 		BeamExportModule::initializeFrom(InputRecord *ir)
 	{
 		//IRResultType result;                 // Required by IR_GIVE_FIELD macro
+		isRespSpec = ir->hasField(_IFT_BeamExportModule_IsRespSpec);
 		return ExportModule::initializeFrom(ir);
 	}
 
