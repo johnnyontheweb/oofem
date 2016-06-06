@@ -59,6 +59,7 @@
 #include "dynamicdatareader.h"
 #include "dynamicinputrecord.h"
 #include "inputrecord.h"
+#include "../sm/Elements/structuralelement.h"
 
 
 #ifdef __OOFEG
@@ -192,6 +193,8 @@ namespace oofem {
 	// forward declaration
 	void addSquared(std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> &answer, std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> &src);
 	void calcRoot(std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> &answer);
+	void addSquared(std::map<int, std::map<std::string, FloatArray>> &answer, std::map<int, std::map<std::string, FloatArray>> &src);
+	void calcRoot(std::map<int, std::map<std::string, FloatArray>> &answer);
 
 	void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 	{
@@ -637,6 +640,7 @@ namespace oofem {
 			}
 
 			elemResponse = new std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>>;
+			beamResponse = new std::map<int, std::map<std::string, FloatArray>>;
 
 			for (auto &elem : domain->giveElements()) {
 				// test for remote element in parallel mode
@@ -658,9 +662,41 @@ namespace oofem {
 				}
 
 				elemResponse->operator[](elem->giveNumber()) = *eir;
+
+				const char* name = elem->giveClassName();
+
+				if ((strcmp(name, "Beam3d") == 0) || (strcmp(name, "Beam2d") == 0) || (strcmp(name, "beam3d") == 0) || (strcmp(name, "beam2d") == 0)){
+					std::map<std::string, FloatArray> *b = new std::map<std::string, FloatArray>;
+
+					FloatArray rl, Fl;
+					elem->computeVectorOf(VM_Total, tStep, rl);
+					// ask for global element end forces vector
+					StructuralElement *SElem;
+
+					b->operator[]("enddisp") = rl;
+
+					SElem = static_cast<StructuralElement *>(elem.get());
+					SElem->giveInternalForcesVector(Fl, tStep);
+
+					//FloatArray loadEndForces;
+
+					//// add exact end forces due to nonnodal loading
+					//SElem->computeForceLoadVector(loadEndForces, tStep, VM_Total);
+					//if (loadEndForces.giveSize()) {
+					//	Fl.subtract(loadEndForces);
+					//}
+
+					b->operator[]("endforces") = Fl;
+
+					beamResponse->operator[](elem->giveNumber()) = *b;
+				}
 			}
 
+			addSquared(combBeamResponse, *beamResponse);
 			addSquared(combElemResponse, *elemResponse);
+
+			delete elemResponse;
+			delete beamResponse;
 
 			// call output manager - bem?
 
@@ -678,6 +714,7 @@ namespace oofem {
 		}
 
 		calcRoot(combElemResponse);
+		calcRoot(combBeamResponse);
 
 		//
 		// zero matrix
@@ -879,6 +916,81 @@ void calcRoot(std::map<int, std::map<int, std::map<int, std::map<std::string, Fl
 }
 
 
+void populateElResults(std::map<int, std::map<std::string, FloatArray>> &answer, std::map<int, std::map<std::string, FloatArray>> &src)
+{
+
+	std::map<int, std::map<std::string, FloatArray>>::iterator srcElem_it = src.begin();
+	for (; srcElem_it != src.end(); ++srcElem_it)
+	{
+		std::map<std::string, FloatArray> *destBRespMap = new std::map<std::string, FloatArray>;
+		std::map<std::string, FloatArray > &srcBRespMap = srcElem_it->second;
+
+		std::map<std::string, FloatArray>::iterator srcBRespMap_it = srcBRespMap.begin();
+		for (; srcBRespMap_it != srcBRespMap.end(); ++srcBRespMap_it)
+		{
+			FloatArray &srcRespArray = srcBRespMap_it->second;
+			FloatArray *destRespArray = new FloatArray(srcRespArray.giveSize());
+
+			destBRespMap->operator[](srcBRespMap_it->first) = *destRespArray;
+		}
+
+		answer[srcElem_it->first] = *destBRespMap;
+	}
+}
+
+void addSquared(std::map<int, std::map<std::string, FloatArray>> &answer, std::map<int, std::map<std::string, FloatArray>> &src)
+{
+	if (answer.size() == 0) {
+		populateElResults(answer, src);
+	}
+
+	// awful iteration
+	std::map<int, std::map<std::string, FloatArray>>::iterator destElem_it = answer.begin();
+	std::map<int, std::map<std::string, FloatArray>>::iterator srcElem_it = src.begin();
+	for (; destElem_it != answer.end(); ++destElem_it, ++srcElem_it)
+	{
+		std::map<std::string, FloatArray> &destRespMap = destElem_it->second;
+		std::map<std::string, FloatArray> &srcRespMap = srcElem_it->second;
+
+		std::map<std::string, FloatArray>::iterator destRespMap_it = destRespMap.begin();
+		std::map<std::string, FloatArray>::iterator srcRespMap_it = srcRespMap.begin();
+		for (; destRespMap_it != destRespMap.end(); ++destRespMap_it, ++srcRespMap_it)
+		{
+			FloatArray &destRespArray = destRespMap_it->second;
+			FloatArray &srcRespArray = srcRespMap_it->second;
+
+			for (int i = 1; i <= srcRespArray.giveSize(); i++)
+			{
+				// square it and add it
+				destRespArray.at(i) += pow(srcRespArray.at(i), 2);
+			}
+		}
+	}
+}
+
+void calcRoot(std::map<int, std::map<std::string, FloatArray>> &answer)
+{
+	// another awful iteration
+	std::map<int, std::map<std::string, FloatArray>>::iterator destElem_it = answer.begin();
+	for (; destElem_it != answer.end(); ++destElem_it)
+	{
+		std::map<std::string, FloatArray> &destRespMap = destElem_it->second;
+
+		std::map<std::string, FloatArray>::iterator destRespMap_it = destRespMap.begin();
+		for (; destRespMap_it != destRespMap.end(); ++destRespMap_it)
+		{
+			FloatArray &destRespArray = destRespMap_it->second;
+
+			for (int i = 1; i <= destRespArray.giveSize(); i++)
+			{
+				// square it and add it
+				destRespArray.at(i) = sqrt(destRespArray.at(i));
+			}
+		}
+	}
+}
+
+
 void
 ResponseSpectrum::computeExternalLoadReactionContribution(FloatArray &reactions, TimeStep *tStep, int di)
 {
@@ -1073,7 +1185,23 @@ void ResponseSpectrum::terminate(TimeStep *tStep)
 
 		std::map<int, std::map<int, std::map<std::string, FloatArray>>> &destElIntRuleMap = combElemResponse[elem->giveNumber()];
 
-		fprintf(outputStream, "element %d (%8d) :\n", elem->giveLabel(), elem->giveNumber());
+		std::map<int, std::map<std::string, FloatArray>>::iterator it = combBeamResponse.find(elem->giveNumber());
+		//beam found;
+		if (it != combBeamResponse.end())
+		{
+			fprintf(outputStream, "beam element %d (%8d) :\n", elem->giveLabel(), elem->giveNumber());
+			fprintf(outputStream, "  local displacements ");
+			for (auto &val : (it->second)["enddisp"]) {
+				fprintf(outputStream, " %.4e", val);
+			}
+
+			fprintf(outputStream, "\n  local end forces    ");
+			for (auto &val : (it->second)["endforces"]) {
+				fprintf(outputStream, " %.4e", val);
+			}
+		} else {
+			fprintf(outputStream, "element %d (%8d) :\n", elem->giveLabel(), elem->giveNumber());
+		}
 
 		for (int i = 1; i <= elem->giveNumberOfInternalDofManagers(); ++i) {
 			DofManager *dman = elem->giveInternalDofManager(i);
@@ -1133,7 +1261,7 @@ void ResponseSpectrum::terminate(TimeStep *tStep)
     //    // export using export manager
     //    tStep->setTime( ( double ) i ); // we use time as intrinsic eigen value index
     //    tStep->setNumber(i);
-    //    exportModuleManager->doOutput(tStep);
+    exportModuleManager->doOutput(tStep);
     //}
     fflush( this->giveOutputStream() );
     this->saveStepContext(tStep);

@@ -93,7 +93,9 @@ private:
 	FloatArray combDisps;
 	IntArray dofManMap, dofidMap, eqnMap;
 	std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> *elemResponse;
+	std::map<int, std::map<std::string, FloatArray>> *beamResponse;
 	std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> combElemResponse;
+	std::map<int, std::map<std::string, FloatArray>> combBeamResponse;
 
 
 public:
