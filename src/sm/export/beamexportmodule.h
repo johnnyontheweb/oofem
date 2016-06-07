@@ -37,6 +37,7 @@
 
 #include "exportmodule.h"
 #include "floatarray.h"
+#include <map>
 
 ///@name Input fields for Beam export module
 //@{
@@ -60,7 +61,8 @@ protected:
     FILE *stream;
     /// Array for the beam diagrams
     FloatArray *res;
-	bool isRespSpec=false; // tStep -1 does the magic
+	bool isRespSpec=false; // tStep 0 does the magic
+
 public:
     /// Constructor. Creates empty Output Manager.
     BeamExportModule(int n, EngngModel *e);
@@ -72,6 +74,18 @@ public:
     virtual void terminate();
     virtual const char *giveClassName() const { return "BeamExportModule"; }
     virtual const char *giveInputRecordName() const { return _IFT_BeamExportModule_Name; }
+
+private:
+	
+	std::map< int, std::map< double, FloatArray > >BeamForces;
+	std::map< int, std::map< double, FloatArray > >BeamDisplacements;
+
+	std::map< int, std::map< double, FloatArray > >combBeamForces;
+	std::map< int, std::map< double, FloatArray > >combBeamDisplacements;
+
+	static void populateElResults(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src);
+	static void addSquared(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src);
+	static void calcRoot(std::map<int, std::map<double, FloatArray>> &answer);
 };
 } // end namespace oofem
 

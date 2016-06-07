@@ -695,10 +695,11 @@ namespace oofem {
 			addSquared(combBeamResponse, *beamResponse);
 			addSquared(combElemResponse, *elemResponse);
 
+			// bem to call addSquared
+			exportModuleManager->doOutput(tStep);
+
 			delete elemResponse;
 			delete beamResponse;
-
-			// call output manager - bem?
 
 		}
 
@@ -712,6 +713,7 @@ namespace oofem {
 		{
 			combDisps.at(z) = sqrt(combDisps.at(z));
 		}
+		
 
 		calcRoot(combElemResponse);
 		calcRoot(combBeamResponse);
@@ -1261,7 +1263,7 @@ void ResponseSpectrum::terminate(TimeStep *tStep)
     //    // export using export manager
     //    tStep->setTime( ( double ) i ); // we use time as intrinsic eigen value index
     //    tStep->setNumber(i);
-    exportModuleManager->doOutput(tStep);
+    exportModuleManager->doOutput(tStep); // forcing bem with intrinsicTime=0 to compute the square root for SRSS and print results
     //}
     fflush( this->giveOutputStream() );
     this->saveStepContext(tStep);

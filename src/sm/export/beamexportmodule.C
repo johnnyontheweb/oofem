@@ -90,8 +90,6 @@ namespace oofem {
 		}
 
 		std::vector< int >beamIDs;
-		std::map< int, std::map< double, FloatArray > >BeamForces;
-		std::map< int, std::map< double, FloatArray > >BeamDisplacements;
 		std::map<int, FloatArray >BeamLoads;
 		IntArray temp;
 		// loop through the beam elements
@@ -497,66 +495,162 @@ namespace oofem {
 
 		//	d->giveSets or d->giveLoad ?
 
-		double curTime = tStep->giveTargetTime();
-		std::map<int, std::map<double, FloatArray>>::iterator BForces_it = BeamForces.begin();
-		std::map<int, std::map<double, FloatArray>>::iterator BDisps_it = BeamDisplacements.begin();
-		for (;
-			BForces_it != BeamForces.end();
-			++BForces_it, ++BDisps_it)
-		{
-			std::map< double, FloatArray > &BForces = BForces_it->second;
-			std::map< double, FloatArray > &BDisps = BDisps_it->second;
-			Element* elem = d->giveElement(BForces_it->first);
-			int ID = elem->giveLabel();
+		if (this->isRespSpec && tStep->giveIntrinsicTime()!=0){
+			// square and save
+			BeamExportModule::addSquared(combBeamDisplacements, BeamDisplacements);
+			BeamExportModule::addSquared(combBeamForces, BeamForces);
 
-			std::map<double, FloatArray >::iterator forces_it = BForces.begin();
-			std::map<double, FloatArray >::iterator disps_it = BDisps.begin();
+		} else {
 
-			for (;
-				forces_it != BForces.end();
-				++forces_it, ++disps_it)
-			{
-				double pos = forces_it->first;
-				FloatArray forces = forces_it->second;
-				FloatArray disps = disps_it->second;
-				fprintf(this->stream, "%10.3e;%d;%10.3e;", curTime, ID, pos);
+			if (this->isRespSpec && tStep->giveIntrinsicTime() != 0) {
+				BeamExportModule::calcRoot(combBeamDisplacements);
+				BeamExportModule::calcRoot(combBeamForces);
 
-				for (auto &val : forces) {
-					fprintf(this->stream, "%10.3e;", val);
-				}
-				for (auto &val : disps) {
-					fprintf(this->stream, "%10.3e;", val);
-				}
-				fprintf(this->stream, "\n");
+				BeamDisplacements = combBeamDisplacements;
+				BeamForces = combBeamForces;
+
+				combBeamDisplacements.clear();
+				combBeamForces.clear();
 			}
 
+			double curTime = tStep->giveTargetTime();
+			std::map<int, std::map<double, FloatArray>>::iterator BForces_it = BeamForces.begin();
+			std::map<int, std::map<double, FloatArray>>::iterator BDisps_it = BeamDisplacements.begin();
+			for (;
+				BForces_it != BeamForces.end();
+				++BForces_it, ++BDisps_it)
+			{
+				std::map< double, FloatArray > &BForces = BForces_it->second;
+				std::map< double, FloatArray > &BDisps = BDisps_it->second;
+				Element* elem = d->giveElement(BForces_it->first);
+				int ID = elem->giveLabel();
+
+				std::map<double, FloatArray >::iterator forces_it = BForces.begin();
+				std::map<double, FloatArray >::iterator disps_it = BDisps.begin();
+
+				for (;
+					forces_it != BForces.end();
+					++forces_it, ++disps_it)
+				{
+					double pos = forces_it->first;
+					FloatArray forces = forces_it->second;
+					FloatArray disps = disps_it->second;
+					fprintf(this->stream, "%10.3e;%d;%10.3e;", curTime, ID, pos);
+
+					for (auto &val : forces) {
+						fprintf(this->stream, "%10.3e;", val);
+					}
+					for (auto &val : disps) {
+						fprintf(this->stream, "%10.3e;", val);
+					}
+					fprintf(this->stream, "\n");
+				}
+
+			}
+
+			//for (auto &bForces : BeamForces) {
+			//	std::map< double, FloatArray >pForces = bForces.second;
+			//	int ID = bForces.first;
+			//	for (auto &vals : pForces) {
+			//		double pos = vals.first;
+			//		FloatArray forces = vals.second;
+			//		fprintf(this->stream, "%10.3e;%d;%10.3e;", curTime, ID, pos);
+			//		for (auto &val : forces) {
+			//			fprintf(this->stream, "%10.3e;", val);
+			//		}
+			//		fprintf(this->stream, "\n");
+			//	}
+			//}
+
+			// write file in the format:
+			// elementNumber distanceFromIend N_x T_z T_y M_x M_y M_z
+			// if 3 Gauss points are used, there would be 5 lines per beam (at distances 0, 0.1127*L, 0.5*L, 0.8873*L, L), ->>> to check
+
+			//fprintf(this->stream, "%d ", avgState.giveSize());
+			//for ( auto s: avgState ) {
+			//    fprintf(this->stream, "%e ", s);
+			//}
+			//fprintf(this->stream, "    ");
+
+			BeamDisplacements.clear();
+			BeamForces.clear();
+
+			fflush(this->stream);
+		}
+	}
+
+	void BeamExportModule::populateElResults(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src)
+	{
+
+		std::map<int, std::map<double, FloatArray>>::iterator srcElem_it = src.begin();
+		for (; srcElem_it != src.end(); ++srcElem_it)
+		{
+			std::map<double, FloatArray> *destBRespMap = new std::map<double, FloatArray>;
+			std::map<double, FloatArray > &srcBRespMap = srcElem_it->second;
+
+			std::map<double, FloatArray>::iterator srcBRespMap_it = srcBRespMap.begin();
+			for (; srcBRespMap_it != srcBRespMap.end(); ++srcBRespMap_it)
+			{
+				FloatArray &srcRespArray = srcBRespMap_it->second;
+				FloatArray *destRespArray = new FloatArray(srcRespArray.giveSize());
+
+				destBRespMap->operator[](srcBRespMap_it->first) = *destRespArray;
+			}
+
+			answer[srcElem_it->first] = *destBRespMap;
+		}
+	}
+
+	void BeamExportModule::addSquared(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src)
+	{
+		if (answer.size() == 0) {
+			populateElResults(answer, src);
 		}
 
-		//for (auto &bForces : BeamForces) {
-		//	std::map< double, FloatArray >pForces = bForces.second;
-		//	int ID = bForces.first;
-		//	for (auto &vals : pForces) {
-		//		double pos = vals.first;
-		//		FloatArray forces = vals.second;
-		//		fprintf(this->stream, "%10.3e;%d;%10.3e;", curTime, ID, pos);
-		//		for (auto &val : forces) {
-		//			fprintf(this->stream, "%10.3e;", val);
-		//		}
-		//		fprintf(this->stream, "\n");
-		//	}
-		//}
+		// awful iteration
+		std::map<int, std::map<double, FloatArray>>::iterator destElem_it = answer.begin();
+		std::map<int, std::map<double, FloatArray>>::iterator srcElem_it = src.begin();
+		for (; destElem_it != answer.end(); ++destElem_it, ++srcElem_it)
+		{
+			std::map<double, FloatArray> &destRespMap = destElem_it->second;
+			std::map<double, FloatArray> &srcRespMap = srcElem_it->second;
 
-		// write file in the format:
-		// elementNumber distanceFromIend N_x T_z T_y M_x M_y M_z
-		// if 3 Gauss points are used, there would be 5 lines per beam (at distances 0, 0.1127*L, 0.5*L, 0.8873*L, L), ->>> to check
+			std::map<double, FloatArray>::iterator destRespMap_it = destRespMap.begin();
+			std::map<double, FloatArray>::iterator srcRespMap_it = srcRespMap.begin();
+			for (; destRespMap_it != destRespMap.end(); ++destRespMap_it, ++srcRespMap_it)
+			{
+				FloatArray &destRespArray = destRespMap_it->second;
+				FloatArray &srcRespArray = srcRespMap_it->second;
 
-		//fprintf(this->stream, "%d ", avgState.giveSize());
-		//for ( auto s: avgState ) {
-		//    fprintf(this->stream, "%e ", s);
-		//}
-		//fprintf(this->stream, "    ");
+				for (int i = 1; i <= srcRespArray.giveSize(); i++)
+				{
+					// square it and add it
+					destRespArray.at(i) += pow(srcRespArray.at(i), 2);
+				}
+			}
+		}
+	}
 
-		fflush(this->stream);
+	void BeamExportModule::calcRoot(std::map<int, std::map<double, FloatArray>> &answer)
+	{
+		// another awful iteration
+		std::map<int, std::map<double, FloatArray>>::iterator destElem_it = answer.begin();
+		for (; destElem_it != answer.end(); ++destElem_it)
+		{
+			std::map<double, FloatArray> &destRespMap = destElem_it->second;
+
+			std::map<double, FloatArray>::iterator destRespMap_it = destRespMap.begin();
+			for (; destRespMap_it != destRespMap.end(); ++destRespMap_it)
+			{
+				FloatArray &destRespArray = destRespMap_it->second;
+
+				for (int i = 1; i <= destRespArray.giveSize(); i++)
+				{
+					// square it and add it
+					destRespArray.at(i) = sqrt(destRespArray.at(i));
+				}
+			}
+		}
 	}
 
 
