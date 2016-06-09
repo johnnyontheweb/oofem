@@ -1201,6 +1201,7 @@ void ResponseSpectrum::terminate(TimeStep *tStep)
 			for (auto &val : (it->second)["endforces"]) {
 				fprintf(outputStream, " %.4e", val);
 			}
+			fprintf(outputStream, "\n");
 		} else {
 			fprintf(outputStream, "element %d (%8d) :\n", elem->giveLabel(), elem->giveNumber());
 		}
