@@ -360,11 +360,11 @@ SubspaceIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Floa
             }
         }
 
-		fprintf(outStream, "SubspaceIteration :: solveYourselfAt: Convergence reached for RTOL=%20.15f", rtol);
+		fprintf(outStream, "SubspaceIteration :: solveYourselfAt: Convergence reached for RTOL=%20.15f\n", rtol);
         break;
 label400:
         if ( nite >= nitem ) {
-			fprintf(outStream, "SubspaceIteration :: solveYourselfAt: Convergence not reached in %d iteration - using current values", nitem);
+			fprintf(outStream, "SubspaceIteration :: solveYourselfAt: Convergence not reached in %d iteration - using current values\n", nitem);
             break;
         }
 

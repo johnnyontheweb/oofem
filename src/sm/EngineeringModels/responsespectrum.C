@@ -648,10 +648,10 @@ namespace oofem {
 					continue;
 				}
 
-				for (int i = 1; i <= elem->giveNumberOfInternalDofManagers(); ++i) {
-					DofManager *dman = elem->giveInternalDofManager(i);
-					dman->printOutputAt(outputStream, tStep);
-				}
+				//for (int i = 1; i <= elem->giveNumberOfInternalDofManagers(); ++i) {
+				//	DofManager *dman = elem->giveInternalDofManager(i);
+				//	dman->printOutputAt(outputStream, tStep);
+				//}
 
 				std::map<int, std::map<int, std::map<std::string, FloatArray>>> *eir = new std::map<int, std::map<int, std::map<std::string, FloatArray>>>;
 
