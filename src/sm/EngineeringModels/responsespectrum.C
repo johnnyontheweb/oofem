@@ -115,11 +115,20 @@ namespace oofem {
 		IR_GIVE_FIELD(ir, val, _IFT_ResponseSpectrum_func);
 		func = (int)val; // we'll check in postInitialize whether this id exists or not
 
-		IR_GIVE_FIELD(ir, val, _IFT_ResponseSpectrum_dir);
-		dir = (int)val;
-		if (dir < D_u && dir > D_w){
-			OOFEM_ERROR("Invalid direction. Currently 1 to 3 are supported");
+		IR_GIVE_FIELD(ir, dir, _IFT_ResponseSpectrum_dir);
+		//dir = (int)val;
+		if (! (dir.giveSize())){
+			OOFEM_ERROR("No direction vector set.");
 		}
+		if (dir.giveSize() > 3){
+			OOFEM_WARNING("more than 3 vector components set. Trimming direction vector");
+			dir.resizeWithValues(3);
+		}
+		else if (dir.giveSize() < 3) {
+			OOFEM_WARNING("less than 3 vector components set. Setting the remaining to zero");
+			dir.resizeWithValues(3);
+		}
+		dir.normalize();
 
 		return IRRT_OK;
 	}
@@ -608,9 +617,16 @@ namespace oofem {
 
 			double sAcc = calcSpectrumOrdinate(periods.at(dN));
 
-			tempCol->beColumnOf(eigVec, dN);
-			massMatrix->times(*tempCol, loadVector);
-			loadVector *= (sAcc * partFact.at(dN, dir)); // scaled forces
+			loadVector.clear();
+
+			for (int nDir = 1; nDir <= 3; nDir++){
+				if (dir.at(nDir) != 0){
+					tempCol->beColumnOf(eigVec, dN);
+					massMatrix->times(*tempCol, *tempCol2);
+					*tempCol2 *= (sAcc * partFact.at(dN, nDir)* dir.at(nDir)); // scaled forces
+					loadVector.add(*tempCol2);
+				}
+			}
 
 			// solve linear system
 			NM_Status s = nLinMethod->solve(*stiffnessMatrix, loadVector, dummyDisps);  // solve linear system

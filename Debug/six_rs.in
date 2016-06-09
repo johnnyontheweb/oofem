@@ -1,6 +1,6 @@
 six_rs.out
 -> NextFEM model 5/24/2016 11:45:45 AM
-responsespectrum nroot 12 rtolv 1.e-6 nmodules 1 func 2 dir 1 stype 1
+responsespectrum nroot 12 rtolv 1.e-6 nmodules 1 func 2 dir 3 1 0 0 stype 1
 bem tstep_all domain_all rspec
 domain 3dShell
 OutputManager tstep_all dofman_all element_all

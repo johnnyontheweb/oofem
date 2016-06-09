@@ -86,7 +86,7 @@ private:
     std :: unique_ptr< SparseGeneralEigenValueSystemNM > nMethod;
     GenEigvalSolverType solverType;
 	int func;
-	int dir;
+	FloatArray dir;
 	FloatArray loadVector;
 	FloatArray dummyDisps;
 	FloatArray combReactions;
