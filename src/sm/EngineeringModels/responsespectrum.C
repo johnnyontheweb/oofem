@@ -1168,14 +1168,16 @@ void ResponseSpectrum::terminate(TimeStep *tStep)
 
     fprintf(outputStream, "\n\n");
 
-	fprintf(outputStream, "\n\n\tR E A C T I O N S  O U T P U T:\n\t_______________________________\n\n\n");
+	fprintf(outputStream, "\n\nDofManager output:\n------------------\n");
 
-	for (int i = 1; i <= dofManMap.giveSize(); i++) {
-		if (domain->giveOutputManager()->testDofManOutput(dofManMap.at(i), tStep)) {
-			fprintf(outputStream, "\tNode %8d iDof %2d reaction % .4e    [bc-id: %d]\n",
-				domain->giveDofManager(dofManMap.at(i))->giveLabel(),
-				dofidMap.at(i), combReactions.at(eqnMap.at(i)),
-				domain->giveDofManager(dofManMap.at(i))->giveDofWithID(dofidMap.at(i))->giveBcId());
+	// change tStep to 0 to allow final displacements extraction
+	tStep->setIntrinsicTime(0.0);
+
+	for (auto &dman : domain->giveDofManagers()) {
+		dman->updateYourself(tStep);
+		fprintf(outputStream, "%-8s%8d (%8d):\n", dman->giveClassName(), dman->giveLabel(), dman->giveNumber());
+		for (Dof *dof : *dman) {
+			this->printDofOutputAt(outputStream, dof, tStep);
 		}
 	}
 
@@ -1261,20 +1263,18 @@ void ResponseSpectrum::terminate(TimeStep *tStep)
 	}
 
 
+    //}
 
-	fprintf(outputStream, "\n\nDofManager output:\n------------------\n");
+	fprintf(outputStream, "\n\n\tR E A C T I O N S  O U T P U T:\n\t_______________________________\n\n\n");
 
-	// change tStep to 0 to allow final displacements extraction
-	tStep->setIntrinsicTime(0.0);
-
-	for (auto &dman : domain->giveDofManagers()) {
-		dman->updateYourself(tStep);
-		fprintf(outputStream, "%-8s%8d (%8d):\n", dman->giveClassName(), dman->giveLabel(), dman->giveNumber());
-		for (Dof *dof : *dman) {
-			this->printDofOutputAt(outputStream, dof, tStep);
+	for (int i = 1; i <= dofManMap.giveSize(); i++) {
+		if (domain->giveOutputManager()->testDofManOutput(dofManMap.at(i), tStep)) {
+			fprintf(outputStream, "\tNode %8d iDof %2d reaction % .4e    [bc-id: %d]\n",
+				domain->giveDofManager(dofManMap.at(i))->giveLabel(),
+				dofidMap.at(i), combReactions.at(eqnMap.at(i)),
+				domain->giveDofManager(dofManMap.at(i))->giveDofWithID(dofidMap.at(i))->giveBcId());
 		}
 	}
-    //}
 
     //for ( int i = 1; i <=  numberOfRequiredEigenValues; i++ ) {
     //    // export using export manager
