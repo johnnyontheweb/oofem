@@ -130,6 +130,10 @@ namespace oofem {
 		}
 		dir.normalize();
 
+		val = 0;
+		IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_ResponseSpectrum_modalCombo);
+		modalCombo = (RSpecComboType)val;
+
 		return IRRT_OK;
 	}
 

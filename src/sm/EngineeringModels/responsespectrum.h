@@ -54,9 +54,16 @@
 #define _IFT_ResponseSpectrum_stype "stype"
 #define _IFT_ResponseSpectrum_func "func"
 #define _IFT_ResponseSpectrum_dir "dir"
+#define _IFT_ResponseSpectrum_modalCombo "modalCombo"
 //@}
 
 namespace oofem {
+
+enum RSpecComboType {
+	RSC_CQC,
+	RSC_SRSS
+};
+
 /**
  * This class implements way for performing a response spectrum analysis.
  * Base for this class is EigenValueDynamic class, functionality
@@ -85,6 +92,7 @@ private:
     /// Numerical method used to solve the problem.
     std :: unique_ptr< SparseGeneralEigenValueSystemNM > nMethod;
     GenEigvalSolverType solverType;
+	RSpecComboType modalCombo;
 	int func;
 	FloatArray dir;
 	FloatArray loadVector;
