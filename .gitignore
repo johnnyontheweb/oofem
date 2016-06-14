@@ -329,3 +329,4 @@ tests/sm/t3d.bmf
 /doxygen.cfg
 /footer.html
 /oofem.dir/Debug/oofem.vcxprojResolveAssemblyReference.cache
+/oofem.opensdf
