@@ -104,7 +104,7 @@ namespace oofem {
 			rtolv = 0.01;
 		}
 
-		int val = 0;
+		int val = 1;
 		IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_ResponseSpectrum_stype);
 		solverType = (GenEigvalSolverType)val;
 
@@ -312,24 +312,27 @@ namespace oofem {
 			//node->giveLocationArray(dofIDArry, loc, EModelDefaultEquationNumbering());
 			if (!node->giveNumberOfDofs()) continue;
 
-			for (int dType = D_u; dType <= D_w; dType++)
-			{
-				auto myDof = node->findDofWithDofId((DofIDItem)dType);
-				if (myDof == node->end()) {
-					//OOFEM_ERROR("incompatible dof (%d) requested", dType);
-					continue;
-				}
+			IntArray mstrDofs,locArr;
+			node->givePrimaryDofs(mstrDofs);
+			node->giveLocationArray(mstrDofs, locArr, EModelDefaultEquationNumbering());
 
-				int eqN = EModelDefaultEquationNumbering().giveDofEquationNumber(*myDof);
-
-				// save unit displacement and coordinate.
-				// TODO consider the fact that nodes may have own UCS.
-				if (eqN)
+			int partialDofCount = locArr.giveSize();
+			if (partialDofCount) {
+				// search for our dofs in there
+				for (int myDofIndex = 1; myDofIndex <= partialDofCount; myDofIndex++)
 				{
-					unitDisp->at(eqN, dType) = 1.0;
-					tempMat2.at(eqN, dType) = node->giveCoordinate(dType);
+					int dType = mstrDofs.at(myDofIndex);
+					int eqN = locArr.at(myDofIndex);
+
+					if ((dType >= D_u) && (dType <= D_w) && eqN) {
+						// save unit displacement and coordinate
+
+						unitDisp->at(eqN, dType) = 1.0;
+						tempMat2.at(eqN, dType) = node->giveCoordinate(dType);
+					}
 				}
 			}
+
 		}  // end of search among nodes
 
 		// then from internaldof managers
@@ -414,16 +417,37 @@ namespace oofem {
 				IntArray eq(3);
 
 				// TODO consider own UCS if present
-				for (int dType = D_u; dType <= D_w; dType++)
-				{
-					auto myDof = node->findDofWithDofId((DofIDItem)dType);
-					if (myDof == node->end()){
-						vk.at(dType) = 0.0;
-						eq.at(dType) = 0;
-						continue;
+				//for (int dType = D_u; dType <= D_w; dType++)
+				//{
+				//	auto myDof = node->findDofWithDofId((DofIDItem)dType);
+				//	if (myDof == node->end()){
+				//		vk.at(dType) = 0.0;
+				//		eq.at(dType) = 0;
+				//		continue;
+				//	}
+				//	vk.at(dType) = node->giveCoordinate(dType) - centroid.at(dType);
+				//	eq.at(dType) = EModelDefaultEquationNumbering().giveDofEquationNumber(*myDof);
+				//}
+
+				IntArray mstrDofs, locArr;
+				node->givePrimaryDofs(mstrDofs);
+				node->giveLocationArray(mstrDofs, locArr, EModelDefaultEquationNumbering());
+
+				int partialDofCount = locArr.giveSize();
+				if (partialDofCount) {
+					// search for our dofs in there
+					for (int myDofIndex = 1; myDofIndex <= partialDofCount; myDofIndex++)
+					{
+						int dType = mstrDofs.at(myDofIndex);
+						int eqN = locArr.at(myDofIndex);
+
+						if ((dType >= D_u) && (dType <= D_w) && eqN) {
+							// save unit displacement and coordinate
+
+							vk.at(dType) = node->giveCoordinate(dType) - centroid.at(dType);
+							eq.at(dType) = eqN;
+						}
 					}
-					vk.at(dType) = node->giveCoordinate(dType) - centroid.at(dType);
-					eq.at(dType) = EModelDefaultEquationNumbering().giveDofEquationNumber(*myDof);
 				}
 
 				// set mixed contribution due to rotation about centroid
@@ -443,24 +467,40 @@ namespace oofem {
 				}
 
 				// set pure rotational contribution
-				for (int dType = R_u; dType <= R_w; dType++)
-				{
-					auto myDof = node->findDofWithDofId((DofIDItem)dType);
-					if (myDof == node->end()) {
-						//OOFEM_ERROR("incompatible dof (%d) requested", dType);
-						continue;
-					}
+				//for (int dType = R_u; dType <= R_w; dType++)
+				//{
+				//	auto myDof = node->findDofWithDofId((DofIDItem)dType);
+				//	if (myDof == node->end()) {
+				//		//OOFEM_ERROR("incompatible dof (%d) requested", dType);
+				//		continue;
+				//	}
 
-					int eqN = EModelDefaultEquationNumbering().giveDofEquationNumber(*myDof);
+				//	int eqN = EModelDefaultEquationNumbering().giveDofEquationNumber(*myDof);
 
-					// save unit displacement and coordinate
-					// TODO consider own UCS if present
-					if (eqN)
+				//	// save unit displacement and coordinate
+				//	// TODO consider own UCS if present
+				//	if (eqN)
+				//	{
+				//		unitDisp->at(eqN, dType) = 1.0;
+				//		tempMat2.at(eqN, dType) = node->giveCoordinate(dType);
+				//	}
+
+				//}
+
+				if (partialDofCount) {
+					// search for our dofs in there
+					for (int myDofIndex = 1; myDofIndex <= partialDofCount; myDofIndex++)
 					{
-						unitDisp->at(eqN, dType) = 1.0;
-						tempMat2.at(eqN, dType) = node->giveCoordinate(dType);
-					}
+						int dType = mstrDofs.at(myDofIndex);
+						int eqN = locArr.at(myDofIndex);
 
+						if ((dType >= R_u) && (dType <= R_w) && eqN) {
+							// save unit displacement and coordinate
+
+							unitDisp->at(eqN, dType) = 1.0;
+							tempMat2.at(eqN, dType) = node->giveCoordinate(dType);
+						}
+					}
 				}
 			}
 		} // end of search among nodes

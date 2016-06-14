@@ -440,6 +440,8 @@ public:
      */
     virtual bool giveMasterDofMans(IntArray &masters);
 
+	virtual void givePrimaryDofs(IntArray &primary);
+
     virtual IRResultType initializeFrom(InputRecord *ir);
     virtual void giveInputRecord(DynamicInputRecord &input);
 

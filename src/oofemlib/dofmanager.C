@@ -872,6 +872,16 @@ bool DofManager :: giveMasterDofMans(IntArray &masters)
 }
 
 
+void DofManager :: givePrimaryDofs(IntArray &primary)
+{
+	for (Dof *dof : *this) {
+		if (dof->isPrimaryDof()) {
+			primary.followedBy(dof->giveDofID());
+		}
+	}
+}
+
+
 void DofManager :: postInitialize()
 {
     hasSlaveDofs = false;
