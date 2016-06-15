@@ -1,0 +1,43 @@
+SixXY-Modal3.out
+-> NextFEM model 6/14/2016 4:01:32 PM
+EigenValueDynamic nroot 21 rtolv 0.00100000004749745
+domain 3dShell
+OutputManager tstep_all dofman_all element_all
+ndofman 9 nelem 12 ncrosssect 2 nmat 1 nbc 5 nic 0 nltf 2 nset 5
+node 1 coords 3 0 0 0 ndofs 6 dofidmask 6 1 2 3 4 5 6
+rigidarmnode 2 coords 3 0 0 2 master 16 dofidmask 6 1 2 3 4 5 6 doftype 6 2 2 0 0 0 2  mastermask 6 1 1 0 0 0 1 
+node 3 coords 3 3 0 0 ndofs 6 dofidmask 6 1 2 3 4 5 6
+rigidarmnode 4 coords 3 3 0 2 master 16 dofidmask 6 1 2 3 4 5 6 doftype 6 2 2 0 0 0 2  mastermask 6 1 1 0 0 0 1 
+node 5 coords 3 0 4 0 ndofs 6 dofidmask 6 1 2 3 4 5 6
+rigidarmnode 6 coords 3 0 4 2 master 16 dofidmask 6 1 2 3 4 5 6 doftype 6 2 2 0 0 0 2  mastermask 6 1 1 0 0 0 1 
+node 7 coords 3 3 4 0 ndofs 6 dofidmask 6 1 2 3 4 5 6
+rigidarmnode 8 coords 3 3 4 2 master 16 dofidmask 6 1 2 3 4 5 6 doftype 6 2 2 0 0 0 2  mastermask 6 1 1 0 0 0 1 
+node 16 coords 3 1.5 2 2 ndofs 6 dofidmask 6 1 2 3 4 5 6
+Beam3d 1 nodes 2 1 2 mat 1 crossSect 2 refAngle 0
+Beam3d 2 nodes 2 2 4 mat 1 crossSect 2 refAngle 0
+Beam3d 3 nodes 2 4 3 mat 1 crossSect 2 refAngle 0
+Beam3d 4 nodes 2 5 6 mat 1 crossSect 2 refAngle 0
+Beam3d 5 nodes 2 6 8 mat 1 crossSect 2 refAngle 0
+Beam3d 6 nodes 2 8 7 mat 1 crossSect 2 refAngle 0
+Beam3d 7 nodes 2 6 2 mat 1 crossSect 2 refAngle 0
+Beam3d 8 nodes 2 8 4 mat 1 crossSect 2 refAngle 0
+lumpedmass 11 nodes 1 2 crosssect 1 components 6 2.5 2.5 2.5 0 0 0
+lumpedmass 12 nodes 1 4 crosssect 1 components 6 2.5 2.5 2.5 0 0 0
+lumpedmass 13 nodes 1 6 crosssect 1 components 6 2.5 2.5 2.5 0 0 0
+lumpedmass 14 nodes 1 8 crosssect 1 components 6 2.5 2.5 2.5 0 0 0
+# fictitious section for LumpedMass elements
+SimpleCS 1 thick 0 drillstiffness 0
+SimpleCS 2 area 0.150000005960464 Iy 0.00112500041723251 Iz 0.00312499981373549 Ik 0.004250000230968 beamShearCoeff 0.833333333333334 thick 0.5 width 0.3
+IsoLE 1 d 0 E 9400000 n 0.300000011920929 tAlpha 0
+BoundaryCondition 1 loadTimeFunction 1 DOFs 3 1 2 3  values 3 0 0 0  set 1
+BoundaryCondition 2 loadTimeFunction 1 DOFs 6 1 2 3 4 5 6  values 6 0 0 0 0 0 0  set 2
+BoundaryCondition 3 loadTimeFunction 1 DOFs 3 1 2 3  values 3 0 0 0  set 3
+BoundaryCondition 4 loadTimeFunction 1 DOFs 6 1 2 3 4 5 6  values 6 0 0 0 0 0 0  set 4
+BoundaryCondition 5 loadTimeFunction 1 DOFs 3 3 4 5  values 3 0 0 0  set 5
+ConstantFunction 1 f(t) 1.0
+PiecewiseLinFunction 2 npoints 2 t 2 0.0 1 f(t) 2 0.0 1.0
+set 1 nodes 1 1
+set 2 nodes 1 3
+set 3 nodes 1 5
+set 4 nodes 1 7
+set 5 nodes 1 16

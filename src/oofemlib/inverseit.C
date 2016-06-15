@@ -67,13 +67,13 @@ InverseIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Float
     int nc = min(2 * nroot, nroot + 8);
     nc = min(nc, nn);
 
-	// control of diagonal zeroes in mass matrix, to be avoided
-	int i;
-	for (i = 1; i <= nc; i++) {
-		if (b.at(i, i) == 0) {
-			b.at(i, i) = 1.0e-12;
-		}
-	}
+	//// control of diagonal zeroes in mass matrix, to be avoided
+	//int i;
+	//for (i = 1; i <= nn; i++) {
+	//	if (b.at(i, i) == 0) {
+	//		b.at(i, i) = 1.0e-12;
+	//	}
+	//}
 
     FloatArray w(nc), ww(nc), t;
     std :: vector< FloatArray > z(nc, nn), zz(nc, nn), x(nc, nn);
