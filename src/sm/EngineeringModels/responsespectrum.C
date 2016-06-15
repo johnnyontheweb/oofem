@@ -66,6 +66,8 @@
  #include "oofeggraphiccontext.h"
 #endif
 
+using namespace std;
+
 namespace oofem {
 	REGISTER_EngngModel(ResponseSpectrum);
 
@@ -204,10 +206,10 @@ namespace oofem {
 	}
 
 	// forward declaration
-	void addSquared(std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> &answer, std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> &src);
-	void calcRoot(std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> &answer);
-	void addSquared(std::map<int, std::map<std::string, FloatArray>> &answer, std::map<int, std::map<std::string, FloatArray>> &src);
-	void calcRoot(std::map<int, std::map<std::string, FloatArray>> &answer);
+	void addSquared(map<int, map<int, map<int, map<string, FloatArray>>>> &answer, map<int, map<int, map<int, map<string, FloatArray>>>> &src);
+	void calcRoot(map<int, map<int, map<int, map<string, FloatArray>>>> &answer);
+	void addSquared(map<int, map<string, FloatArray>> &answer, map<int, map<string, FloatArray>> &src);
+	void calcRoot(map<int, map<string, FloatArray>> &answer);
 
 	void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
 	{
@@ -688,19 +690,11 @@ namespace oofem {
 			// compute reaction forces
 			this->computeReaction(reactions, tStep, 1);
 
-			//SRSS
-			for (int z = 1; z <= reactions.giveSize(); z++)
-			{
-				combReactions.at(z) += pow(reactions.at(z), 2);
-			}
+			reactionsList.push_back(reactions);
+			dispList.push_back(dummyDisps);
 
-			for (int z = 1; z <= dummyDisps.giveSize(); z++)
-			{
-				combDisps.at(z) += pow(dummyDisps.at(z), 2);
-			}
-
-			elemResponse = new std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>>;
-			beamResponse = new std::map<int, std::map<std::string, FloatArray>>;
+			map<int, map<int, map<int, map<string, FloatArray>>>> elemResponse;
+			map<int, map<string, FloatArray>> beamResponse;
 
 			for (auto &elem : domain->giveElements()) {
 				// test for remote element in parallel mode
@@ -713,20 +707,20 @@ namespace oofem {
 				//	dman->printOutputAt(outputStream, tStep);
 				//}
 
-				std::map<int, std::map<int, std::map<std::string, FloatArray>>> *eir = new std::map<int, std::map<int, std::map<std::string, FloatArray>>>;
+				map<int, map<int, map<string, FloatArray>>> *eir = new map<int, map<int, map<string, FloatArray>>>;
 
 				for (int i = 0; i < elem->giveNumberOfIntegrationRules(); i++) {
-					std::map<int, std::map<std::string, FloatArray>> *ir = NULL;
+					map<int, map<string, FloatArray>> *ir = NULL;
 					this->getIntRuleOutputAt(elem->giveIntegrationRule(i), tStep, ir);
 					if (ir) eir->operator[](i) = *ir;
 				}
 
-				elemResponse->operator[](elem->giveNumber()) = *eir;
+				elemResponse[elem->giveNumber()] = *eir;
 
 				const char* name = elem->giveClassName();
 
 				if ((strcmp(name, "Beam3d") == 0) || (strcmp(name, "Beam2d") == 0) || (strcmp(name, "beam3d") == 0) || (strcmp(name, "beam2d") == 0)){
-					std::map<std::string, FloatArray> *b = new std::map<std::string, FloatArray>;
+					map<string, FloatArray> *b = new map<string, FloatArray>;
 
 					FloatArray rl, Fl;
 					elem->computeVectorOf(VM_Total, tStep, rl);
@@ -748,35 +742,24 @@ namespace oofem {
 
 					b->operator[]("endforces") = Fl;
 
-					beamResponse->operator[](elem->giveNumber()) = *b;
+					beamResponse[elem->giveNumber()] = *b;
 				}
 			}
 
-			addSquared(combBeamResponse, *beamResponse);
-			addSquared(combElemResponse, *elemResponse);
+			beamResponseList.push_back(beamResponse);
+			elemResponseList.push_back(elemResponse);
 
 			// bem to call addSquared
 			exportModuleManager->doOutput(tStep);
 
-			delete elemResponse;
-			delete beamResponse;
-
 		}
 
-		// SRSS - going on with square root
-		for (int z = 1; z <= combReactions.giveSize(); z++)
-		{
-			combReactions.at(z) = sqrt(combReactions.at(z));
+		if (modalCombo == RSpecComboType::RSC_SRSS) {
+			this->SRSS();
 		}
-
-		for (int z = 1; z <= combDisps.giveSize(); z++)
-		{
-			combDisps.at(z) = sqrt(combDisps.at(z));
+		else {
+			this->CQC();
 		}
-		
-
-		calcRoot(combElemResponse);
-		calcRoot(combBeamResponse);
 
 		//
 		// zero matrix
@@ -789,6 +772,84 @@ namespace oofem {
 		delete tempCol;
 		delete tempCol2;
 		delete dofIdArray;
+	}
+
+	void ResponseSpectrum::SRSS()
+	{
+		list<map<int, map<int, map<int, map<string, FloatArray>>>>>::iterator elem_it = elemResponseList.begin();
+		list<map<int, map<string, FloatArray>>>::iterator beam_it = beamResponseList.begin();
+		for (; elem_it != elemResponseList.end(); ++elem_it)
+		{
+			addSquared(combElemResponse, *elem_it);
+		}
+
+		for (; beam_it != beamResponseList.end(); ++beam_it)
+		{
+			addSquared(combBeamResponse, *beam_it);
+		}
+
+		list<FloatArray>::iterator reac_it = reactionsList.begin();
+		list<FloatArray>::iterator disp_it = dispList.begin();
+
+		for (; reac_it != reactionsList.end(); ++reac_it)
+		{
+			FloatArray &reactions = *reac_it;
+			for (int z = 1; z <= reactions.giveSize(); z++)
+			{
+				combReactions.at(z) += pow(reactions.at(z), 2);
+			}
+		}
+
+		for (; disp_it != dispList.end(); ++disp_it)
+		{
+			FloatArray &disps = *disp_it;
+			for (int z = 1; z <= disps.giveSize(); z++)
+			{
+				combDisps.at(z) += pow(disps.at(z), 2);
+			}
+		}
+
+		for (int z = 1; z <= combReactions.giveSize(); z++)
+		{
+			combReactions.at(z) = sqrt(combReactions.at(z));
+		}
+
+		for (int z = 1; z <= combDisps.giveSize(); z++)
+		{
+			combDisps.at(z) = sqrt(combDisps.at(z));
+		}
+
+		calcRoot(combElemResponse);
+		calcRoot(combBeamResponse);
+	}
+
+
+	void ResponseSpectrum::CQC()
+	{
+		list<map<int, map<int, map<int, map<string, FloatArray>>>>>::iterator elem_it = elemResponseList.begin();
+		list<map<int, map<string, FloatArray>>>::iterator beam_it = beamResponseList.begin();
+		for (; elem_it != elemResponseList.end(); ++elem_it)
+		{
+			addSquared(combElemResponse, *elem_it);
+		}
+
+		for (; beam_it != beamResponseList.end(); ++beam_it)
+		{
+			addSquared(combBeamResponse, *beam_it);
+		}
+
+		for (int z = 1; z <= combReactions.giveSize(); z++)
+		{
+			combReactions.at(z) = sqrt(combReactions.at(z));
+		}
+
+		for (int z = 1; z <= combDisps.giveSize(); z++)
+		{
+			combDisps.at(z) = sqrt(combDisps.at(z));
+		}
+
+		calcRoot(combElemResponse);
+		calcRoot(combBeamResponse);
 	}
 
 
@@ -819,10 +880,10 @@ namespace oofem {
 	}
 
 	void
-		ResponseSpectrum::getIntRuleOutputAt(IntegrationRule *iRule, TimeStep *tStep, std::map<int, std::map<std::string, FloatArray>> *&ir)
+		ResponseSpectrum::getIntRuleOutputAt(IntegrationRule *iRule, TimeStep *tStep, map<int, map<string, FloatArray>> *&ir)
 	{
-		std::map<std::string, FloatArray> *igp = NULL;
-		ir = new std::map<int, std::map<std::string, FloatArray>>;
+		map<string, FloatArray> *igp = NULL;
+		ir = new map<int, map<string, FloatArray>>;
 		for (GaussPoint *gp : *iRule) {
 			this->getGPOutputAt(gp, tStep, igp);
 			if (igp)  ir->operator[](gp->giveNumber()) = *igp;
@@ -830,14 +891,14 @@ namespace oofem {
 	}
 
 	void
-		ResponseSpectrum::getIntPointStatusOutputAt(IntegrationPointStatus *iStatus, TimeStep *tStep, MaterialMode materialMode, std::map<std::string, FloatArray> *&ir)
+		ResponseSpectrum::getIntPointStatusOutputAt(IntegrationPointStatus *iStatus, TimeStep *tStep, MaterialMode materialMode, map<string, FloatArray> *&ir)
 	{
 		ir = NULL;
 		StructuralMaterialStatus * strMS = dynamic_cast<StructuralMaterialStatus *> (iStatus);
 		if (strMS)
 		{
 			FloatArray helpVec;
-			ir = new std::map<std::string, FloatArray>;
+			ir = new map<string, FloatArray>;
 
 			StructuralMaterial::giveFullSymVectorForm(helpVec, strMS->giveStrainVector(), materialMode);
 			//for (auto &var : helpVec) {
@@ -857,28 +918,28 @@ namespace oofem {
 
 	}
 
-void populateElResults(std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> &answer, std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> &src)
+void populateElResults(map<int, map<int, map<int, map<string, FloatArray>>>> &answer, map<int, map<int, map<int, map<string, FloatArray>>>> &src)
 {
 	
-	std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>>::iterator srcElem_it = src.begin();
+	map<int, map<int, map<int, map<string, FloatArray>>>>::iterator srcElem_it = src.begin();
 	for (; srcElem_it != src.end(); ++srcElem_it)
 	{
-		std::map<int, std::map<int, std::map<std::string, FloatArray>>> *destElIntRuleMap = new std::map<int, std::map<int, std::map<std::string, FloatArray>>>;
-		std::map<int, std::map<int, std::map<std::string, FloatArray>>> &srcElIntRuleMap = srcElem_it->second;
+		map<int, map<int, map<string, FloatArray>>> *destElIntRuleMap = new map<int, map<int, map<string, FloatArray>>>;
+		map<int, map<int, map<string, FloatArray>>> &srcElIntRuleMap = srcElem_it->second;
 
-		std::map<int, std::map<int, std::map<std::string, FloatArray>>>::iterator srcElIntRuleMap_it = srcElIntRuleMap.begin();
+		map<int, map<int, map<string, FloatArray>>>::iterator srcElIntRuleMap_it = srcElIntRuleMap.begin();
 		for (; srcElIntRuleMap_it != srcElIntRuleMap.end(); ++srcElIntRuleMap_it)
 		{
-			std::map<int, std::map<std::string, FloatArray>> *destGPMap = new std::map<int, std::map<std::string, FloatArray>>;
-			std::map<int, std::map<std::string, FloatArray>> &srcGPMap = srcElIntRuleMap_it->second;
+			map<int, map<string, FloatArray>> *destGPMap = new map<int, map<string, FloatArray>>;
+			map<int, map<string, FloatArray>> &srcGPMap = srcElIntRuleMap_it->second;
 
-			std::map<int, std::map<std::string, FloatArray>>::iterator srcGPMap_it = srcGPMap.begin();
+			map<int, map<string, FloatArray>>::iterator srcGPMap_it = srcGPMap.begin();
 			for (; srcGPMap_it != srcGPMap.end(); ++srcGPMap_it)
 			{
-				std::map<std::string, FloatArray> *destRespMap = new std::map<std::string, FloatArray>;
-				std::map<std::string, FloatArray> &srcRespMap = srcGPMap_it->second;
+				map<string, FloatArray> *destRespMap = new map<string, FloatArray>;
+				map<string, FloatArray> &srcRespMap = srcGPMap_it->second;
 
-				std::map<std::string, FloatArray>::iterator srcRespMap_it = srcRespMap.begin();
+				map<string, FloatArray>::iterator srcRespMap_it = srcRespMap.begin();
 				for (; srcRespMap_it != srcRespMap.end(); ++srcRespMap_it)
 				{
 					FloatArray &srcRespArray = srcRespMap_it->second;
@@ -897,36 +958,36 @@ void populateElResults(std::map<int, std::map<int, std::map<int, std::map<std::s
 	}
 }
 
-void addSquared(std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> &answer, std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> &src)
+void addSquared(map<int, map<int, map<int, map<string, FloatArray>>>> &answer, map<int, map<int, map<int, map<string, FloatArray>>>> &src)
 {
 	if (answer.size() ==0) {
 		populateElResults(answer, src);
 	}
 
 	// awful iteration
-	std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>>::iterator destElem_it = answer.begin();
-	std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>>::iterator srcElem_it = src.begin();
+	map<int, map<int, map<int, map<string, FloatArray>>>>::iterator destElem_it = answer.begin();
+	map<int, map<int, map<int, map<string, FloatArray>>>>::iterator srcElem_it = src.begin();
 	for (; destElem_it != answer.end(); ++destElem_it, ++srcElem_it)
 	{
-		std::map<int, std::map<int, std::map<std::string, FloatArray>>> &destElIntRuleMap = destElem_it->second;
-		std::map<int, std::map<int, std::map<std::string, FloatArray>>> &srcElIntRuleMap = srcElem_it->second;
+		map<int, map<int, map<string, FloatArray>>> &destElIntRuleMap = destElem_it->second;
+		map<int, map<int, map<string, FloatArray>>> &srcElIntRuleMap = srcElem_it->second;
 
-		std::map<int, std::map<int, std::map<std::string, FloatArray>>>::iterator destElIntRuleMap_it = destElIntRuleMap.begin();
-		std::map<int, std::map<int, std::map<std::string, FloatArray>>>::iterator srcElIntRuleMap_it = srcElIntRuleMap.begin();
+		map<int, map<int, map<string, FloatArray>>>::iterator destElIntRuleMap_it = destElIntRuleMap.begin();
+		map<int, map<int, map<string, FloatArray>>>::iterator srcElIntRuleMap_it = srcElIntRuleMap.begin();
 		for (; destElIntRuleMap_it != destElIntRuleMap.end(); ++destElIntRuleMap_it, ++srcElIntRuleMap_it)
 		{
-			std::map<int, std::map<std::string, FloatArray>> &destGPMap = destElIntRuleMap_it->second;
-			std::map<int, std::map<std::string, FloatArray>> &srcGPMap = srcElIntRuleMap_it->second;
+			map<int, map<string, FloatArray>> &destGPMap = destElIntRuleMap_it->second;
+			map<int, map<string, FloatArray>> &srcGPMap = srcElIntRuleMap_it->second;
 
-			std::map<int, std::map<std::string, FloatArray>>::iterator destGPMap_it = destGPMap.begin();
-			std::map<int, std::map<std::string, FloatArray>>::iterator srcGPMap_it = srcGPMap.begin();
+			map<int, map<string, FloatArray>>::iterator destGPMap_it = destGPMap.begin();
+			map<int, map<string, FloatArray>>::iterator srcGPMap_it = srcGPMap.begin();
 			for (; destGPMap_it != destGPMap.end(); ++destGPMap_it, ++srcGPMap_it)
 			{
-				std::map<std::string, FloatArray> &destRespMap = destGPMap_it->second;
-				std::map<std::string, FloatArray> &srcRespMap = srcGPMap_it->second;
+				map<string, FloatArray> &destRespMap = destGPMap_it->second;
+				map<string, FloatArray> &srcRespMap = srcGPMap_it->second;
 
-				std::map<std::string, FloatArray>::iterator destRespMap_it = destRespMap.begin();
-				std::map<std::string, FloatArray>::iterator srcRespMap_it = srcRespMap.begin();
+				map<string, FloatArray>::iterator destRespMap_it = destRespMap.begin();
+				map<string, FloatArray>::iterator srcRespMap_it = srcRespMap.begin();
 				for (; destRespMap_it != destRespMap.end(); ++destRespMap_it, ++srcRespMap_it)
 				{
 					FloatArray &destRespArray = destRespMap_it->second;
@@ -943,25 +1004,25 @@ void addSquared(std::map<int, std::map<int, std::map<int, std::map<std::string, 
 	}
 }
 
-void calcRoot(std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> &answer)
+void calcRoot(map<int, map<int, map<int, map<string, FloatArray>>>> &answer)
 {
 	// another awful iteration
-	std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>>::iterator destElem_it = answer.begin();
+	map<int, map<int, map<int, map<string, FloatArray>>>>::iterator destElem_it = answer.begin();
 	for (; destElem_it != answer.end(); ++destElem_it)
 	{
-		std::map<int, std::map<int, std::map<std::string, FloatArray>>> &destElIntRuleMap = destElem_it->second;
+		map<int, map<int, map<string, FloatArray>>> &destElIntRuleMap = destElem_it->second;
 
-		std::map<int, std::map<int, std::map<std::string, FloatArray>>>::iterator destElIntRuleMap_it = destElIntRuleMap.begin();
+		map<int, map<int, map<string, FloatArray>>>::iterator destElIntRuleMap_it = destElIntRuleMap.begin();
 		for (; destElIntRuleMap_it != destElIntRuleMap.end(); ++destElIntRuleMap_it)
 		{
-			std::map<int, std::map<std::string, FloatArray>> &destGPMap = destElIntRuleMap_it->second;
+			map<int, map<string, FloatArray>> &destGPMap = destElIntRuleMap_it->second;
 
-			std::map<int, std::map<std::string, FloatArray>>::iterator destGPMap_it = destGPMap.begin();
+			map<int, map<string, FloatArray>>::iterator destGPMap_it = destGPMap.begin();
 			for (; destGPMap_it != destGPMap.end(); ++destGPMap_it)
 			{
-				std::map<std::string, FloatArray> &destRespMap = destGPMap_it->second;
+				map<string, FloatArray> &destRespMap = destGPMap_it->second;
 
-				std::map<std::string, FloatArray>::iterator destRespMap_it = destRespMap.begin();
+				map<string, FloatArray>::iterator destRespMap_it = destRespMap.begin();
 				for (; destRespMap_it != destRespMap.end(); ++destRespMap_it)
 				{
 					FloatArray &destRespArray = destRespMap_it->second;
@@ -978,16 +1039,16 @@ void calcRoot(std::map<int, std::map<int, std::map<int, std::map<std::string, Fl
 }
 
 
-void populateElResults(std::map<int, std::map<std::string, FloatArray>> &answer, std::map<int, std::map<std::string, FloatArray>> &src)
+void populateElResults(map<int, map<string, FloatArray>> &answer, map<int, map<string, FloatArray>> &src)
 {
 
-	std::map<int, std::map<std::string, FloatArray>>::iterator srcElem_it = src.begin();
+	map<int, map<string, FloatArray>>::iterator srcElem_it = src.begin();
 	for (; srcElem_it != src.end(); ++srcElem_it)
 	{
-		std::map<std::string, FloatArray> *destBRespMap = new std::map<std::string, FloatArray>;
-		std::map<std::string, FloatArray > &srcBRespMap = srcElem_it->second;
+		map<string, FloatArray> *destBRespMap = new map<string, FloatArray>;
+		map<string, FloatArray > &srcBRespMap = srcElem_it->second;
 
-		std::map<std::string, FloatArray>::iterator srcBRespMap_it = srcBRespMap.begin();
+		map<string, FloatArray>::iterator srcBRespMap_it = srcBRespMap.begin();
 		for (; srcBRespMap_it != srcBRespMap.end(); ++srcBRespMap_it)
 		{
 			FloatArray &srcRespArray = srcBRespMap_it->second;
@@ -1000,22 +1061,22 @@ void populateElResults(std::map<int, std::map<std::string, FloatArray>> &answer,
 	}
 }
 
-void addSquared(std::map<int, std::map<std::string, FloatArray>> &answer, std::map<int, std::map<std::string, FloatArray>> &src)
+void addSquared(map<int, map<string, FloatArray>> &answer, map<int, map<string, FloatArray>> &src)
 {
 	if (answer.size() == 0) {
 		populateElResults(answer, src);
 	}
 
 	// awful iteration
-	std::map<int, std::map<std::string, FloatArray>>::iterator destElem_it = answer.begin();
-	std::map<int, std::map<std::string, FloatArray>>::iterator srcElem_it = src.begin();
+	map<int, map<string, FloatArray>>::iterator destElem_it = answer.begin();
+	map<int, map<string, FloatArray>>::iterator srcElem_it = src.begin();
 	for (; destElem_it != answer.end(); ++destElem_it, ++srcElem_it)
 	{
-		std::map<std::string, FloatArray> &destRespMap = destElem_it->second;
-		std::map<std::string, FloatArray> &srcRespMap = srcElem_it->second;
+		map<string, FloatArray> &destRespMap = destElem_it->second;
+		map<string, FloatArray> &srcRespMap = srcElem_it->second;
 
-		std::map<std::string, FloatArray>::iterator destRespMap_it = destRespMap.begin();
-		std::map<std::string, FloatArray>::iterator srcRespMap_it = srcRespMap.begin();
+		map<string, FloatArray>::iterator destRespMap_it = destRespMap.begin();
+		map<string, FloatArray>::iterator srcRespMap_it = srcRespMap.begin();
 		for (; destRespMap_it != destRespMap.end(); ++destRespMap_it, ++srcRespMap_it)
 		{
 			FloatArray &destRespArray = destRespMap_it->second;
@@ -1030,15 +1091,15 @@ void addSquared(std::map<int, std::map<std::string, FloatArray>> &answer, std::m
 	}
 }
 
-void calcRoot(std::map<int, std::map<std::string, FloatArray>> &answer)
+void calcRoot(map<int, map<string, FloatArray>> &answer)
 {
 	// another awful iteration
-	std::map<int, std::map<std::string, FloatArray>>::iterator destElem_it = answer.begin();
+	map<int, map<string, FloatArray>>::iterator destElem_it = answer.begin();
 	for (; destElem_it != answer.end(); ++destElem_it)
 	{
-		std::map<std::string, FloatArray> &destRespMap = destElem_it->second;
+		map<string, FloatArray> &destRespMap = destElem_it->second;
 
-		std::map<std::string, FloatArray>::iterator destRespMap_it = destRespMap.begin();
+		map<string, FloatArray>::iterator destRespMap_it = destRespMap.begin();
 		for (; destRespMap_it != destRespMap.end(); ++destRespMap_it)
 		{
 			FloatArray &destRespArray = destRespMap_it->second;
@@ -1247,9 +1308,9 @@ void ResponseSpectrum::terminate(TimeStep *tStep)
 			continue;
 		}
 
-		std::map<int, std::map<int, std::map<std::string, FloatArray>>> &destElIntRuleMap = combElemResponse[elem->giveNumber()];
+		map<int, map<int, map<string, FloatArray>>> &destElIntRuleMap = combElemResponse[elem->giveNumber()];
 
-		std::map<int, std::map<std::string, FloatArray>>::iterator it = combBeamResponse.find(elem->giveNumber());
+		map<int, map<string, FloatArray>>::iterator it = combBeamResponse.find(elem->giveNumber());
 		//beam found;
 		if (it != combBeamResponse.end())
 		{
@@ -1276,7 +1337,7 @@ void ResponseSpectrum::terminate(TimeStep *tStep)
 		for (int i = 0; i < elem->giveNumberOfIntegrationRules();i++){
 			IntegrationRule *iRule = elem->giveIntegrationRule(i);
 
-			std::map<int, std::map<std::string, FloatArray>> &destGPMap = destElIntRuleMap[i];
+			map<int, map<string, FloatArray>> &destGPMap = destElIntRuleMap[i];
 
 			for (GaussPoint *gp : *iRule) {
 				fprintf(outputStream, "  GP %2d.%-2d :", iRule->giveNumber(), gp->giveNumber());
@@ -1285,7 +1346,7 @@ void ResponseSpectrum::terminate(TimeStep *tStep)
 					StructuralMaterialStatus * strMS = dynamic_cast<StructuralMaterialStatus *> (status);
 					if (strMS)
 					{
-						std::map<std::string, FloatArray> &destRespMap = destGPMap[gp->giveNumber()];
+						map<string, FloatArray> &destRespMap = destGPMap[gp->giveNumber()];
 
 						fprintf(outputStream, "  strains ");
 						//StructuralMaterial::giveFullSymVectorForm(helpVec, strMS->giveStrainVector(), gp->giveMaterialMode());

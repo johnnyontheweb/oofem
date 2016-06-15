@@ -57,6 +57,8 @@
 #define _IFT_ResponseSpectrum_modalCombo "modalCombo"
 //@}
 
+using namespace std;
+
 namespace oofem {
 
 enum RSpecComboType {
@@ -97,13 +99,15 @@ private:
 	FloatArray dir;
 	FloatArray loadVector;
 	FloatArray dummyDisps;
+	list<FloatArray> reactionsList;
+	list<FloatArray> dispList;
 	FloatArray combReactions;
 	FloatArray combDisps;
 	IntArray dofManMap, dofidMap, eqnMap;
-	std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> *elemResponse;
-	std::map<int, std::map<std::string, FloatArray>> *beamResponse;
-	std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> combElemResponse;
-	std::map<int, std::map<std::string, FloatArray>> combBeamResponse;
+	list< map<int, map<int, map<int, map<string, FloatArray>>>> > elemResponseList;
+	list< map<int, map<string, FloatArray>> > beamResponseList;
+	map<int, map<int, map<int, map<string, FloatArray>>>> combElemResponse;
+	map<int, map<string, FloatArray>> combBeamResponse;
 
 
 public:
@@ -131,15 +135,17 @@ public:
 
 	virtual void postInitialize();
 
-	virtual void ResponseSpectrum::getGPOutputAt(GaussPoint *gp, TimeStep *tStep, std::map<std::string, FloatArray> *&ips);
-	virtual void ResponseSpectrum::getIntRuleOutputAt(IntegrationRule *iRule, TimeStep *tStep, std::map<int, std::map<std::string, FloatArray>> *&ir);
-	virtual void ResponseSpectrum::getIntPointStatusOutputAt(IntegrationPointStatus *iStatus, TimeStep *tStep, MaterialMode materialMode, std::map<std::string, FloatArray> *&ir);
+	virtual void ResponseSpectrum::getGPOutputAt(GaussPoint *gp, TimeStep *tStep, map<string, FloatArray> *&ips);
+	virtual void ResponseSpectrum::getIntRuleOutputAt(IntegrationRule *iRule, TimeStep *tStep, map<int, map<string, FloatArray>> *&ir);
+	virtual void ResponseSpectrum::getIntPointStatusOutputAt(IntegrationPointStatus *iStatus, TimeStep *tStep, MaterialMode materialMode, map<string, FloatArray> *&ir);
 	virtual double calcSpectrumOrdinate(double period);
 	virtual void computeExternalLoadReactionContribution(FloatArray &reactions, TimeStep *tStep, int di);
 	virtual void buildReactionTable(IntArray &restrDofMans, IntArray &restrDofs,
 		IntArray &eqn, TimeStep *tStep, int di);
 	virtual void computeReaction(FloatArray &answer, TimeStep *tStep, int di);
 	virtual void updateInternalState(TimeStep *tStep);
+	virtual void SRSS();
+	virtual void CQC();
 
     // identification
     virtual const char *giveClassName() const { return "ResponseSpectrum"; }
