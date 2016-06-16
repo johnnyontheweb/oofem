@@ -210,9 +210,9 @@ namespace oofem {
 	}
 
 	// forward declaration
-	void addSquared(map<int, map<int, map<int, map<string, FloatArray>>>> &answer, map<int, map<int, map<int, map<string, FloatArray>>>> &src);
+	void addMultiply(map<int, map<int, map<int, map<string, FloatArray>>>> &answer, map<int, map<int, map<int, map<string, FloatArray>>>> &src, map<int, map<int, map<int, map<string, FloatArray>>>> &src2, double fact = 1.0);
 	void calcRoot(map<int, map<int, map<int, map<string, FloatArray>>>> &answer);
-	void addSquared(map<int, map<string, FloatArray>> &answer, map<int, map<string, FloatArray>> &src);
+	void addMultiply(map<int, map<string, FloatArray>> &answer, map<int, map<string, FloatArray>> &src, map<int, map<string, FloatArray>> &src2, double fact = 1.0);
 	void calcRoot(map<int, map<string, FloatArray>> &answer);
 
 	void ResponseSpectrum::solveYourselfAt(TimeStep *tStep)
@@ -784,12 +784,12 @@ namespace oofem {
 		list<map<int, map<string, FloatArray>>>::iterator beam_it = beamResponseList.begin();
 		for (; elem_it != elemResponseList.end(); ++elem_it)
 		{
-			addSquared(combElemResponse, *elem_it);
+			addMultiply(combElemResponse, *elem_it, *elem_it);
 		}
 
 		for (; beam_it != beamResponseList.end(); ++beam_it)
 		{
-			addSquared(combBeamResponse, *beam_it);
+			addMultiply(combBeamResponse, *beam_it, *beam_it);
 		}
 
 		list<FloatArray>::iterator reac_it = reactionsList.begin();
@@ -831,20 +831,67 @@ namespace oofem {
 	void ResponseSpectrum::CQC()
 	{
 		list<map<int, map<int, map<int, map<string, FloatArray>>>>>::iterator elem_it = elemResponseList.begin();
+
+		FloatMatrix rhos(numberOfRequiredEigenValues, numberOfRequiredEigenValues);
+		for (int i = 1; i < numberOfRequiredEigenValues; i++)
+			for (int j = 1; j < numberOfRequiredEigenValues; j++){
+				double beta = periods.at(i) / periods.at(j);
+				rhos.at(i,j) = 8 * pow(this->csi, 2.0) * pow(beta, 1.5) / (1.0 + beta) / (pow(1 - beta, 2.0) + 4 * pow(this->csi, 2.0)*beta);
+			}
+		
+		for (int i=1; elem_it != elemResponseList.end(); ++elem_it, i++)
+		{
+			list<map<int, map<int, map<int, map<string, FloatArray>>>>>::iterator elem_it2 = elemResponseList.begin();
+			for (int j=1; elem_it2 != elemResponseList.end(); ++elem_it2, j++)
+			{
+				addMultiply(combElemResponse, *elem_it, *elem_it2, rhos.at(i,j));
+			}
+		}
+		calcRoot(combElemResponse);
+
 		list<map<int, map<string, FloatArray>>>::iterator beam_it = beamResponseList.begin();
-		for (; elem_it != elemResponseList.end(); ++elem_it)
+		for (int i = 1; beam_it != beamResponseList.end(); ++beam_it, i++)
 		{
-			addSquared(combElemResponse, *elem_it);
+			list<map<int, map<string, FloatArray>>>::iterator beam_it2 = beamResponseList.begin();
+			for (int j = 1; beam_it2 != beamResponseList.end(); ++beam_it2, j++)
+			{
+				addMultiply(combBeamResponse, *beam_it, *beam_it2, rhos.at(i, j));
+			}
 		}
+		calcRoot(combBeamResponse);
 
-		for (; beam_it != beamResponseList.end(); ++beam_it)
+		list<FloatArray>::iterator reac_it = reactionsList.begin();
+		for (int i = 1; reac_it != reactionsList.end(); ++reac_it, i++)
 		{
-			addSquared(combBeamResponse, *beam_it);
+			FloatArray &reactions = *reac_it;
+			list<FloatArray>::iterator reac_it2 = reactionsList.begin();
+			for (int j = 1; reac_it2 != reactionsList.end(); ++reac_it2, j++)
+			{
+				FloatArray &reactions2 = *reac_it2;
+				for (int z = 1; z <= reactions.giveSize(); z++)
+				{
+					combReactions.at(z) += reactions.at(z)*reactions2.at(z)*rhos.at(i, j);
+				}
+			}
 		}
-
 		for (int z = 1; z <= combReactions.giveSize(); z++)
 		{
 			combReactions.at(z) = sqrt(combReactions.at(z));
+		}
+
+		list<FloatArray>::iterator disp_it = dispList.begin();
+		for (int i = 1; disp_it != dispList.end(); ++disp_it, i++)
+		{
+			FloatArray &disps = *disp_it;
+			list<FloatArray>::iterator disp_it2 = dispList.begin();
+			for (int j = 1; disp_it2 != dispList.end(); ++disp_it2, j++)
+			{
+				FloatArray &disps2 = *disp_it2;
+				for (int z = 1; z <= disps.giveSize(); z++)
+				{
+					combDisps.at(z) += disps2.at(z)*disps2.at(z)*rhos.at(i, j);
+				}
+			}
 		}
 
 		for (int z = 1; z <= combDisps.giveSize(); z++)
@@ -852,8 +899,6 @@ namespace oofem {
 			combDisps.at(z) = sqrt(combDisps.at(z));
 		}
 
-		calcRoot(combElemResponse);
-		calcRoot(combBeamResponse);
 	}
 
 
@@ -962,7 +1007,7 @@ void populateElResults(map<int, map<int, map<int, map<string, FloatArray>>>> &an
 	}
 }
 
-void addSquared(map<int, map<int, map<int, map<string, FloatArray>>>> &answer, map<int, map<int, map<int, map<string, FloatArray>>>> &src)
+void addMultiply(map<int, map<int, map<int, map<string, FloatArray>>>> &answer, map<int, map<int, map<int, map<string, FloatArray>>>> &src, map<int, map<int, map<int, map<string, FloatArray>>>> &src2, double fact)
 {
 	if (answer.size() ==0) {
 		populateElResults(answer, src);
@@ -971,36 +1016,44 @@ void addSquared(map<int, map<int, map<int, map<string, FloatArray>>>> &answer, m
 	// awful iteration
 	map<int, map<int, map<int, map<string, FloatArray>>>>::iterator destElem_it = answer.begin();
 	map<int, map<int, map<int, map<string, FloatArray>>>>::iterator srcElem_it = src.begin();
-	for (; destElem_it != answer.end(); ++destElem_it, ++srcElem_it)
+	map<int, map<int, map<int, map<string, FloatArray>>>>::iterator srcElem_it2 = src2.begin();
+	for (; destElem_it != answer.end(); ++destElem_it, ++srcElem_it, ++srcElem_it2)
 	{
 		map<int, map<int, map<string, FloatArray>>> &destElIntRuleMap = destElem_it->second;
 		map<int, map<int, map<string, FloatArray>>> &srcElIntRuleMap = srcElem_it->second;
+		map<int, map<int, map<string, FloatArray>>> &srcElIntRuleMap2 = srcElem_it2->second;
 
 		map<int, map<int, map<string, FloatArray>>>::iterator destElIntRuleMap_it = destElIntRuleMap.begin();
 		map<int, map<int, map<string, FloatArray>>>::iterator srcElIntRuleMap_it = srcElIntRuleMap.begin();
-		for (; destElIntRuleMap_it != destElIntRuleMap.end(); ++destElIntRuleMap_it, ++srcElIntRuleMap_it)
+		map<int, map<int, map<string, FloatArray>>>::iterator srcElIntRuleMap_it2 = srcElIntRuleMap2.begin();
+		for (; destElIntRuleMap_it != destElIntRuleMap.end(); ++destElIntRuleMap_it, ++srcElIntRuleMap_it, ++srcElIntRuleMap_it2)
 		{
 			map<int, map<string, FloatArray>> &destGPMap = destElIntRuleMap_it->second;
 			map<int, map<string, FloatArray>> &srcGPMap = srcElIntRuleMap_it->second;
+			map<int, map<string, FloatArray>> &srcGPMap2 = srcElIntRuleMap_it2->second;
 
 			map<int, map<string, FloatArray>>::iterator destGPMap_it = destGPMap.begin();
 			map<int, map<string, FloatArray>>::iterator srcGPMap_it = srcGPMap.begin();
-			for (; destGPMap_it != destGPMap.end(); ++destGPMap_it, ++srcGPMap_it)
+			map<int, map<string, FloatArray>>::iterator srcGPMap_it2 = srcGPMap2.begin();
+			for (; destGPMap_it != destGPMap.end(); ++destGPMap_it, ++srcGPMap_it, ++srcGPMap_it2)
 			{
 				map<string, FloatArray> &destRespMap = destGPMap_it->second;
 				map<string, FloatArray> &srcRespMap = srcGPMap_it->second;
+				map<string, FloatArray> &srcRespMap2 = srcGPMap_it2->second;
 
 				map<string, FloatArray>::iterator destRespMap_it = destRespMap.begin();
 				map<string, FloatArray>::iterator srcRespMap_it = srcRespMap.begin();
-				for (; destRespMap_it != destRespMap.end(); ++destRespMap_it, ++srcRespMap_it)
+				map<string, FloatArray>::iterator srcRespMap_it2 = srcRespMap2.begin();
+				for (; destRespMap_it != destRespMap.end(); ++destRespMap_it, ++srcRespMap_it, ++srcRespMap_it2)
 				{
 					FloatArray &destRespArray = destRespMap_it->second;
 					FloatArray &srcRespArray = srcRespMap_it->second;
+					FloatArray &srcRespArray2 = srcRespMap_it2->second;
 
 					for (int i = 1; i <= srcRespArray.giveSize(); i++)
 					{	
 						// square it and add it
-						destRespArray.at(i) += pow(srcRespArray.at(i), 2);
+						destRespArray.at(i) += srcRespArray.at(i)*srcRespArray2.at(i)*fact;
 					}
 				}
 			}
@@ -1065,7 +1118,7 @@ void populateElResults(map<int, map<string, FloatArray>> &answer, map<int, map<s
 	}
 }
 
-void addSquared(map<int, map<string, FloatArray>> &answer, map<int, map<string, FloatArray>> &src)
+void addMultiply(map<int, map<string, FloatArray>> &answer, map<int, map<string, FloatArray>> &src, map<int, map<string, FloatArray>> &src2, double fact)
 {
 	if (answer.size() == 0) {
 		populateElResults(answer, src);
@@ -1074,22 +1127,26 @@ void addSquared(map<int, map<string, FloatArray>> &answer, map<int, map<string, 
 	// awful iteration
 	map<int, map<string, FloatArray>>::iterator destElem_it = answer.begin();
 	map<int, map<string, FloatArray>>::iterator srcElem_it = src.begin();
-	for (; destElem_it != answer.end(); ++destElem_it, ++srcElem_it)
+	map<int, map<string, FloatArray>>::iterator srcElem_it2 = src2.begin();
+	for (; destElem_it != answer.end(); ++destElem_it, ++srcElem_it, ++srcElem_it2)
 	{
 		map<string, FloatArray> &destRespMap = destElem_it->second;
 		map<string, FloatArray> &srcRespMap = srcElem_it->second;
+		map<string, FloatArray> &srcRespMap2 = srcElem_it2->second;
 
 		map<string, FloatArray>::iterator destRespMap_it = destRespMap.begin();
 		map<string, FloatArray>::iterator srcRespMap_it = srcRespMap.begin();
-		for (; destRespMap_it != destRespMap.end(); ++destRespMap_it, ++srcRespMap_it)
+		map<string, FloatArray>::iterator srcRespMap_it2 = srcRespMap2.begin();
+		for (; destRespMap_it != destRespMap.end(); ++destRespMap_it, ++srcRespMap_it, ++srcRespMap_it2)
 		{
 			FloatArray &destRespArray = destRespMap_it->second;
 			FloatArray &srcRespArray = srcRespMap_it->second;
+			FloatArray &srcRespArray2 = srcRespMap_it2->second;
 
 			for (int i = 1; i <= srcRespArray.giveSize(); i++)
 			{
 				// square it and add it
-				destRespArray.at(i) += pow(srcRespArray.at(i), 2);
+				destRespArray.at(i) += srcRespArray.at(i)*srcRespArray2.at(i)*fact;
 			}
 		}
 	}
