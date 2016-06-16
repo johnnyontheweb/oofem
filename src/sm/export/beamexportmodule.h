@@ -37,12 +37,16 @@
 
 #include "exportmodule.h"
 #include "floatarray.h"
+#include "../sm/engineeringmodels/responseSpectrum.h"
 #include <map>
 
 ///@name Input fields for Beam export module
 //@{
 #define _IFT_BeamExportModule_Name "bem"
 #define _IFT_BeamExportModule_IsRespSpec "rspec"
+#define _IFT_BeamExportModule_modalCombo "modalCombo"
+#define _IFT_BeamExportModule_damp "damp"
+
 //@}
 
 namespace oofem {
@@ -62,6 +66,9 @@ protected:
     /// Array for the beam diagrams
     FloatArray *res;
 	bool isRespSpec=false; // tStep 0 does the magic
+	FloatArray periods;
+	RSpecComboType modalCombo;
+	double csi;
 
 public:
     /// Constructor. Creates empty Output Manager.
@@ -80,12 +87,18 @@ private:
 	std::map< int, std::map< double, FloatArray > >BeamForces;
 	std::map< int, std::map< double, FloatArray > >BeamDisplacements;
 
+	std::list<std::map< int, std::map< double, FloatArray > > >BeamForcesList;
+	std::list<std::map< int, std::map< double, FloatArray > > >BeamDisplacementsList;
+
 	std::map< int, std::map< double, FloatArray > >combBeamForces;
 	std::map< int, std::map< double, FloatArray > >combBeamDisplacements;
 
-	static void populateElResults(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src);
-	static void addSquared(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src);
-	static void calcRoot(std::map<int, std::map<double, FloatArray>> &answer);
+	virtual void populateElResults(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src);
+	virtual void addMultiply(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src, std::map<int, std::map<double, FloatArray>> &src2, double fact = 1.0);
+	virtual void calcRoot(std::map<int, std::map<double, FloatArray>> &answer);
+	virtual void SRSS();
+	virtual void CQC();
+
 };
 } // end namespace oofem
 

@@ -44,6 +44,13 @@
 #include "generalboundarycondition.h"
 #include "constantedgeload.h"
 #include "fei3dlinelin.h"
+#include "inputrecord.h"
+#include "../sm/engineeringmodels/responseSpectrum.h"
+#include "irresulttype.h"
+#include "dynamicdatareader.h"
+#include "dynamicinputrecord.h"
+
+using namespace std;
 
 namespace oofem {
 	REGISTER_ExportModule(BeamExportModule)
@@ -57,6 +64,15 @@ namespace oofem {
 	{
 		//IRResultType result;                 // Required by IR_GIVE_FIELD macro
 		isRespSpec = ir->hasField(_IFT_BeamExportModule_IsRespSpec);
+
+		int val = 0;
+		IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_BeamExportModule_modalCombo);
+		modalCombo = (RSpecComboType)val;
+
+		double damp = 0.05; // default damping ratio
+		IR_GIVE_OPTIONAL_FIELD(ir, damp, _IFT_BeamExportModule_damp);
+		csi = damp;
+
 		return ExportModule::initializeFrom(ir);
 	}
 
@@ -89,8 +105,8 @@ namespace oofem {
 			return;
 		}
 
-		std::vector< int >beamIDs;
-		std::map<int, FloatArray >BeamLoads;
+		vector< int >beamIDs;
+		map<int, FloatArray >BeamLoads;
 		IntArray temp;
 		// loop through the beam elements
 		Domain *d = emodel->giveDomain(1);
@@ -120,7 +136,7 @@ namespace oofem {
 					Fl.subtract(loadEndForces);
 				}
 
-				std::map< double, FloatArray >ForceDict;
+				map< double, FloatArray >ForceDict;
 				FloatArray I, E, Diff, dI, dE;
 
 				I.resize(6);
@@ -205,7 +221,7 @@ namespace oofem {
 				BeamForces [ elem->giveNumber() ] = ForceDict;
 				//BeamForces[elem->giveLabel()] = ForceDict;
 
-				//std::pair <double, double> loadPair;
+				//pair <double, double> loadPair;
 				//loadPair.first = FinalLoads.at(2);
 				//loadPair.second = FinalLoads.at(3);
 
@@ -216,7 +232,7 @@ namespace oofem {
 			}
 		}
 
-		//std::vector< std::unique_ptr< GeneralBoundaryCondition > > BCs = d->giveBcs();
+		//vector< unique_ptr< GeneralBoundaryCondition > > BCs = d->giveBcs();
 
 		// tamper with stuff only if sets are defined.
 		if (d->giveNumberOfSets()) {
@@ -269,7 +285,7 @@ namespace oofem {
 							//BeamLoads[elNum].second += compArr.at(3);
 
 							// compute contribution to internal forces
-							std::map< double, FloatArray >Dst = BeamForces[elNum];
+							map< double, FloatArray >Dst = BeamForces[elNum];
 							for (auto &PointVals : Dst) {
 								const double &pos = PointVals.first;
 								FloatArray Vals = PointVals.second;
@@ -296,7 +312,7 @@ namespace oofem {
 			FloatArray rl, dI, dE; // used to store element end displacements
 			FloatArray dNI, dNE; // used to store nodal displacements - may be different from the previous because of releases.
 			FloatArray ddN; // used to store the difference between the ends.
-			std::map< double, FloatArray >DispDict;
+			map< double, FloatArray >DispDict;
 			double l = elem->computeLength();
 			double l_2 = l*l;
 			double l_3 = l_2*l;
@@ -392,7 +408,7 @@ namespace oofem {
 					double dx_0, dx_l;						// axial displacements
 					double tx_0, tx_l;						// torsional rotations
 
-					//std::map<double, FloatArray> &td = BeamDisplacements[elNum];
+					//map<double, FloatArray> &td = BeamDisplacements[elNum];
 					FloatArray &bl = BeamLoads[elNum];
 					FloatArray *disps = &dI;
 					vy_0 = disps->at(2);
@@ -497,8 +513,8 @@ namespace oofem {
 
 		if (this->isRespSpec && tStep->giveIntrinsicTime()!=0){
 			// square and save
-			BeamExportModule::addSquared(combBeamDisplacements, BeamDisplacements);
-			BeamExportModule::addSquared(combBeamForces, BeamForces);
+			//BeamExportModule::addMultiply(combBeamDisplacements, BeamDisplacements,,1.0);
+			//BeamExportModule::addMultiply(combBeamForces, BeamForces,,1.0);
 
 		} else {
 
@@ -514,19 +530,19 @@ namespace oofem {
 			}
 
 			double curTime = tStep->giveTargetTime();
-			std::map<int, std::map<double, FloatArray>>::iterator BForces_it = BeamForces.begin();
-			std::map<int, std::map<double, FloatArray>>::iterator BDisps_it = BeamDisplacements.begin();
+			map<int, map<double, FloatArray>>::iterator BForces_it = BeamForces.begin();
+			map<int, map<double, FloatArray>>::iterator BDisps_it = BeamDisplacements.begin();
 			for (;
 				BForces_it != BeamForces.end();
 				++BForces_it, ++BDisps_it)
 			{
-				std::map< double, FloatArray > &BForces = BForces_it->second;
-				std::map< double, FloatArray > &BDisps = BDisps_it->second;
+				map< double, FloatArray > &BForces = BForces_it->second;
+				map< double, FloatArray > &BDisps = BDisps_it->second;
 				Element* elem = d->giveElement(BForces_it->first);
 				int ID = elem->giveLabel();
 
-				std::map<double, FloatArray >::iterator forces_it = BForces.begin();
-				std::map<double, FloatArray >::iterator disps_it = BDisps.begin();
+				map<double, FloatArray >::iterator forces_it = BForces.begin();
+				map<double, FloatArray >::iterator disps_it = BDisps.begin();
 
 				for (;
 					forces_it != BForces.end();
@@ -549,7 +565,7 @@ namespace oofem {
 			}
 
 			//for (auto &bForces : BeamForces) {
-			//	std::map< double, FloatArray >pForces = bForces.second;
+			//	map< double, FloatArray >pForces = bForces.second;
 			//	int ID = bForces.first;
 			//	for (auto &vals : pForces) {
 			//		double pos = vals.first;
@@ -579,16 +595,16 @@ namespace oofem {
 		}
 	}
 
-	void BeamExportModule::populateElResults(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src)
+	void BeamExportModule::populateElResults(map<int, map<double, FloatArray>> &answer, map<int, map<double, FloatArray>> &src)
 	{
 
-		std::map<int, std::map<double, FloatArray>>::iterator srcElem_it = src.begin();
+		map<int, map<double, FloatArray>>::iterator srcElem_it = src.begin();
 		for (; srcElem_it != src.end(); ++srcElem_it)
 		{
-			std::map<double, FloatArray> *destBRespMap = new std::map<double, FloatArray>;
-			std::map<double, FloatArray > &srcBRespMap = srcElem_it->second;
+			map<double, FloatArray> *destBRespMap = new map<double, FloatArray>;
+			map<double, FloatArray > &srcBRespMap = srcElem_it->second;
 
-			std::map<double, FloatArray>::iterator srcBRespMap_it = srcBRespMap.begin();
+			map<double, FloatArray>::iterator srcBRespMap_it = srcBRespMap.begin();
 			for (; srcBRespMap_it != srcBRespMap.end(); ++srcBRespMap_it)
 			{
 				FloatArray &srcRespArray = srcBRespMap_it->second;
@@ -601,22 +617,22 @@ namespace oofem {
 		}
 	}
 
-	void BeamExportModule::addSquared(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src)
+	void BeamExportModule::addMultiply(map<int, map<double, FloatArray>> &answer, map<int, map<double, FloatArray>> &src, map<int, map<double, FloatArray>> &src2, double fact)
 	{
 		if (answer.size() == 0) {
 			populateElResults(answer, src);
 		}
 
 		// awful iteration
-		std::map<int, std::map<double, FloatArray>>::iterator destElem_it = answer.begin();
-		std::map<int, std::map<double, FloatArray>>::iterator srcElem_it = src.begin();
+		map<int, map<double, FloatArray>>::iterator destElem_it = answer.begin();
+		map<int, map<double, FloatArray>>::iterator srcElem_it = src.begin();
 		for (; destElem_it != answer.end(); ++destElem_it, ++srcElem_it)
 		{
-			std::map<double, FloatArray> &destRespMap = destElem_it->second;
-			std::map<double, FloatArray> &srcRespMap = srcElem_it->second;
+			map<double, FloatArray> &destRespMap = destElem_it->second;
+			map<double, FloatArray> &srcRespMap = srcElem_it->second;
 
-			std::map<double, FloatArray>::iterator destRespMap_it = destRespMap.begin();
-			std::map<double, FloatArray>::iterator srcRespMap_it = srcRespMap.begin();
+			map<double, FloatArray>::iterator destRespMap_it = destRespMap.begin();
+			map<double, FloatArray>::iterator srcRespMap_it = srcRespMap.begin();
 			for (; destRespMap_it != destRespMap.end(); ++destRespMap_it, ++srcRespMap_it)
 			{
 				FloatArray &destRespArray = destRespMap_it->second;
@@ -631,15 +647,15 @@ namespace oofem {
 		}
 	}
 
-	void BeamExportModule::calcRoot(std::map<int, std::map<double, FloatArray>> &answer)
+	void BeamExportModule::calcRoot(map<int, map<double, FloatArray>> &answer)
 	{
 		// another awful iteration
-		std::map<int, std::map<double, FloatArray>>::iterator destElem_it = answer.begin();
+		map<int, map<double, FloatArray>>::iterator destElem_it = answer.begin();
 		for (; destElem_it != answer.end(); ++destElem_it)
 		{
-			std::map<double, FloatArray> &destRespMap = destElem_it->second;
+			map<double, FloatArray> &destRespMap = destElem_it->second;
 
-			std::map<double, FloatArray>::iterator destRespMap_it = destRespMap.begin();
+			map<double, FloatArray>::iterator destRespMap_it = destRespMap.begin();
 			for (; destRespMap_it != destRespMap.end(); ++destRespMap_it)
 			{
 				FloatArray &destRespArray = destRespMap_it->second;
@@ -653,11 +669,18 @@ namespace oofem {
 		}
 	}
 
+	void BeamExportModule::SRSS(){
+
+	}
+
+	void BeamExportModule::CQC(){
+
+	}
 
 	void
 		BeamExportModule::initialize()
 	{
-		std::string fileName = emodel->giveOutputBaseFileName() + ".bem";
+		string fileName = emodel->giveOutputBaseFileName() + ".bem";
 		if ((this->stream = fopen(fileName.c_str(), "w")) == NULL) {
 			OOFEM_ERROR("failed to open file %s", fileName.c_str());
 		}
