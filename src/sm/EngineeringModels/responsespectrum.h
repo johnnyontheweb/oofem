@@ -57,8 +57,6 @@
 #define _IFT_ResponseSpectrum_modalCombo "modalCombo"
 //@}
 
-using namespace std;
-
 namespace oofem {
 
 enum RSpecComboType {
@@ -99,15 +97,15 @@ private:
 	FloatArray dir;
 	FloatArray loadVector;
 	FloatArray dummyDisps;
-	list<FloatArray> reactionsList;
-	list<FloatArray> dispList;
+	std::list<FloatArray> reactionsList;
+	std::list<FloatArray> dispList;
 	FloatArray combReactions;
 	FloatArray combDisps;
 	IntArray dofManMap, dofidMap, eqnMap;
-	list< map<int, map<int, map<int, map<string, FloatArray>>>> > elemResponseList;
-	list< map<int, map<string, FloatArray>> > beamResponseList;
-	map<int, map<int, map<int, map<string, FloatArray>>>> combElemResponse;
-	map<int, map<string, FloatArray>> combBeamResponse;
+	std::list< std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> > elemResponseList;
+	std::list< std::map<int, std::map<std::string, FloatArray>> > beamResponseList;
+	std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> combElemResponse;
+	std::map<int, std::map<std::string, FloatArray>> combBeamResponse;
 
 
 public:
@@ -135,9 +133,9 @@ public:
 
 	virtual void postInitialize();
 
-	virtual void ResponseSpectrum::getGPOutputAt(GaussPoint *gp, TimeStep *tStep, map<string, FloatArray> *&ips);
-	virtual void ResponseSpectrum::getIntRuleOutputAt(IntegrationRule *iRule, TimeStep *tStep, map<int, map<string, FloatArray>> *&ir);
-	virtual void ResponseSpectrum::getIntPointStatusOutputAt(IntegrationPointStatus *iStatus, TimeStep *tStep, MaterialMode materialMode, map<string, FloatArray> *&ir);
+	virtual void ResponseSpectrum::getGPOutputAt(GaussPoint *gp, TimeStep *tStep, std::map<std::string, FloatArray> *&ips);
+	virtual void ResponseSpectrum::getIntRuleOutputAt(IntegrationRule *iRule, TimeStep *tStep, std::map<int, std::map<std::string, FloatArray>> *&ir);
+	virtual void ResponseSpectrum::getIntPointStatusOutputAt(IntegrationPointStatus *iStatus, TimeStep *tStep, MaterialMode materialMode, std::map<std::string, FloatArray> *&ir);
 	virtual double calcSpectrumOrdinate(double period);
 	virtual void computeExternalLoadReactionContribution(FloatArray &reactions, TimeStep *tStep, int di);
 	virtual void buildReactionTable(IntArray &restrDofMans, IntArray &restrDofs,
