@@ -136,6 +136,10 @@ namespace oofem {
 		IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_ResponseSpectrum_modalCombo);
 		modalCombo = (RSpecComboType)val;
 
+		double damp = 0.05; // default damping ratio
+		IR_GIVE_OPTIONAL_FIELD(ir, damp, _IFT_ResponseSpectrum_damp);
+		csi = damp;
+
 		return IRRT_OK;
 	}
 

@@ -55,6 +55,7 @@
 #define _IFT_ResponseSpectrum_func "func"
 #define _IFT_ResponseSpectrum_dir "dir"
 #define _IFT_ResponseSpectrum_modalCombo "modalCombo"
+#define _IFT_ResponseSpectrum_damp "damp"
 //@}
 
 namespace oofem {
@@ -93,6 +94,7 @@ private:
     std :: unique_ptr< SparseGeneralEigenValueSystemNM > nMethod;
     GenEigvalSolverType solverType;
 	RSpecComboType modalCombo;
+	double csi;
 	int func;
 	FloatArray dir;
 	FloatArray loadVector;
