@@ -69,6 +69,7 @@ protected:
 	FloatArray periods;
 	RSpecComboType modalCombo;
 	double csi;
+	ResponseSpectrum *rs;
 
 public:
     /// Constructor. Creates empty Output Manager.

@@ -46,9 +46,6 @@
 #include "fei3dlinelin.h"
 #include "inputrecord.h"
 #include "../sm/engineeringmodels/responseSpectrum.h"
-#include "irresulttype.h"
-#include "dynamicdatareader.h"
-#include "dynamicinputrecord.h"
 
 using namespace std;
 
@@ -62,16 +59,14 @@ namespace oofem {
 	IRResultType
 		BeamExportModule::initializeFrom(InputRecord *ir)
 	{
-		//IRResultType result;                 // Required by IR_GIVE_FIELD macro
+		IRResultType result;                 // Required by IR_GIVE_FIELD macro
 		isRespSpec = ir->hasField(_IFT_BeamExportModule_IsRespSpec);
 
-		int val = 0;
-		IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_BeamExportModule_modalCombo);
-		modalCombo = (RSpecComboType)val;
+		if (isRespSpec) {
+			rs = dynamic_cast<ResponseSpectrum*>(this->emodel);
+		}
 
-		double damp = 0.05; // default damping ratio
-		IR_GIVE_OPTIONAL_FIELD(ir, damp, _IFT_BeamExportModule_damp);
-		csi = damp;
+		if (!rs) OOFEM_ERROR("Using rspec mode without a ResponseSpectrum engineering model");
 
 		return ExportModule::initializeFrom(ir);
 	}
@@ -513,14 +508,20 @@ namespace oofem {
 
 		if (this->isRespSpec && tStep->giveIntrinsicTime()!=0){
 			// square and save
+			BeamDisplacementsList.push_back(BeamDisplacements);
+			BeamForcesList.push_back(BeamForces);
 			//BeamExportModule::addMultiply(combBeamDisplacements, BeamDisplacements,,1.0);
 			//BeamExportModule::addMultiply(combBeamForces, BeamForces,,1.0);
 
 		} else {
 
-			if (this->isRespSpec && tStep->giveIntrinsicTime() != 0) {
-				BeamExportModule::calcRoot(combBeamDisplacements);
-				BeamExportModule::calcRoot(combBeamForces);
+			if (this->isRespSpec && tStep->giveIntrinsicTime() == 0) {
+
+				if (rs->giveComboType() == RSC_SRSS) {
+					this->SRSS();
+				} else {
+					this->CQC();
+				}
 
 				BeamDisplacements = combBeamDisplacements;
 				BeamForces = combBeamForces;
@@ -626,22 +627,26 @@ namespace oofem {
 		// awful iteration
 		map<int, map<double, FloatArray>>::iterator destElem_it = answer.begin();
 		map<int, map<double, FloatArray>>::iterator srcElem_it = src.begin();
-		for (; destElem_it != answer.end(); ++destElem_it, ++srcElem_it)
+		map<int, map<double, FloatArray>>::iterator srcElem_it2 = src.begin();
+		for (; destElem_it != answer.end(); ++destElem_it, ++srcElem_it, ++srcElem_it2)
 		{
 			map<double, FloatArray> &destRespMap = destElem_it->second;
 			map<double, FloatArray> &srcRespMap = srcElem_it->second;
+			map<double, FloatArray> &srcRespMap2 = srcElem_it2->second;
 
 			map<double, FloatArray>::iterator destRespMap_it = destRespMap.begin();
 			map<double, FloatArray>::iterator srcRespMap_it = srcRespMap.begin();
-			for (; destRespMap_it != destRespMap.end(); ++destRespMap_it, ++srcRespMap_it)
+			map<double, FloatArray>::iterator srcRespMap_it2 = srcRespMap2.begin();
+			for (; destRespMap_it != destRespMap.end(); ++destRespMap_it, ++srcRespMap_it, ++srcRespMap_it2)
 			{
 				FloatArray &destRespArray = destRespMap_it->second;
 				FloatArray &srcRespArray = srcRespMap_it->second;
+				FloatArray &srcRespArray2 = srcRespMap_it2->second;
 
 				for (int i = 1; i <= srcRespArray.giveSize(); i++)
 				{
 					// square it and add it
-					destRespArray.at(i) += pow(srcRespArray.at(i), 2);
+					destRespArray.at(i) += srcRespArray.at(i)*srcRespArray2.at(i)*fact;
 				}
 			}
 		}
@@ -670,11 +675,49 @@ namespace oofem {
 	}
 
 	void BeamExportModule::SRSS(){
+		list<map<int, map<double, FloatArray>>>::iterator disps_it = BeamDisplacementsList.begin();
+		for (; disps_it != BeamDisplacementsList.end(); ++disps_it)
+		{
+			addMultiply(combBeamDisplacements, *disps_it, *disps_it);
+		}
+		calcRoot(combBeamDisplacements);
+
+		list<map<int, map<double, FloatArray>>>::iterator forces_it = BeamForcesList.begin();
+		for (; forces_it != BeamForcesList.end(); ++forces_it)
+		{
+			addMultiply(combBeamForces, *forces_it, *forces_it);  // mult by 1.0
+		}
+		calcRoot(combBeamForces);
 
 	}
 
 	void BeamExportModule::CQC(){
+		FloatMatrix rhos;
+		rs->giveRhos(rhos);
 
+		list<map<int, map<double, FloatArray>>>::iterator disps_it = BeamDisplacementsList.begin();
+
+		for (int i = 1; disps_it != BeamDisplacementsList.end(); ++disps_it, i++)
+		{
+			list<map<int, map<double, FloatArray>>>::iterator disps_it2 = BeamDisplacementsList.begin();
+			for (int j = 1; disps_it2 != BeamDisplacementsList.end(); ++disps_it2, j++)
+			{
+				addMultiply(combBeamDisplacements, *disps_it, *disps_it2, rhos.at(i, j));
+			}
+		}
+		calcRoot(combBeamDisplacements);
+
+		list<map<int, map<double, FloatArray>>>::iterator forces_it = BeamForcesList.begin();
+
+		for (int i = 1; forces_it != BeamForcesList.end(); ++forces_it, i++)
+		{
+			list<map<int, map<double, FloatArray>>>::iterator forces_it2 = BeamForcesList.begin();
+			for (int j = 1; forces_it2 != BeamForcesList.end(); ++forces_it2, j++)
+			{
+				addMultiply(combBeamForces, *forces_it, *forces_it2, rhos.at(i, j));
+			}
+		}
+		calcRoot(combBeamForces);
 	}
 
 	void

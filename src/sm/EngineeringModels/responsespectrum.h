@@ -81,6 +81,7 @@ private:
     FloatMatrix eigVec;
     FloatArray eigVal;
 	FloatArray periods;
+	FloatMatrix rhos;
 	FloatArray centroid;
 	FloatArray totMass;
 	FloatMatrix partFact;
@@ -146,6 +147,8 @@ public:
 	virtual void updateInternalState(TimeStep *tStep);
 	virtual void SRSS();
 	virtual void CQC();
+	virtual void giveRhos(FloatMatrix &rhos);
+	virtual RSpecComboType giveComboType();
 
     // identification
     virtual const char *giveClassName() const { return "ResponseSpectrum"; }

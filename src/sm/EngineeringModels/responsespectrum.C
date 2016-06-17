@@ -286,6 +286,7 @@ namespace oofem {
 		periods.resize(numberOfRequiredEigenValues);
 		combReactions.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
 		combDisps.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
+		rhos.resize(numberOfRequiredEigenValues, numberOfRequiredEigenValues);
 
 		// mass normalization
 		for (int i = 1; i <= numberOfRequiredEigenValues; i++)
@@ -299,6 +300,12 @@ namespace oofem {
 			periods.at(i) = 2 * M_PI / sqrt(eigVal.at(i));
 		}
 		// eigVec has been normalized
+
+		for (int i = 1; i < numberOfRequiredEigenValues; i++)
+			for (int j = 1; j < numberOfRequiredEigenValues; j++){
+				double beta = periods.at(i) / periods.at(j);
+				rhos.at(i, j) = 8 * pow(this->csi, 2.0) * pow(beta, 1.5) / (1.0 + beta) / (pow(1 - beta, 2.0) + 4 * pow(this->csi, 2.0)*beta);
+			}
 
 		IntArray masterDofIDs, nodalArray, ids;
 		IntArray locationArray;
@@ -831,13 +838,6 @@ namespace oofem {
 	void ResponseSpectrum::CQC()
 	{
 		list<map<int, map<int, map<int, map<string, FloatArray>>>>>::iterator elem_it = elemResponseList.begin();
-
-		FloatMatrix rhos(numberOfRequiredEigenValues, numberOfRequiredEigenValues);
-		for (int i = 1; i < numberOfRequiredEigenValues; i++)
-			for (int j = 1; j < numberOfRequiredEigenValues; j++){
-				double beta = periods.at(i) / periods.at(j);
-				rhos.at(i,j) = 8 * pow(this->csi, 2.0) * pow(beta, 1.5) / (1.0 + beta) / (pow(1 - beta, 2.0) + 4 * pow(this->csi, 2.0)*beta);
-			}
 		
 		for (int i=1; elem_it != elemResponseList.end(); ++elem_it, i++)
 		{
@@ -926,6 +926,16 @@ namespace oofem {
 
 		//	fprintf(File, "} end layers report\n");
 		//}
+	}
+
+	void ResponseSpectrum::giveRhos(FloatMatrix &ans)
+	{
+		ans = rhos;
+	}
+
+	RSpecComboType ResponseSpectrum::giveComboType()
+	{
+		return modalCombo;
 	}
 
 	void
