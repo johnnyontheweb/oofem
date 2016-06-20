@@ -32,18 +32,21 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef BeamExportModule_h
-#define BeamExportModule_h
+#ifndef NodalRecoveryModule_h
+#define NodalRecoveryModule_h
 
 #include "exportmodule.h"
+#include "nodalrecoverymodel.h"
 #include "floatarray.h"
 #include "../sm/engineeringmodels/responseSpectrum.h"
 #include <map>
 
 ///@name Input fields for Beam export module
 //@{
-#define _IFT_BeamExportModule_Name "bem"
-#define _IFT_BeamExportModule_isrespspec "rspec"
+#define _IFT_NodalRecoveryModule_Name "nrm"
+#define _IFT_NodalRecoveryModule_stype "stype"
+#define _IFT_NodalRecoveryModule_rtypes "rtypes"
+#define _IFT_NodalRecoveryModule_isrespspec "rspec"
 //@}
 
 namespace oofem {
@@ -51,11 +54,10 @@ namespace oofem {
  * Represents beam (2D and 3D) export module. It gives the beam diagram values (N_x, T_z, T_y, M_x, M_y, M_z)
  * for all beam elements in the model, in local coordinate system.
  *
- * @author Vit Smilauer
- * @author Mikael Öhman
+ * @author Francesco Pontarin
  * @author Giovanni Rinaldin
  */
-class OOFEM_EXPORT BeamExportModule : public ExportModule
+class OOFEM_EXPORT NodalRecoveryModule : public ExportModule
 {
 protected:
     /// Stream for file.
@@ -63,22 +65,24 @@ protected:
     /// Array for the beam diagrams
     FloatArray *res;
 	bool isRespSpec=false; // tStep 0 does the magic
-	FloatArray periods;
+	NodalRecoveryModel::NodalRecoveryModelType stype;
 	RSpecComboType modalCombo;
 	double csi;
 	ResponseSpectrum *rs;
+	NodalRecoveryModel* smoother;
+	FloatArray rTypes;
 
 public:
     /// Constructor. Creates empty Output Manager.
-    BeamExportModule(int n, EngngModel *e);
+    NodalRecoveryModule(int n, EngngModel *e);
     /// Destructor.
-    virtual ~BeamExportModule();
+    virtual ~NodalRecoveryModule();
     virtual IRResultType initializeFrom(InputRecord *ir);
     virtual void doOutput(TimeStep *tStep, bool forcedOutput = false);
     virtual void initialize();
     virtual void terminate();
-    virtual const char *giveClassName() const { return "BeamExportModule"; }
-    virtual const char *giveInputRecordName() const { return _IFT_BeamExportModule_Name; }
+    virtual const char *giveClassName() const { return "NodalRecoveryModule"; }
+    virtual const char *giveInputRecordName() const { return _IFT_NodalRecoveryModule_Name; }
 
 private:
 	

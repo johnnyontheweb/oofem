@@ -251,6 +251,7 @@ set (sm_export
     export/poiexportmodule.C
     export/gnuplotexportmodule.C
     export/beamexportmodule.C
+	export/nodalrecoverymodule.C
     )
 
 set (sm_barrier

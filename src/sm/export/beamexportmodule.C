@@ -60,7 +60,7 @@ namespace oofem {
 		BeamExportModule::initializeFrom(InputRecord *ir)
 	{
 		IRResultType result;                 // Required by IR_GIVE_FIELD macro
-		isRespSpec = ir->hasField(_IFT_BeamExportModule_IsRespSpec);
+		isRespSpec = ir->hasField(_IFT_BeamExportModule_isrespspec);
 
 		if (isRespSpec) {
 			const char* name = this->emodel->giveClassName();
