@@ -63,10 +63,11 @@ namespace oofem {
 		isRespSpec = ir->hasField(_IFT_BeamExportModule_IsRespSpec);
 
 		if (isRespSpec) {
+			const char* name = this->emodel->giveClassName();
+			if (!strcmp(name, "ResponseSpectrum") == 0) OOFEM_ERROR("Using rspec mode without a ResponseSpectrum engineering model");
 			rs = dynamic_cast<ResponseSpectrum*>(this->emodel);
+			if (!rs) OOFEM_ERROR("Error retrieving engmodel.");
 		}
-
-		if (!rs) OOFEM_ERROR("Using rspec mode without a ResponseSpectrum engineering model");
 
 		return ExportModule::initializeFrom(ir);
 	}
