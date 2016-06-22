@@ -80,6 +80,8 @@ public:
     virtual const char *giveClassName() const { return "BeamExportModule"; }
     virtual const char *giveInputRecordName() const { return _IFT_BeamExportModule_Name; }
 
+	static int checkValidType(const char* name) { return (strcmp(name, "Beam3d") == 0) || (strcmp(name, "Beam2d") == 0) || (strcmp(name, "beam3d") == 0) || (strcmp(name, "beam2d") == 0); };
+
 private:
 	
 	std::map< int, std::map< double, FloatArray > >BeamForces;

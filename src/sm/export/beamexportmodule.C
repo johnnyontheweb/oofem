@@ -89,10 +89,10 @@ namespace oofem {
 		dst.at(6) -= src.at(2) * (pos) / 2 * (len - pos);
 	}
 
-	int checkValidType(const char* name)
-	{
-		return (strcmp(name, "Beam3d") == 0) || (strcmp(name, "Beam2d") == 0) || (strcmp(name, "beam3d") == 0) || (strcmp(name, "beam2d") == 0);
-	}
+	//int checkValidType(const char* name)
+	//{
+	//	return (strcmp(name, "Beam3d") == 0) || (strcmp(name, "Beam2d") == 0) || (strcmp(name, "beam3d") == 0) || (strcmp(name, "beam2d") == 0);
+	//}
 
 	void
 		BeamExportModule::doOutput(TimeStep *tStep, bool forcedOutput)
@@ -107,7 +107,7 @@ namespace oofem {
 		// loop through the beam elements
 		Domain *d = emodel->giveDomain(1);
 		for (auto &elem : d->giveElements()) {
-			if (checkValidType(elem->giveClassName())) {   // check if elem is beam (LIbeam?)
+			if (this->checkValidType(elem->giveClassName())) {   // check if elem is beam (LIbeam?)
 
 				int elNum;
 				elNum = elem->giveNumber();
@@ -262,7 +262,7 @@ namespace oofem {
 							c += 2; // increment counter in interleaved array
 
 							Element* ele = d->giveElement(elNum);
-							if (!checkValidType(ele->giveClassName())) continue;
+							if (!this->checkValidType(ele->giveClassName())) continue;
 
 							const FloatArray coords;
 

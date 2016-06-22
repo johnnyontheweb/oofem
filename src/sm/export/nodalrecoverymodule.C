@@ -67,16 +67,19 @@ namespace oofem {
 		stype = (NodalRecoveryModel::NodalRecoveryModelType) val;
 
 		IR_GIVE_OPTIONAL_FIELD(ir, rTypes, _IFT_NodalRecoveryModule_rtypes);
-		// check types!
-		
+		if (rTypes.giveSize() == 0) OOFEM_ERROR("NodalRecoveryModule - No response types defined");
+		for (int i = 0; rTypes.giveSize(); i++) {
+			InternalStateType ist = static_cast<InternalStateType>(rTypes.at(i));
+			if (ist==InternalStateType::IST_Undefined) OOFEM_ERROR("NodalRecoveryModule - Invalid response type defined at pos %d", i);
+		}
 
 		isRespSpec = ir->hasField(_IFT_NodalRecoveryModule_isrespspec);
 
 		if (isRespSpec) {
 			const char* name = this->emodel->giveClassName();
-			if (!strcmp(name, "ResponseSpectrum") == 0) OOFEM_ERROR("Using rspec mode without a ResponseSpectrum engineering model");
+			if (!strcmp(name, "ResponseSpectrum") == 0) OOFEM_ERROR("NodalRecoveryModule - Using rspec mode without a ResponseSpectrum engineering model");
 			rs = dynamic_cast<ResponseSpectrum*>(this->emodel);
-			if (!rs) OOFEM_ERROR("Error retrieving engmodel.");
+			if (!rs) OOFEM_ERROR("NodalRecoveryModule - Error retrieving engmodel.");
 		}
 
 		return ExportModule::initializeFrom(ir);
@@ -87,6 +90,15 @@ namespace oofem {
 	{
 		if (!(testTimeStepOutput(tStep) || forcedOutput)) {
 			return;
+		}
+
+		// gather stuff
+		Domain *d = emodel->giveDomain(1);
+		for (auto &elem : d->giveElements()) {
+			if (this->checkValidType(elem->giveClassName())) {
+
+			}
+
 		}
 
 		if (this->isRespSpec && tStep->giveIntrinsicTime()!=0){

@@ -70,7 +70,7 @@ protected:
 	double csi;
 	ResponseSpectrum *rs;
 	NodalRecoveryModel* smoother;
-	FloatArray rTypes;
+	IntArray rTypes;
 
 public:
     /// Constructor. Creates empty Output Manager.
@@ -83,6 +83,8 @@ public:
     virtual void terminate();
     virtual const char *giveClassName() const { return "NodalRecoveryModule"; }
     virtual const char *giveInputRecordName() const { return _IFT_NodalRecoveryModule_Name; }
+
+	static int checkValidType(const char* name) { return 0; };
 
 private:
 	
