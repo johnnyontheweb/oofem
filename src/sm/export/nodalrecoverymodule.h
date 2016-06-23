@@ -51,8 +51,9 @@
 
 namespace oofem {
 /**
- * Represents beam (2D and 3D) export module. It gives the beam diagram values (N_x, T_z, T_y, M_x, M_y, M_z)
- * for all beam elements in the model, in local coordinate system.
+ * Represents generic export module. It gives the internal variables chosen
+ * by the user for all elements in the model.
+ * Parts adapted from VTKExportModule.
  *
  * @author Francesco Pontarin
  * @author Giovanni Rinaldin
@@ -70,7 +71,11 @@ protected:
 	double csi;
 	ResponseSpectrum *rs;
 	NodalRecoveryModel* smoother;
-	IntArray rTypes;
+	IntArray internalVarsToExport;
+	Set* elemSet;
+
+	std::list<std::string> valueTypesStr;
+	int regionDofMans;
 
 public:
     /// Constructor. Creates empty Output Manager.
@@ -85,6 +90,25 @@ public:
     virtual const char *giveInputRecordName() const { return _IFT_NodalRecoveryModule_Name; }
 
 	static int checkValidType(const char* name) { return 0; };
+
+	/**
+	* Export internal variables.
+	*/
+	void exportIntVars(FILE *stream, TimeStep *tStep);
+	/**
+	* Exports single variable.
+	*/
+	void exportIntVarAs(InternalStateType valID, InternalStateValueType type, FILE *stream, TimeStep *tStep);
+	/**
+	* Assembles the region node map. Also computes the total number of nodes in region.
+	* The region are numbered starting from offset+1.
+	* if mode == 0 then regionNodalNumbers is array with mapping from global numbering to local region numbering.
+	* The i-th value contains the corresponding local region number (or zero, if global numbar is not in region).
+	* if mode == 1 then regionNodalNumbers is array with mapping from local to global numbering.
+	* The i-th value contains the corresponding global node number.
+	*/
+	int initRegionNodeNumbering(IntArray &regionNodalNumbers, int &regionDofMans,
+		int offset, Domain *domain, int reg, int mode);
 
 private:
 	
