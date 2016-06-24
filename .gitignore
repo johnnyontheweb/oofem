@@ -330,3 +330,7 @@ tests/sm/t3d.bmf
 /footer.html
 /oofem.dir/Debug/oofem.vcxprojResolveAssemblyReference.cache
 /oofem.opensdf
+/Debug/pianoRigStatic3-modal.in
+/Debug/pianoRigStatic3-modal2.in
+/MinSizeRel/pianoRigStatic3-Static.in
+/src/oofemlib/inverseitMIK2.C
