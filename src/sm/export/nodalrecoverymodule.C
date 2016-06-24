@@ -58,7 +58,11 @@ namespace oofem {
 
 		NodalRecoveryModule::NodalRecoveryModule(int n, EngngModel *e) : ExportModule(n, e) { }
 
-	NodalRecoveryModule :: ~NodalRecoveryModule() { }
+	NodalRecoveryModule :: ~NodalRecoveryModule()
+	{
+		delete regionNodalNumbers;
+		delete elemSet;
+	}
 
 	IRResultType
 		NodalRecoveryModule::initializeFrom(InputRecord *ir)
@@ -126,37 +130,12 @@ namespace oofem {
 		int nindx = giveInternalStateTypeSize(type);
 
 		for (int indx = 1; indx <= nindx; indx++) {
-			// print header
-			if (type == ISVT_SCALAR) {
-				fprintf(stream, "SCALARS %s double 1\n", __InternalStateTypeToString(valID));
-			}
-			else if (type == ISVT_VECTOR) {
-				fprintf(stream, "VECTORS %s double\n", __InternalStateTypeToString(valID));
-			}
-			else if ((type == ISVT_TENSOR_S3) || (type == ISVT_TENSOR_S3E)) {
-				fprintf(stream, "TENSORS %s double\n", __InternalStateTypeToString(valID));
-			}
-			else if (type == ISVT_TENSOR_G) {
-				fprintf(stream, "SCALARS %s_%d double 1\n", __InternalStateTypeToString(valID), indx);
-			}
-			else {
-				fprintf(stderr, "VTKExportModule :: exportIntVarAs: unsupported variable type %s\n", __InternalStateTypeToString(valID));
-			}
-
-			if ((type == ISVT_SCALAR) || (type == ISVT_TENSOR_G)) {
-				fprintf(stream, "LOOKUP_TABLE default\n");
-			}
-
 			if (!((valID == IST_DisplacementVector) || (valID == IST_MaterialInterfaceVal))) {
 				this->smoother->recoverValues(*elemSet, valID, tStep);
 			}
 
-			IntArray regionNodalNumbers(nnodes);
-			int regionDofMans = 0, offset = 0;
-			ireg = -1;
 			int defaultSize = 0;
 
-			this->initRegionNodeNumbering(regionNodalNumbers, regionDofMans, offset, d, ireg, 1);
 			if (!((valID == IST_DisplacementVector) || (valID == IST_MaterialInterfaceVal))) {
 				// assemble local->global map
 				defaultSize = giveInternalStateTypeSize(type);
@@ -170,8 +149,8 @@ namespace oofem {
 					iVal.resize(3);
 					val = &iVal;
 					for (j = 1; j <= 3; j++) {
-						iVal.at(j) = d->giveNode(regionNodalNumbers.at(inode))->giveUpdatedCoordinate(j, tStep, 1.0) -
-							d->giveNode(regionNodalNumbers.at(inode))->giveCoordinate(j);
+						iVal.at(j) = d->giveNode(regionNodalNumbers->at(inode))->giveUpdatedCoordinate(j, tStep, 1.0) -
+							d->giveNode(regionNodalNumbers->at(inode))->giveCoordinate(j);
 					}
 				}
 				else if (valID == IST_MaterialInterfaceVal) {
@@ -179,11 +158,11 @@ namespace oofem {
 					if (mi) {
 						iVal.resize(1);
 						val = &iVal;
-						iVal.at(1) = mi->giveNodalScalarRepresentation(regionNodalNumbers.at(inode));
+						iVal.at(1) = mi->giveNodalScalarRepresentation(regionNodalNumbers->at(inode));
 					}
 				}
 				else {
-					this->smoother->giveNodalVector(val, regionNodalNumbers.at(inode));
+					this->smoother->giveNodalVector(val, regionNodalNumbers->at(inode));
 				}
 
 				if (val == NULL) {
@@ -194,58 +173,8 @@ namespace oofem {
 				}
 			}
 
+			if (type == ISVT_SCALAR || type == ISVT_VECTOR || type == ISVT_TENSOR_S3) {
 
-			if (type == ISVT_SCALAR) {
-				if (val->giveSize()) {
-					fprintf(stream, "%e ", val->at(1));
-				}
-				else {
-					fprintf(stream, "%e ", 0.0);
-				}
-			}
-			else if (type == ISVT_VECTOR) {
-				jsize = min(3, val->giveSize());
-				for (j = 1; j <= jsize; j++) {
-					fprintf(stream, "%e ", val->at(j));
-				}
-
-				for (j = jsize + 1; j <= 3; j++) {
-					fprintf(stream, "0.0 ");
-				}
-			}
-			else if (type == ISVT_TENSOR_S3) {
-				t.zero();
-				for (int ii = 1; ii <= 6; ii++) {
-					if (ii == 1) {
-						t.at(1, 1) = val->at(ii);
-					}
-					else if (ii == 2) {
-						t.at(2, 2) = val->at(ii);
-					}
-					else if (ii == 3) {
-						t.at(3, 3) = val->at(ii);
-					}
-					else if (ii == 4) {
-						t.at(2, 3) = val->at(ii);
-						t.at(3, 2) = val->at(ii);
-					}
-					else if (ii == 5) {
-						t.at(1, 3) = val->at(ii);
-						t.at(3, 1) = val->at(ii);
-					}
-					else if (ii == 6) {
-						t.at(1, 2) = val->at(ii);
-						t.at(2, 1) = val->at(ii);
-					}
-				}
-
-				for (int ii = 1; ii <= 3; ii++) {
-					for (int jj = 1; jj <= 3; jj++) {
-						fprintf(stream, "%e ", t.at(ii, jj));
-					}
-
-					fprintf(stream, "\n");
-				}
 			}
 			else if (type == ISVT_TENSOR_G) { // export general tensor values as scalars
 				fprintf(stream, "%e ", val->at(indx));
@@ -333,14 +262,11 @@ namespace oofem {
 			if (this->checkValidType(elem->giveClassName())) {
 
 			}
-
 		}
 
 		if (this->isRespSpec && tStep->giveIntrinsicTime()!=0){
 			// square and save
-			BeamDisplacementsList.push_back(BeamDisplacements);
-			BeamForcesList.push_back(BeamForces);
-
+			combNodalValuesList.push_back(nodalValues);
 		} else {
 
 			if (this->isRespSpec && tStep->giveIntrinsicTime() == 0) {
@@ -351,16 +277,12 @@ namespace oofem {
 					this->CQC();
 				}
 
-				BeamDisplacements = combBeamDisplacements;
-				BeamForces = combBeamForces;
+				nodalValues = combNodalValues;
 
-				combBeamDisplacements.clear();
-				combBeamForces.clear();
+				combNodalValues.clear();
 			}
 
-			BeamDisplacements.clear();
-			BeamForces.clear();
-
+			nodalValues.clear();
 			fflush(this->stream);
 		}
 	}
@@ -444,49 +366,49 @@ namespace oofem {
 	}
 
 	void NodalRecoveryModule::SRSS(){
-		list<map<int, map<double, FloatArray>>>::iterator disps_it = BeamDisplacementsList.begin();
-		for (; disps_it != BeamDisplacementsList.end(); ++disps_it)
-		{
-			addMultiply(combBeamDisplacements, *disps_it, *disps_it);
-		}
-		calcRoot(combBeamDisplacements);
+		//list<map<int, map<double, FloatArray>>>::iterator disps_it = BeamDisplacementsList.begin();
+		//for (; disps_it != BeamDisplacementsList.end(); ++disps_it)
+		//{
+		//	addMultiply(combBeamDisplacements, *disps_it, *disps_it);
+		//}
+		//calcRoot(combBeamDisplacements);
 
-		list<map<int, map<double, FloatArray>>>::iterator forces_it = BeamForcesList.begin();
-		for (; forces_it != BeamForcesList.end(); ++forces_it)
-		{
-			addMultiply(combBeamForces, *forces_it, *forces_it);  // mult by 1.0
-		}
-		calcRoot(combBeamForces);
+		//list<map<int, map<double, FloatArray>>>::iterator forces_it = BeamForcesList.begin();
+		//for (; forces_it != BeamForcesList.end(); ++forces_it)
+		//{
+		//	addMultiply(combBeamForces, *forces_it, *forces_it);  // mult by 1.0
+		//}
+		//calcRoot(combBeamForces);
 
 	}
 
 	void NodalRecoveryModule::CQC(){
-		FloatMatrix rhos;
-		rs->giveRhos(rhos);
+		//FloatMatrix rhos;
+		//rs->giveRhos(rhos);
 
-		list<map<int, map<double, FloatArray>>>::iterator disps_it = BeamDisplacementsList.begin();
+		//list<map<int, map<double, FloatArray>>>::iterator disps_it = BeamDisplacementsList.begin();
 
-		for (int i = 1; disps_it != BeamDisplacementsList.end(); ++disps_it, i++)
-		{
-			list<map<int, map<double, FloatArray>>>::iterator disps_it2 = BeamDisplacementsList.begin();
-			for (int j = 1; disps_it2 != BeamDisplacementsList.end(); ++disps_it2, j++)
-			{
-				addMultiply(combBeamDisplacements, *disps_it, *disps_it2, rhos.at(i, j));
-			}
-		}
-		calcRoot(combBeamDisplacements);
+		//for (int i = 1; disps_it != BeamDisplacementsList.end(); ++disps_it, i++)
+		//{
+		//	list<map<int, map<double, FloatArray>>>::iterator disps_it2 = BeamDisplacementsList.begin();
+		//	for (int j = 1; disps_it2 != BeamDisplacementsList.end(); ++disps_it2, j++)
+		//	{
+		//		addMultiply(combBeamDisplacements, *disps_it, *disps_it2, rhos.at(i, j));
+		//	}
+		//}
+		//calcRoot(combBeamDisplacements);
 
-		list<map<int, map<double, FloatArray>>>::iterator forces_it = BeamForcesList.begin();
+		//list<map<int, map<double, FloatArray>>>::iterator forces_it = BeamForcesList.begin();
 
-		for (int i = 1; forces_it != BeamForcesList.end(); ++forces_it, i++)
-		{
-			list<map<int, map<double, FloatArray>>>::iterator forces_it2 = BeamForcesList.begin();
-			for (int j = 1; forces_it2 != BeamForcesList.end(); ++forces_it2, j++)
-			{
-				addMultiply(combBeamForces, *forces_it, *forces_it2, rhos.at(i, j));
-			}
-		}
-		calcRoot(combBeamForces);
+		//for (int i = 1; forces_it != BeamForcesList.end(); ++forces_it, i++)
+		//{
+		//	list<map<int, map<double, FloatArray>>>::iterator forces_it2 = BeamForcesList.begin();
+		//	for (int j = 1; forces_it2 != BeamForcesList.end(); ++forces_it2, j++)
+		//	{
+		//		addMultiply(combBeamForces, *forces_it, *forces_it2, rhos.at(i, j));
+		//	}
+		//}
+		//calcRoot(combBeamForces);
 	}
 
 	void
@@ -502,15 +424,16 @@ namespace oofem {
 		elemSet = new Set(0, d);
 		elemSet->addAllElements();
 
+		// save result type strings
 		for (int i = 1; i <= internalVarsToExport.giveSize(); i++) {
 			InternalStateType type = (InternalStateType)internalVarsToExport.at(i);
 			valueTypesStr.push_back(__InternalStateTypeToString(type));
 		}
 
-		IntArray map(d->giveNumberOfDofManagers());
+		regionNodalNumbers = new IntArray(d->giveNumberOfDofManagers());
 
 		// asemble local->global region map
-		this->initRegionNodeNumbering(map, regionDofMans, 0, d, -1, 1);
+		this->initRegionNodeNumbering(*regionNodalNumbers, regionDofMans, 0, d, -1, 1);
 
 		string fileName = emodel->giveOutputBaseFileName() + ".nrm";
 		if ((this->stream = fopen(fileName.c_str(), "w")) == NULL) {

@@ -64,19 +64,18 @@ class OOFEM_EXPORT NodalRecoveryModule : public ExportModule
 protected:
     /// Stream for file.
     FILE *stream;
-    /// Array for the beam diagrams
-    FloatArray *res;
 	bool isRespSpec=false; // tStep 0 does the magic
 	NodalRecoveryModel::NodalRecoveryModelType stype;
 	RSpecComboType modalCombo;
 	double csi;
-	ResponseSpectrum *rs;
-	NodalRecoveryModel* smoother;
+	ResponseSpectrum *rs=NULL;
+	NodalRecoveryModel* smoother=NULL;
 	IntArray internalVarsToExport;
-	Set* elemSet;
+	Set* elemSet=NULL;
 
 	std::list<std::string> valueTypesStr;
 	int regionDofMans;
+	IntArray *regionNodalNumbers=NULL;
 
 public:
     /// Constructor. Creates empty Output Manager.
@@ -113,14 +112,11 @@ public:
 
 private:
 	
-	std::map< int, std::map< double, FloatArray > >BeamForces;
-	std::map< int, std::map< double, FloatArray > >BeamDisplacements;
+	std::map< int, std::map< int, std::vector<double> > > nodalValues; // rType node values
 
-	std::list<std::map< int, std::map< double, FloatArray > > >BeamForcesList;
-	std::list<std::map< int, std::map< double, FloatArray > > >BeamDisplacementsList;
+	std::list<std::map< int, std::map< int, std::vector<double> > > >combNodalValuesList; // eigMode rType node values
 
-	std::map< int, std::map< double, FloatArray > >combBeamForces;
-	std::map< int, std::map< double, FloatArray > >combBeamDisplacements;
+	std::map< int, std::map< int, std::vector<double> > > combNodalValues;  // rType node values
 
 	virtual void populateElResults(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src);
 	virtual void addMultiply(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src, std::map<int, std::map<double, FloatArray>> &src2, double fact = 1.0);
