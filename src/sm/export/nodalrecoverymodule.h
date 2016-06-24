@@ -40,6 +40,7 @@
 #include "floatarray.h"
 #include "../sm/engineeringmodels/responseSpectrum.h"
 #include <map>
+#include "cltypes.h"
 
 ///@name Input fields for Beam export module
 //@{
