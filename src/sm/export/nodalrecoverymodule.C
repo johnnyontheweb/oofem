@@ -56,7 +56,11 @@ using namespace std;
 namespace oofem {
 	REGISTER_ExportModule(NodalRecoveryModule)
 
-		NodalRecoveryModule::NodalRecoveryModule(int n, EngngModel *e) : ExportModule(n, e) { }
+	IntArray NodalRecoveryModule::redToFull = {
+		1, 5, 9, 8, 7, 4, 6, 3, 2
+	};
+
+	NodalRecoveryModule::NodalRecoveryModule(int n, EngngModel *e) : ExportModule(n, e) { }
 
 	NodalRecoveryModule :: ~NodalRecoveryModule()
 	{
@@ -94,7 +98,7 @@ namespace oofem {
 	}
 
 	void
-		NodalRecoveryModule::exportIntVars(FILE *stream, TimeStep *tStep)
+		NodalRecoveryModule::exportIntVars(TimeStep *tStep)
 	{
 		// should be performed over regions
 
@@ -108,79 +112,102 @@ namespace oofem {
 		}
 
 		for (i = 1; i <= n; i++) {
+			map< int, FloatArray >  nodVec;
 			type = (InternalStateType)internalVarsToExport.at(i);
 			InternalStateValueType iType = giveInternalStateValueType(type);
-			this->exportIntVarAs(type, iType, stream, tStep);
+			this->exportIntVarAs(nodVec, type, iType, stream, tStep);
+			nodalValues[i] = nodVec;
 		}
 	}
 
 	void
-		NodalRecoveryModule::exportIntVarAs(InternalStateType valID, InternalStateValueType type, FILE *stream, TimeStep *tStep)
+		NodalRecoveryModule::exportIntVarAs(map< int, FloatArray > &answer, InternalStateType valID, InternalStateValueType type, FILE *stream, TimeStep *tStep)
 	{
 		Domain *d = emodel->giveDomain(1);
 		int ireg;
 		int nnodes = d->giveNumberOfDofManagers(), inode;
 		int j, jsize;
 		FloatArray iVal(3);
-		FloatMatrix t(3, 3);
+		FloatArray t(9);
 		const FloatArray *val = NULL;
 
 		//this->giveSmoother();
 
-		int nindx = giveInternalStateTypeSize(type);
+		if (!((valID == IST_DisplacementVector) || (valID == IST_MaterialInterfaceVal))) {
+			this->smoother->recoverValues(*elemSet, valID, tStep);
+		}
 
-		for (int indx = 1; indx <= nindx; indx++) {
-			if (!((valID == IST_DisplacementVector) || (valID == IST_MaterialInterfaceVal))) {
-				this->smoother->recoverValues(*elemSet, valID, tStep);
+		int defaultSize = 0;
+
+		if (!((valID == IST_DisplacementVector) || (valID == IST_MaterialInterfaceVal))) {
+			// assemble local->global map
+			defaultSize = giveInternalStateTypeSize(type);
+		}
+		else {
+			regionDofMans = nnodes;
+		}
+
+		for (inode = 1; inode <= regionDofMans; inode++) {
+			if (valID == IST_DisplacementVector) {
+				iVal.resize(3);
+				val = &iVal;
+				for (j = 1; j <= 3; j++) {
+					iVal.at(j) = d->giveNode(regionNodalNumbers->at(inode))->giveUpdatedCoordinate(j, tStep, 1.0) -
+						d->giveNode(regionNodalNumbers->at(inode))->giveCoordinate(j);
+				}
 			}
-
-			int defaultSize = 0;
-
-			if (!((valID == IST_DisplacementVector) || (valID == IST_MaterialInterfaceVal))) {
-				// assemble local->global map
-				defaultSize = giveInternalStateTypeSize(type);
+			else if (valID == IST_MaterialInterfaceVal) {
+				MaterialInterface *mi = emodel->giveMaterialInterface(1);
+				if (mi) {
+					iVal.resize(1);
+					val = &iVal;
+					iVal.at(1) = mi->giveNodalScalarRepresentation(regionNodalNumbers->at(inode));
+				}
 			}
 			else {
-				regionDofMans = nnodes;
+				this->smoother->giveNodalVector(val, regionNodalNumbers->at(inode));
 			}
 
-			for (inode = 1; inode <= regionDofMans; inode++) {
-				if (valID == IST_DisplacementVector) {
-					iVal.resize(3);
-					val = &iVal;
-					for (j = 1; j <= 3; j++) {
-						iVal.at(j) = d->giveNode(regionNodalNumbers->at(inode))->giveUpdatedCoordinate(j, tStep, 1.0) -
-							d->giveNode(regionNodalNumbers->at(inode))->giveCoordinate(j);
-					}
-				}
-				else if (valID == IST_MaterialInterfaceVal) {
-					MaterialInterface *mi = emodel->giveMaterialInterface(1);
-					if (mi) {
-						iVal.resize(1);
-						val = &iVal;
-						iVal.at(1) = mi->giveNodalScalarRepresentation(regionNodalNumbers->at(inode));
-					}
-				}
-				else {
-					this->smoother->giveNodalVector(val, regionNodalNumbers->at(inode));
-				}
-
-				if (val == NULL) {
-					iVal.resize(defaultSize);
-					iVal.zero();
-					val = &iVal;
-					//OOFEM_ERROR("internal error: invalid dofman data");
-				}
+			if (val == NULL) {
+				iVal.resize(defaultSize);
+				iVal.zero();
+				val = &iVal;
+				//OOFEM_ERROR("internal error: invalid dofman data");
 			}
 
-			if (type == ISVT_SCALAR || type == ISVT_VECTOR || type == ISVT_TENSOR_S3) {
+			answer[regionNodalNumbers->at(inode)] = *val;
 
-			}
-			else if (type == ISVT_TENSOR_G) { // export general tensor values as scalars
-				fprintf(stream, "%e ", val->at(indx));
-			}
+		}
 
-			fprintf(stream, "\n");
+		if (type == ISVT_SCALAR || type == ISVT_VECTOR || type == ISVT_TENSOR_S3 || type == ISVT_TENSOR_G) {
+			this->makeFullTensorForm(t, *val, type);
+			answer[regionNodalNumbers->at(inode)] = *val;
+
+		}
+
+	}
+
+	void
+		NodalRecoveryModule::makeFullTensorForm(FloatArray &answer, const FloatArray &reducedForm, InternalStateValueType vtype)
+	{
+		answer.resize(9);
+		answer.zero();
+
+		for (int i = 1; i <= reducedForm.giveSize(); i++) {
+			answer.at(redToFull.at(i)) = reducedForm.at(i);
+		}
+
+		if (vtype == ISVT_TENSOR_S3E) {
+			answer.at(4) *= 0.5;
+			answer.at(7) *= 0.5;
+			answer.at(8) *= 0.5;
+		}
+
+		// Symmetrize if needed
+		if (vtype != ISVT_TENSOR_G) {
+			answer.at(2) = answer.at(4);
+			answer.at(3) = answer.at(7);
+			answer.at(6) = answer.at(8);
 		}
 	}
 
@@ -259,16 +286,18 @@ namespace oofem {
 		// gather stuff
 		Domain *d = emodel->giveDomain(1);
 		for (auto &elem : d->giveElements()) {
-			if (this->checkValidType(elem->giveClassName())) {
-
+			if (this->checkValidType(elem->giveClassName())) { // ALL?
+				this->exportIntVars(tStep); // save to map.
 			}
 		}
 
+		// is this responseSpectrum? then pile up stuff to combine later
 		if (this->isRespSpec && tStep->giveIntrinsicTime()!=0){
 			// square and save
 			combNodalValuesList.push_back(nodalValues);
 		} else {
 
+			// is RespSpec and magic timeStep? then time to combine results
 			if (this->isRespSpec && tStep->giveIntrinsicTime() == 0) {
 
 				if (rs->giveComboType() == RSC_SRSS) {
@@ -282,52 +311,58 @@ namespace oofem {
 				combNodalValues.clear();
 			}
 
+
+			// export all the stuff!
+
+
+
+			// clean up
 			nodalValues.clear();
 			fflush(this->stream);
 		}
 	}
 
-	void NodalRecoveryModule::populateElResults(map<int, map<double, FloatArray>> &answer, map<int, map<double, FloatArray>> &src)
+	void NodalRecoveryModule::populateElResults(map< int, map< int, FloatArray > > &answer, map< int, map< int, FloatArray > > &src)
 	{
 
-		map<int, map<double, FloatArray>>::iterator srcElem_it = src.begin();
-		for (; srcElem_it != src.end(); ++srcElem_it)
+		map< int, map< int, FloatArray > >::iterator srcValue_it = src.begin();
+		for (; srcValue_it != src.end(); ++srcValue_it)
 		{
-			map<double, FloatArray> *destBRespMap = new map<double, FloatArray>;
-			map<double, FloatArray > &srcBRespMap = srcElem_it->second;
+			map< int, FloatArray > *destNRespMap = new map< int, FloatArray >;
+			map< int, FloatArray > &srcNRespMap = srcValue_it->second;
 
-			map<double, FloatArray>::iterator srcBRespMap_it = srcBRespMap.begin();
-			for (; srcBRespMap_it != srcBRespMap.end(); ++srcBRespMap_it)
+			map< int, FloatArray >::iterator srcNRespMap_it = srcNRespMap.begin();
+			for (; srcNRespMap_it != srcNRespMap.end(); ++srcNRespMap_it)
 			{
-				FloatArray &srcRespArray = srcBRespMap_it->second;
+				FloatArray &srcRespArray = srcNRespMap_it->second;
 				FloatArray *destRespArray = new FloatArray(srcRespArray.giveSize());
 
-				destBRespMap->operator[](srcBRespMap_it->first) = *destRespArray;
+				destNRespMap->operator[](srcNRespMap_it->first) = *destRespArray;
 			}
 
-			answer[srcElem_it->first] = *destBRespMap;
+			answer[srcValue_it->first] = *destNRespMap;
 		}
 	}
 
-	void NodalRecoveryModule::addMultiply(map<int, map<double, FloatArray>> &answer, map<int, map<double, FloatArray>> &src, map<int, map<double, FloatArray>> &src2, double fact)
+	void NodalRecoveryModule::addMultiply(std::map< int, std::map< int, FloatArray > > &answer, std::map< int, std::map< int, FloatArray > > &src, std::map< int, std::map< int, FloatArray > > &src2, double fact)
 	{
 		if (answer.size() == 0) {
 			populateElResults(answer, src);
 		}
 
 		// awful iteration
-		map<int, map<double, FloatArray>>::iterator destElem_it = answer.begin();
-		map<int, map<double, FloatArray>>::iterator srcElem_it = src.begin();
-		map<int, map<double, FloatArray>>::iterator srcElem_it2 = src.begin();
-		for (; destElem_it != answer.end(); ++destElem_it, ++srcElem_it, ++srcElem_it2)
+		std::map< int, std::map< int, FloatArray > >::iterator destValue_it = answer.begin();
+		std::map< int, std::map< int, FloatArray > >::iterator srcValue_it = src.begin();
+		std::map< int, std::map< int, FloatArray > >::iterator srcValue_it2 = src2.begin();
+		for (; destValue_it != answer.end(); ++destValue_it, ++srcValue_it, ++srcValue_it2)
 		{
-			map<double, FloatArray> &destRespMap = destElem_it->second;
-			map<double, FloatArray> &srcRespMap = srcElem_it->second;
-			map<double, FloatArray> &srcRespMap2 = srcElem_it2->second;
+			map<int, FloatArray> &destRespMap = destValue_it->second;
+			map<int, FloatArray> &srcRespMap = srcValue_it->second;
+			map<int, FloatArray> &srcRespMap2 = srcValue_it2->second;
 
-			map<double, FloatArray>::iterator destRespMap_it = destRespMap.begin();
-			map<double, FloatArray>::iterator srcRespMap_it = srcRespMap.begin();
-			map<double, FloatArray>::iterator srcRespMap_it2 = srcRespMap2.begin();
+			map<int, FloatArray>::iterator destRespMap_it = destRespMap.begin();
+			map<int, FloatArray>::iterator srcRespMap_it = srcRespMap.begin();
+			map<int, FloatArray>::iterator srcRespMap_it2 = srcRespMap2.begin();
 			for (; destRespMap_it != destRespMap.end(); ++destRespMap_it, ++srcRespMap_it, ++srcRespMap_it2)
 			{
 				FloatArray &destRespArray = destRespMap_it->second;
@@ -343,15 +378,15 @@ namespace oofem {
 		}
 	}
 
-	void NodalRecoveryModule::calcRoot(map<int, map<double, FloatArray>> &answer)
+	void NodalRecoveryModule::calcRoot(std::map< int, std::map< int, FloatArray > > &answer)
 	{
 		// another awful iteration
-		map<int, map<double, FloatArray>>::iterator destElem_it = answer.begin();
-		for (; destElem_it != answer.end(); ++destElem_it)
+		std::map< int, std::map< int, FloatArray > >::iterator destValue_it = answer.begin();
+		for (; destValue_it != answer.end(); ++destValue_it)
 		{
-			map<double, FloatArray> &destRespMap = destElem_it->second;
+			map<int, FloatArray> &destRespMap = destValue_it->second;
 
-			map<double, FloatArray>::iterator destRespMap_it = destRespMap.begin();
+			map<int, FloatArray>::iterator destRespMap_it = destRespMap.begin();
 			for (; destRespMap_it != destRespMap.end(); ++destRespMap_it)
 			{
 				FloatArray &destRespArray = destRespMap_it->second;
@@ -366,49 +401,30 @@ namespace oofem {
 	}
 
 	void NodalRecoveryModule::SRSS(){
-		//list<map<int, map<double, FloatArray>>>::iterator disps_it = BeamDisplacementsList.begin();
-		//for (; disps_it != BeamDisplacementsList.end(); ++disps_it)
-		//{
-		//	addMultiply(combBeamDisplacements, *disps_it, *disps_it);
-		//}
-		//calcRoot(combBeamDisplacements);
-
-		//list<map<int, map<double, FloatArray>>>::iterator forces_it = BeamForcesList.begin();
-		//for (; forces_it != BeamForcesList.end(); ++forces_it)
-		//{
-		//	addMultiply(combBeamForces, *forces_it, *forces_it);  // mult by 1.0
-		//}
-		//calcRoot(combBeamForces);
+		list<map<int, map<int, FloatArray>>>::iterator values_it = combNodalValuesList.begin();
+		for (; values_it != combNodalValuesList.end(); ++values_it)
+		{
+			addMultiply(combNodalValues, *values_it, *values_it);
+		}
+		calcRoot(combNodalValues);
 
 	}
 
 	void NodalRecoveryModule::CQC(){
-		//FloatMatrix rhos;
-		//rs->giveRhos(rhos);
+		FloatMatrix rhos;
+		rs->giveRhos(rhos);
 
-		//list<map<int, map<double, FloatArray>>>::iterator disps_it = BeamDisplacementsList.begin();
+		list<map<int, map<int, FloatArray>>>::iterator disps_it = combNodalValuesList.begin();
 
-		//for (int i = 1; disps_it != BeamDisplacementsList.end(); ++disps_it, i++)
-		//{
-		//	list<map<int, map<double, FloatArray>>>::iterator disps_it2 = BeamDisplacementsList.begin();
-		//	for (int j = 1; disps_it2 != BeamDisplacementsList.end(); ++disps_it2, j++)
-		//	{
-		//		addMultiply(combBeamDisplacements, *disps_it, *disps_it2, rhos.at(i, j));
-		//	}
-		//}
-		//calcRoot(combBeamDisplacements);
-
-		//list<map<int, map<double, FloatArray>>>::iterator forces_it = BeamForcesList.begin();
-
-		//for (int i = 1; forces_it != BeamForcesList.end(); ++forces_it, i++)
-		//{
-		//	list<map<int, map<double, FloatArray>>>::iterator forces_it2 = BeamForcesList.begin();
-		//	for (int j = 1; forces_it2 != BeamForcesList.end(); ++forces_it2, j++)
-		//	{
-		//		addMultiply(combBeamForces, *forces_it, *forces_it2, rhos.at(i, j));
-		//	}
-		//}
-		//calcRoot(combBeamForces);
+		for (int i = 1; disps_it != combNodalValuesList.end(); ++disps_it, i++)
+		{
+			list<map<int, map<int, FloatArray>>>::iterator disps_it2 = combNodalValuesList.begin();
+			for (int j = 1; disps_it2 != combNodalValuesList.end(); ++disps_it2, j++)
+			{
+				addMultiply(combNodalValues, *disps_it, *disps_it2, rhos.at(i, j));
+			}
+		}
+		calcRoot(combNodalValues);
 	}
 
 	void

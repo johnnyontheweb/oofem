@@ -55,6 +55,7 @@ namespace oofem {
  * Represents generic export module. It gives the internal variables chosen
  * by the user for all elements in the model.
  * Parts adapted from VTKExportModule.
+ * Behaves like BeamExportModule with ResponseSpectrum Engineering Model (intrinsic time=0 forces modal combination)
  *
  * @author Francesco Pontarin
  * @author Giovanni Rinaldin
@@ -77,6 +78,9 @@ protected:
 	int regionDofMans;
 	IntArray *regionNodalNumbers=NULL;
 
+	/// Map from Voigt to full tensor.
+	static IntArray redToFull;
+
 public:
     /// Constructor. Creates empty Output Manager.
     NodalRecoveryModule(int n, EngngModel *e);
@@ -92,13 +96,13 @@ public:
 	static int checkValidType(const char* name) { return 0; };
 
 	/**
-	* Export internal variables.
+	* save internal variables to map.
 	*/
-	void exportIntVars(FILE *stream, TimeStep *tStep);
+	void exportIntVars(TimeStep *tStep);
 	/**
 	* Exports single variable.
 	*/
-	void exportIntVarAs(InternalStateType valID, InternalStateValueType type, FILE *stream, TimeStep *tStep);
+	void exportIntVarAs(map< int, FloatArray > &answer, InternalStateType valID, InternalStateValueType type, FILE *stream, TimeStep *tStep);
 	/**
 	* Assembles the region node map. Also computes the total number of nodes in region.
 	* The region are numbered starting from offset+1.
@@ -110,17 +114,21 @@ public:
 	int initRegionNodeNumbering(IntArray &regionNodalNumbers, int &regionDofMans,
 		int offset, Domain *domain, int reg, int mode);
 
+protected:
+	/// Gives the full form of given symmetrically stored tensors, missing components are filled with zeros.
+	static void makeFullTensorForm(FloatArray &answer, const FloatArray &reducedForm, InternalStateValueType vtype);
+
 private:
 	
-	std::map< int, std::map< int, std::vector<double> > > nodalValues; // rType node values
+	std::map< int, std::map< int, FloatArray > > nodalValues; // rType node values
 
-	std::list<std::map< int, std::map< int, std::vector<double> > > >combNodalValuesList; // eigMode rType node values
+	std::list<std::map< int, std::map< int, FloatArray > > >combNodalValuesList; // eigMode rType node values
 
-	std::map< int, std::map< int, std::vector<double> > > combNodalValues;  // rType node values
+	std::map< int, std::map< int, FloatArray > > combNodalValues;  // rType node values
 
-	virtual void populateElResults(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src);
-	virtual void addMultiply(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src, std::map<int, std::map<double, FloatArray>> &src2, double fact = 1.0);
-	virtual void calcRoot(std::map<int, std::map<double, FloatArray>> &answer);
+	virtual void populateElResults(std::map< int, std::map< int, FloatArray > > &answer, std::map< int, std::map< int, FloatArray > > &src);
+	virtual void addMultiply(std::map< int, std::map< int, FloatArray > > &answer, std::map< int, std::map< int, FloatArray > > &src, std::map< int, std::map< int, FloatArray > > &src2, double fact = 1.0);
+	virtual void calcRoot(std::map< int, std::map< int, FloatArray > > &answer);
 	virtual void SRSS();
 	virtual void CQC();
 

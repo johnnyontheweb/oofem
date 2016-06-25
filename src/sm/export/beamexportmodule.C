@@ -628,7 +628,7 @@ namespace oofem {
 		// awful iteration
 		map<int, map<double, FloatArray>>::iterator destElem_it = answer.begin();
 		map<int, map<double, FloatArray>>::iterator srcElem_it = src.begin();
-		map<int, map<double, FloatArray>>::iterator srcElem_it2 = src.begin();
+		map<int, map<double, FloatArray>>::iterator srcElem_it2 = src2.begin();
 		for (; destElem_it != answer.end(); ++destElem_it, ++srcElem_it, ++srcElem_it2)
 		{
 			map<double, FloatArray> &destRespMap = destElem_it->second;
