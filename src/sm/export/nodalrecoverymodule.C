@@ -32,22 +32,21 @@
 *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "NodalRecoveryModule.h"
+#include "nodalrecoverymodule.h"
 #include "timestep.h"
 #include "element.h"
-#include "../sm/Elements/structuralelement.h"
-#include "../sm/Elements/Beams/beam3d.h"
 #include "gausspoint.h"
 #include "engngm.h"
+#include "node.h"
+#include "dof.h"
 #include "material.h"
 #include "classfactory.h"
 #include "generalboundarycondition.h"
-#include "constantedgeload.h"
-#include "fei3dlinelin.h"
 #include "inputrecord.h"
 #include "../sm/engineeringmodels/responseSpectrum.h"
 #include "cltypes.h"
 #include "materialinterface.h"
+#include "nodalaveragingrecoverymodel.h"
 
 #include <vector>
 
@@ -64,7 +63,6 @@ namespace oofem {
 
 	NodalRecoveryModule :: ~NodalRecoveryModule()
 	{
-		delete regionNodalNumbers;
 		delete elemSet;
 	}
 
@@ -78,9 +76,9 @@ namespace oofem {
 		IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_NodalRecoveryModule_stype);
 		stype = (NodalRecoveryModel::NodalRecoveryModelType) val;
 
-		IR_GIVE_OPTIONAL_FIELD(ir, internalVarsToExport, _IFT_NodalRecoveryModule_rtypes);
+		IR_GIVE_OPTIONAL_FIELD(ir, internalVarsToExport, _IFT_NodalRecoveryModule_vars);
 		if (internalVarsToExport.giveSize() == 0) OOFEM_ERROR("NodalRecoveryModule - No response types defined");
-		for (int i = 0; internalVarsToExport.giveSize(); i++) {
+		for (int i = 1; i<=internalVarsToExport.giveSize(); i++) {
 			InternalStateType ist = static_cast<InternalStateType>(internalVarsToExport.at(i));
 			if (ist==InternalStateType::IST_Undefined) OOFEM_ERROR("NodalRecoveryModule - Invalid response type defined at pos %d", i);
 		}
@@ -115,13 +113,13 @@ namespace oofem {
 			map< int, FloatArray >  nodVec;
 			type = (InternalStateType)internalVarsToExport.at(i);
 			InternalStateValueType iType = giveInternalStateValueType(type);
-			this->exportIntVarAs(nodVec, type, iType, stream, tStep);
+			this->exportIntVarAs(nodVec, type, iType, tStep);
 			nodalValues[i] = nodVec;
 		}
 	}
 
 	void
-		NodalRecoveryModule::exportIntVarAs(map< int, FloatArray > &answer, InternalStateType valID, InternalStateValueType type, FILE *stream, TimeStep *tStep)
+		NodalRecoveryModule::exportIntVarAs(map< int, FloatArray > &answer, InternalStateType valID, InternalStateValueType type, TimeStep *tStep)
 	{
 		Domain *d = emodel->giveDomain(1);
 		int ireg;
@@ -134,17 +132,21 @@ namespace oofem {
 		//this->giveSmoother();
 
 		if (!((valID == IST_DisplacementVector) || (valID == IST_MaterialInterfaceVal))) {
-			this->smoother->recoverValues(*elemSet, valID, tStep);
+			this->smoother->recoverValues(*this->elemSet, valID, tStep);
 		}
 
+		IntArray regionNodalNumbers(nnodes);
+		int regionDofMans = 0, offset = 0;
+		ireg = -1;
 		int defaultSize = 0;
 
+		this->initRegionNodeNumbering(regionNodalNumbers, regionDofMans, offset, d, ireg, 1);
 		if (!((valID == IST_DisplacementVector) || (valID == IST_MaterialInterfaceVal))) {
 			// assemble local->global map
 			defaultSize = giveInternalStateTypeSize(type);
 		}
 		else {
-			regionDofMans = nnodes;
+			//regionDofMans = nnodes;
 		}
 
 		for (inode = 1; inode <= regionDofMans; inode++) {
@@ -152,8 +154,8 @@ namespace oofem {
 				iVal.resize(3);
 				val = &iVal;
 				for (j = 1; j <= 3; j++) {
-					iVal.at(j) = d->giveNode(regionNodalNumbers->at(inode))->giveUpdatedCoordinate(j, tStep, 1.0) -
-						d->giveNode(regionNodalNumbers->at(inode))->giveCoordinate(j);
+					iVal.at(j) = d->giveNode(regionNodalNumbers.at(inode))->giveUpdatedCoordinate(j, tStep, 1.0) -
+						d->giveNode(regionNodalNumbers.at(inode))->giveCoordinate(j);
 				}
 			}
 			else if (valID == IST_MaterialInterfaceVal) {
@@ -161,11 +163,11 @@ namespace oofem {
 				if (mi) {
 					iVal.resize(1);
 					val = &iVal;
-					iVal.at(1) = mi->giveNodalScalarRepresentation(regionNodalNumbers->at(inode));
+					iVal.at(1) = mi->giveNodalScalarRepresentation(regionNodalNumbers.at(inode));
 				}
 			}
 			else {
-				this->smoother->giveNodalVector(val, regionNodalNumbers->at(inode));
+				this->smoother->giveNodalVector(val, regionNodalNumbers.at(inode));
 			}
 
 			if (val == NULL) {
@@ -175,15 +177,17 @@ namespace oofem {
 				//OOFEM_ERROR("internal error: invalid dofman data");
 			}
 
-			answer[regionNodalNumbers->at(inode)] = *val;
+			answer[regionNodalNumbers.at(inode)] = *val;
+
+			//if (type == ISVT_SCALAR || type == ISVT_VECTOR || type == ISVT_TENSOR_S3 || type == ISVT_TENSOR_G) {
+			//	//this->makeFullTensorForm(t, *val, type);
+			//	answer[regionNodalNumbers.at(inode)] = *val;
+
+			//}
 
 		}
 
-		if (type == ISVT_SCALAR || type == ISVT_VECTOR || type == ISVT_TENSOR_S3 || type == ISVT_TENSOR_G) {
-			this->makeFullTensorForm(t, *val, type);
-			answer[regionNodalNumbers->at(inode)] = *val;
 
-		}
 
 	}
 
@@ -283,12 +287,14 @@ namespace oofem {
 			return;
 		}
 
-		// gather stuff
-		Domain *d = emodel->giveDomain(1);
-		for (auto &elem : d->giveElements()) {
-			if (this->checkValidType(elem->giveClassName())) { // ALL?
-				this->exportIntVars(tStep); // save to map.
-			}
+		if ((!this->isRespSpec && tStep->giveIntrinsicTime() == 0) || (tStep->giveIntrinsicTime() != 0)){
+			// gather stuff
+			//Domain *d = emodel->giveDomain(1);
+			//for (auto &elem : d->giveElements()) {
+				//if (this->checkValidType(elem->giveClassName())) { // ALL?
+					this->exportIntVars(tStep); // save to map.
+				//}
+			//}
 		}
 
 		// is this responseSpectrum? then pile up stuff to combine later
@@ -313,8 +319,33 @@ namespace oofem {
 
 
 			// export all the stuff!
+			double curTime = tStep->giveTargetTime();
+			map<int, map<int, FloatArray>>::iterator values_it = nodalValues.begin();
+			list<string>::iterator names_it = valueTypesStr.begin();
+			for (;
+				values_it != nodalValues.end();
+				++values_it, ++names_it)
+			{
+				map< int, FloatArray > &nodes = values_it->second;
+				const string resp = *names_it;
 
+				map<int, FloatArray >::iterator nodes_it = nodes.begin();
 
+				for (;
+					nodes_it != nodes.end();
+					++nodes_it)
+				{
+					int node = nodes_it->first;
+					FloatArray resps = nodes_it->second;
+					fprintf(this->stream, "%10.3e;%s;%d;", curTime, resp.c_str(), node);
+
+					for (auto &val : resps) {
+						fprintf(this->stream, "%10.3e;", val);
+					}
+					fprintf(this->stream, "\n");
+				}
+
+			}
 
 			// clean up
 			nodalValues.clear();
@@ -446,17 +477,12 @@ namespace oofem {
 			valueTypesStr.push_back(__InternalStateTypeToString(type));
 		}
 
-		regionNodalNumbers = new IntArray(d->giveNumberOfDofManagers());
-
-		// asemble local->global region map
-		this->initRegionNodeNumbering(*regionNodalNumbers, regionDofMans, 0, d, -1, 1);
-
 		string fileName = emodel->giveOutputBaseFileName() + ".nrm";
 		if ((this->stream = fopen(fileName.c_str(), "w")) == NULL) {
 			OOFEM_ERROR("failed to open file %s", fileName.c_str());
 		}
 		// ";" as separator
-		//fprintf(this->stream, "#Time;ElemNo;ValNo;N_x;T_y;T_z;M_x;M_y;M_z;dx;dy;dz;rx;ry;rz;");
+		fprintf(this->stream, "#Time;ISType;NodeNo;vars;");
 		//for ( int var: this->ists ) {
 		//    fprintf(this->stream, "%s    ", __InternalStateTypeToString( ( InternalStateType ) var) );
 		//}

@@ -46,7 +46,7 @@
 //@{
 #define _IFT_NodalRecoveryModule_Name "nrm"
 #define _IFT_NodalRecoveryModule_stype "stype"
-#define _IFT_NodalRecoveryModule_rtypes "rtypes"
+#define _IFT_NodalRecoveryModule_vars "vars"
 #define _IFT_NodalRecoveryModule_isrespspec "rspec"
 //@}
 
@@ -75,8 +75,6 @@ protected:
 	Set* elemSet=NULL;
 
 	std::list<std::string> valueTypesStr;
-	int regionDofMans;
-	IntArray *regionNodalNumbers=NULL;
 
 	/// Map from Voigt to full tensor.
 	static IntArray redToFull;
@@ -93,7 +91,7 @@ public:
     virtual const char *giveClassName() const { return "NodalRecoveryModule"; }
     virtual const char *giveInputRecordName() const { return _IFT_NodalRecoveryModule_Name; }
 
-	static int checkValidType(const char* name) { return 0; };
+	static int checkValidType(const char* name) { return 1; };
 
 	/**
 	* save internal variables to map.
@@ -102,7 +100,7 @@ public:
 	/**
 	* Exports single variable.
 	*/
-	void exportIntVarAs(map< int, FloatArray > &answer, InternalStateType valID, InternalStateValueType type, FILE *stream, TimeStep *tStep);
+	void exportIntVarAs(std::map< int, FloatArray > &answer, InternalStateType valID, InternalStateValueType type, TimeStep *tStep);
 	/**
 	* Assembles the region node map. Also computes the total number of nodes in region.
 	* The region are numbered starting from offset+1.
@@ -117,6 +115,8 @@ public:
 protected:
 	/// Gives the full form of given symmetrically stored tensors, missing components are filled with zeros.
 	static void makeFullTensorForm(FloatArray &answer, const FloatArray &reducedForm, InternalStateValueType vtype);
+	/// Returns the internal smoother.
+	NodalRecoveryModel *giveSmoother();
 
 private:
 	
