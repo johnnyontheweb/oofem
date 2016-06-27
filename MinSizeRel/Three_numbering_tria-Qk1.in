@@ -1,12 +1,12 @@
-Three_numbering-Qk1.out
--> NextFEM model 6/27/2016 12:43:36 PM
+Three_numbering_tria-Qk1.out
+-> NextFEM model 6/27/2016 1:07:07 PM
 LinearStatic nsteps 1 nmodules 3
 bem tstep_all domain_all
 nrm tstep_all domain_all vars 2 1 4 stype 1
 vtkxml 1 tstep_all domain_all vars 2 1 4 primvars 1 1 stype 1
 domain 3dShell
 OutputManager tstep_all dofman_all element_all
-ndofman 33 nelem 20 ncrosssect 2 nmat 1 nbc 7 nic 0 nltf 2 nset 7
+ndofman 33 nelem 40 ncrosssect 2 nmat 1 nbc 7 nic 0 nltf 2 nset 7
 node 34 coords 3 0 0 0 ndofs 6 dofidmask 6 1 2 3 4 5 6
 node 35 coords 3 250 0 0 ndofs 6 dofidmask 6 1 2 3 4 5 6
 node 36 coords 3 500 0 0 ndofs 6 dofidmask 6 1 2 3 4 5 6
@@ -40,26 +40,46 @@ node 63 coords 3 1750 0 -500 ndofs 6 dofidmask 6 1 2 3 4 5 6
 node 64 coords 3 2000 0 -500 ndofs 6 dofidmask 6 1 2 3 4 5 6
 node 65 coords 3 2250 0 -500 ndofs 6 dofidmask 6 1 2 3 4 5 6
 node 66 coords 3 2500 0 -500 ndofs 6 dofidmask 6 1 2 3 4 5 6
-Quad1MindlinShell3d 34 nodes 4 34 35 46 45  crossSect 2 mat 1 
-Quad1MindlinShell3d 35 nodes 4 35 36 47 46  crossSect 2 mat 1 
-Quad1MindlinShell3d 36 nodes 4 36 37 48 47  crossSect 2 mat 1 
-Quad1MindlinShell3d 37 nodes 4 37 38 49 48  crossSect 2 mat 1 
-Quad1MindlinShell3d 38 nodes 4 38 39 50 49  crossSect 2 mat 1 
-Quad1MindlinShell3d 39 nodes 4 39 40 51 50  crossSect 2 mat 1 
-Quad1MindlinShell3d 40 nodes 4 40 41 52 51  crossSect 2 mat 1 
-Quad1MindlinShell3d 41 nodes 4 41 42 53 52  crossSect 2 mat 1 
-Quad1MindlinShell3d 42 nodes 4 42 43 54 53  crossSect 2 mat 1 
-Quad1MindlinShell3d 43 nodes 4 43 44 55 54  crossSect 2 mat 1 
-Quad1MindlinShell3d 44 nodes 4 55 66 65 54  crossSect 2 mat 1 
-Quad1MindlinShell3d 45 nodes 4 54 65 64 53  crossSect 2 mat 1 
-Quad1MindlinShell3d 46 nodes 4 53 64 63 52  crossSect 2 mat 1 
-Quad1MindlinShell3d 47 nodes 4 52 63 62 51  crossSect 2 mat 1 
-Quad1MindlinShell3d 48 nodes 4 51 62 61 50  crossSect 2 mat 1 
-Quad1MindlinShell3d 49 nodes 4 50 61 60 49  crossSect 2 mat 1 
-Quad1MindlinShell3d 50 nodes 4 49 60 59 48  crossSect 2 mat 1 
-Quad1MindlinShell3d 51 nodes 4 48 59 58 47  crossSect 2 mat 1 
-Quad1MindlinShell3d 52 nodes 4 47 58 57 46  crossSect 2 mat 1 
-Quad1MindlinShell3d 53 nodes 4 46 57 56 45  crossSect 2 mat 1 
+tr_shell01 34 nodes 3 34 35 46  crossSect 2 mat 1 NIP 1
+tr_shell01 35 nodes 3 35 36 47  crossSect 2 mat 1 NIP 1
+tr_shell01 36 nodes 3 36 37 48  crossSect 2 mat 1 NIP 1
+tr_shell01 37 nodes 3 37 38 49  crossSect 2 mat 1 NIP 1
+tr_shell01 38 nodes 3 38 39 50  crossSect 2 mat 1 NIP 1
+tr_shell01 39 nodes 3 39 40 51  crossSect 2 mat 1 NIP 1
+tr_shell01 40 nodes 3 40 41 52  crossSect 2 mat 1 NIP 1
+tr_shell01 41 nodes 3 41 42 53  crossSect 2 mat 1 NIP 1
+tr_shell01 42 nodes 3 42 43 54  crossSect 2 mat 1 NIP 1
+tr_shell01 43 nodes 3 43 44 55  crossSect 2 mat 1 NIP 1
+tr_shell01 44 nodes 3 55 66 65  crossSect 2 mat 1 NIP 1
+tr_shell01 45 nodes 3 54 65 64  crossSect 2 mat 1 NIP 1
+tr_shell01 46 nodes 3 53 64 63  crossSect 2 mat 1 NIP 1
+tr_shell01 47 nodes 3 52 63 62  crossSect 2 mat 1 NIP 1
+tr_shell01 48 nodes 3 51 62 61  crossSect 2 mat 1 NIP 1
+tr_shell01 49 nodes 3 50 61 60  crossSect 2 mat 1 NIP 1
+tr_shell01 50 nodes 3 49 60 59  crossSect 2 mat 1 NIP 1
+tr_shell01 51 nodes 3 48 59 58  crossSect 2 mat 1 NIP 1
+tr_shell01 52 nodes 3 47 58 57  crossSect 2 mat 1 NIP 1
+tr_shell01 53 nodes 3 46 57 56  crossSect 2 mat 1 NIP 1
+tr_shell01 22 nodes 3 34 46 45  crossSect 2 mat 1 NIP 1
+tr_shell01 23 nodes 3 35 47 46  crossSect 2 mat 1 NIP 1
+tr_shell01 24 nodes 3 36 48 47  crossSect 2 mat 1 NIP 1
+tr_shell01 25 nodes 3 37 49 48  crossSect 2 mat 1 NIP 1
+tr_shell01 26 nodes 3 38 50 49  crossSect 2 mat 1 NIP 1
+tr_shell01 27 nodes 3 39 51 50  crossSect 2 mat 1 NIP 1
+tr_shell01 28 nodes 3 40 52 51  crossSect 2 mat 1 NIP 1
+tr_shell01 29 nodes 3 41 53 52  crossSect 2 mat 1 NIP 1
+tr_shell01 30 nodes 3 42 54 53  crossSect 2 mat 1 NIP 1
+tr_shell01 31 nodes 3 43 55 54  crossSect 2 mat 1 NIP 1
+tr_shell01 32 nodes 3 55 65 54  crossSect 2 mat 1 NIP 1
+tr_shell01 33 nodes 3 54 64 53  crossSect 2 mat 1 NIP 1
+tr_shell01 54 nodes 3 53 63 52  crossSect 2 mat 1 NIP 1
+tr_shell01 55 nodes 3 52 62 51  crossSect 2 mat 1 NIP 1
+tr_shell01 56 nodes 3 51 61 50  crossSect 2 mat 1 NIP 1
+tr_shell01 57 nodes 3 50 60 49  crossSect 2 mat 1 NIP 1
+tr_shell01 58 nodes 3 49 59 48  crossSect 2 mat 1 NIP 1
+tr_shell01 59 nodes 3 48 58 47  crossSect 2 mat 1 NIP 1
+tr_shell01 60 nodes 3 47 57 46  crossSect 2 mat 1 NIP 1
+tr_shell01 61 nodes 3 46 56 45  crossSect 2 mat 1 NIP 1
 # fictitious section for LumpedMass elements
 SimpleCS 1 thick 0 drillstiffness 0
 SimpleCS 2 thick 300 drillstiffness 1e11
