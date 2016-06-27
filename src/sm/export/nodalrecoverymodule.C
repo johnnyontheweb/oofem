@@ -319,6 +319,7 @@ namespace oofem {
 
 
 			// export all the stuff!
+			Domain *d = emodel->giveDomain(1);
 			double curTime = tStep->giveTargetTime();
 			map<int, map<int, FloatArray>>::iterator values_it = nodalValues.begin();
 			list<string>::iterator names_it = valueTypesStr.begin();
@@ -336,13 +337,16 @@ namespace oofem {
 					++nodes_it)
 				{
 					int node = nodes_it->first;
+					Node* nd = d->giveNode(node);
 					FloatArray resps = nodes_it->second;
-					fprintf(this->stream, "%10.3e;%s;%d;", curTime, resp.c_str(), node);
+					if (resps.giveSize()) {
+						fprintf(this->stream, "%10.3e;%s;%d;", curTime, resp.c_str(), nd->giveLabel());
 
-					for (auto &val : resps) {
-						fprintf(this->stream, "%10.3e;", val);
+						for (auto &val : resps) {
+							fprintf(this->stream, "%10.3e;", val);
+						}
+						fprintf(this->stream, "\n");
 					}
-					fprintf(this->stream, "\n");
 				}
 
 			}
