@@ -335,3 +335,7 @@ tests/sm/t3d.bmf
 /MinSizeRel/pianoRigStatic3-Static.in
 /src/oofemlib/inverseitMIK2.C
 /MinSizeRel/Three-Qk1.in
+/Debug/cow2sets.in
+/Debug/cowRed-load.in
+/MinSizeRel/Walls-st.in
+/MinSizeRel/Walls-st.outnrm.csv
