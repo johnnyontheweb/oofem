@@ -179,7 +179,7 @@ namespace oofem {
 		//V4.at(2) = this->giveCrossSection()->give(CS_DirectorVectorY, *c4, this, false);
 		//V4.at(3) = this->giveCrossSection()->give(CS_DirectorVectorZ, *c4, this, false);
 
-		V1.beVectorProductOf(c2 - c1, c4 - c1);
+		V1.beVectorProductOf(*c2 - *c1, *c4 - *c1);
 		V2 = V1;
 		V3 = V1;
 		V4 = V1;
