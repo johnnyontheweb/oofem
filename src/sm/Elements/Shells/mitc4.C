@@ -162,22 +162,28 @@ namespace oofem {
 		c2 = this->giveNode(2)->giveCoordinates();
 		c3 = this->giveNode(3)->giveCoordinates();
 		c4 = this->giveNode(4)->giveCoordinates();
-		V1.at(1) = this->giveCrossSection()->give(CS_DirectorVectorX, *c1, this, false);
-		V1.at(2) = this->giveCrossSection()->give(CS_DirectorVectorY, *c1, this, false);
-		V1.at(3) = this->giveCrossSection()->give(CS_DirectorVectorZ, *c1, this, false);
 
-		V2.at(1) = this->giveCrossSection()->give(CS_DirectorVectorX, *c2, this, false);
-		V2.at(2) = this->giveCrossSection()->give(CS_DirectorVectorY, *c2, this, false);
-		V2.at(3) = this->giveCrossSection()->give(CS_DirectorVectorZ, *c2, this, false);
+		//V1.at(1) = this->giveCrossSection()->give(CS_DirectorVectorX, *c1, this, false);
+		//V1.at(2) = this->giveCrossSection()->give(CS_DirectorVectorY, *c1, this, false);
+		//V1.at(3) = this->giveCrossSection()->give(CS_DirectorVectorZ, *c1, this, false);
 
-		V3.at(1) = this->giveCrossSection()->give(CS_DirectorVectorX, *c3, this, false);
-		V3.at(2) = this->giveCrossSection()->give(CS_DirectorVectorY, *c3, this, false);
-		V3.at(3) = this->giveCrossSection()->give(CS_DirectorVectorZ, *c3, this, false);
+		//V2.at(1) = this->giveCrossSection()->give(CS_DirectorVectorX, *c2, this, false);
+		//V2.at(2) = this->giveCrossSection()->give(CS_DirectorVectorY, *c2, this, false);
+		//V2.at(3) = this->giveCrossSection()->give(CS_DirectorVectorZ, *c2, this, false);
 
-		V4.at(1) = this->giveCrossSection()->give(CS_DirectorVectorX, *c4, this, false);
-		V4.at(2) = this->giveCrossSection()->give(CS_DirectorVectorY, *c4, this, false);
-		V4.at(3) = this->giveCrossSection()->give(CS_DirectorVectorZ, *c4, this, false);
+		//V3.at(1) = this->giveCrossSection()->give(CS_DirectorVectorX, *c3, this, false);
+		//V3.at(2) = this->giveCrossSection()->give(CS_DirectorVectorY, *c3, this, false);
+		//V3.at(3) = this->giveCrossSection()->give(CS_DirectorVectorZ, *c3, this, false);
 
+		//V4.at(1) = this->giveCrossSection()->give(CS_DirectorVectorX, *c4, this, false);
+		//V4.at(2) = this->giveCrossSection()->give(CS_DirectorVectorY, *c4, this, false);
+		//V4.at(3) = this->giveCrossSection()->give(CS_DirectorVectorZ, *c4, this, false);
+
+		V1.beVectorProductOf(c2 - c1, c4 - c1);
+		V2 = V1;
+		V3 = V1;
+		V4 = V1;
+		
 		V1.normalize();
 		V2.normalize();
 		V3.normalize();
