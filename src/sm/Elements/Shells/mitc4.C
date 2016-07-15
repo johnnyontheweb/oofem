@@ -676,8 +676,8 @@ MITC4Shell :: computeLocalBaseVectors(FloatArray &e1, FloatArray &e2, FloatArray
     FloatArray help;
 
     // compute e1' = [N4-N3]  and  help = [N2-N3]
-    e1.beDifferenceOf( * this->giveNode(4)->giveCoordinates(), * this->giveNode(3)->giveCoordinates() );
-    help.beDifferenceOf( * this->giveNode(2)->giveCoordinates(), * this->giveNode(3)->giveCoordinates() );
+    e1.beDifferenceOf( * this->giveNode(2)->giveCoordinates(), * this->giveNode(1)->giveCoordinates() );
+    help.beDifferenceOf( * this->giveNode(3)->giveCoordinates(), * this->giveNode(1)->giveCoordinates() );
 
     // let us normalize e1'
     e1.normalize();
@@ -700,8 +700,8 @@ MITC4Shell :: computeLToDirectorRotationMatrix(FloatMatrix &answer1, FloatMatrix
 //
 // local coordinate (described by vector triplet e1',e2',e3') is defined as follows:
 //
-// e1'    : [N4-N3]    Ni - means i - th node
-// help   : [N2-N3]
+// e1'    : [N2-N1]    Ni - means i - th node
+// help   : [N3-N1]
 // e3'    : e1' x help
 // e2'    : e3' x e1'
 {

@@ -645,7 +645,7 @@ Quad1MindlinShell3D :: computeLCS()
 
     // compute e1' = [N2-N1]  and  help = [N4-N1]
     e1.beDifferenceOf( * this->giveNode(2)->giveCoordinates(), * this->giveNode(1)->giveCoordinates() );
-    help.beDifferenceOf( * this->giveNode(4)->giveCoordinates(), * this->giveNode(1)->giveCoordinates() );
+    help.beDifferenceOf( * this->giveNode(3)->giveCoordinates(), * this->giveNode(1)->giveCoordinates() );
     e1.normalize();
     e3.beVectorProductOf(e1, help);
     e3.normalize();
