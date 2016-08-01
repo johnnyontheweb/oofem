@@ -71,6 +71,10 @@ namespace oofem {
 	protected:
 		/// Element geometry approximation
 		static FEI2dQuadLin interp_lin;
+		/// Ordering for the normal shell stiffness (everything but the out-of-plane rotations)
+		static IntArray shellOrdering;
+		/// Ordering for the drilling dofs (the out-of-plane rotations)
+		static IntArray drillOrdering;
 		/**
 		* Transformation Matrix form GtoL(3,3) is stored
 		* at the element level for computation efficiency.
@@ -94,6 +98,8 @@ namespace oofem {
 		virtual SPRPatchType SPRNodalRecoveryMI_givePatchType();
 		virtual void NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node, InternalStateType type, TimeStep *tStep);
 
+		virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep);
+		virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord = 0);
 
 		// transformation
 		virtual bool computeGtoLRotationMatrix(FloatMatrix &answer);
@@ -109,7 +115,9 @@ namespace oofem {
 		virtual void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int = 1, int = ALL_STRAINS);
 		virtual void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer);
 		virtual void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep);
+		virtual void computeStrainVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep);
 		virtual void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep);
+		virtual void computeVectorOfUnknowns(ValueModeType mode, TimeStep* tStep, FloatArray &shellUnknowns, FloatArray &drillUnknowns);
 
 
 	private:

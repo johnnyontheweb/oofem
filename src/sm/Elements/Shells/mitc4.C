@@ -52,6 +52,8 @@ namespace oofem {
 REGISTER_Element(MITC4Shell);
 
 FEI2dQuadLin MITC4Shell :: interp_lin(1, 2);
+IntArray MITC4Shell::shellOrdering = { 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23 };
+IntArray MITC4Shell::drillOrdering = { 6, 12, 18, 24 };
 
 MITC4Shell :: MITC4Shell(int n, Domain *aDomain) :
     NLStructuralElement(n, aDomain), ZZNodalRecoveryModelInterface(this),
@@ -449,7 +451,7 @@ MITC4Shell :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int 
     FloatMatrix dn(4, 2);
     FloatMatrix dndx(4, 2);
 
-    answer.resize(6, 24);
+    answer.resize(6, 20);
     // get node coordinates
     double x1, x2, x3, x4, y1, y2, y3, y4, z1, z2, z3, z4;
     this->giveNodeCoordinates(x1, x2, x3, x4, y1, y2, y3, y4, z1, z2, z3, z4);
@@ -530,23 +532,23 @@ MITC4Shell :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int 
     answer.at(4, 4) = -a1 / 32. * ( ( V21.dotProduct({ x1 - x2, y1 - y2, z1 - z2 }) * ( cb * ( 1. + r2 ) ) ) + ( V21.dotProduct({ x1 - x4, y1 - y4, z1 - z4 }) * ( ca * ( 1. + r1 ) ) ) );
     answer.at(4, 5) = a1 / 32. * ( ( V11.dotProduct({ x1 - x2, y1 - y2, z1 - z2 }) * ( cb * ( 1. + r2 ) ) ) + ( V11.dotProduct({ x1 - x4, y1 - y4, z1 - z4 }) * ( ca * ( 1. + r1 ) ) ) );
 
-    answer.at(4, 7) = 1. / 32. * ( -( a1 * V1.at(1) + a2 * V2.at(1) ) * ( cb * ( 1. + r2 ) ) + ( a2 * V2.at(1) + a3 * V3.at(1) ) * ( ca * ( 1. - r1 ) ) );
-    answer.at(4, 8) = 1. / 32. * ( -( a1 * V1.at(2) + a2 * V2.at(2) ) * ( cb * ( 1. + r2 ) ) + ( a2 * V2.at(2) + a3 * V3.at(2) ) * ( ca * ( 1. - r1 ) ) );
-    answer.at(4, 9) = 1. / 32. * ( -( a1 * V1.at(3) + a2 * V2.at(3) ) * ( cb * ( 1. + r2 ) ) + ( a2 * V2.at(3) + a3 * V3.at(3) ) * ( ca * ( 1. - r1 ) ) );
-    answer.at(4, 10) = -a1 / 32. * ( ( V21.dotProduct({ x1 - x2, y1 - y2, z1 - z2 }) * ( cb * ( 1. + r2 ) ) ) + ( V21.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * ( ca * ( 1. - r1 ) ) ) );
-    answer.at(4, 11) = a1 / 32. * ( ( V11.dotProduct({ x1 - x2, y1 - y2, z1 - z2 }) * ( cb * ( 1. + r2 ) ) ) + ( V11.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * ( ca * ( 1. - r1 ) ) ) );
+    answer.at(4, 6) = 1. / 32. * ( -( a1 * V1.at(1) + a2 * V2.at(1) ) * ( cb * ( 1. + r2 ) ) + ( a2 * V2.at(1) + a3 * V3.at(1) ) * ( ca * ( 1. - r1 ) ) );
+    answer.at(4, 7) = 1. / 32. * ( -( a1 * V1.at(2) + a2 * V2.at(2) ) * ( cb * ( 1. + r2 ) ) + ( a2 * V2.at(2) + a3 * V3.at(2) ) * ( ca * ( 1. - r1 ) ) );
+    answer.at(4, 8) = 1. / 32. * ( -( a1 * V1.at(3) + a2 * V2.at(3) ) * ( cb * ( 1. + r2 ) ) + ( a2 * V2.at(3) + a3 * V3.at(3) ) * ( ca * ( 1. - r1 ) ) );
+    answer.at(4, 9) = -a1 / 32. * ( ( V21.dotProduct({ x1 - x2, y1 - y2, z1 - z2 }) * ( cb * ( 1. + r2 ) ) ) + ( V21.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * ( ca * ( 1. - r1 ) ) ) );
+    answer.at(4, 10) = a1 / 32. * ( ( V11.dotProduct({ x1 - x2, y1 - y2, z1 - z2 }) * ( cb * ( 1. + r2 ) ) ) + ( V11.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * ( ca * ( 1. - r1 ) ) ) );
 
-    answer.at(4, 13) = 1. / 32. * ( -( a3 * V3.at(1) + a4 * V4.at(1) ) * ( cb * ( 1. - r2 ) ) - ( a2 * V2.at(1) + a3 * V3.at(1) ) * ( ca * ( 1. - r1 ) ) );
-    answer.at(4, 14) = 1. / 32. * ( -( a3 * V3.at(2) + a4 * V4.at(2) ) * ( cb * ( 1. - r2 ) ) - ( a2 * V2.at(2) + a3 * V3.at(2) ) * ( ca * ( 1. - r1 ) ) );
-    answer.at(4, 15) = 1. / 32. * ( -( a3 * V3.at(3) + a4 * V4.at(3) ) * ( cb * ( 1. - r2 ) ) - ( a2 * V2.at(3) + a3 * V3.at(3) ) * ( ca * ( 1. - r1 ) ) );
-    answer.at(4, 16) = -a1 / 32. * ( ( V21.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * ( cb * ( 1. - r2 ) ) ) + ( V21.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * ( ca * ( 1. - r1 ) ) ) );
-    answer.at(4, 17) = a1 / 32. * ( ( V11.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * ( cb * ( 1. - r2 ) ) ) + ( V11.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * ( ca * ( 1. - r1 ) ) ) );
+    answer.at(4, 11) = 1. / 32. * ( -( a3 * V3.at(1) + a4 * V4.at(1) ) * ( cb * ( 1. - r2 ) ) - ( a2 * V2.at(1) + a3 * V3.at(1) ) * ( ca * ( 1. - r1 ) ) );
+    answer.at(4, 12) = 1. / 32. * ( -( a3 * V3.at(2) + a4 * V4.at(2) ) * ( cb * ( 1. - r2 ) ) - ( a2 * V2.at(2) + a3 * V3.at(2) ) * ( ca * ( 1. - r1 ) ) );
+    answer.at(4, 13) = 1. / 32. * ( -( a3 * V3.at(3) + a4 * V4.at(3) ) * ( cb * ( 1. - r2 ) ) - ( a2 * V2.at(3) + a3 * V3.at(3) ) * ( ca * ( 1. - r1 ) ) );
+    answer.at(4, 14) = -a1 / 32. * ( ( V21.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * ( cb * ( 1. - r2 ) ) ) + ( V21.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * ( ca * ( 1. - r1 ) ) ) );
+    answer.at(4, 15) = a1 / 32. * ( ( V11.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * ( cb * ( 1. - r2 ) ) ) + ( V11.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * ( ca * ( 1. - r1 ) ) ) );
 
-    answer.at(4, 19) = 1. / 32. * ( ( a3 * V3.at(1) + a4 * V4.at(1) ) * ( cb * ( 1. - r2 ) ) - ( a1 * V1.at(1) + a4 * V4.at(1) ) * ( ca * ( 1. + r1 ) ) );
-    answer.at(4, 20) = 1. / 32. * ( ( a3 * V3.at(2) + a4 * V4.at(2) ) * ( cb * ( 1. - r2 ) ) - ( a1 * V1.at(2) + a4 * V4.at(2) ) * ( ca * ( 1. + r1 ) ) );
-    answer.at(4, 21) = 1. / 32. * ( ( a3 * V3.at(3) + a4 * V4.at(3) ) * ( cb * ( 1. - r2 ) ) - ( a1 * V1.at(3) + a4 * V4.at(3) ) * ( ca * ( 1. + r1 ) ) );
-    answer.at(4, 22) = -a1 / 32. * ( ( V21.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * ( cb * ( 1. - r2 ) ) ) + ( V21.dotProduct({ x1 - x4, y1 - y4, z1 - z4 }) * ( ca * ( 1. + r1 ) ) ) );
-    answer.at(4, 23) = a1 / 32. * ( ( V11.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * ( cb * ( 1. - r2 ) ) ) + ( V11.dotProduct({ x1 - x4, y1 - y4, z1 - z4 }) * ( ca * ( 1. + r1 ) ) ) );
+    answer.at(4, 16) = 1. / 32. * ( ( a3 * V3.at(1) + a4 * V4.at(1) ) * ( cb * ( 1. - r2 ) ) - ( a1 * V1.at(1) + a4 * V4.at(1) ) * ( ca * ( 1. + r1 ) ) );
+    answer.at(4, 17) = 1. / 32. * ( ( a3 * V3.at(2) + a4 * V4.at(2) ) * ( cb * ( 1. - r2 ) ) - ( a1 * V1.at(2) + a4 * V4.at(2) ) * ( ca * ( 1. + r1 ) ) );
+    answer.at(4, 18) = 1. / 32. * ( ( a3 * V3.at(3) + a4 * V4.at(3) ) * ( cb * ( 1. - r2 ) ) - ( a1 * V1.at(3) + a4 * V4.at(3) ) * ( ca * ( 1. + r1 ) ) );
+    answer.at(4, 19) = -a1 / 32. * ( ( V21.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * ( cb * ( 1. - r2 ) ) ) + ( V21.dotProduct({ x1 - x4, y1 - y4, z1 - z4 }) * ( ca * ( 1. + r1 ) ) ) );
+    answer.at(4, 20) = a1 / 32. * ( ( V11.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * ( cb * ( 1. - r2 ) ) ) + ( V11.dotProduct({ x1 - x4, y1 - y4, z1 - z4 }) * ( ca * ( 1. + r1 ) ) ) );
 
     answer.at(5, 1) = 1. / 32. * ( ( a1 * V1.at(1) + a2 * V2.at(1) ) * ( sb * ( 1. + r2 ) ) + ( a1 * V1.at(1) + a4 * V4.at(1) ) * ( sa * ( 1. + r1 ) ) );
     answer.at(5, 2) = 1. / 32. * ( ( a1 * V1.at(2) + a2 * V2.at(2) ) * ( sb * ( 1. + r2 ) ) + ( a1 * V1.at(2) + a4 * V4.at(2) ) * ( sa * ( 1. + r1 ) ) );
@@ -554,72 +556,72 @@ MITC4Shell :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int 
     answer.at(5, 4) = -a1 / 32. * ( ( V21.dotProduct({ x1 - x2, y1 - y2, z1 - z2 }) * ( sb * ( 1. + r2 ) ) ) + ( V21.dotProduct({ x1 - x4, y1 - y4, z1 - z4 }) * ( sa * ( 1. + r1 ) ) ) );
     answer.at(5, 5) = a1 / 32. * ( ( V11.dotProduct({ x1 - x2, y1 - y2, z1 - z2 }) * ( sb * ( 1. + r2 ) ) ) + ( V11.dotProduct({ x1 - x4, y1 - y4, z1 - z4 }) * ( sa * ( 1. + r1 ) ) ) );
 
-    answer.at(5, 7) = 1. / 32. * ( -( a1 * V1.at(1) + a2 * V2.at(1) ) * ( sb * ( 1. + r2 ) ) + ( a2 * V2.at(1) + a3 * V3.at(1) ) * ( sa * ( 1. - r1 ) ) );
-    answer.at(5, 8) = 1. / 32. * ( -( a1 * V1.at(2) + a2 * V2.at(2) ) * ( sb * ( 1. + r2 ) ) + ( a2 * V2.at(2) + a3 * V3.at(2) ) * ( sa * ( 1. - r1 ) ) );
-    answer.at(5, 9) = 1. / 32. * ( -( a1 * V1.at(3) + a2 * V2.at(3) ) * ( sb * ( 1. + r2 ) ) + ( a2 * V2.at(3) + a3 * V3.at(3) ) * ( sa * ( 1. - r1 ) ) );
-    answer.at(5, 10) = -a1 / 32. * ( ( V21.dotProduct({ x1 - x2, y1 - y2, z1 - z2 }) * ( sb * ( 1. + r2 ) ) ) + ( V21.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * ( sa * ( 1. - r1 ) ) ) );
-    answer.at(5, 11) = a1 / 32. * ( ( V11.dotProduct({ x1 - x2, y1 - y2, z1 - z2 }) * ( sb * ( 1. + r2 ) ) ) + ( V11.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * ( sa * ( 1. - r1 ) ) ) );
+	answer.at(5, 6) = 1. / 32. * (-(a1 * V1.at(1) + a2 * V2.at(1)) * (sb * (1. + r2)) + (a2 * V2.at(1) + a3 * V3.at(1)) * (sa * (1. - r1)));
+	answer.at(5, 7) = 1. / 32. * (-(a1 * V1.at(2) + a2 * V2.at(2)) * (sb * (1. + r2)) + (a2 * V2.at(2) + a3 * V3.at(2)) * (sa * (1. - r1)));
+	answer.at(5, 8) = 1. / 32. * (-(a1 * V1.at(3) + a2 * V2.at(3)) * (sb * (1. + r2)) + (a2 * V2.at(3) + a3 * V3.at(3)) * (sa * (1. - r1)));
+	answer.at(5, 9) = -a1 / 32. * ((V21.dotProduct({ x1 - x2, y1 - y2, z1 - z2 }) * (sb * (1. + r2))) + (V21.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * (sa * (1. - r1))));
+	answer.at(5, 10) = a1 / 32. * ((V11.dotProduct({ x1 - x2, y1 - y2, z1 - z2 }) * (sb * (1. + r2))) + (V11.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * (sa * (1. - r1))));
 
-    answer.at(5, 13) = 1. / 32. * ( -( a3 * V3.at(1) + a4 * V4.at(1) ) * ( sb * ( 1. - r2 ) ) - ( a2 * V2.at(1) + a3 * V3.at(1) ) * ( sa * ( 1. - r1 ) ) );
-    answer.at(5, 14) = 1. / 32. * ( -( a3 * V3.at(2) + a4 * V4.at(2) ) * ( sb * ( 1. - r2 ) ) - ( a2 * V2.at(2) + a3 * V3.at(2) ) * ( sa * ( 1. - r1 ) ) );
-    answer.at(5, 15) = 1. / 32. * ( -( a3 * V3.at(3) + a4 * V4.at(3) ) * ( sb * ( 1. - r2 ) ) - ( a2 * V2.at(3) + a3 * V3.at(3) ) * ( sa * ( 1. - r1 ) ) );
-    answer.at(5, 16) = -a1 / 32. * ( ( V21.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * ( sb * ( 1. - r2 ) ) ) + ( V21.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * ( sa * ( 1. - r1 ) ) ) );
-    answer.at(5, 17) = a1 / 32. * ( ( V11.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * ( sb * ( 1. - r2 ) ) ) + ( V11.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * ( sa * ( 1. - r1 ) ) ) );
+	answer.at(5, 11) = 1. / 32. * (-(a3 * V3.at(1) + a4 * V4.at(1)) * (sb * (1. - r2)) - (a2 * V2.at(1) + a3 * V3.at(1)) * (sa * (1. - r1)));
+	answer.at(5, 12) = 1. / 32. * (-(a3 * V3.at(2) + a4 * V4.at(2)) * (sb * (1. - r2)) - (a2 * V2.at(2) + a3 * V3.at(2)) * (sa * (1. - r1)));
+	answer.at(5, 13) = 1. / 32. * (-(a3 * V3.at(3) + a4 * V4.at(3)) * (sb * (1. - r2)) - (a2 * V2.at(3) + a3 * V3.at(3)) * (sa * (1. - r1)));
+	answer.at(5, 14) = -a1 / 32. * ((V21.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * (sb * (1. - r2))) + (V21.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * (sa * (1. - r1))));
+	answer.at(5, 15) = a1 / 32. * ((V11.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * (sb * (1. - r2))) + (V11.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * (sa * (1. - r1))));
 
-    answer.at(5, 19) = 1. / 32. * ( ( a3 * V3.at(1) + a4 * V4.at(1) ) * ( sb * ( 1. - r2 ) ) - ( a1 * V1.at(1) + a4 * V4.at(1) ) * ( sa * ( 1. + r1 ) ) );
-    answer.at(5, 20) = 1. / 32. * ( ( a3 * V3.at(2) + a4 * V4.at(2) ) * ( sb * ( 1. - r2 ) ) - ( a1 * V1.at(2) + a4 * V4.at(2) ) * ( sa * ( 1. + r1 ) ) );
-    answer.at(5, 21) = 1. / 32. * ( ( a3 * V3.at(3) + a4 * V4.at(3) ) * ( sb * ( 1. - r2 ) ) - ( a1 * V1.at(3) + a4 * V4.at(3) ) * ( sa * ( 1. + r1 ) ) );
-    answer.at(5, 22) = -a1 / 32. * ( ( V21.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * ( sb * ( 1. - r2 ) ) ) + ( V21.dotProduct({ x1 - x4, y1 - y4, z1 - z4 }) * ( sa * ( 1. + r1 ) ) ) );
-    answer.at(5, 23) = a1 / 32. * ( ( V11.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * ( sb * ( 1. - r2 ) ) ) + ( V11.dotProduct({ x1 - x4, y1 - y4, z1 - z4 }) * ( sa * ( 1. + r1 ) ) ) );
+	answer.at(5, 16) = 1. / 32. * ((a3 * V3.at(1) + a4 * V4.at(1)) * (sb * (1. - r2)) - (a1 * V1.at(1) + a4 * V4.at(1)) * (sa * (1. + r1)));
+	answer.at(5, 17) = 1. / 32. * ((a3 * V3.at(2) + a4 * V4.at(2)) * (sb * (1. - r2)) - (a1 * V1.at(2) + a4 * V4.at(2)) * (sa * (1. + r1)));
+	answer.at(5, 18) = 1. / 32. * ((a3 * V3.at(3) + a4 * V4.at(3)) * (sb * (1. - r2)) - (a1 * V1.at(3) + a4 * V4.at(3)) * (sa * (1. + r1)));
+	answer.at(5, 19) = -a1 / 32. * ((V21.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * (sb * (1. - r2))) + (V21.dotProduct({ x1 - x4, y1 - y4, z1 - z4 }) * (sa * (1. + r1))));
+	answer.at(5, 20) = a1 / 32. * ((V11.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * (sb * (1. - r2))) + (V11.dotProduct({ x1 - x4, y1 - y4, z1 - z4 }) * (sa * (1. + r1))));
 
     answer.at(1, 1) = hkx.at(1);
     answer.at(1, 4) = -r3 / 2. *a1 *hkx.at(1) * V21.at(1);
     answer.at(1, 5) = r3 / 2. *a1 *hkx.at(1) * V11.at(1);
-    answer.at(1, 7) = hkx.at(2);
-    answer.at(1, 10) = -r3 / 2. *a2 *hkx.at(2) * V22.at(1);
-    answer.at(1, 11) = r3 / 2. *a2 *hkx.at(2) * V12.at(1);
-    answer.at(1, 13) =  hkx.at(3);
-    answer.at(1, 16) = -r3 / 2. *a3 *hkx.at(3) * V23.at(1);
-    answer.at(1, 17) = r3 / 2. *a3 *hkx.at(3) * V13.at(1);
-    answer.at(1, 19) = hkx.at(4);
-    answer.at(1, 22) = -r3 / 2. *a4 *hkx.at(4) * V24.at(1);
-    answer.at(1, 23) = r3 / 2. *a4 *hkx.at(4) * V14.at(1);
+    answer.at(1, 6) = hkx.at(2);
+    answer.at(1, 9) = -r3 / 2. *a2 *hkx.at(2) * V22.at(1);
+    answer.at(1, 10) = r3 / 2. *a2 *hkx.at(2) * V12.at(1);
+    answer.at(1, 11) =  hkx.at(3);
+    answer.at(1, 14) = -r3 / 2. *a3 *hkx.at(3) * V23.at(1);
+    answer.at(1, 15) = r3 / 2. *a3 *hkx.at(3) * V13.at(1);
+    answer.at(1, 16) = hkx.at(4);
+    answer.at(1, 19) = -r3 / 2. *a4 *hkx.at(4) * V24.at(1);
+    answer.at(1, 20) = r3 / 2. *a4 *hkx.at(4) * V14.at(1);
 
     answer.at(2, 2) = hky.at(1);
     answer.at(2, 4) = -r3 / 2. *a1 *hky.at(1) * V21.at(2);
     answer.at(2, 5) = r3 / 2. *a1 *hky.at(1) * V11.at(2);
 
-    answer.at(2, 8) = hky.at(2);
-    answer.at(2, 10) = -r3 / 2. *a2 *hky.at(2) * V22.at(2);
-    answer.at(2, 11) = r3 / 2. *a2 *hky.at(2) * V12.at(2);
+    answer.at(2, 7) = hky.at(2);
+    answer.at(2, 9) = -r3 / 2. *a2 *hky.at(2) * V22.at(2);
+    answer.at(2, 10) = r3 / 2. *a2 *hky.at(2) * V12.at(2);
 
-    answer.at(2, 14) = hky.at(3);
-    answer.at(2, 16) = -r3 / 2. *a3 *hky.at(3) * V23.at(2);
-    answer.at(2, 17) = r3 / 2. *a3 *hky.at(3) * V13.at(2);
+    answer.at(2, 12) = hky.at(3);
+    answer.at(2, 14) = -r3 / 2. *a3 *hky.at(3) * V23.at(2);
+    answer.at(2, 15) = r3 / 2. *a3 *hky.at(3) * V13.at(2);
 
-    answer.at(2, 20) = hky.at(4);
-    answer.at(2, 22) = -r3 / 2. *a4 *hky.at(4) * V24.at(2);
-    answer.at(2, 23) = r3 / 2. *a4 *hky.at(4) * V14.at(2);
+    answer.at(2, 17) = hky.at(4);
+    answer.at(2, 19) = -r3 / 2. *a4 *hky.at(4) * V24.at(2);
+    answer.at(2, 20) = r3 / 2. *a4 *hky.at(4) * V14.at(2);
 
     answer.at(6, 1) = hky.at(1);
     answer.at(6, 2) = hkx.at(1);
     answer.at(6, 4) = -r3 / 2. * a1 * ( hkx.at(1) * V21.at(2) + hky.at(1) * V21.at(1) );
     answer.at(6, 5) = r3 / 2. * a1 * ( hky.at(1) * V11.at(1) + hky.at(1) * V11.at(2) );
 
-    answer.at(6, 7) = hky.at(2);
-    answer.at(6, 8) = hkx.at(2);
-    answer.at(6, 10) = -r3 / 2. * a2 * ( hkx.at(2) * V22.at(2) + hky.at(2) * V22.at(1) );
-    answer.at(6, 11) = r3 / 2. * a2 * ( hky.at(2) * V12.at(1) + hky.at(2) * V12.at(2) );
+    answer.at(6, 6) = hky.at(2);
+    answer.at(6, 7) = hkx.at(2);
+    answer.at(6, 9) = -r3 / 2. * a2 * ( hkx.at(2) * V22.at(2) + hky.at(2) * V22.at(1) );
+    answer.at(6, 10) = r3 / 2. * a2 * ( hky.at(2) * V12.at(1) + hky.at(2) * V12.at(2) );
 
-    answer.at(6, 13) = hky.at(3);
-    answer.at(6, 14) = hkx.at(3);
-    answer.at(6, 16) = -r3 / 2. * a3 * ( hkx.at(3) * V23.at(2) + hky.at(3) * V23.at(1) );
-    answer.at(6, 17) = r3 / 2. * a3 * ( hky.at(3) * V13.at(1) + hky.at(3) * V13.at(2) );
+    answer.at(6, 11) = hky.at(3);
+    answer.at(6, 12) = hkx.at(3);
+    answer.at(6, 14) = -r3 / 2. * a3 * ( hkx.at(3) * V23.at(2) + hky.at(3) * V23.at(1) );
+    answer.at(6, 15) = r3 / 2. * a3 * ( hky.at(3) * V13.at(1) + hky.at(3) * V13.at(2) );
 
-    answer.at(6, 19) = hky.at(4);
-    answer.at(6, 20) = hkx.at(4);
-    answer.at(6, 22) = -r3 / 2. * a4 * ( hkx.at(4) * V24.at(2) + hky.at(4) * V24.at(1) );
-    answer.at(6, 23) = r3 / 2. * a4 * ( hky.at(4) * V14.at(1) + hky.at(4) * V14.at(2) );
+    answer.at(6, 16) = hky.at(4);
+    answer.at(6, 17) = hkx.at(4);
+    answer.at(6, 19) = -r3 / 2. * a4 * ( hkx.at(4) * V24.at(2) + hky.at(4) * V24.at(1) );
+    answer.at(6, 20) = r3 / 2. * a4 * ( hky.at(4) * V14.at(1) + hky.at(4) * V14.at(2) );
 }
 
 
@@ -811,6 +813,27 @@ MITC4Shell :: computeGtoLRotationMatrix(FloatMatrix &answer)
     return 1;
 }
 
+void
+MITC4Shell::computeStrainVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep)
+{
+	FloatArray shellUnknowns, tmp;
+	FloatMatrix b;
+	/* Here we do compute only the "traditional" part of shell strain vector, the quasi-strain related to rotations is not computed */
+	this->computeVectorOfUnknowns(VM_Total, tStep, shellUnknowns, tmp);
+
+	this->computeBmatrixAt(gp, b);
+	answer.beProductOf(b, shellUnknowns);
+}
+
+void
+MITC4Shell::computeVectorOfUnknowns(ValueModeType mode, TimeStep *tStep, FloatArray &shell, FloatArray &drill)
+{
+	FloatArray tmp;
+	this->computeVectorOf(mode, tStep, tmp);
+	shell.beSubArrayOf(tmp, this->shellOrdering);
+	drill.beSubArrayOf(tmp, this->drillOrdering);
+}
+
 
 void
 MITC4Shell :: computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
@@ -818,6 +841,99 @@ MITC4Shell :: computeStressVector(FloatArray &answer, const FloatArray &strain, 
     this->giveStructuralCrossSection()->giveRealStress_3dDegeneratedShell(answer, gp, strain, tStep);
 }
 
+void
+MITC4Shell :: computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep)
+{
+	// We need to overload this for practical reasons (this 3d shell has all 9 dofs, but the shell part only cares for the first 8)
+	// This elements adds an additional stiffness for the so called drilling dofs, meaning we need to work with all 9 components.
+	FloatMatrix d, b, db;
+	FloatArray n;
+	bool drillCoeffFlag = false;
+
+	FloatMatrix shellStiffness, drillStiffness;
+
+	for (GaussPoint *gp : *integrationRulesArray[0]) {
+		this->computeBmatrixAt(gp, b);
+		double dV = this->computeVolumeAround(gp);
+		double drillCoeff = this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp);
+
+		this->computeConstitutiveMatrixAt(d, rMode, gp, tStep);
+
+		db.beProductOf(d, b);
+		shellStiffness.plusProductSymmUpper(b, db, dV);
+
+		// Drilling stiffness is here for improved numerical properties
+		if (drillCoeff > 0.) {
+			this->interp_lin.evalN(n, gp->giveNaturalCoordinates(), FEIVoidCellGeometry());
+			for (int j = 0; j < 4; j++) {
+				n(j) -= 0.25;
+			}
+			drillStiffness.plusDyadSymmUpper(n, drillCoeff * dV);
+			drillCoeffFlag = true;
+		}
+	}
+	shellStiffness.symmetrized();
+
+	answer.resize(24, 24);
+	answer.zero();
+	answer.assemble(shellStiffness, this->shellOrdering);
+
+	if (drillCoeffFlag) {
+		drillStiffness.symmetrized();
+		answer.assemble(drillStiffness, this->drillOrdering);
+	}
+}
+
+void
+MITC4Shell::giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord)
+{
+	// We need to overload this for practical reasons (this 3d shell has all 9 dofs, but the shell part only cares for the first 8)
+	// This elements adds an additional stiffness for the so called drilling dofs, meaning we need to work with all 9 components.
+	FloatMatrix b;
+	FloatArray n, strain, stress;
+	FloatArray shellUnknowns, drillUnknowns;
+	bool drillCoeffFlag = false;
+
+	// Split this for practical reasons into normal shell dofs and drilling dofs
+	this->computeVectorOfUnknowns(VM_Total, tStep, shellUnknowns, drillUnknowns);
+
+	FloatArray shellForces, drillMoment;
+	StructuralCrossSection *cs = this->giveStructuralCrossSection();
+
+	for (GaussPoint *gp : *integrationRulesArray[0]) {
+		this->computeBmatrixAt(gp, b);
+		double dV = this->computeVolumeAround(gp);
+		double drillCoeff = cs->give(CS_DrillingStiffness, gp);
+
+		if (useUpdatedGpRecord) {
+			stress = static_cast< StructuralMaterialStatus * >(gp->giveMaterialStatus())->giveStressVector();
+		}
+		else {
+			strain.beProductOf(b, shellUnknowns);
+			this->computeStressVector(stress, strain, gp, tStep);
+		}
+		shellForces.plusProduct(b, stress, dV);
+
+		// Drilling stiffness is here for improved numerical properties
+		if (drillCoeff > 0.) {
+			this->interp_lin.evalN(n, gp->giveNaturalCoordinates(), FEIVoidCellGeometry());
+			for (int j = 0; j < 4; j++) {
+				n(j) -= 0.25;
+			}
+			double dtheta = n.dotProduct(drillUnknowns);
+			drillMoment.add(drillCoeff * dV * dtheta, n); ///@todo Decide on how to alpha should be defined.
+			drillCoeffFlag = true;
+		}
+	}
+
+	answer.resize(24);
+	answer.zero();
+	answer.assemble(shellForces, this->shellOrdering);
+
+	if (drillCoeffFlag) {
+		answer.assemble(drillMoment, this->drillOrdering);
+	}
+}
 
 void
 MITC4Shell :: giveCharacteristicTensor(FloatMatrix &answer, CharTensor type, GaussPoint *gp, TimeStep *tStep)

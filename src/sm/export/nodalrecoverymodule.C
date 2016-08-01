@@ -177,15 +177,15 @@ namespace oofem {
 				//OOFEM_ERROR("internal error: invalid dofman data");
 			}
 
-			//if (type == ISVT_SCALAR || type == ISVT_VECTOR || type == ISVT_TENSOR_S3 || type == ISVT_TENSOR_G) {
-			//	FloatArray t;
-			//	this->makeFullTensorForm(t, *val, type);
-			//	answer[regionNodalNumbers.at(inode)] = t;
+			if (type == ISVT_SCALAR || type == ISVT_VECTOR || type == ISVT_TENSOR_S3 || type == ISVT_TENSOR_G) {
+				FloatArray t;
+				this->makeFullTensorForm(t, *val, type);
+				answer[regionNodalNumbers.at(inode)] = t;
 
-			//}
-			//else {
+			}
+			else {
 				answer[regionNodalNumbers.at(inode)] = *val;
-			//}
+			}
 
 		}
 
