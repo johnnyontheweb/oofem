@@ -910,7 +910,8 @@ MITC4Shell::giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int us
 		}
 		else {
 			strain.beProductOf(b, shellUnknowns);
-			this->computeStressVector(stress, strain, gp, tStep);
+			// this->computeStressVector(stress, strain, gp, tStep);
+			this->giveStructuralCrossSection()->giveRealStress_3dDegeneratedShell(stress, gp, strain, tStep);
 		}
 		shellForces.plusProduct(b, stress, dV);
 
@@ -974,6 +975,33 @@ MITC4Shell :: giveCharacteristicTensor(FloatMatrix &answer, CharTensor type, Gau
         answer.at(3, 2) = strain.at(5) / 2.;
         answer.at(1, 3) = strain.at(6) / 2.;
         answer.at(3, 1) = strain.at(6) / 2.;
+	} else if (type == LocalStrainTensor ) {
+		FloatArray strain;
+		this->computeStrainVector(strain, gp, tStep);
+
+		answer.at(1, 1) = strain.at(1);
+		answer.at(2, 2) = strain.at(2);
+		answer.at(3, 3) = strain.at(3);
+		answer.at(1, 2) = strain.at(4) / 2.;
+		answer.at(2, 1) = strain.at(4) / 2.;
+		answer.at(2, 3) = strain.at(5) / 2.;
+		answer.at(3, 2) = strain.at(5) / 2.;
+		answer.at(1, 3) = strain.at(6) / 2.;
+		answer.at(3, 1) = strain.at(6) / 2.;
+	} else if (type == LocalForceTensor ) {
+		FloatArray stress, strain;
+		this->computeStrainVector(strain, gp, tStep);
+		this->computeStressVector(stress, strain, gp, tStep);
+
+		answer.at(1, 1) = stress.at(1);
+		answer.at(2, 2) = stress.at(2);
+		answer.at(3, 3) = stress.at(3);
+		answer.at(1, 2) = stress.at(4);
+		answer.at(2, 1) = stress.at(4);
+		answer.at(2, 3) = stress.at(5);
+		answer.at(3, 2) = stress.at(5);
+		answer.at(1, 3) = stress.at(6);
+		answer.at(3, 1) = stress.at(6);
     } else {
         OOFEM_ERROR("unsupported tensor mode");
     }
@@ -1010,29 +1038,60 @@ MITC4Shell :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
     answer.resize(6);
 
     if (  type == IST_ShellStrainTensor ) {
+        this->giveCharacteristicTensor(globTensor, LocalStrainTensor, gp, tStep);
 
-        this->giveCharacteristicTensor(globTensor, GlobalStrainTensor, gp, tStep);
+		// GlobalStrainTensor
+        //answer.at(1) = globTensor.at(1, 1); //xx
+        //answer.at(2) = globTensor.at(2, 2); //yy
+        //answer.at(3) = globTensor.at(3, 3); //zz
+        //answer.at(4) = 2 * globTensor.at(2, 3); //yz
+        //answer.at(5) = 2 * globTensor.at(1, 3); //xz
+        //answer.at(6) = 2 * globTensor.at(1, 2); //xy
 
-        answer.at(1) = globTensor.at(1, 1); //xx
-        answer.at(2) = globTensor.at(2, 2); //yy
-        answer.at(3) = globTensor.at(3, 3); //zz
-        answer.at(4) = 2 * globTensor.at(2, 3); //yz
-        answer.at(5) = 2 * globTensor.at(1, 3); //xz
-        answer.at(6) = 2 * globTensor.at(1, 2); //xy
+		answer.at(1) = globTensor.at(1, 1); //xx
+		answer.at(2) = globTensor.at(2, 2); //yy
+		answer.at(3) = 0.0; //zz
+		answer.at(4) = 2 * globTensor.at(2, 3);; //yz
+		answer.at(5) = 2 * globTensor.at(1, 3);; //xz
+		answer.at(6) = 2 * globTensor.at(1, 2); //xy
 
         return 1;
     } else if ( type == IST_ShellForceTensor ) {
+		FloatArray stress1;
+		stress1 = static_cast< StructuralMaterialStatus * >(gp->giveMaterialStatus())->giveStressVector();
 
-        this->giveCharacteristicTensor(globTensor, GlobalForceTensor, gp, tStep);
+		this->giveCharacteristicTensor(globTensor, LocalForceTensor, gp, tStep);
 
         answer.at(1) = globTensor.at(1, 1); //xx
         answer.at(2) = globTensor.at(2, 2); //yy
-        answer.at(3) = globTensor.at(3, 3); //zz
-        answer.at(4) = globTensor.at(2, 3); //yz
-        answer.at(5) = globTensor.at(1, 3); //xz
+		answer.at(3) = 0.0; //zz
+		answer.at(4) = globTensor.at(2, 3); //yz
+		answer.at(5) = globTensor.at(1, 3); //xz
         answer.at(6) = globTensor.at(1, 2); //xy
 
         return 1;
+	} else if (type == IST_ShellMomentTensor) {
+		FloatArray stress;
+		stress = static_cast< StructuralMaterialStatus * >(gp->giveMaterialStatus())->giveStressVector();
+
+		answer.at(1) = stress.at(4); // mx
+		answer.at(2) = stress.at(5); // my
+		answer.at(3) = 0.0;      // mz
+		answer.at(4) = 0.0;      // mzy
+		answer.at(5) = 0.0;      // mzx
+		answer.at(6) = stress.at(6); // mxy
+		return 1;
+	} else if (type == IST_CurvatureTensor) {
+		FloatArray strain;
+		strain = static_cast< StructuralMaterialStatus * >(gp->giveMaterialStatus())->giveStrainVector();
+
+		answer.at(1) = strain.at(4); // mx
+		answer.at(2) = strain.at(5); // my
+		answer.at(3) = 0.0;      // mz
+		answer.at(4) = 0.0;      // mzy
+		answer.at(5) = 0.0;      // mzx
+		answer.at(6) = strain.at(6); // mxy
+		return 1;
     } else {
         return NLStructuralElement :: giveIPValue(answer, gp, type, tStep);
     }
