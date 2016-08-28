@@ -778,23 +778,23 @@ InternalStateType type, TimeStep *tStep)
 
 	switch (node) {
 	case 1:
-		x1 = 1.0;
-		x2 = 1.0;
+		x1 = -1.0;
+		x2 = -1.0;
 		x3 = 0.0;
 		break;
 	case 2:
-		x1 = -1.0;
-		x2 = 1.0;
+		x1 = 1.0;
+		x2 = -1.0;
 		x3 = 0.0;
 		break;
 	case 3:
-		x1 = -1.0;
-		x2 = -1.0;
+		x1 = 1.0;
+		x2 = 1.0;
 		x3 = 0.0;
 		break;
 	case 4:
-		x1 = 1.0;
-		x2 = -1.0;
+		x1 = -1.0;
+		x2 = 1.0;
 		x3 = 0.0;
 		break;
 	default:
