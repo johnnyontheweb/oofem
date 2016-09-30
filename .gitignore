@@ -549,3 +549,7 @@ tests/sm/t3d.bmf
 /CMakeFiles/3.6.1/CompilerIdCXX/CompilerIdCXX.exe
 /CMakeFiles/3.6.1/CompilerIdCXX/CompilerIdCXX.vcxproj
 /beam01.dir/Debug/vc120.pdb
+/Debug/in3D.dat
+/Debug/in3Dc.dat
+/Debug/out.dat
+/MinSizeRel/quad plane stress-st.in
