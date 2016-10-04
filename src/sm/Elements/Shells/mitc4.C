@@ -937,114 +937,114 @@ MITC4Shell::giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int us
 }
 
 
-void
-MITC4Shell::giveGPForcesVector(FloatArray &answer, TimeStep *tStep, GaussPoint *gp, int useUpdatedGpRecord)
-{
-	// We need to overload this for practical reasons (this 3d shell has all 9 dofs, but the shell part only cares for the first 8)
-	// This elements adds an additional stiffness for the so called drilling dofs, meaning we need to work with all 9 components.
-	FloatMatrix b;
-	FloatArray n, strain, stress;
-	FloatArray shellUnknowns, drillUnknowns;
-	bool drillCoeffFlag = false;
-
-	// Split this for practical reasons into normal shell dofs and drilling dofs
-	this->computeVectorOfUnknowns(VM_Total, tStep, shellUnknowns, drillUnknowns);
-
-	FloatArray shellForces, drillMoment;
-	StructuralCrossSection *cs = this->giveStructuralCrossSection();
-
-	this->computeBmatrixAt(gp, b);
-	double dV = this->computeVolumeAround(gp);
-	double drillCoeff = cs->give(CS_DrillingStiffness, gp);
-
-	// manca reperire spostamenti u di soluzione - B'*D*B*u è vettore answer
-
-	if (useUpdatedGpRecord) {
-		stress = static_cast< StructuralMaterialStatus * >(gp->giveMaterialStatus())->giveStressVector();
-	}
-	else {
-		strain.beProductOf(b, shellUnknowns);
-		// this->computeStressVector(stress, strain, gp, tStep);
-		this->giveStructuralCrossSection()->giveRealStress_3dDegeneratedShell(stress, gp, strain, tStep);
-	}
-	shellForces.plusProduct(b, stress, dV); // basterebbe anche senza plusProduct? solo con product?
-
-	// Drilling stiffness is here for improved numerical properties
-	if (drillCoeff > 0.) {
-		this->interp_lin.evalN(n, gp->giveNaturalCoordinates(), FEIVoidCellGeometry());
-		for (int j = 0; j < 4; j++) {
-			n(j) -= 0.25;
-		}
-		double dtheta = n.dotProduct(drillUnknowns);
-		drillMoment.add(drillCoeff * dV * dtheta, n); ///@todo Decide on how to alpha should be defined.
-		drillCoeffFlag = true;
-	}
-
-	answer.resize(9); // deve tornare vettore da 9 come riga 531 di quad1mindlinshell
-	answer.zero();
-	answer.assemble(shellForces, this->shellOrdering);
-
-	if (drillCoeffFlag) {
-		answer.assemble(drillMoment, this->drillOrdering);
-	}
-}
-
-void
-MITC4Shell::giveGPStrainVector(FloatArray &answer, TimeStep *tStep, GaussPoint *gp, int useUpdatedGpRecord)
-{
-	// We need to overload this for practical reasons (this 3d shell has all 9 dofs, but the shell part only cares for the first 8)
-	// This elements adds an additional stiffness for the so called drilling dofs, meaning we need to work with all 9 components.
-	FloatMatrix b;
-	FloatArray n, strain, stress;
-	FloatArray shellUnknowns, drillUnknowns;
-	bool drillCoeffFlag = false;
-
-	// Split this for practical reasons into normal shell dofs and drilling dofs
-	this->computeVectorOfUnknowns(VM_Total, tStep, shellUnknowns, drillUnknowns);
-
-	FloatArray drillStrain;
-	StructuralCrossSection *cs = this->giveStructuralCrossSection();
-
-	this->computeBmatrixAt(gp, b);
-	double dV = this->computeVolumeAround(gp);
-	double drillCoeff = cs->give(CS_DrillingStiffness, gp);
-
-	// manca reperire spostamenti u di soluzione (sarebbero da riferire al solo gp in ingresso, altrimenti iterare su tutti i gp e estrarre parte che interessa una volta fatto prodotto) - B*u è vettore answer
-
-	if (useUpdatedGpRecord) {
-		stress = static_cast< StructuralMaterialStatus * >(gp->giveMaterialStatus())->giveStressVector();
-	}
-	else {
-		strain.beProductOf(b, shellUnknowns);
-		// this->computeStressVector(stress, strain, gp, tStep);
-		this->giveStructuralCrossSection()->giveRealStress_3dDegeneratedShell(stress, gp, strain, tStep);
-	}
-	// shellForces.plusProduct(b, stress, dV); // basterebbe anche senza plusProduct? solo con product?
-	// solo B*u
-	// ...
-
-	// Drilling stiffness is here for improved numerical properties
-	double dtheta = 0;
-	if (drillCoeff > 0.) {
-		this->interp_lin.evalN(n, gp->giveNaturalCoordinates(), FEIVoidCellGeometry());
-		for (int j = 0; j < 4; j++) {
-			n(j) -= 0.25;
-		}
-		dtheta = n.dotProduct(drillUnknowns);
-		drillStrain.add(dtheta, n); ///@todo Decide on how to alpha should be defined.
-		// solo B*u
-		// ...
-		drillCoeffFlag = true;
-	}
-
-	answer.resize(9); // deve tornare vettore da 9 come riga 531 di quad1mindlinshell
-	answer.zero();
-	answer.assemble(strain, this->shellOrdering);
-
-	if (drillCoeffFlag) {
-		answer.assemble(drillStrain, this->drillOrdering);
-	}
-}
+//void
+//MITC4Shell::giveGPForcesVector(FloatArray &answer, TimeStep *tStep, GaussPoint *gp, int useUpdatedGpRecord)
+//{
+//	// We need to overload this for practical reasons (this 3d shell has all 9 dofs, but the shell part only cares for the first 8)
+//	// This elements adds an additional stiffness for the so called drilling dofs, meaning we need to work with all 9 components.
+//	FloatMatrix b;
+//	FloatArray n, strain, stress;
+//	FloatArray shellUnknowns, drillUnknowns;
+//	bool drillCoeffFlag = false;
+//
+//	// Split this for practical reasons into normal shell dofs and drilling dofs
+//	this->computeVectorOfUnknowns(VM_Total, tStep, shellUnknowns, drillUnknowns);
+//
+//	FloatArray shellForces, drillMoment;
+//	StructuralCrossSection *cs = this->giveStructuralCrossSection();
+//
+//	this->computeBmatrixAt(gp, b);
+//	double dV = this->computeVolumeAround(gp);
+//	double drillCoeff = cs->give(CS_DrillingStiffness, gp);
+//
+//	// manca reperire spostamenti u di soluzione - B'*D*B*u è vettore answer
+//
+//	if (useUpdatedGpRecord) {
+//		stress = static_cast< StructuralMaterialStatus * >(gp->giveMaterialStatus())->giveStressVector();
+//	}
+//	else {
+//		strain.beProductOf(b, shellUnknowns);
+//		// this->computeStressVector(stress, strain, gp, tStep);
+//		this->giveStructuralCrossSection()->giveRealStress_3dDegeneratedShell(stress, gp, strain, tStep);
+//	}
+//	shellForces.plusProduct(b, stress, dV); // basterebbe anche senza plusProduct? solo con product?
+//
+//	// Drilling stiffness is here for improved numerical properties
+//	if (drillCoeff > 0.) {
+//		this->interp_lin.evalN(n, gp->giveNaturalCoordinates(), FEIVoidCellGeometry());
+//		for (int j = 0; j < 4; j++) {
+//			n(j) -= 0.25;
+//		}
+//		double dtheta = n.dotProduct(drillUnknowns);
+//		drillMoment.add(drillCoeff * dV * dtheta, n); ///@todo Decide on how to alpha should be defined.
+//		drillCoeffFlag = true;
+//	}
+//
+//	answer.resize(9); // deve tornare vettore da 9 come riga 531 di quad1mindlinshell
+//	answer.zero();
+//	answer.assemble(shellForces, this->shellOrdering);
+//
+//	if (drillCoeffFlag) {
+//		answer.assemble(drillMoment, this->drillOrdering);
+//	}
+//}
+//
+//void
+//MITC4Shell::giveGPStrainVector(FloatArray &answer, TimeStep *tStep, GaussPoint *gp, int useUpdatedGpRecord)
+//{
+//	// We need to overload this for practical reasons (this 3d shell has all 9 dofs, but the shell part only cares for the first 8)
+//	// This elements adds an additional stiffness for the so called drilling dofs, meaning we need to work with all 9 components.
+//	FloatMatrix b;
+//	FloatArray n, strain, stress;
+//	FloatArray shellUnknowns, drillUnknowns;
+//	bool drillCoeffFlag = false;
+//
+//	// Split this for practical reasons into normal shell dofs and drilling dofs
+//	this->computeVectorOfUnknowns(VM_Total, tStep, shellUnknowns, drillUnknowns);
+//
+//	FloatArray drillStrain;
+//	StructuralCrossSection *cs = this->giveStructuralCrossSection();
+//
+//	this->computeBmatrixAt(gp, b);
+//	double dV = this->computeVolumeAround(gp);
+//	double drillCoeff = cs->give(CS_DrillingStiffness, gp);
+//
+//	// manca reperire spostamenti u di soluzione (sarebbero da riferire al solo gp in ingresso, altrimenti iterare su tutti i gp e estrarre parte che interessa una volta fatto prodotto) - B*u è vettore answer
+//
+//	if (useUpdatedGpRecord) {
+//		stress = static_cast< StructuralMaterialStatus * >(gp->giveMaterialStatus())->giveStressVector();
+//	}
+//	else {
+//		strain.beProductOf(b, shellUnknowns);
+//		// this->computeStressVector(stress, strain, gp, tStep);
+//		this->giveStructuralCrossSection()->giveRealStress_3dDegeneratedShell(stress, gp, strain, tStep);
+//	}
+//	// shellForces.plusProduct(b, stress, dV); // basterebbe anche senza plusProduct? solo con product?
+//	// solo B*u
+//	// ...
+//
+//	// Drilling stiffness is here for improved numerical properties
+//	double dtheta = 0;
+//	if (drillCoeff > 0.) {
+//		this->interp_lin.evalN(n, gp->giveNaturalCoordinates(), FEIVoidCellGeometry());
+//		for (int j = 0; j < 4; j++) {
+//			n(j) -= 0.25;
+//		}
+//		dtheta = n.dotProduct(drillUnknowns);
+//		drillStrain.add(dtheta, n); ///@todo Decide on how to alpha should be defined.
+//		// solo B*u
+//		// ...
+//		drillCoeffFlag = true;
+//	}
+//
+//	answer.resize(9); // deve tornare vettore da 9 come riga 531 di quad1mindlinshell
+//	answer.zero();
+//	answer.assemble(strain, this->shellOrdering);
+//
+//	if (drillCoeffFlag) {
+//		answer.assemble(drillStrain, this->drillOrdering);
+//	}
+//}
 
 void
 MITC4Shell :: giveCharacteristicTensor(FloatMatrix &answer, CharTensor type, GaussPoint *gp, TimeStep *tStep)

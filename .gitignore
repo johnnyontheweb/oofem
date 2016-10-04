@@ -553,3 +553,6 @@ tests/sm/t3d.bmf
 /Debug/in3Dc.dat
 /Debug/out.dat
 /MinSizeRel/quad plane stress-st.in
+/Debug/patch.in
+/MinSizeRel/WallsB.in
+/apidoc.vcxproj.user

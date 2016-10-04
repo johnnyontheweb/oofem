@@ -100,8 +100,8 @@ namespace oofem {
 
 		virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep);
 		virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord = 0);
-		virtual void giveGPForcesVector(FloatArray &answer, TimeStep *tStep, GaussPoint *gp, int useUpdatedGpRecord = 0);
-		virtual void giveGPStrainVector(FloatArray &answer, TimeStep *tStep, GaussPoint *gp, int useUpdatedGpRecord = 0);
+		//virtual void giveGPForcesVector(FloatArray &answer, TimeStep *tStep, GaussPoint *gp, int useUpdatedGpRecord = 0);
+		//virtual void giveGPStrainVector(FloatArray &answer, TimeStep *tStep, GaussPoint *gp, int useUpdatedGpRecord = 0);
 
 		// transformation
 		virtual bool computeGtoLRotationMatrix(FloatMatrix &answer);
