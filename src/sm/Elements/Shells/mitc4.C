@@ -1002,7 +1002,7 @@ MITC4Shell::giveGPStrainVector(FloatArray &answer, TimeStep *tStep, GaussPoint *
 	// Split this for practical reasons into normal shell dofs and drilling dofs
 	this->computeVectorOfUnknowns(VM_Total, tStep, shellUnknowns, drillUnknowns);
 
-	FloatArray shellForces, drillMoment;
+	FloatArray drillStrain;
 	StructuralCrossSection *cs = this->giveStructuralCrossSection();
 
 	this->computeBmatrixAt(gp, b);
@@ -1024,13 +1024,14 @@ MITC4Shell::giveGPStrainVector(FloatArray &answer, TimeStep *tStep, GaussPoint *
 	// ...
 
 	// Drilling stiffness is here for improved numerical properties
+	double dtheta = 0;
 	if (drillCoeff > 0.) {
 		this->interp_lin.evalN(n, gp->giveNaturalCoordinates(), FEIVoidCellGeometry());
 		for (int j = 0; j < 4; j++) {
 			n(j) -= 0.25;
 		}
-		double dtheta = n.dotProduct(drillUnknowns);
-		// drillMoment.add(drillCoeff * dV * dtheta, n); ///@todo Decide on how to alpha should be defined.
+		dtheta = n.dotProduct(drillUnknowns);
+		drillStrain.add(dtheta, n); ///@todo Decide on how to alpha should be defined.
 		// solo B*u
 		// ...
 		drillCoeffFlag = true;
@@ -1038,10 +1039,10 @@ MITC4Shell::giveGPStrainVector(FloatArray &answer, TimeStep *tStep, GaussPoint *
 
 	answer.resize(9); // deve tornare vettore da 9 come riga 531 di quad1mindlinshell
 	answer.zero();
-	answer.assemble(shellForces, this->shellOrdering);
+	answer.assemble(strain, this->shellOrdering);
 
 	if (drillCoeffFlag) {
-		answer.assemble(drillMoment, this->drillOrdering);
+		answer.assemble(drillStrain, this->drillOrdering);
 	}
 }
 
@@ -1180,26 +1181,53 @@ MITC4Shell :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
 
         return 1;
 	} else if (type == IST_ShellMomentTensor) {
-		FloatArray stress;
-		stress = static_cast< StructuralMaterialStatus * >(gp->giveMaterialStatus())->giveStressVector();
+		FloatArray stress1, stress2;
+		FloatArray c1, c2; // coordinate GP
+		double dist;
+		int base = (gp->giveNumber() - 1) >> 1;
 
-		answer.at(1) = stress.at(4); // mx
-		answer.at(2) = stress.at(5); // my
+		GaussPoint *gp1, *gp2;
+		gp1 = integrationRulesArray[0]->getIntegrationPoint(base*2);
+		gp2 = integrationRulesArray[0]->getIntegrationPoint(base*2 + 1);
+		stress1 = static_cast<StructuralMaterialStatus *>(gp1->giveMaterialStatus())->giveStressVector();
+		stress2 = static_cast<StructuralMaterialStatus *>(gp2->giveMaterialStatus())->giveStressVector();
+		c1 = gp1->giveNaturalCoordinates();
+		c2 = gp2->giveNaturalCoordinates();
+
+		dist = c1.distance(c2) * this->giveCrossSection()->give(CS_Thickness, gp) / 2;
+
+		// ATTENZIONE: m11 provoca sigma11, m22 provoca sigma22
+		answer.at(1) = (stress1.at(1) - stress2.at(1)) / dist; // mx
+		answer.at(2) = (stress1.at(2) - stress2.at(2)) / dist; // my
 		answer.at(3) = 0.0;      // mz
 		answer.at(4) = 0.0;      // mzy
 		answer.at(5) = 0.0;      // mzx
-		answer.at(6) = stress.at(6); // mxy
+		answer.at(6) = (stress1.at(6) - stress2.at(6)) / dist; // mxy
 		return 1;
-	} else if (type == IST_CurvatureTensor) {
-		FloatArray strain;
-		strain = static_cast< StructuralMaterialStatus * >(gp->giveMaterialStatus())->giveStrainVector();
+	}
+	else if (type == IST_CurvatureTensor) {
+		FloatArray strain1, strain2;
+		FloatArray c1, c2; // coordinate GP
+		double dist;
+		int base = (gp->giveNumber() - 1) >> 1;
 
-		answer.at(1) = strain.at(4); // mx
-		answer.at(2) = strain.at(5); // my
+		GaussPoint *gp1, *gp2;
+		gp1 = integrationRulesArray[0]->getIntegrationPoint(base*2);
+		gp2 = integrationRulesArray[0]->getIntegrationPoint(base*2 + 1);
+		strain1 = static_cast<StructuralMaterialStatus *>(gp1->giveMaterialStatus())->giveStrainVector();
+		strain2 = static_cast<StructuralMaterialStatus *>(gp2->giveMaterialStatus())->giveStrainVector();
+		c1 = gp1->giveNaturalCoordinates();
+		c2 = gp2->giveNaturalCoordinates();
+
+		dist = c1.distance(c2) * this->giveCrossSection()->give(CS_Thickness, gp) / 2;
+
+		// ATTENZIONE: k11 provoca eps11, k22 provoca eps22
+		answer.at(1) = (strain1.at(1) - strain2.at(1)) / dist; // mx
+		answer.at(2) = (strain1.at(2) - strain2.at(2)) / dist; // my
 		answer.at(3) = 0.0;      // mz
 		answer.at(4) = 0.0;      // mzy
 		answer.at(5) = 0.0;      // mzx
-		answer.at(6) = strain.at(6); // mxy
+		answer.at(6) = (strain1.at(6) - strain2.at(6)) / dist; // mxy
 		return 1;
     } else {
         return NLStructuralElement :: giveIPValue(answer, gp, type, tStep);
