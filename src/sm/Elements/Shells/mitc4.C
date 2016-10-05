@@ -695,7 +695,7 @@ MITC4Shell :: computeLocalBaseVectors(FloatArray &e1, FloatArray &e2, FloatArray
 
 void
 MITC4Shell :: computeLToDirectorRotationMatrix(FloatMatrix &answer1, FloatMatrix &answer2, FloatMatrix &answer3, FloatMatrix &answer4)
-// Returns the rotation matrix of the reciever of the size [2,3]
+// Returns the rotation matrix of the receiver of the size [2,3]
 // {alpha_i,beta_i} = Ti * {rotL_xi, rotL_yi, rotL_zi}
 //      alpha_i, beta_i - rotations about the components of director vector at node i
 //      r1_i, r2_i, r3_i, - rotations about local coordinates e1', e2', e3'
@@ -936,116 +936,6 @@ MITC4Shell::giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int us
 	}
 }
 
-
-//void
-//MITC4Shell::giveGPForcesVector(FloatArray &answer, TimeStep *tStep, GaussPoint *gp, int useUpdatedGpRecord)
-//{
-//	// We need to overload this for practical reasons (this 3d shell has all 9 dofs, but the shell part only cares for the first 8)
-//	// This elements adds an additional stiffness for the so called drilling dofs, meaning we need to work with all 9 components.
-//	FloatMatrix b;
-//	FloatArray n, strain, stress;
-//	FloatArray shellUnknowns, drillUnknowns;
-//	bool drillCoeffFlag = false;
-//
-//	// Split this for practical reasons into normal shell dofs and drilling dofs
-//	this->computeVectorOfUnknowns(VM_Total, tStep, shellUnknowns, drillUnknowns);
-//
-//	FloatArray shellForces, drillMoment;
-//	StructuralCrossSection *cs = this->giveStructuralCrossSection();
-//
-//	this->computeBmatrixAt(gp, b);
-//	double dV = this->computeVolumeAround(gp);
-//	double drillCoeff = cs->give(CS_DrillingStiffness, gp);
-//
-//	// manca reperire spostamenti u di soluzione - B'*D*B*u è vettore answer
-//
-//	if (useUpdatedGpRecord) {
-//		stress = static_cast< StructuralMaterialStatus * >(gp->giveMaterialStatus())->giveStressVector();
-//	}
-//	else {
-//		strain.beProductOf(b, shellUnknowns);
-//		// this->computeStressVector(stress, strain, gp, tStep);
-//		this->giveStructuralCrossSection()->giveRealStress_3dDegeneratedShell(stress, gp, strain, tStep);
-//	}
-//	shellForces.plusProduct(b, stress, dV); // basterebbe anche senza plusProduct? solo con product?
-//
-//	// Drilling stiffness is here for improved numerical properties
-//	if (drillCoeff > 0.) {
-//		this->interp_lin.evalN(n, gp->giveNaturalCoordinates(), FEIVoidCellGeometry());
-//		for (int j = 0; j < 4; j++) {
-//			n(j) -= 0.25;
-//		}
-//		double dtheta = n.dotProduct(drillUnknowns);
-//		drillMoment.add(drillCoeff * dV * dtheta, n); ///@todo Decide on how to alpha should be defined.
-//		drillCoeffFlag = true;
-//	}
-//
-//	answer.resize(9); // deve tornare vettore da 9 come riga 531 di quad1mindlinshell
-//	answer.zero();
-//	answer.assemble(shellForces, this->shellOrdering);
-//
-//	if (drillCoeffFlag) {
-//		answer.assemble(drillMoment, this->drillOrdering);
-//	}
-//}
-//
-//void
-//MITC4Shell::giveGPStrainVector(FloatArray &answer, TimeStep *tStep, GaussPoint *gp, int useUpdatedGpRecord)
-//{
-//	// We need to overload this for practical reasons (this 3d shell has all 9 dofs, but the shell part only cares for the first 8)
-//	// This elements adds an additional stiffness for the so called drilling dofs, meaning we need to work with all 9 components.
-//	FloatMatrix b;
-//	FloatArray n, strain, stress;
-//	FloatArray shellUnknowns, drillUnknowns;
-//	bool drillCoeffFlag = false;
-//
-//	// Split this for practical reasons into normal shell dofs and drilling dofs
-//	this->computeVectorOfUnknowns(VM_Total, tStep, shellUnknowns, drillUnknowns);
-//
-//	FloatArray drillStrain;
-//	StructuralCrossSection *cs = this->giveStructuralCrossSection();
-//
-//	this->computeBmatrixAt(gp, b);
-//	double dV = this->computeVolumeAround(gp);
-//	double drillCoeff = cs->give(CS_DrillingStiffness, gp);
-//
-//	// manca reperire spostamenti u di soluzione (sarebbero da riferire al solo gp in ingresso, altrimenti iterare su tutti i gp e estrarre parte che interessa una volta fatto prodotto) - B*u è vettore answer
-//
-//	if (useUpdatedGpRecord) {
-//		stress = static_cast< StructuralMaterialStatus * >(gp->giveMaterialStatus())->giveStressVector();
-//	}
-//	else {
-//		strain.beProductOf(b, shellUnknowns);
-//		// this->computeStressVector(stress, strain, gp, tStep);
-//		this->giveStructuralCrossSection()->giveRealStress_3dDegeneratedShell(stress, gp, strain, tStep);
-//	}
-//	// shellForces.plusProduct(b, stress, dV); // basterebbe anche senza plusProduct? solo con product?
-//	// solo B*u
-//	// ...
-//
-//	// Drilling stiffness is here for improved numerical properties
-//	double dtheta = 0;
-//	if (drillCoeff > 0.) {
-//		this->interp_lin.evalN(n, gp->giveNaturalCoordinates(), FEIVoidCellGeometry());
-//		for (int j = 0; j < 4; j++) {
-//			n(j) -= 0.25;
-//		}
-//		dtheta = n.dotProduct(drillUnknowns);
-//		drillStrain.add(dtheta, n); ///@todo Decide on how to alpha should be defined.
-//		// solo B*u
-//		// ...
-//		drillCoeffFlag = true;
-//	}
-//
-//	answer.resize(9); // deve tornare vettore da 9 come riga 531 di quad1mindlinshell
-//	answer.zero();
-//	answer.assemble(strain, this->shellOrdering);
-//
-//	if (drillCoeffFlag) {
-//		answer.assemble(drillStrain, this->drillOrdering);
-//	}
-//}
-
 void
 MITC4Shell :: giveCharacteristicTensor(FloatMatrix &answer, CharTensor type, GaussPoint *gp, TimeStep *tStep)
 // returns characteristic tensor of the receiver at given gp and tStep
@@ -1182,8 +1072,9 @@ MITC4Shell :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
         return 1;
 	} else if (type == IST_ShellMomentTensor) {
 		FloatArray stress1, stress2;
-		FloatArray c1, c2; // coordinate GP
+		FloatArray c1, c2; // GP coordinates
 		double dist;
+		double t;
 		int base = (gp->giveNumber() - 1) >> 1;
 
 		GaussPoint *gp1, *gp2;
@@ -1193,21 +1084,29 @@ MITC4Shell :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
 		stress2 = static_cast<StructuralMaterialStatus *>(gp2->giveMaterialStatus())->giveStressVector();
 		c1 = gp1->giveNaturalCoordinates();
 		c2 = gp2->giveNaturalCoordinates();
+		t = this->giveCrossSection()->give(CS_Thickness, gp);
+		dist = c1.distance(c2) * t / 2;
 
-		dist = c1.distance(c2) * this->giveCrossSection()->give(CS_Thickness, gp) / 2;
+		// WARNING: sigma11->m11, sigma22->m22
+		//answer.at(1) = (stress1.at(1) - stress2.at(1)) * dist; // mx
+		//answer.at(2) = (stress1.at(2) - stress2.at(2)) * dist; // my
+		//answer.at(3) = 0.0;      // mz
+		//answer.at(4) = 0.0;      // mzy
+		//answer.at(5) = 0.0;      // mzx
+		//answer.at(6) = (stress1.at(6) - stress2.at(6)) * dist; // mxy
 
-		// ATTENZIONE: m11 provoca sigma11, m22 provoca sigma22
-		answer.at(1) = (stress1.at(1) - stress2.at(1)) / dist; // mx
-		answer.at(2) = (stress1.at(2) - stress2.at(2)) / dist; // my
+		// sx=12*mxx*z/(t^3)
+		answer.at(1) = stress1.at(2)*powf(t, 3) / (12 * c1.at(3)* t / 2) + stress2.at(2)*powf(t, 3) / (12 * c2.at(3)* t / 2); // mx
+		answer.at(2) = stress1.at(1)*powf(t, 3) / (12 * c1.at(3)* t / 2) + stress2.at(1)*powf(t, 3) / (12 * c2.at(3)* t / 2); // my
 		answer.at(3) = 0.0;      // mz
 		answer.at(4) = 0.0;      // mzy
 		answer.at(5) = 0.0;      // mzx
-		answer.at(6) = (stress1.at(6) - stress2.at(6)) / dist; // mxy
+		answer.at(6) = stress1.at(6)*powf(t, 3) / (12 * c1.at(3)* t / 2) + stress2.at(6)*powf(t, 3) / (12 * c2.at(3)* t / 2); // mxy
 		return 1;
 	}
 	else if (type == IST_CurvatureTensor) {
 		FloatArray strain1, strain2;
-		FloatArray c1, c2; // coordinate GP
+		FloatArray c1, c2; // GP coordinates
 		double dist;
 		int base = (gp->giveNumber() - 1) >> 1;
 
@@ -1221,13 +1120,13 @@ MITC4Shell :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
 
 		dist = c1.distance(c2) * this->giveCrossSection()->give(CS_Thickness, gp) / 2;
 
-		// ATTENZIONE: k11 provoca eps11, k22 provoca eps22
-		answer.at(1) = (strain1.at(1) - strain2.at(1)) / dist; // mx
-		answer.at(2) = (strain1.at(2) - strain2.at(2)) / dist; // my
+		// ATTENZIONE: eps11->k11 , eps22->k22 
+		answer.at(1) = -(strain1.at(1) - strain2.at(1)) / dist; // mx
+		answer.at(2) = -(strain1.at(2) - strain2.at(2)) / dist; // my
 		answer.at(3) = 0.0;      // mz
 		answer.at(4) = 0.0;      // mzy
 		answer.at(5) = 0.0;      // mzx
-		answer.at(6) = (strain1.at(6) - strain2.at(6)) / dist; // mxy
+		answer.at(6) = -(strain1.at(6) - strain2.at(6)) / dist; // mxy
 		return 1;
     } else {
         return NLStructuralElement :: giveIPValue(answer, gp, type, tStep);
