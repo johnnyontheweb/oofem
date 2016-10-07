@@ -1,0 +1,75 @@
+test_mitc4_p.out
+-> shell model loaded on surfaces
+LinearStatic nsteps 1 nmodules 2
+vtkxml tstep_all domain_all vars 6 9 10 11 104 1 4 cellvars 6 9 10 11 104 1 4 primvars 1 1 stype 1
+nrm tstep_all domain_all vars 6 9 10 11 104 1 4 stype 0
+domain 3dShell
+OutputManager tstep_all dofman_all element_all
+ndofman 33 nelem 20 ncrosssect 2 nmat 1 nbc 4 nic 0 nltf 2 nset 3
+node 1 coords 3 0 0 0 
+node 2 coords 3 250 0 0 
+node 3 coords 3 500 0 0 
+node 4 coords 3 750 0 0 
+node 5 coords 3 1000 0 0 
+node 6 coords 3 1250 0 0 
+node 7 coords 3 1500 0 0 
+node 8 coords 3 1750 0 0 
+node 9 coords 3 2000 0 0 
+node 10 coords 3 2250 0 0 
+node 11 coords 3 2500 0 0 
+node 12 coords 3 0 0 -250 
+node 13 coords 3 250 0 -250 
+node 14 coords 3 500 0 -250 
+node 15 coords 3 750 0 -250 
+node 16 coords 3 1000 0 -250 
+node 17 coords 3 1250 0 -250 
+node 18 coords 3 1500 0 -250 
+node 19 coords 3 1750 0 -250 
+node 20 coords 3 2000 0 -250 
+node 21 coords 3 2250 0 -250 
+node 22 coords 3 2500 0 -250 
+node 23 coords 3 0 0 -500 
+node 24 coords 3 250 0 -500 
+node 25 coords 3 500 0 -500 
+node 26 coords 3 750 0 -500 
+node 27 coords 3 1000 0 -500 
+node 28 coords 3 1250 0 -500 
+node 29 coords 3 1500 0 -500 
+node 30 coords 3 1750 0 -500 
+node 31 coords 3 2000 0 -500 
+node 32 coords 3 2250 0 -500 
+node 33 coords 3 2500 0 -500 
+mitc4shell 1 nodes 4 1 2 13 12 crossSect 2 mat 1  boundaryLoads 2 4 1
+mitc4shell 2 nodes 4 2 3 14 13 crossSect 2 mat 1   boundaryLoads 2 4 1
+mitc4shell 3 nodes 4 3 4 15 14 crossSect 2 mat 1  boundaryLoads 2 4 1 
+mitc4shell 4 nodes 4 4 5 16 15 crossSect 2 mat 1   boundaryLoads 2 4 1
+mitc4shell 5 nodes 4 5 6 17 16 crossSect 2 mat 1   boundaryLoads 2 4 1
+mitc4shell 6 nodes 4 6 7 18 17 crossSect 2 mat 1   boundaryLoads 2 4 1
+mitc4shell 7 nodes 4 7 8 19 18 crossSect 2 mat 1   boundaryLoads 2 4 1
+mitc4shell 8 nodes 4 8 9 20 19 crossSect 2 mat 1   boundaryLoads 2 4 1
+mitc4shell 9 nodes 4 9 10 21 20 crossSect 2 mat 1   boundaryLoads 2 4 1
+mitc4shell 10 nodes 4 10 11 22 21 crossSect 2 mat 1   boundaryLoads 2 4 1
+mitc4shell 11 nodes 4 21 22 33 32 crossSect 2 mat 1   boundaryLoads 2 4 1
+mitc4shell 12 nodes 4 20 21 32 31 crossSect 2 mat 1   boundaryLoads 2 4 1
+mitc4shell 13 nodes 4 19 20 31 30 crossSect 2 mat 1   boundaryLoads 2 4 1
+mitc4shell 14 nodes 4 18 19 30 29 crossSect 2 mat 1   boundaryLoads 2 4 1
+mitc4shell 15 nodes 4 17 18 29 28 crossSect 2 mat 1   boundaryLoads 2 4 1
+mitc4shell 16 nodes 4 16 17 28 27 crossSect 2 mat 1   boundaryLoads 2 4 1
+mitc4shell 17 nodes 4 15 16 27 26 crossSect 2 mat 1   boundaryLoads 2 4 1
+mitc4shell 18 nodes 4 14 15 26 25 crossSect 2 mat 1   boundaryLoads 2 4 1
+mitc4shell 19 nodes 4 13 14 25 24 crossSect 2 mat 1   boundaryLoads 2 4 1
+mitc4shell 20 nodes 4 12 13 24 23 crossSect 2 mat 1   boundaryLoads 2 4 1
+# fictitious section for LumpedMass elements
+SimpleCS 1 thick 0 drillstiffness 0
+SimpleCS 2 thick 300 drillstiffness 1e11
+IsoLE 1 d 2.5E-09 E 30000 n 0.3 tAlpha 0
+BoundaryCondition 1 loadTimeFunction 1 DOFs 6 1 2 3 4 5 6  values 6 0 0 0 0 0 0  set 1
+BoundaryCondition 2 loadTimeFunction 1 DOFs 6 1 2 3 4 5 6  values 6 0 0 0 0 0 0  set 2
+BoundaryCondition 3 loadTimeFunction 1 DOFs 6 1 2 3 4 5 6  values 6 0 0 0 0 0 0  set 3
+# NodalLoad 4 loadTimeFunction 2 Components 1 -10000 DOFs 1 2 set 4
+ConstantSurfaceLoad 4 loadType 2 dofs 1 2 Components 1 1.0 loadTimeFunction 1
+ConstantFunction 1 f(t) 1.0
+PiecewiseLinFunction 2 npoints 2 t 2 0.0 1 f(t) 2 0.0 1.0
+set 1 nodes 1 1
+set 2 nodes 1 12
+set 3 nodes 1 23

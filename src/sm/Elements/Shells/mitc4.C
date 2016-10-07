@@ -1095,13 +1095,17 @@ MITC4Shell :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
 		//answer.at(5) = 0.0;      // mzx
 		//answer.at(6) = (stress1.at(6) - stress2.at(6)) * dist; // mxy
 
+		double meanV1 = 0.5*(stress1.at(1) + stress2.at(1));
+		double meanV2 = 0.5*(stress1.at(2) + stress2.at(2));
+		double meanV6 = 0.5*(stress1.at(6) + stress2.at(6));
+		
 		// sx=12*mxx*z/(t^3)
-		answer.at(1) = stress1.at(2)*powf(t, 3) / (12 * c1.at(3)* t / 2) + stress2.at(2)*powf(t, 3) / (12 * c2.at(3)* t / 2); // mx
-		answer.at(2) = stress1.at(1)*powf(t, 3) / (12 * c1.at(3)* t / 2) + stress2.at(1)*powf(t, 3) / (12 * c2.at(3)* t / 2); // my
+		answer.at(1) = (stress1.at(1) - meanV1)*powf(t, 3) / (12 * c1.at(3)* t / 2) + (stress2.at(1) - meanV1)*powf(t, 3) / (12 * c2.at(3)* t / 2); // mx
+		answer.at(2) = (stress1.at(2) - meanV2)*powf(t, 3) / (12 * c1.at(3)* t / 2) + (stress2.at(2) - meanV2)*powf(t, 3) / (12 * c2.at(3)* t / 2); // my
 		answer.at(3) = 0.0;      // mz
 		answer.at(4) = 0.0;      // mzy
 		answer.at(5) = 0.0;      // mzx
-		answer.at(6) = stress1.at(6)*powf(t, 3) / (12 * c1.at(3)* t / 2) + stress2.at(6)*powf(t, 3) / (12 * c2.at(3)* t / 2); // mxy
+		answer.at(6) = (stress1.at(6) - meanV6)*powf(t, 3) / (12 * c1.at(3)* t / 2) + (stress2.at(6) - meanV6)*powf(t, 3) / (12 * c2.at(3)* t / 2); // mxy
 		return 1;
 	}
 	else if (type == IST_CurvatureTensor) {
@@ -1126,7 +1130,7 @@ MITC4Shell :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
 		answer.at(3) = 0.0;      // mz
 		answer.at(4) = 0.0;      // mzy
 		answer.at(5) = 0.0;      // mzx
-		answer.at(6) = -(strain1.at(6) - strain2.at(6)) / dist; // mxy
+		answer.at(6) = -2*(strain1.at(6) - strain2.at(6)) / dist; // mxy
 		return 1;
     } else {
         return NLStructuralElement :: giveIPValue(answer, gp, type, tStep);
