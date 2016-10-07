@@ -1039,15 +1039,6 @@ MITC4Shell :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
 
     if (  type == IST_ShellStrainTensor ) {
         this->giveCharacteristicTensor(globTensor, LocalStrainTensor, gp, tStep);
-
-		// GlobalStrainTensor
-        //answer.at(1) = globTensor.at(1, 1); //xx
-        //answer.at(2) = globTensor.at(2, 2); //yy
-        //answer.at(3) = globTensor.at(3, 3); //zz
-        //answer.at(4) = 2 * globTensor.at(2, 3); //yz
-        //answer.at(5) = 2 * globTensor.at(1, 3); //xz
-        //answer.at(6) = 2 * globTensor.at(1, 2); //xy
-
 		answer.at(1) = globTensor.at(1, 1); //xx
 		answer.at(2) = globTensor.at(2, 2); //yy
 		answer.at(3) = 0.0; //zz
@@ -1057,9 +1048,6 @@ MITC4Shell :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
 
         return 1;
     } else if ( type == IST_ShellForceTensor ) {
-		FloatArray stress1;
-		stress1 = static_cast< StructuralMaterialStatus * >(gp->giveMaterialStatus())->giveStressVector();
-
 		this->giveCharacteristicTensor(globTensor, LocalForceTensor, gp, tStep);
 		double t = this->giveCrossSection()->give(CS_Thickness, gp)/2;
 
@@ -1089,13 +1077,6 @@ MITC4Shell :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
 		dist = c1.distance(c2) * t / 2;
 
 		// WARNING: sigma11->m11, sigma22->m22
-		//answer.at(1) = (stress1.at(1) - stress2.at(1)) * dist; // mx
-		//answer.at(2) = (stress1.at(2) - stress2.at(2)) * dist; // my
-		//answer.at(3) = 0.0;      // mz
-		//answer.at(4) = 0.0;      // mzy
-		//answer.at(5) = 0.0;      // mzx
-		//answer.at(6) = (stress1.at(6) - stress2.at(6)) * dist; // mxy
-
 		double meanV1 = 0.5*(stress1.at(1) + stress2.at(1));
 		double meanV2 = 0.5*(stress1.at(2) + stress2.at(2));
 		double meanV6 = 0.5*(stress1.at(6) + stress2.at(6));
@@ -1131,7 +1112,7 @@ MITC4Shell :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
 		answer.at(3) = 0.0;      // mz
 		answer.at(4) = 0.0;      // mzy
 		answer.at(5) = 0.0;      // mzx
-		answer.at(6) = -2*(strain1.at(6) - strain2.at(6)) / dist; // mxy
+		answer.at(6) = -2*(strain1.at(6) - strain2.at(6)) / dist; // mxy - TO DO: check 2*
 		return 1;
     } else {
         return NLStructuralElement :: giveIPValue(answer, gp, type, tStep);
