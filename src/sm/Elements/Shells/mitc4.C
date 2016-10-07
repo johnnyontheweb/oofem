@@ -1061,13 +1061,14 @@ MITC4Shell :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
 		stress1 = static_cast< StructuralMaterialStatus * >(gp->giveMaterialStatus())->giveStressVector();
 
 		this->giveCharacteristicTensor(globTensor, LocalForceTensor, gp, tStep);
+		double t = this->giveCrossSection()->give(CS_Thickness, gp)/2;
 
-        answer.at(1) = globTensor.at(1, 1); //xx
-        answer.at(2) = globTensor.at(2, 2); //yy
-		answer.at(3) = 0.0; //zz
-		answer.at(4) = globTensor.at(2, 3); //yz
-		answer.at(5) = globTensor.at(1, 3); //xz
-        answer.at(6) = globTensor.at(1, 2); //xy
+        answer.at(1) = globTensor.at(1, 1)*t; //xx
+        answer.at(2) = globTensor.at(2, 2)*t; //yy
+		answer.at(3) = 0.0; //zz		  *t
+		answer.at(4) = globTensor.at(2, 3)*t; //yz
+		answer.at(5) = globTensor.at(1, 3)*t; //xz
+        answer.at(6) = globTensor.at(1, 2)*t; //xy
 
         return 1;
 	} else if (type == IST_ShellMomentTensor) {
