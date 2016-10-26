@@ -285,8 +285,8 @@ LinearStability :: terminateLinStatic(TimeStep *tStep)
     FILE *File = this->giveOutputStream();
     tStep->setTime(0.);
 
-    fprintf(File, "\nOutput for time %.3e \n\n", tStep->giveTargetTime() );
-    fprintf(File, "Linear static:\n\n");
+    //fprintf(File, "\nOutput for time %.3e \n\n", tStep->giveTargetTime() ); // FP: removed output
+    //fprintf(File, "Linear static:\n\n"); // FP: removed output
 
     if ( requiresUnknownsDictionaryUpdate() ) {
         for ( auto &dman : domain->giveDofManagers() ) {
@@ -296,7 +296,7 @@ LinearStability :: terminateLinStatic(TimeStep *tStep)
 
     for ( auto &dman : domain->giveDofManagers() ) {
         dman->updateYourself(tStep);
-        dman->printOutputAt(File, tStep);
+        //dman->printOutputAt(File, tStep); // FP: removed output
     }
 
 #  ifdef VERBOSE
@@ -307,7 +307,7 @@ LinearStability :: terminateLinStatic(TimeStep *tStep)
     for ( auto &elem : domain->giveElements() ) {
         elem->updateInternalState(tStep);
         elem->updateYourself(tStep);
-        elem->printOutputAt(File, tStep);
+        //elem->printOutputAt(File, tStep); // FP: removed output
     }
 
 #  ifdef VERBOSE
@@ -328,7 +328,7 @@ LinearStability :: terminateLinStatic(TimeStep *tStep)
      * }
      */
 
-    this->printReactionForces(tStep, 1);
+    //this->printReactionForces(tStep, 1);  // FP: removed output
 }
 
 
