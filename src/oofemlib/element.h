@@ -217,8 +217,8 @@ public:
      * Returns the location array for the boundary of the element.
      * Only takes into account nodes in the bNodes vector.
      */
-	virtual void giveBoundaryLocationArray(IntArray &locationArray, const IntArray &bNodes, const UnknownNumberingScheme &s, IntArray *dofIds = NULL);
-	virtual void giveBoundaryLocationArray(IntArray &locationArray, const IntArray &bNodes, const IntArray &dofIDMask, const UnknownNumberingScheme &s, IntArray *dofIds = NULL);
+    virtual void giveBoundaryLocationArray(IntArray &locationArray, const IntArray &bNodes, const UnknownNumberingScheme &s, IntArray *dofIds = NULL);
+    virtual void giveBoundaryLocationArray(IntArray &locationArray, const IntArray &bNodes, const IntArray &dofIDMask, const UnknownNumberingScheme &s, IntArray *dofIds = NULL);
     /**
      * @return Number of DOFs in element.
      */
@@ -311,7 +311,7 @@ public:
     /**
      * Computes the contribution of the given load at the given boundary edge.
      * @note Elements which do not have an contribution should resize the vector to be empty.
-     * @param answer Requested contribution of load.
+     * @param answer Requested contribution of load (in Global c.s.).
      * @param load Load to compute contribution from.
      * @param edge Edge number.
      * @param type Type of the contribution.
@@ -690,6 +690,18 @@ public:
      * @return True, if receiver is activated for given solution step, otherwise false.
      */
     virtual bool isActivated(TimeStep *tStep);
+
+    /**
+     * @return True, if the current time is higher than the casting time of the material, otherwise false.
+     * Used from e.g. vtkxml export module to display only active elements
+     * @note: The element can be activated (isActivated method) before its 
+     * material is actually casted. This case has to be supported by 
+     * the material and can be used to simulate the casting on deformed 
+     * configuration, for example. 
+     * In this case, the material has to define a small stifness 
+     * for solution steps before is actually casted.
+     */
+    virtual bool isCast(TimeStep *tStep);
 
     // time step initialization (required for some non-linear solvers)
     /**

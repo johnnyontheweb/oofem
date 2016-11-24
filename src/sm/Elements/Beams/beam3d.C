@@ -1,36 +1,36 @@
 /*
-*
-*                 #####    #####   ######  ######  ###   ###
-*               ##   ##  ##   ##  ##      ##      ## ### ##
-*              ##   ##  ##   ##  ####    ####    ##  #  ##
-*             ##   ##  ##   ##  ##      ##      ##     ##
-*            ##   ##  ##   ##  ##      ##      ##     ##
-*            #####    #####   ##      ######  ##     ##
-*
-*
-*             OOFEM : Object Oriented Finite Element Code
-*
-*               Copyright (C) 1993 - 2013   Borek Patzak
-*
-*
-*
-*       Czech Technical University, Faculty of Civil Engineering,
-*   Department of Structural Mechanics, 166 29 Prague, Czech Republic
-*
-*  This library is free software; you can redistribute it and/or
-*  modify it under the terms of the GNU Lesser General Public
-*  License as published by the Free Software Foundation; either
-*  version 2.1 of the License, or (at your option) any later version.
-*
-*  This program is distributed in the hope that it will be useful,
-*  but WITHOUT ANY WARRANTY; without even the implied warranty of
-*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-*  Lesser General Public License for more details.
-*
-*  You should have received a copy of the GNU Lesser General Public
-*  License along with this library; if not, write to the Free Software
-*  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
-*/
+ *
+ *                 #####    #####   ######  ######  ###   ###
+ *               ##   ##  ##   ##  ##      ##      ## ### ##
+ *              ##   ##  ##   ##  ####    ####    ##  #  ##
+ *             ##   ##  ##   ##  ##      ##      ##     ##
+ *            ##   ##  ##   ##  ##      ##      ##     ##
+ *            #####    #####   ##      ######  ##     ##
+ *
+ *
+ *             OOFEM : Object Oriented Finite Element Code
+ *
+ *               Copyright (C) 1993 - 2013   Borek Patzak
+ *
+ *
+ *
+ *       Czech Technical University, Faculty of Civil Engineering,
+ *   Department of Structural Mechanics, 166 29 Prague, Czech Republic
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2.1 of the License, or (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
 
 #include "../sm/Elements/Beams/beam3d.h"
 #include "../sm/Materials/structuralms.h"
@@ -212,6 +212,11 @@ namespace oofem {
 	{
 		// compute clamped stiffness
 		this->computeLocalStiffnessMatrix(answer, rMode, tStep);
+		if (subsoilMat) {
+			FloatMatrix k;
+			this->computeSubSoilStiffnessMatrix(k, rMode, tStep);
+			answer.add(k);
+		}
 	}
 
 
@@ -305,7 +310,6 @@ namespace oofem {
 		// Returns the rotation matrix of the receiver.
 	{
 		FloatMatrix lcs;
-
 		int ndofs = computeNumberOfGlobalDofs();
 		answer.resize(ndofs, ndofs);
 		answer.zero();
@@ -355,6 +359,26 @@ namespace oofem {
 	}
 
 
+
+	void
+		Beam3d::B3SSMI_getUnknownsGtoLRotationMatrix(FloatMatrix &answer)
+		// Returns the rotation matrix for element unknowns
+	{
+		FloatMatrix lcs;
+
+		answer.resize(6, 6);
+		answer.zero();
+
+		this->giveLocalCoordinateSystem(lcs);
+		for (int i = 1; i <= 3; i++) {
+			for (int j = 1; j <= 3; j++) {
+				answer.at(i, j) = lcs.at(i, j);
+				answer.at(i + 3, j + 3) = lcs.at(i, j);
+			}
+		}
+
+	}
+
 	double
 		Beam3d::computeVolumeAround(GaussPoint *gp)
 	{
@@ -367,11 +391,11 @@ namespace oofem {
 		Beam3d::giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep)
 	{
 		if (type == IST_BeamForceMomentumTensor) {
-			answer = static_cast< StructuralMaterialStatus * >(gp->giveMaterialStatus())->giveStressVector();
+			answer = static_cast<StructuralMaterialStatus *>(gp->giveMaterialStatus())->giveStressVector();
 			return 1;
 		}
 		else if (type == IST_BeamStrainCurvatureTensor) {
-			answer = static_cast< StructuralMaterialStatus * >(gp->giveMaterialStatus())->giveStrainVector();
+			answer = static_cast<StructuralMaterialStatus *>(gp->giveMaterialStatus())->giveStrainVector();
 			return 1;
 		}
 		else {
@@ -474,11 +498,16 @@ namespace oofem {
 		lx.beDifferenceOf(*nodeB->giveCoordinates(), *nodeA->giveCoordinates());
 		lx.normalize();
 
-		if (!this->usingAngle) {
+		if (this->referenceNode) {
 			Node *refNode = this->giveDomain()->giveNode(this->referenceNode);
 			help.beDifferenceOf(*refNode->giveCoordinates(), *nodeA->giveCoordinates());
 
 			lz.beVectorProductOf(lx, help);
+			lz.normalize();
+		}
+		else if (this->zaxis.giveSize() > 0) {
+			lz = this->zaxis;
+			lz.add(lz.dotProduct(lx), lx);
 			lz.normalize();
 		}
 		else {
@@ -499,8 +528,9 @@ namespace oofem {
 
 			help.at(3) = 1.0;         // up-vector
 			// here is ly is used as a temp var
-			double prvect = acos(lx.dotProduct(help));
-			if (prvect < 0.001 || prvect > M_PI - 0.001) { // Check if it is vertical
+			// double prvect = acos(lx.dotProduct(help));
+			// if (prvect < 0.001 || prvect > M_PI - 0.001) { // Check if it is vertical
+			if (fabs(lx.dotProduct(help)) > 0.999) { // Check if it is vertical
 				ly = { 0., 1., 0. };
 			}
 			else {
@@ -622,13 +652,13 @@ namespace oofem {
 
 	}
 
-
 	void
 		Beam3d::giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord)
 	{
 #if 0
 		FloatMatrix stiffness;
 		FloatArray u;
+
 		this->computeStiffnessMatrix(stiffness, SecantStiffness, tStep);
 		this->computeVectorOf(VM_Total, tStep, u);
 		answer.beProductOf(stiffness, u);
@@ -681,7 +711,7 @@ namespace oofem {
 		// evaluates the receivers edge load vector
 		// for clamped beam
 		//
-		BoundaryLoad *edgeLoad = dynamic_cast< BoundaryLoad * >(load);
+		BoundaryLoad *edgeLoad = dynamic_cast<BoundaryLoad *>(load);
 		if (edgeLoad) {
 
 			answer.resize(12);
@@ -1038,7 +1068,7 @@ namespace oofem {
 		Beam3d::giveInterface(InterfaceType interface)
 	{
 		if (interface == FiberedCrossSectionInterfaceType) {
-			return static_cast< FiberedCrossSectionInterface * >(this);
+			return static_cast<FiberedCrossSectionInterface *>(this);
 		}
 
 		return NULL;
