@@ -50,6 +50,10 @@
 #include "dynamicinputrecord.h"
 #include "elementinternaldofman.h"
 #include "masterdof.h"
+#include "bctracker.h"
+
+#include "bodyload.h"
+#include "boundaryload.h"
 
 #ifdef __OOFEG
 #include "oofeggraphiccontext.h"
@@ -560,7 +564,13 @@ namespace oofem {
 	{
 		IRResultType result;                    // Required by IR_GIVE_FIELD macro
 
-		if (ir->hasField(_IFT_Beam3d_refnode)) {
+		referenceNode = 0;
+		referenceAngle = 0;
+		this->zaxis.clear();
+		if (ir->hasField(_IFT_Beam3d_zaxis)) {
+			IR_GIVE_FIELD(ir, this->zaxis, _IFT_Beam3d_zaxis);
+		}
+		else if (ir->hasField(_IFT_Beam3d_refnode)) {
 			IR_GIVE_FIELD(ir, referenceNode, _IFT_Beam3d_refnode);
 			if (referenceNode == 0) {
 				OOFEM_WARNING("wrong reference node specified. Using default orientation.");
@@ -568,10 +578,10 @@ namespace oofem {
 		}
 		else if (ir->hasField(_IFT_Beam3d_refangle)) {
 			IR_GIVE_FIELD(ir, referenceAngle, _IFT_Beam3d_refangle);
-			usingAngle = true;
 		}
 		else {
-			OOFEM_ERROR("reference node or reference angle not set")
+			OOFEM_WARNING("y-axis, reference node or angle not set");
+			return IRRT_NOTFOUND;
 		}
 
 		if (ir->hasField(_IFT_Beam3d_dofstocondense)) {
@@ -596,7 +606,7 @@ namespace oofem {
 				}
 				else {
 					if (ghostNodes[1] == NULL) {
-						ghostNodes[1] = new ElementDofManager(2, giveDomain(), this);
+						ghostNodes[1] = new ElementDofManager(2, giveDomain(), this); // use 2 to distinguish the end the ghost node is associated to
 					}
 					ghostNodes[1]->appendDof(new MasterDof(ghostNodes[1], mask[val.at(i) - 7]));
 				}
@@ -606,6 +616,9 @@ namespace oofem {
 		else {
 			//dofsToCondense = NULL;
 		}
+
+		this->subsoilMat = 0;
+		IR_GIVE_OPTIONAL_FIELD(ir, this->subsoilMat, _IFT_Beam3d_subsoilmat);
 
 		return StructuralElement::initializeFrom(ir);
 	}
@@ -691,9 +704,46 @@ namespace oofem {
 		this->giveInternalForcesVector(answer, tStep);
 
 		// add exact end forces due to nonnodal loading
-		this->computeForceLoadVector(loadEndForces, tStep, VM_Total);
+		this->computeForceLoadVector(loadEndForces, tStep, VM_Total); // will compute only contribution of loads applied directly on receiver (not using sets)
 		if (loadEndForces.giveSize()) {
 			answer.subtract(loadEndForces);
+		}
+
+		// add exact end forces due to nonnodal loading applied indirectly (via sets)
+		BCTracker *bct = this->domain->giveBCTracker();
+		BCTracker::entryListType bcList = bct->getElementRecords(this->number);
+		FloatArray help;
+		FloatMatrix t;
+
+		for (BCTracker::entryListType::iterator it = bcList.begin(); it != bcList.end(); ++it) {
+			GeneralBoundaryCondition *bc = this->domain->giveBc((*it).bcNumber);
+			BodyLoad *bodyLoad;
+			BoundaryLoad *boundaryLoad;
+			if (bc->isImposed(tStep)) {
+				if ((bodyLoad = dynamic_cast<BodyLoad*>(bc))) { // body load
+					this->computeBodyLoadVectorAt(help, bodyLoad, tStep, VM_Total); // this one is local
+					answer.subtract(help);
+				}
+				else if ((boundaryLoad = dynamic_cast<BoundaryLoad*>(bc))) {
+					// compute Boundary Edge load vector in GLOBAL CS !!!!!!!
+					this->computeBoundaryEdgeLoadVector(help, boundaryLoad, (*it).boundaryId,
+						ExternalForcesVector, VM_Total, tStep);
+					// get it transformed back to local c.s.
+					this->computeGtoLRotationMatrix(t);
+					help.rotatedWith(t, 'n');
+					answer.subtract(help);
+				}
+			}
+		}
+
+		if (subsoilMat) {
+			// @todo: linear subsoil assumed here; more general approach should integrate internal forces
+			FloatMatrix k;
+			FloatArray u, F;
+			this->computeSubSoilStiffnessMatrix(k, TangentStiffness, tStep);
+			this->computeVectorOf(VM_Total, tStep, u);
+			F.beProductOf(k, u);
+			answer.add(F);
 		}
 	}
 
@@ -902,9 +952,9 @@ namespace oofem {
 		GaussPoint *gp = integrationRulesArray[0]->getIntegrationPoint(0);
 
 		/*
-		* StructuralElement::computeMassMatrix(answer, tStep);
-		* answer.times(this->giveCrossSection()->give('A'));
-		*/
+		 * StructuralElement::computeMassMatrix(answer, tStep);
+		 * answer.times(this->giveCrossSection()->give('A'));
+		 */
 		double l = this->computeLength();
 		double kappay = this->giveKappayCoeff(tStep);
 		double kappaz = this->giveKappazCoeff(tStep);
@@ -1070,6 +1120,9 @@ namespace oofem {
 		if (interface == FiberedCrossSectionInterfaceType) {
 			return static_cast<FiberedCrossSectionInterface *>(this);
 		}
+		else if (interface == Beam3dSubsoilMaterialInterfaceType) {
+			return static_cast<Beam3dSubsoilMaterialInterface *>(this);
+		}
 
 		return NULL;
 	}
@@ -1079,7 +1132,7 @@ namespace oofem {
 		Beam3d::updateLocalNumbering(EntityRenumberingFunctor &f)
 	{
 		StructuralElement::updateLocalNumbering(f);
-		if (!this->usingAngle) {
+		if (this->referenceNode) {
 			this->referenceNode = f(this->referenceNode, ERS_DofManager);
 		}
 	}
@@ -1138,4 +1191,34 @@ namespace oofem {
 		EMAddGraphicsToModel(ESIModel(), go);
 	}
 #endif
+
+	void
+		Beam3d::computeSubSoilNMatrixAt(GaussPoint *gp, FloatMatrix &answer)
+	{
+		// only winkler model supported now (passing only unknown interpolation)
+		this->computeNmatrixAt(gp->giveNaturalCoordinates(), answer);
+	}
+
+
+	void
+		Beam3d::computeSubSoilStiffnessMatrix(FloatMatrix &answer,
+		MatResponseMode rMode, TimeStep *tStep)
+	{
+
+		double l = this->computeLength();
+		FloatMatrix N, DN, d;
+		answer.clear();
+		for (GaussPoint *gp : *this->giveDefaultIntegrationRulePtr()) {
+			this->computeSubSoilNMatrixAt(gp, N);
+			((StructuralMaterial*)this->domain->giveMaterial(subsoilMat))->give3dBeamSubSoilStiffMtrx(d, rMode, gp, tStep);
+			double dV = gp->giveWeight() * 0.5 * l;
+			DN.beProductOf(d, N);
+			answer.plusProductSymmUpper(N, DN, dV);
+		}
+		answer.symmetrized();
+	}
+
+
+
+
 } // end namespace oofem
