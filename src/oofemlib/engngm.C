@@ -94,6 +94,8 @@
 namespace oofem {
 EngngModel :: EngngModel(int i, EngngModel *_master) : domainNeqs(), domainPrescribedNeqs()
 {
+    suppressOutput = false;
+
     number = i;
     defaultErrEstimator = NULL;
     numberOfSteps = 0;
@@ -220,27 +222,17 @@ int EngngModel :: instanciateYourself(DataReader *dr, InputRecord *ir, const cha
         this->dataOutputFileName.append(".oofeg");
     }
 
-    if ( ( outputStream = fopen(this->dataOutputFileName.c_str(), "w") ) == NULL ) {
-        OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str());
-    }
 
     this->Instanciate_init(); // Must be done after initializeFrom
 
-    fprintf(outputStream, "%s", PRG_HEADER);
-    this->startTime = time(NULL);
-    fprintf( outputStream, "\nStarting analysis on: %s\n", ctime(& this->startTime) );
 
-    fprintf(outputStream, "%s\n", desc);
+    this->startTime = time(NULL);
 
 #  ifdef VERBOSE
     OOFEM_LOG_DEBUG( "Reading all data from input file %s\n", dr->giveDataSourceName() );
 #  endif
-#ifdef __PARALLEL_MODE
-    if ( this->isParallel() ) {
-        fprintf(outputStream, "Problem rank is %d/%d on %s\n\n", this->rank, this->numProcs, this->processor_name);
-    }
 
-#endif
+    simulationDescription = std::string(desc);
 
     // instanciate receiver
     this->initializeFrom(ir);
@@ -323,6 +315,29 @@ EngngModel :: initializeFrom(InputRecord *ir)
     force_load_rebalance_in_first_step = _val;
 
 #endif
+
+    suppressOutput = ir->hasField(_IFT_EngngModel_suppressOutput);
+
+    if ( suppressOutput ) {
+        printf("Suppressing output.\n");
+    }
+    else {
+
+        if ( ( outputStream = fopen(this->dataOutputFileName.c_str(), "w") ) == NULL ) {
+            OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str());
+        }
+
+        fprintf(outputStream, "%s", PRG_HEADER);
+        fprintf(outputStream, "\nStarting analysis on: %s\n", ctime(& this->startTime) );
+        fprintf(outputStream, "%s\n", simulationDescription.c_str());
+
+#ifdef __PARALLEL_MODE
+        if ( this->isParallel() ) {
+            fprintf(outputStream, "Problem rank is %d/%d on %s\n\n", this->rank, this->numProcs, this->processor_name);
+        }
+#endif
+    }
+
     return IRRT_OK;
 }
 
@@ -500,7 +515,6 @@ void
 EngngModel :: solveYourself()
 {
     int smstep = 1, sjstep = 1;
-    FILE *out = this->giveOutputStream();
 
     this->timer.startTimer(EngngModelTimer :: EMTT_AnalysisTimer);
 
@@ -541,8 +555,10 @@ EngngModel :: solveYourself()
             OOFEM_LOG_INFO("EngngModel info: user time consumed by solution step %d: %.2fs\n",
                            this->giveCurrentStep()->giveNumber(), _steptime);
 
-            fprintf(out, "\nUser time consumed by solution step %d: %.3f [s]\n\n",
-                    this->giveCurrentStep()->giveNumber(), _steptime);
+            if(!suppressOutput) {
+            	fprintf(this->giveOutputStream(), "\nUser time consumed by solution step %d: %.3f [s]\n\n",
+            			this->giveCurrentStep()->giveNumber(), _steptime);
+            }
 
 #ifdef __PARALLEL_MODE
             if ( loadBalancingFlag ) {
@@ -553,6 +569,28 @@ EngngModel :: solveYourself()
         }
     }
 }
+
+TimeStep* EngngModel :: generateNextStep(/* arguments */) {
+  /* code */
+  int smstep = 1, sjstep = 1;
+  if ( this->currentStep ) {
+      smstep = this->currentStep->giveMetaStepNumber();
+      sjstep = this->giveMetaStep(smstep)->giveStepRelativeNumber( this->currentStep->giveNumber() ) + 1;
+  }
+
+  // test if sjstep still valid for MetaStep
+  if (sjstep > this->giveMetaStep(smstep)->giveNumberOfSteps())
+    smstep++;
+  if (smstep > nMetaSteps) return NULL; // no more metasteps
+
+  this->initMetaStepAttributes(this->giveMetaStep(smstep));
+
+  this->preInitializeNextStep();
+  return this->giveNextStep();
+}
+
+
+
 
 void
 EngngModel :: initMetaStepAttributes(MetaStep *mStep)
@@ -634,7 +672,6 @@ void
 EngngModel :: terminate(TimeStep *tStep)
 {
     this->doStepOutput(tStep);
-    fflush( this->giveOutputStream() );
     this->saveStepContext(tStep);
 }
 
@@ -642,10 +679,11 @@ EngngModel :: terminate(TimeStep *tStep)
 void
 EngngModel :: doStepOutput(TimeStep *tStep)
 {
-    FILE *File = this->giveOutputStream();
+    if(!suppressOutput) {
+        this->printOutputAt(this->giveOutputStream(), tStep);
+        fflush( this->giveOutputStream() );
+    }
 
-    // print output
-    this->printOutputAt(File, tStep);
     // export using export manager
     exportModuleManager->doOutput(tStep);
 }
@@ -668,11 +706,10 @@ EngngModel :: saveStepContext(TimeStep *tStep)
 
 
 void
-EngngModel :: printOutputAt(FILE *File, TimeStep *tStep)
+EngngModel :: printOutputAt(FILE *file, TimeStep *tStep)
 {
     int domCount = 0;
 
-    // fprintf (File,"\nOutput for time step number %d \n\n",tStep->giveNumber());
     for ( auto &domain: domainList ) {
         domCount += domain->giveOutputManager()->testTimeStepOutput(tStep);
     }
@@ -681,14 +718,14 @@ EngngModel :: printOutputAt(FILE *File, TimeStep *tStep)
         return;              // do not print even Solution step header
     }
 
-    fprintf(File, "\n==============================================================");
-    fprintf(File, "\nOutput for time %.8e ", tStep->giveTargetTime() * this->giveVariableScale(VST_Time) );
-    fprintf(File, "\n==============================================================\n");
+    fprintf(file, "\n==============================================================");
+    fprintf(file, "\nOutput for time %.8e ", tStep->giveTargetTime() * this->giveVariableScale(VST_Time) );
+    fprintf(file, "\n==============================================================\n");
     for ( auto &domain: domainList ) {
-        fprintf( File, "Output for domain %3d\n", domain->giveNumber() );
+        fprintf( file, "Output for domain %3d\n", domain->giveNumber() );
 
-        domain->giveOutputManager()->doDofManOutput(File, tStep);
-        domain->giveOutputManager()->doElementOutput(File, tStep);
+        domain->giveOutputManager()->doDofManOutput(file, tStep);
+        domain->giveOutputManager()->doElementOutput(file, tStep);
     }
 }
 
@@ -754,7 +791,7 @@ void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAss
         if ( ( abc = dynamic_cast< ActiveBoundaryCondition * >(bc) ) ) {
             ma.assembleFromActiveBC(answer, *abc, tStep, s, s);
         } else if ( bc->giveSetNumber() && ( load = dynamic_cast< Load * >(bc) ) && bc->isImposed(tStep) ) {
-            // Now we assemble the corresponding load type fo the respective components in the set:
+            // Now we assemble the corresponding load type for the respective components in the set:
             IntArray loc, bNodes;
             FloatMatrix mat, R;
             BodyLoad *bodyLoad;
@@ -816,12 +853,12 @@ void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAss
             }
         }
     }
-    
+
     if ( domain->hasContactManager() ) {
         OOFEM_ERROR("Contant problems temporarily deactivated");
         //domain->giveContactManager()->assembleTangentFromContacts(answer, tStep, type, s, s);
     }
-    
+
     this->timer.pauseTimer(EngngModelTimer :: EMTT_NetComputationalStepTimer);
 
     answer.assembleBegin();
@@ -921,7 +958,7 @@ void EngngModel :: assembleVector(FloatArray &answer, TimeStep *tStep,
 void EngngModel :: assembleVectorFromDofManagers(FloatArray &answer, TimeStep *tStep, const VectorAssembler &va, ValueModeType mode,
                                                  const UnknownNumberingScheme &s, Domain *domain, FloatArray *eNorms)
 {
-    ///@todo This should be removed when it loads are given through sets.
+    ///@todo This should be removed when loads are given through sets.
     IntArray loc, dofids;
     FloatArray charVec;
     FloatMatrix R;
@@ -988,7 +1025,7 @@ void EngngModel :: assembleVectorFromBC(FloatArray &answer, TimeStep *tStep,
         if ( ( abc = dynamic_cast< ActiveBoundaryCondition * >(bc) ) ) {
             va.assembleFromActiveBC(answer, *abc, tStep, mode, s, eNorms);
         } else if ( bc->giveSetNumber() && ( load = dynamic_cast< Load * >(bc) ) && bc->isImposed(tStep) ) {
-            // Now we assemble the corresponding load type fo the respective components in the set:
+            // Now we assemble the corresponding load type for the respective components in the set:
             IntArray dofids, loc, bNodes;
             FloatArray charVec;
             FloatMatrix R;
@@ -1002,65 +1039,72 @@ void EngngModel :: assembleVectorFromBC(FloatArray &answer, TimeStep *tStep,
                 const IntArray &elements = set->giveElementList();
                 for ( int ielem = 1; ielem <= elements.giveSize(); ++ielem ) {
                     Element *element = domain->giveElement( elements.at(ielem) );
-                    charVec.clear();
-                    va.vectorFromLoad(charVec, *element, bodyLoad, tStep, mode);
+		    if ( element->isActivated(tStep) ) {
+		      charVec.clear();
+		      va.vectorFromLoad(charVec, *element, bodyLoad, tStep, mode);
 
-                    if ( charVec.isNotEmpty() ) {
+		      if ( charVec.isNotEmpty() ) {
                         if ( element->giveRotationMatrix(R) ) {
-                            charVec.rotatedWith(R, 't');
+			  charVec.rotatedWith(R, 't');
                         }
 
                         va.locationFromElement(loc, *element, s, & dofids);
                         answer.assemble(charVec, loc);
 
                         if ( eNorms ) {
-                            eNorms->assembleSquared(charVec, dofids);
+			  eNorms->assembleSquared(charVec, dofids);
                         }
-                    }
+		      }
+		    }
                 }
             } else if ( ( bLoad = dynamic_cast< BoundaryLoad * >(load) ) ) { // Boundary load:
                 const IntArray &boundaries = set->giveBoundaryList();
                 for ( int ibnd = 1; ibnd <= boundaries.giveSize() / 2; ++ibnd ) {
                     Element *element = domain->giveElement( boundaries.at(ibnd * 2 - 1) );
-                    int boundary = boundaries.at(ibnd * 2);
-                    charVec.clear();
-                    va.vectorFromBoundaryLoad(charVec, *element, bLoad, boundary, tStep, mode);
+		    if ( element->isActivated(tStep) ) {
 
-                    if ( charVec.isNotEmpty() ) {
+		      int boundary = boundaries.at(ibnd * 2);
+		      charVec.clear();
+		      va.vectorFromBoundaryLoad(charVec, *element, bLoad, boundary, tStep, mode);
+
+		      if ( charVec.isNotEmpty() ) {
                         element->giveInterpolation()->boundaryGiveNodes(bNodes, boundary);
                         if ( element->computeDofTransformationMatrix(R, bNodes, false) ) {
-                            charVec.rotatedWith(R, 't');
+			  charVec.rotatedWith(R, 't');
                         }
 
                         va.locationFromElementNodes(loc, *element, bNodes, s, & dofids);
                         answer.assemble(charVec, loc);
 
                         if ( eNorms ) {
-                            eNorms->assembleSquared(charVec, dofids);
+			  eNorms->assembleSquared(charVec, dofids);
                         }
-                    }
+		      }
+		    }
                 }
                 ///@todo Should we have a seperate entry for edge loads? Just sticking to the general "boundaryload" for now.
                 const IntArray &edgeBoundaries = set->giveEdgeList();
                 for ( int ibnd = 1; ibnd <= edgeBoundaries.giveSize() / 2; ++ibnd ) {
-                    Element *element = domain->giveElement( edgeBoundaries.at(ibnd * 2 - 1) );
-                    int boundary = edgeBoundaries.at(ibnd * 2);
-                    charVec.clear();
-                    va.vectorFromEdgeLoad(charVec, *element, bLoad, boundary, tStep, mode);
+		  Element *element = domain->giveElement( edgeBoundaries.at(ibnd * 2 - 1) );
+		  if ( element->isActivated(tStep) ) {
+		    int boundary = edgeBoundaries.at(ibnd * 2);
+		    charVec.clear();
+		    va.vectorFromEdgeLoad(charVec, *element, bLoad, boundary, tStep, mode);
 
-                    if ( charVec.isNotEmpty() ) {
-                        element->giveInterpolation()->boundaryEdgeGiveNodes(bNodes, boundary);
-                        if ( element->computeDofTransformationMatrix(R, bNodes, false) ) {
-                            charVec.rotatedWith(R, 't');
-                        }
+		    if ( charVec.isNotEmpty() ) {
+		      element->giveInterpolation()->boundaryEdgeGiveNodes(bNodes, boundary);
+		      if ( element->computeDofTransformationMatrix(R, bNodes, false) ) {
+			charVec.rotatedWith(R, 't');
+		      }
 
-						va.locationFromElementNodes(loc, *element, bNodes, s, & dofids);
-						answer.assemble(charVec, loc);
+		      va.locationFromElementNodes(loc, *element, bNodes, s, & dofids);
+		      answer.assemble(charVec, loc);
 
-                        if ( eNorms ) {
-                            eNorms->assembleSquared(charVec, dofids);
-                        }
-                    }
+		      if ( eNorms ) {
+			eNorms->assembleSquared(charVec, dofids);
+		      }
+		    }
+		  }
                 }
             } else if ( ( nLoad = dynamic_cast< NodalLoad * >(load) ) ) { // Nodal load:
                 const IntArray &nodes = set->giveNodeList();
@@ -1191,20 +1235,33 @@ EngngModel :: assembleExtrapolatedForces(FloatArray &answer, TimeStep *tStep, Ch
         ///@todo This is not perfect. It is probably no good for viscoelastic materials, and possibly other scenarios that are rate dependent
         ///(tangent will be computed for the previous step, with whatever deltaT it had)
         element->giveCharacteristicMatrix(charMatrix, type, tStep);
-		if (charMatrix.isNotEmpty()) {
-			element->computeVectorOf(VM_Incremental, tStep, delta_u);
-			charVec.beProductOf(charMatrix, delta_u);
-			if ( element->giveRotationMatrix(R) ) {
-				charVec.rotatedWith(R, 't');
-			}
-		}
+        if ( charMatrix.isNotEmpty() ) {
+            ///@note Temporary work-around for active b.c. used in multiscale (it can't support VM_Incremental easily).
+            //element->computeVectorOf(VM_Incremental, tStep, delta_u);
+            element->computeVectorOf(VM_Total, tStep, delta_u);
+            FloatArray tmp;
 
-        ///@todo Deal with element deactivation and reactivation properly.
-#ifdef _OPENMP
- #pragma omp critical
-#endif
-        {
-            answer.assemble(charVec, loc);
+            if(tStep->isTheFirstStep() ) {
+            	tmp = delta_u;
+            	tmp.zero();
+            }
+            else {
+            	element->computeVectorOf(VM_Total, tStep->givePreviousStep(), tmp);
+            }
+
+            delta_u.subtract(tmp);
+            charVec.beProductOf(charMatrix, delta_u);
+            if ( element->giveRotationMatrix(R) ) {
+                charVec.rotatedWith(R, 't');
+            }
+
+            ///@todo Deal with element deactivation and reactivation properly.
+    #ifdef _OPENMP
+    #pragma omp critical
+    #endif
+            {
+                answer.assemble(charVec, loc);
+            }
         }
     }
 
@@ -1217,7 +1274,7 @@ EngngModel :: assembleVectorFromContacts(FloatArray &answer, TimeStep *tStep, Ch
 {
     if( domain->hasContactManager()) {
         domain->giveContactManager()->assembleVectorFromContacts(answer, tStep, type, mode, s, domain, eNorms);
-    } 
+    }
 }
 
 
@@ -1329,7 +1386,7 @@ contextIOResultType EngngModel :: saveContext(DataStream *stream, ContextMode mo
 
 
     for ( auto &domain: domainList ) {
-        domain->saveContext(*stream, mode, obj);
+        domain->saveContext(*stream, mode);
     }
 
 
@@ -1436,7 +1493,7 @@ contextIOResultType EngngModel :: restoreContext(DataStream *stream, ContextMode
     }
 
     for ( auto &domain: domainList ) {
-        domain->restoreContext(*stream, mode, obj);
+        domain->restoreContext(*stream, mode);
     }
 
     // restore nMethod
@@ -1632,14 +1689,18 @@ EngngModel :: giveMetaStep(int i)
     return NULL;
 }
 
-void 
-EngngModel::letOutputBaseFileNameBe(const std :: string &src) {
-  this->dataOutputFileName = src;
+void
+EngngModel::letOutputBaseFileNameBe(const std :: string &src)
+{
+    this->dataOutputFileName = src;
 
-  if ( outputStream) fclose(outputStream);
-  if ( ( outputStream = fopen(this->dataOutputFileName.c_str(), "w") ) == NULL ) {
-    OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str());
-  }
+    if ( outputStream ) fclose(outputStream);
+
+    if ( !suppressOutput ) {
+        if ( ( outputStream = fopen(this->dataOutputFileName.c_str(), "w") ) == NULL ) {
+            OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str());
+        }
+    }
 }
 
 FILE *
@@ -1675,18 +1736,22 @@ EngngModel :: terminateAnalysis()
 {
     int rsec = 0, rmin = 0, rhrs = 0;
     int usec = 0, umin = 0, uhrs = 0;
-    FILE *out = this->giveOutputStream();
     time_t endTime = time(NULL);
     this->timer.stopTimer(EngngModelTimer :: EMTT_AnalysisTimer);
 
-    
-    fprintf(out, "\nFinishing analysis on: %s\n", ctime(& endTime) );
+
     // compute real time consumed
     this->giveAnalysisTime(rhrs, rmin, rsec, uhrs, umin, usec);
-    fprintf(out, "Real time consumed: %03dh:%02dm:%02ds\n", rhrs, rmin, rsec);
+
+    if(!suppressOutput) {
+        FILE *out = this->giveOutputStream();
+        fprintf(out, "\nFinishing analysis on: %s\n", ctime(& endTime) );
+        fprintf(out, "Real time consumed: %03dh:%02dm:%02ds\n", rhrs, rmin, rsec);
+        fprintf(out, "User time consumed: %03dh:%02dm:%02ds\n\n\n", uhrs, umin, usec);
+    }
+
     OOFEM_LOG_FORCED("\n\nANALYSIS FINISHED\n\n\n");
     OOFEM_LOG_FORCED("Real time consumed: %03dh:%02dm:%02ds\n", rhrs, rmin, rsec);
-    fprintf(out, "User time consumed: %03dh:%02dm:%02ds\n\n\n", uhrs, umin, usec);
     OOFEM_LOG_FORCED("User time consumed: %03dh:%02dm:%02ds\n", uhrs, umin, usec);
     exportModuleManager->terminate();
 }
@@ -1719,13 +1784,11 @@ EngngModel :: checkProblemConsistency()
 void
 EngngModel :: postInitialize()
 {
-
     // set meta step bounds
     int istep = this->giveNumberOfFirstStep(true);
     for ( auto &metaStep: metaStepList ) {
         istep = metaStep.setStepBounds(istep);
     }
-
 
     for ( auto &domain: domainList ) {
         domain->postInitialize();

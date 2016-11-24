@@ -454,7 +454,6 @@ Element :: giveBoundaryLocationArray(IntArray &locationArray, const IntArray &bN
 
 
 Material *Element :: giveMaterial()
-// Returns the material of the receiver.
 {
 #ifdef DEBUG
     if ( !material ) {
@@ -466,7 +465,6 @@ Material *Element :: giveMaterial()
 
 
 CrossSection *Element :: giveCrossSection()
-// Returns the crossSection of the receiver.
 {
 #ifdef DEBUG
     if ( !crossSection ) {
@@ -486,7 +484,6 @@ Element :: giveRegionNumber()
 
 DofManager *
 Element :: giveDofManager(int i) const
-// Returns the i-th node of the receiver.
 {
 #ifdef DEBUG
     if ( ( i <= 0 ) || ( i > dofManArray.giveSize() ) ) {
@@ -498,7 +495,6 @@ Element :: giveDofManager(int i) const
 
 void
 Element :: addDofManager(DofManager *dMan)
-// Adds a new dMan to the dofManArray
 {
 #ifdef DEBUG
     if ( dMan == NULL ) {
@@ -508,12 +504,10 @@ Element :: addDofManager(DofManager *dMan)
     int size =  dofManArray.giveSize();
     this->dofManArray.resizeWithValues( size + 1 );
     this->dofManArray.at(size + 1) = dMan->giveGlobalNumber();
-    
 }
 
 ElementSide *
 Element :: giveSide(int i) const
-// Returns the i-th side of the receiver.
 {
 #ifdef DEBUG
     if ( ( i <= 0 ) || ( i > dofManArray.giveSize() ) ) {
@@ -729,7 +723,6 @@ Element :: postInitialize()
 
 void
 Element :: printOutputAt(FILE *file, TimeStep *tStep)
-// Performs end-of-step operations.
 {
     fprintf( file, "element %d (%8d) :\n", this->giveLabel(), this->giveNumber() );
 
@@ -772,6 +765,54 @@ Element :: isActivated(TimeStep *tStep)
     }
 }
 
+
+
+bool
+Element :: isCast(TimeStep *tStep)
+{
+
+         // this approach used to work when material was assigned to element
+          //    if ( tStep->giveIntrinsicTime() >= this->giveMaterial()->giveCastingTime() )  
+
+  
+  if ( tStep ) {
+
+    double castingTime;    
+    double tNow = tStep->giveIntrinsicTime();
+    
+    if ( integrationRulesArray.size() > 1 ) {
+      
+      for ( int i = 0; i < (int)integrationRulesArray.size(); i++ ) {
+        IntegrationRule *iRule;
+        iRule = integrationRulesArray [ i ].get();
+        
+        for ( GaussPoint *gp: *iRule ) {
+          castingTime =  this->giveCrossSection()->giveMaterial(gp)->giveCastingTime();
+
+          if (tNow < castingTime ) {
+            return false;
+          }          
+        }
+      }
+    } else {
+      
+      for ( GaussPoint *gp: *this->giveDefaultIntegrationRulePtr() ) {
+        castingTime =  this->giveCrossSection()->giveMaterial(gp)->giveCastingTime();
+        
+         if (tNow < castingTime ) {
+           return false;
+         }
+      }
+    }
+    
+    return true;
+    
+  } else {
+    return false;
+  }
+  
+}
+
 void
 Element :: initForNewStep()
 // initializes receiver to new time step or can be used
@@ -786,10 +827,7 @@ Element :: initForNewStep()
 
 
 contextIOResultType Element :: saveContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// saves full element context (saves state variables, that completely describe
-// current state)
-//
+// saves full element context (saves state variables, that completely describe current state)
 {
     contextIOResultType iores;
     int _val;
@@ -874,10 +912,7 @@ contextIOResultType Element :: saveContext(DataStream &stream, ContextMode mode,
 
 
 contextIOResultType Element :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// restores full element context (saves state variables, that completely describe
-// current state)
-//
+// restores full element context (saves state variables, that completely describe current state)
 {
     contextIOResultType iores;
     int _nrules;
@@ -1074,7 +1109,7 @@ Element :: giveLengthInDir(const FloatArray &normalToCrackPlane)
 
     return maxDis - minDis;
 }
-    
+
 double 
 Element :: giveCharacteristicLengthForPlaneElements(const FloatArray &normalToCrackPlane) 
 //
@@ -1090,7 +1125,7 @@ Element :: giveCharacteristicLengthForPlaneElements(const FloatArray &normalToCr
         return this->computeMeanSize();
     }
 }
-    
+
 double 
 Element :: giveCharacteristicLengthForAxisymmElements(const FloatArray &normalToCrackPlane) 
 //
@@ -1343,16 +1378,17 @@ int
 Element :: adaptiveMap(Domain *oldd, TimeStep *tStep)
 {
     int result = 1;
-    MaterialModelMapperInterface *interface = static_cast< MaterialModelMapperInterface * >
-                                              ( this->giveMaterial()->giveInterface(MaterialModelMapperInterfaceType) );
-
-    if ( !interface ) {
-        return 0;
-    }
+    CrossSection *cs = this->giveCrossSection();
 
     for ( auto &iRule: integrationRulesArray ) {
-        for ( GaussPoint *gp: *iRule ) {
-            result &= interface->MMI_map(gp, oldd, tStep);
+        for ( auto &gp: *iRule ) {
+            MaterialModelMapperInterface *interface = static_cast< MaterialModelMapperInterface * >
+                ( cs->giveMaterial(gp)->giveInterface(MaterialModelMapperInterfaceType) );
+            if ( interface ) {
+                result &= interface->MMI_map(gp, oldd, tStep);
+            } else {
+                result = 0;
+            }
         }
     }
 

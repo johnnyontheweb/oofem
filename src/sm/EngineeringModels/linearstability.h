@@ -94,10 +94,12 @@ public:
     virtual void solveYourself();
     virtual void solveYourselfAt(TimeStep *tStep);
 
-    virtual void terminate(TimeStep *tStep);
+    virtual void doStepOutput(TimeStep *tStep);
+    virtual void printOutputAt(FILE *file, TimeStep *tStep);
     void terminateLinStatic(TimeStep *tStep);
     int requiresNewLsh() { return 0; }
     virtual void updateYourself(TimeStep *tStep);
+	virtual void terminate(TimeStep *tStep);
 
     // the intrinsic time of time step defines active eigen value and corresponding vector,
     // for which values can be requested using

@@ -629,13 +629,13 @@ namespace oofem {
 		Element::giveInputRecord(input);
 
 		// now let's add what's left, that is the bunch of custom properties
-		if (usingAngle)
+		if (referenceNode)
 		{
-			input.setField(referenceAngle, _IFT_Beam3d_refangle);
+			input.setField(referenceNode, _IFT_Beam3d_refnode);
 		}
 		else
 		{
-			input.setField(referenceNode, _IFT_Beam3d_refnode);
+			input.setField(referenceAngle, _IFT_Beam3d_refangle);
 		}
 
 		IntArray dofsTC;

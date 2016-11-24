@@ -38,9 +38,10 @@
 #include "xfem/xfemelementinterface.h"
 #include "internalstatetype.h"
 namespace oofem {
-class StructuralInterfaceMaterial;
+class Material;
 class IntegrationRule;
 class VTKPiece;
+class StructuralFE2MaterialStatus;
 /**
  * Provides Xfem interface for a structural element.
  * @author Erik Svenning
@@ -54,6 +55,8 @@ public:
 
     /// Updates integration rule based on the triangulation.
     virtual bool XfemElementInterface_updateIntegrationRule();
+
+    double computeEffectiveSveSize(StructuralFE2MaterialStatus *iFe2Ms);
 
     virtual void XfemElementInterface_computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *, TimeStep *tStep);
     virtual void XfemElementInterface_computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep);
@@ -73,6 +76,8 @@ public:
 
     virtual void initializeCZMaterial();
 
+    bool useNonStdCz();
+
     virtual void XfemElementInterface_computeDeformationGradientVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep);
 
 
@@ -83,7 +88,7 @@ public:
     void giveIntersectionsTouchingCrack(std :: vector< int > &oTouchingEnrItemIndices, const std :: vector< int > &iCandidateIndices, int iEnrItemIndex, XfemManager &iXMan);
 
     // Cohesive Zone variables
-    StructuralInterfaceMaterial *mpCZMat;
+    Material *mpCZMat;
     int mCZMaterialNum;
     int mCSNumGaussPoints;
 

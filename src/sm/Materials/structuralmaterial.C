@@ -47,7 +47,7 @@
 #include "dynamicinputrecord.h"
 
 namespace oofem {
-    
+
 std::vector< std::vector<int> > StructuralMaterial :: vIindex = {
     { 1, 6, 5 },
     { 9, 2, 4 },
@@ -102,6 +102,8 @@ StructuralMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint *gp, c
         this->giveRealStressVector_Lattice3d(answer, gp, reducedStrain, tStep);
     } else if ( mode == _2dPlateSubSoil ) {
         this->giveRealStressVector_2dPlateSubSoil(answer, gp, reducedStrain, tStep);
+    } else if ( mode == _3dBeamSubSoil ) {
+        this->giveRealStressVector_3dBeamSubSoil(answer, gp, reducedStrain, tStep);
     }
 }
 
@@ -209,7 +211,6 @@ StructuralMaterial :: giveRealStressVector_ShellStressControl(FloatArray &answer
     // step 0: vE = {., ., 0, ., ., .}
     // step n: vE = {., ., sum(ve(n)), ., ., .}
 
-
     // Iterate to find full vE.
     for ( int k = 0; k < 100; k++ ) { // Allow for a generous 100 iterations.
         this->giveRealStressVector_3d(answer, gp, vE, tStep);
@@ -296,6 +297,12 @@ void
 StructuralMaterial :: giveRealStressVector_2dPlateSubSoil(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep)
 {
     OOFEM_ERROR("2dPlateSubSoil mode not supported");
+}
+
+void
+StructuralMaterial :: giveRealStressVector_3dBeamSubSoil(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep)
+{
+    OOFEM_ERROR("3dBeamSubSoil mode not supported");
 }
 
 
@@ -775,6 +782,20 @@ StructuralMaterial :: giveStressDependentPartOfStrainVector(FloatArray &answer, 
     }
 }
 
+void
+StructuralMaterial :: giveStressDependentPartOfStrainVector_3d(FloatArray &answer, GaussPoint *gp,
+                                                            const FloatArray &reducedStrainVector,
+                                                            TimeStep *tStep, ValueModeType mode)
+{
+    FloatArray epsilonTemperature;
+
+    answer = reducedStrainVector;
+    this->computeStressIndependentStrainVector_3d(epsilonTemperature, gp, tStep, mode);
+    if ( epsilonTemperature.giveSize() ) {
+        answer.subtract(epsilonTemperature);
+    }
+}
+
 
 int
 StructuralMaterial :: giveSizeOfVoigtSymVector(MaterialMode mode)
@@ -945,6 +966,18 @@ StructuralMaterial :: giveVoigtSymVectorMask(IntArray &answer, MaterialMode mmod
         };
         return 6;
 
+    case _3dBeamSubSoil: ///@todo This isn't actually fixed yet. Should be made compatible with 3dShell and 2dBeam
+#if 1
+        answer.enumerate(6);
+        return 6;
+
+#else
+        answer = {
+            1, 5, 6, 7, 8, 9
+        };
+        return 12;
+#endif
+	
     case _Unknown:
         answer.clear();
         return 0;
@@ -1216,6 +1249,14 @@ StructuralMaterial :: give2dPlateSubSoilStiffMtrx(FloatMatrix &answer,
     OOFEM_ERROR("No general implementation provided");
 }
 
+void
+StructuralMaterial :: give3dBeamSubSoilStiffMtrx(FloatMatrix &answer,
+						 MatResponseMode mmode, GaussPoint *gp,
+						 TimeStep *tStep)
+{
+    OOFEM_ERROR("No general implementation provided");
+}
+
 
 
 
@@ -1245,14 +1286,18 @@ StructuralMaterial :: computePrincipalValues(FloatArray &answer, const FloatArra
 //
 {
     int size = s.giveSize();
-    if ( !( ( size == 3 ) || ( size == 4 ) || ( size == 6 ) ) ) {
+    if ( !( size == 1 || size == 3 || size == 4 || size == 6 ) ) {
         OOFEM_SERROR("Vector size mismatch");
     }
 
     double swap;
     int nonzeroFlag = 0;
     bool solve = true;
-    if ( ( size == 3 ) || ( size == 4 ) ) {
+    if ( size == 1 ) {
+        answer.resize(1);
+        answer.at(1) = s.at(1);
+        return;
+    } else if ( size == 3 || size == 4 ) {
         // 2D problem
         double ast, dst, D = 0.0;
         answer.resize(size - 1);
@@ -1304,15 +1349,6 @@ StructuralMaterial :: computePrincipalValues(FloatArray &answer, const FloatArra
             return;
         }
 
-        //Problem with numerical stability for hydrostatic case, handle directly-TODO
-//         if (fabs( s.at(4) ) < 1.e-20 && fabs( s.at(5)) < 1.e-20 && fabs( s.at(6)) < 1.e-20 ){
-//             solve = false;
-//             s1 = s.at(1);
-//             s2 = s.at(2);
-//             s3 = s.at(3);
-//         }
-
-
         if ( mode == principal_stress ) {
             I1 = s.at(1) + s.at(2) + s.at(3);
             I2 = s.at(1) * s.at(2) + s.at(2) * s.at(3) + s.at(3) * s.at(1) -
@@ -1347,34 +1383,29 @@ StructuralMaterial :: computePrincipalValues(FloatArray &answer, const FloatArra
         int n;
         if ( solve ){
             cubic3r( ( double ) -1., I1, -I2, I3, & s1, & s2, & s3, & n );
-        }
+            if ( n > 0 ) {
+                answer.at(1) = s1;
+            }
 
-        if ( n > 0 ) {
-            answer.at(1) = s1;
-        }
+            if ( n > 1 ) {
+                answer.at(2) = s2;
+            }
 
-        if ( n > 1 ) {
-            answer.at(2) = s2;
-        }
+            if ( n > 2 ) {
+                answer.at(3) = s3;
+            }
 
-        if ( n > 2 ) {
-            answer.at(3) = s3;
+#if 0
+            //Check NaN
+            if (answer.at(1) != answer.at(1)) {
+                s.pY();
+                printf("%.10e %.10e %.10e\n", I1, I2, I3);
+                exit(0);
+            }
+#endif
         }
-    
-         //Check NaN
-//     if (answer.at(1)  != answer.at(1)) {
-//         s.pY();
-//         printf("%.10e %.10e %.10e\n", I1, I2, I3);
-//         exit(0);
-//     }
-//         
-        
         
     }
-
-   
-    
-    
     
     //sort the results
     for ( int i = 1; i < answer.giveSize(); i++ ) {
@@ -1427,11 +1458,17 @@ StructuralMaterial :: computePrincipalValDir(FloatArray &answer, FloatMatrix &di
     int nonzeroFlag = 0;
 
     // printf ("size is %d\n",size);
-    if ( !( ( size == 3 ) || ( size == 4 ) || ( size == 6 ) ) ) {
+    if ( !( size == 1 || size == 3 || size == 4 || size == 6 ) ) {
         OOFEM_SERROR("Vector size mismatch");
     }
 
-    if ( ( size == 3 ) || ( size == 4 ) ) {
+    if ( size == 1 ) {
+        answer.resize(1);
+        answer.at(1) = s.at(1);
+        dir.resize(1, 1);
+        dir.at(1, 1) = 1.0;
+        return;
+    } else if ( size == 3 || size == 4 ) {
         // 2D problem
         ss.resize(2, 2);
         answer.resize(2);
@@ -2109,7 +2146,7 @@ StructuralMaterial :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalSt
     } else if ( type == IST_Temperature ) {
         /* add external source, if provided, such as staggered analysis */
         FieldManager *fm = domain->giveEngngModel()->giveContext()->giveFieldManager();
-        FM_FieldPtr tf;
+        FieldPtr tf;
         int err;
         if ( ( tf = fm->giveField(FT_Temperature) ) ) {
             // temperature field registered
@@ -2158,7 +2195,13 @@ StructuralMaterial :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalSt
     } else if ( type == IST_FirstPKStressTensor ) {
         answer = status->givePVector();
         return 1;
-    } else {
+    } else if ( type == IST_EigenStrainTensor ) {
+        FloatArray eigenstrain;
+        StructuralElement *selem = dynamic_cast< StructuralElement * >( gp->giveElement() );
+        selem->computeResultingIPEigenstrainAt(eigenstrain, tStep, gp, VM_Total );
+        StructuralMaterial :: giveFullSymVectorForm( answer, eigenstrain, gp->giveMaterialMode() );
+        return 1;
+    }else {
         return Material :: giveIPValue(answer, gp, type, tStep);
     }
 }
@@ -2186,7 +2229,7 @@ StructuralMaterial :: computeStressIndependentStrainVector(FloatArray &answer,
     //sum up all prescribed temperatures over an element
     //elem->computeResultingIPTemperatureAt(et, tStep, gp, mode);
     if ( selem ) {
-        selem->computeResultingIPTemperatureAt(et, tStep, gp, mode);        // HUHU
+        selem->computeResultingIPTemperatureAt(et, tStep, gp, mode);
     }
 
     //sum up all prescribed eigenstrain over an element
@@ -2200,7 +2243,7 @@ StructuralMaterial :: computeStressIndependentStrainVector(FloatArray &answer,
 
     /* add external source, if provided */
     FieldManager *fm = domain->giveEngngModel()->giveContext()->giveFieldManager();
-    FM_FieldPtr tf;
+    FieldPtr tf;
 
     if ( ( tf = fm->giveField(FT_Temperature) ) ) {
         // temperature field registered
@@ -2236,6 +2279,93 @@ StructuralMaterial :: computeStressIndependentStrainVector(FloatArray &answer,
 
             StructuralMaterial :: giveReducedSymVectorForm( answer, fullAnswer, gp->giveMaterialMode() );
             //answer = fullAnswer;
+        }
+    }
+
+    //join temperature and eigenstrain vectors, compare vector sizes
+    if ( answer.giveSize() ) {
+        if ( eigenstrain.giveSize() ) {
+            if ( answer.giveSize() != eigenstrain.giveSize() ) {
+                OOFEM_ERROR( "Vector of temperature strains has the size %d which is different with the size of eigenstrain vector %d, element %d", answer.giveSize(), eigenstrain.giveSize(), elem->giveNumber() );
+            }
+
+            answer.add(eigenstrain);
+        }
+    } else {
+        if ( eigenstrain.giveSize() ) {
+            answer = eigenstrain;
+        }
+    }
+}
+
+
+void
+StructuralMaterial :: computeStressIndependentStrainVector_3d(FloatArray &answer,
+                                                           GaussPoint *gp, TimeStep *tStep, ValueModeType mode)
+{
+    FloatArray et, eigenstrain;
+    if ( gp->giveIntegrationRule() == NULL ) {
+        ///@todo Hack for loose gausspoints. We shouldn't ask for "gp->giveElement()". FIXME
+        answer.clear();
+        return;
+    }
+    Element *elem = gp->giveElement();
+    StructuralElement *selem = dynamic_cast< StructuralElement * >( gp->giveElement() );
+
+    answer.clear();
+
+    if ( tStep->giveIntrinsicTime() < this->castingTime ) {
+        return;
+    }
+
+    //sum up all prescribed temperatures over an element
+    //elem->computeResultingIPTemperatureAt(et, tStep, gp, mode);
+    if ( selem ) {
+        selem->computeResultingIPTemperatureAt(et, tStep, gp, mode);
+    }
+
+    //sum up all prescribed eigenstrain over an element
+    if ( selem ) {
+        selem->computeResultingIPEigenstrainAt(eigenstrain, tStep, gp, mode);
+    }
+
+    /* add external source, if provided */
+    FieldManager *fm = domain->giveEngngModel()->giveContext()->giveFieldManager();
+    FieldPtr tf = fm->giveField(FT_Temperature);
+
+    if ( tf ) {
+        // temperature field registered
+        FloatArray gcoords, et2;
+        int err;
+        elem->computeGlobalCoordinates( gcoords, gp->giveNaturalCoordinates() );
+        if ( ( err = tf->evaluateAt(et2, gcoords, mode, tStep) ) ) {
+            OOFEM_ERROR("tf->evaluateAt failed, element %d, error code %d", elem->giveNumber(), err);
+        }
+
+        if ( et2.isNotEmpty() ) {
+            if ( et.isEmpty() ) {
+                et = et2;
+            } else {
+                et.at(1) += et2.at(1);
+            }
+        }
+    }
+
+
+    if ( et.giveSize() ) { //found temperature boundary conditions or prescribed field
+        FloatArray fullAnswer, e0;
+
+        this->giveThermalDilatationVector(e0, gp, tStep);
+
+        if ( e0.giveSize() ) {
+            fullAnswer = e0;
+            if ( mode == VM_Total ) {
+                fullAnswer.times(et.at(1) - this->referenceTemperature);
+            } else {
+                fullAnswer.times( et.at(1) );
+            }
+
+            answer = fullAnswer;
         }
     }
 
@@ -2300,10 +2430,7 @@ StructuralMaterial :: giveReducedVectorForm(FloatArray &answer, const FloatArray
 {
     IntArray indx;
     StructuralMaterial :: giveVoigtVectorMask(indx, matMode);
-    answer.resize( indx.giveSize() );
-    for ( int i = 1; i <= indx.giveSize(); i++ ) {
-        answer.at(i) = vec.at( indx.at(i) );
-    }
+    answer.beSubArrayOf(vec, indx);
 }
 
 
@@ -2316,10 +2443,7 @@ StructuralMaterial :: giveReducedSymVectorForm(FloatArray &answer, const FloatAr
     if ( indx.giveSize() == vec.giveSize() ) {
         answer = vec;
     } else {
-        answer.resize( indx.giveSize() );
-        for ( int i = 1; i <= indx.giveSize(); i++ ) {
-            answer.at(i) = vec.at( indx.at(i) );
-        }
+        answer.beSubArrayOf(vec, indx);
     }
 }
 

@@ -67,6 +67,7 @@
 #include "initmodulemanager.h"
 #include "exportmodulemanager.h"
 #include "xfem/enrichmentitem.h"
+#include "xfem/nucleationcriterion.h"
 #include "xfem/enrichmentfunction.h"
 #include "xfem/propagationlaw.h"
 #include "contact/contactmanager.h"
@@ -90,10 +91,16 @@
 #include <set>
 
 namespace oofem {
-Domain :: Domain(int n, int serNum, EngngModel *e) : defaultNodeDofIDArry(),
-    outputManager( new OutputManager(this) )
+Domain :: Domain(int n, int serNum, EngngModel *e) : defaultNodeDofIDArry()
     // Constructor. Creates a new domain.
 {
+	if(!e->giveSuppressOutput()) {
+	    outputManager = std::unique_ptr<OutputManager> (new OutputManager(this) );
+	}
+	else {
+		outputManager = NULL;
+	}
+
     this->engineeringModel = e;
     this->number = n;
     this->serialNumber = serNum;
@@ -230,6 +237,13 @@ Domain *Domain :: Clone()
         for ( int i = 1; i <= nEI; i++ ) {
             EnrichmentItem *ei = xfemManager->giveEnrichmentItem(i);
             ei->appendInputRecords(dataReader);
+        }
+
+        // Nucleation criteria
+        int nNC = xfemManager->giveNumberOfNucleationCriteria();
+        for ( int i = 1; i <= nNC; i++ ) {
+            NucleationCriterion *nc = xfemManager->giveNucleationCriterion(i);
+            nc->appendInputRecords(dataReader);
         }
     }
 
@@ -595,8 +609,6 @@ Domain :: instanciateYourself(DataReader *dr)
     // mapping from label to local numbers for dofmans and elements
     std :: map< int, int >dofManLabelMap, elemLabelMap;
 
-    FILE *outputStream = this->giveEngngModel()->giveOutputStream();
-
     // read type of Domain to be solved
     InputRecord *ir = dr->giveInputRecord(DataReader :: IR_domainRec, 1);
     IR_GIVE_FIELD(ir, name, _IFT_Domain_type); // This is inconsistent, "domain" isn't  exactly a field, but the actual record keyword.
@@ -610,14 +622,16 @@ Domain :: instanciateYourself(DataReader *dr)
 #  endif
 
     resolveDomainDofsDefaults( name.c_str() );
-    fprintf( outputStream, "Domain type: %s, default ndofs per node is %d\n\n\n",
-            name.c_str(), giveDefaultNodeDofIDArry().giveSize() );
 
     // read output manager record
     std :: string tmp;
     ir = dr->giveInputRecord(DataReader :: IR_outManRec, 1);
     ir->giveRecordKeywordField(tmp);
-    outputManager->initializeFrom(ir);
+
+    if(!giveEngngModel()->giveSuppressOutput()) {
+    	outputManager->initializeFrom(ir);
+    }
+
     ir->finish();
 
     // read domain description
@@ -686,6 +700,8 @@ Domain :: instanciateYourself(DataReader *dr)
     VERBOSE_PRINT0("Instanciated nodes & sides ", nnode)
 #  endif
 
+    BuildDofManPlaceInArrayMap();
+
     // read elements
     elementList.clear();
     elementList.resize(nelem);
@@ -715,7 +731,6 @@ Domain :: instanciateYourself(DataReader *dr)
     }
 
     BuildElementPlaceInArrayMap();
-    BuildDofManPlaceInArrayMap();
 
     // Support sets defined directly after the elements (special hack for backwards compatibility).
     setList.clear();
@@ -1604,7 +1619,7 @@ Domain :: giveTopology()
 #define DOMAIN_NCOMP 8
 
 contextIOResultType
-Domain :: saveContext(DataStream &stream, ContextMode mode, void *obj)
+Domain :: saveContext(DataStream &stream, ContextMode mode)
 {
     contextIOResultType iores;
     int serNum;
@@ -1660,7 +1675,7 @@ Domain :: saveContext(DataStream &stream, ContextMode mode, void *obj)
 
 
 contextIOResultType
-Domain :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
+Domain :: restoreContext(DataStream &stream, ContextMode mode)
 {
     contextIOResultType iores;
     int serNum;

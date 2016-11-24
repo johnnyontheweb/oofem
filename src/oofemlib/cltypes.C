@@ -57,13 +57,15 @@ namespace oofem {
 char cltypesGiveUnknownTypeModeKey(ValueModeType mode)
 {
     switch ( mode ) {
-    case VM_Unknown:      return 0;
+    case VM_Unknown:        return 0;
 
-    case VM_Total:        return 'u';
+    case VM_Total:          return 'u';
 
-    case VM_Velocity:     return 'v';
+    case VM_Velocity:       return 'v';
 
-    case VM_Acceleration: return 'a';
+    case VM_Acceleration:   return 'a';
+      
+    case VM_TotalIntrinsic: return 'i';
 
     default: OOFEM_ERROR("unsupported ValueModeType");
     }
@@ -142,6 +144,7 @@ InternalStateValueType giveInternalStateValueType(InternalStateType type)
     case IST_InterfaceFirstPKTraction:
     case IST_InterfaceTraction:
     case IST_InterfaceJump:
+    case IST_InterfaceNormal:
         return ISVT_VECTOR;
 
     case IST_MaxEquivalentStrainLevel:

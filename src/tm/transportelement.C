@@ -51,6 +51,10 @@
 #include "feinterpol3d.h"
 #include "dof.h"
 #include "stationarytransportproblem.h"
+#ifdef __CEMHYD_MODULE
+ #include "cemhyd/cemhydmat.h"
+#endif
+
 
 #ifdef __OOFEG
  #include "oofeggraphiccontext.h"
@@ -95,7 +99,7 @@ TransportElement :: giveCharacteristicMatrix(FloatMatrix &answer,
     if ( mtrx == TangentStiffnessMatrix ) {
         FloatMatrix tmp;
         this->computeConductivityMatrix(answer, Conductivity, tStep);
-        this->computeBCMtrxAt(tmp, tStep, VM_Total);
+        this->computeBCMtrxAt(tmp, tStep, VM_TotalIntrinsic);
         answer.add(tmp);
     } else if ( mtrx == ConductivityMatrix ) {
         this->computeConductivityMatrix(answer, Conductivity, tStep);
@@ -486,7 +490,7 @@ void
 TransportElement :: computeInternalForcesVector(FloatArray &answer, TimeStep *tStep)
 {
     FloatArray unknowns;
-    this->computeVectorOf(VM_Total, tStep, unknowns);
+    this->computeVectorOf(VM_TotalIntrinsic, tStep, unknowns);
 
     TransportMaterial *mat = static_cast< TransportMaterial* >( this->giveMaterial() );
     FloatArray flux, grad, field;
@@ -511,7 +515,7 @@ TransportElement :: computeInternalForcesVector(FloatArray &answer, TimeStep *tS
         if ( mat->hasInternalSource() ) {
             // add internal source produced by material (if any)
             FloatArray val;
-            mat->computeInternalSourceVector(val, gp, tStep, VM_Total);
+            mat->computeInternalSourceVector(val, gp, tStep, VM_TotalIntrinsic);
             answer.plusProduct(N, val, -dV);
         }
     }
@@ -519,7 +523,7 @@ TransportElement :: computeInternalForcesVector(FloatArray &answer, TimeStep *tS
     ///@todo With sets, we can make this much nicer than to add it here, though it works for now. / Mikael
     // Neumann b.c.s
     FloatMatrix bc_tangent;
-    this->computeBCMtrxAt(bc_tangent, tStep, VM_Total);
+    this->computeBCMtrxAt(bc_tangent, tStep, VM_TotalIntrinsic);
     if ( bc_tangent.isNotEmpty() ) {
         answer.plusProduct(bc_tangent, unknowns, 1.0);
     }
@@ -585,7 +589,7 @@ TransportElement :: computeLoadVector(FloatArray &answer, Load *load, CharType t
     std :: unique_ptr< IntegrationRule > iRule( interp->giveIntegrationRule( load->giveApproxOrder() ) );
 
     if ( load->giveType() == ConvectionBC || load->giveType() == RadiationBC ) {
-        this->computeVectorOf(dofid, VM_Total, tStep, unknowns);
+        this->computeVectorOf(dofid, VM_TotalIntrinsic, tStep, unknowns);
     }
 
     for ( GaussPoint *gp: *iRule ) {
@@ -611,7 +615,8 @@ TransportElement :: computeLoadVector(FloatArray &answer, Load *load, CharType t
 void
 TransportElement :: computeBoundaryLoadVector(FloatArray &answer, BoundaryLoad *load, int boundary, CharType type, ValueModeType mode, TimeStep *tStep)
 {
-    answer.clear();
+    
+answer.clear();
 
     if ( !( load->giveType() == TransmissionBC && type == ExternalForcesVector ) &&
         !( load->giveType() == ConvectionBC && type == InternalForcesVector ) &&
@@ -633,7 +638,7 @@ TransportElement :: computeBoundaryLoadVector(FloatArray &answer, BoundaryLoad *
     if ( load->giveType() == ConvectionBC || load->giveType() == RadiationBC ) {
         IntArray bNodes;
         interp->boundaryGiveNodes(bNodes, boundary);
-        this->computeBoundaryVectorOf(bNodes, dofid, VM_Total, tStep, unknowns);
+        this->computeBoundaryVectorOf(bNodes, dofid, VM_TotalIntrinsic, tStep, unknowns);
     }
 
     for ( GaussPoint *gp: *iRule ) {
@@ -646,7 +651,11 @@ TransportElement :: computeBoundaryLoadVector(FloatArray &answer, BoundaryLoad *
         double detJ = interp->boundaryGiveTransformationJacobian( boundary, lcoords, FEIElementGeometryWrapper(this) );
         double dA = this->giveThicknessAt(gcoords) * gp->giveWeight() * detJ;
 
-        if ( load->giveFormulationType() == Load :: FT_Entity ) {
+        //Check external ambient temperature field first
+        FieldPtr tf;
+        if (tf = domain->giveEngngModel()->giveContext()->giveFieldManager()->giveField(FT_TemperatureAmbient)){
+            tf->evaluateAt(val, gcoords, VM_TotalIntrinsic, tStep);
+        } else if ( load->giveFormulationType() == Load :: FT_Entity ) {
             load->computeValueAt(val, tStep, lcoords, mode);
         } else {
             load->computeValueAt(val, tStep, gcoords, mode);
@@ -708,6 +717,7 @@ TransportElement :: computeTangentFromBoundaryLoad(FloatMatrix &answer, Boundary
 void
 TransportElement :: computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, int boundary, CharType type, ValueModeType mode, TimeStep *tStep)
 {
+    ///@todo Very similar to function computeBoundaryLoadVector and computeEdgeBCSubVectorAt. They should be all merged together.
     answer.clear();
 
     if ( !( load->giveType() == TransmissionBC && type == ExternalForcesVector ) &&
@@ -732,8 +742,8 @@ TransportElement :: computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLo
 
     if ( load->giveType() == ConvectionBC || load->giveType() == RadiationBC ) {
         IntArray bNodes;
-        interp->boundaryGiveNodes(bNodes, boundary);
-        this->computeBoundaryVectorOf(bNodes, dofid, VM_Total, tStep, unknowns);
+        interp->boundaryEdgeGiveNodes(bNodes, boundary);
+        this->computeBoundaryVectorOf(bNodes, dofid, VM_TotalIntrinsic, tStep, unknowns);
     }
 
     for ( GaussPoint *gp: *iRule ) {
@@ -744,9 +754,12 @@ TransportElement :: computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLo
 
         double detJ = interp->boundaryEdgeGiveTransformationJacobian( boundary, lcoords, FEIElementGeometryWrapper(this) );
         interp->boundaryEdgeLocal2Global( gcoords, boundary, lcoords, FEIElementGeometryWrapper(this) );
-        double dL = this->giveThicknessAt(gcoords) * gp->giveWeight() * detJ;
+        double dL = gp->giveWeight() * detJ;
 
-        if ( load->giveFormulationType() == Load :: FT_Entity ) {
+        FieldPtr tf;
+        if (tf = domain->giveEngngModel()->giveContext()->giveFieldManager()->giveField(FT_TemperatureAmbient)){
+            tf->evaluateAt(val, gcoords, VM_TotalIntrinsic, tStep);
+        } else if ( load->giveFormulationType() == Load :: FT_Entity ) {
             load->computeValueAt(val, tStep, lcoords, mode);
         } else {
             load->computeValueAt(val, tStep, gcoords, mode);
@@ -907,7 +920,7 @@ TransportElement :: computeEdgeBCSubVectorAt(FloatArray &answer, Load *load, int
                 this->computeEgdeNAt( n, iEdge, gp->giveNaturalCoordinates() );
                 this->giveElementDofIDMask(dofid);
                 this->giveEdgeDofMapping(mask, iEdge);
-                this->computeBoundaryVectorOf(mask, dofid, VM_Total, tStep, unknowns);
+                this->computeBoundaryVectorOf(mask, dofid, VM_TotalIntrinsic, tStep, unknowns);
                 double value = n.dotProduct(unknowns);//unknown in IP
                 edgeLoad->setVariableState('x', value);
             }
@@ -923,12 +936,16 @@ TransportElement :: computeEdgeBCSubVectorAt(FloatArray &answer, Load *load, int
             this->computeEgdeNAt(n, iEdge, lcoords);
             dV = this->computeEdgeVolumeAround(gp, iEdge);
 
-            if ( edgeLoad->giveFormulationType() == Load :: FT_Entity ) {
+            FieldPtr tf;
+            FloatArray gcoords;
+            if (tf = domain->giveEngngModel()->giveContext()->giveFieldManager()->giveField(FT_TemperatureAmbient)){
+                this->computeEdgeIpGlobalCoords(gcoords, lcoords, iEdge);
+                tf->evaluateAt(val, gcoords, VM_TotalIntrinsic, tStep);
+            } else if ( edgeLoad->giveFormulationType() == Load :: FT_Entity ) {
                 edgeLoad->computeValueAt(val, tStep, lcoords, mode);
             } else {
-                FloatArray globalIPcoords;
-                this->computeEdgeIpGlobalCoords(globalIPcoords, lcoords, iEdge);
-                edgeLoad->computeValueAt(val, tStep, globalIPcoords, mode);
+                this->computeEdgeIpGlobalCoords(gcoords, lcoords, iEdge);
+                edgeLoad->computeValueAt(val, tStep, gcoords, mode);
             }
 
             reducedAnswer.add(val.at(indx) * coeff * dV, n);
@@ -952,7 +969,7 @@ TransportElement :: computeSurfaceBCSubVectorAt(FloatArray &answer, Load *load,
 
     BoundaryLoad *surfLoad = dynamic_cast< BoundaryLoad * >(load);
     if ( surfLoad ) {
-        FloatArray reducedAnswer, val, globalIPcoords, n;
+        FloatArray reducedAnswer, val, gcoords, n;
         IntArray mask;
 
         answer.resize( this->giveNumberOfDofManagers() );
@@ -973,7 +990,7 @@ TransportElement :: computeSurfaceBCSubVectorAt(FloatArray &answer, Load *load,
                     this->computeSurfaceNAt( n, iSurf, gp->giveNaturalCoordinates() );
                     this->giveElementDofIDMask(dofid);
                     this->giveSurfaceDofMapping(mask, iSurf);
-                    this->computeBoundaryVectorOf(mask, dofid, VM_Total, tStep, unknowns);
+                    this->computeBoundaryVectorOf(mask, dofid, VM_TotalIntrinsic, tStep, unknowns);
                     double value = n.dotProduct(unknowns);//unknown in IP
                     surfLoad->setVariableState('x', value);
                 }
@@ -990,11 +1007,15 @@ TransportElement :: computeSurfaceBCSubVectorAt(FloatArray &answer, Load *load,
             this->computeSurfaceNAt( n, iSurf, gp->giveNaturalCoordinates() );
             double dV = this->computeSurfaceVolumeAround(gp, iSurf);
 
-            if ( surfLoad->giveFormulationType() == Load :: FT_Entity ) {
+            FieldPtr tf;
+            if (tf = domain->giveEngngModel()->giveContext()->giveFieldManager()->giveField(FT_TemperatureAmbient)){
+                this->computeSurfIpGlobalCoords(gcoords, gp->giveNaturalCoordinates(), iSurf);
+                tf->evaluateAt(val, gcoords, VM_TotalIntrinsic, tStep);
+            } else if ( surfLoad->giveFormulationType() == Load :: FT_Entity ) {
                 surfLoad->computeValueAt(val, tStep, gp->giveNaturalCoordinates(), mode);
             } else {
-                this->computeSurfIpGlobalCoords(globalIPcoords, gp->giveNaturalCoordinates(), iSurf);
-                surfLoad->computeValueAt(val, tStep, globalIPcoords, mode);
+                this->computeSurfIpGlobalCoords(gcoords, gp->giveNaturalCoordinates(), iSurf);
+                surfLoad->computeValueAt(val, tStep, gcoords, mode);
             }
 
             reducedAnswer.add(val.at(indx) * coeff * dV, n);
@@ -1039,7 +1060,7 @@ TransportElement :: computeBCSubMtrxAt(FloatMatrix &answer, TimeStep *tStep, Val
                 IntArray mask;
                 FloatMatrix subAnswer;
 
-                for ( GaussPoint *gp: iRule ) {
+                for ( auto &gp: iRule ) {
                     this->computeEgdeNAt( n, id, gp->giveNaturalCoordinates() );
                     double dV = this->computeEdgeVolumeAround(gp, id);
                     if( edgeLoad->propertyMultExpr.isDefined()) {//dependence on state variable
@@ -1051,7 +1072,7 @@ TransportElement :: computeBCSubMtrxAt(FloatMatrix &answer, TimeStep *tStep, Val
                         IntArray dofid;
                         this->giveElementDofIDMask(dofid);
                         this->giveEdgeDofMapping(mask, id);
-                        this->computeBoundaryVectorOf(mask, dofid, VM_Total, tStep, unknowns);
+                        this->computeBoundaryVectorOf(mask, dofid, VM_TotalIntrinsic, tStep, unknowns);
                         double value = n.dotProduct(unknowns);//unknown in IP
                         edgeLoad->setVariableState('x', value);
                     }
@@ -1079,7 +1100,7 @@ TransportElement :: computeBCSubMtrxAt(FloatMatrix &answer, TimeStep *tStep, Val
                 int approxOrder = 2 * this->giveApproxOrder(indx);
                 std :: unique_ptr< IntegrationRule > iRule( this->GetSurfaceIntegrationRule(approxOrder) );
 
-                for ( GaussPoint *gp: *iRule ) {
+                for ( auto &gp: *iRule ) {
                     this->computeSurfaceNAt( n, id, gp->giveNaturalCoordinates() );
                     double dV = this->computeSurfaceVolumeAround(gp, id);
                     if( surfLoad->propertyMultExpr.isDefined()) {//dependence on state variable
@@ -1091,7 +1112,7 @@ TransportElement :: computeBCSubMtrxAt(FloatMatrix &answer, TimeStep *tStep, Val
                         IntArray dofid;
                         this->giveElementDofIDMask(dofid);
                         this->giveSurfaceDofMapping(mask, id);
-                        this->computeBoundaryVectorOf(mask, dofid, VM_Total, tStep, unknowns);
+                        this->computeBoundaryVectorOf(mask, dofid, VM_TotalIntrinsic, tStep, unknowns);
                         double value = n.dotProduct(unknowns);//unknown in IP
                         surfLoad->setVariableState('x', value);
                     }
@@ -1153,7 +1174,7 @@ TransportElement :: getRadiativeHeatTranferCoef(BoundaryLoad *bLoad, TimeStep *t
     double answer = 0;
     ///@todo Why aren't this code using the standard approach of calling computeComponentArrayAt(...) to get the time function scaling and all?
     const FloatArray &components = bLoad->giveComponentArray();
-    
+
     answer = components.at(1);//T_infty
     answer += 273.15;
     answer = answer*answer*answer;
@@ -1180,7 +1201,7 @@ TransportElement :: computeFlow(FloatArray &answer, GaussPoint *gp, TimeStep *tS
     IntArray dofid;
 
     this->giveElementDofIDMask(dofid);
-    this->computeVectorOf(dofid, VM_Total, tStep, r);
+    this->computeVectorOf(dofid, VM_TotalIntrinsic, tStep, r);
     this->computeGradientMatrixAt(b, gp->giveNaturalCoordinates());
 
     if ( emode == HeatTransferEM ||  emode == Mass1TransferEM ) {
@@ -1237,8 +1258,15 @@ TransportElement :: updateInternalState(TimeStep *tStep)
     IntArray dofid;
     TransportMaterial *mat = static_cast< TransportMaterial * >( this->giveMaterial() );
 
+#ifdef __CEMHYD_MODULE //not very efficient here, looping over all GPs in each call
+    if (dynamic_cast< CemhydMat * >( mat ) &&  tStep->isIcApply()){
+        CemhydMat *cem = dynamic_cast< CemhydMat * >( mat );
+        cem->initMaterial(this); //create microstructures and statuses on specific GPs
+    }
+#endif //__CEMHYD_MODULE    
+    
     this->giveElementDofIDMask(dofid);
-    this->computeVectorOf(dofid, VM_Total, tStep, r);
+    this->computeVectorOf(dofid, VM_TotalIntrinsic, tStep, r);
     // force updating ip values
     for ( auto &iRule: integrationRulesArray ) {
         for ( GaussPoint *gp: *iRule ) {
@@ -1256,11 +1284,12 @@ TransportElement :: updateInternalState(TimeStep *tStep)
 #endif
         }
     }
+    
 }
 
 int
 TransportElement :: EIPrimaryFieldI_evaluateFieldVectorAt(FloatArray &answer, PrimaryField &pf,
-                                                          FloatArray &coords, IntArray &dofId, ValueModeType mode,
+                                                          const FloatArray &coords, IntArray &dofId, ValueModeType mode,
                                                           TimeStep *tStep)
 {
     int indx;

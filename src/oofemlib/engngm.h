@@ -81,6 +81,8 @@
 #define _IFT_EngngModel_lstype "lstype"
 #define _IFT_EngngModel_smtype "smtype"
 
+#define _IFT_EngngModel_suppressOutput "suppress_output" // Suppress writing to .out file
+
 //@}
 
 namespace oofem {
@@ -107,8 +109,6 @@ class ProcessCommunicatorBuff;
 class CommunicatorBuff;
 class ProcessCommunicator;
 class UnknownNumberingScheme;
-
-typedef std :: shared_ptr< Field > EModelFieldPtr;
 
 
 /**
@@ -311,6 +311,11 @@ protected:
     /// List where parallel contexts are stored.
     std :: vector< ParallelContext > parallelContextList;
 
+    /// Flag for suppressing output to file.
+    bool suppressOutput;
+
+    std::string simulationDescription;
+
 public:
     /**
      * Constructor. Creates Engng model with number i.
@@ -336,6 +341,10 @@ public:
     void setDomain(int i, Domain *ptr, bool iDeallocateOld = true);
     /// Returns number of domains in problem.
     int giveNumberOfDomains() { return (int)domainList.size(); }
+
+    const std :: string &giveDescription() const { return simulationDescription; }
+    const time_t &giveStartTime() { return startTime; }
+    bool giveSuppressOutput() const { return suppressOutput; }
 
     /** Service for accessing ErrorEstimator corresponding to particular domain */
     virtual ErrorEstimator *giveDomainErrorEstimator(int n) { return defaultErrEstimator; }
@@ -495,13 +504,13 @@ public:
     virtual double giveUnknownComponent(ValueModeType, TimeStep *, Domain *, Dof *) { return 0.0; }
 
     /**
-     * Returns the smart pointer to requested field, Null otherwise. 
+     * Returns the smart pointer to requested field, Null otherwise.
      * The return value uses shared_ptr, as some registered fields may be
-     * owned (and maintained) by emodel, while some may be created on demand 
-     * and thus reliable reference counting mechanism is essential. 
+     * owned (and maintained) by emodel, while some may be created on demand
+     * and thus reliable reference counting mechanism is essential.
      *
      */
-    virtual EModelFieldPtr giveField (FieldType key, TimeStep *) { return EModelFieldPtr();}
+    virtual FieldPtr giveField (FieldType key, TimeStep *) { return FieldPtr();}
 
 
     ///Returns the master engnmodel
@@ -530,7 +539,7 @@ public:
      */
     int exchangeRemoteElementData(int ExchangeTag);
     /**
-     * Returns number of iterations that was required to reach equilibrium - used for adaptive step length in 
+     * Returns number of iterations that was required to reach equilibrium - used for adaptive step length in
      * staggered problem
      */
     virtual int giveCurrentNumberOfIterations() {return 1;}
@@ -679,9 +688,9 @@ public:
     void resolveCorrespondingStepNumber(int &, int &, void *obj);
     /// Returns current meta step.
     MetaStep *giveCurrentMetaStep();
-    /** Returns current time step. 
+    /** Returns current time step.
      *  @param force when set to true then current step of receiver is returned instead of master (default)
-     */ 
+     */
     virtual TimeStep *giveCurrentStep(bool force = false) {
       if ( master && (!force)) {
             return master->giveCurrentStep();
@@ -691,7 +700,7 @@ public:
     }
     /** Returns previous time step.
      *  @param force when set to true then previous step of receiver is returned instead of master (default)
-     */ 
+     */
     virtual TimeStep *givePreviousStep(bool force = false) {
         if ( master && (!force)) {
             return master->givePreviousStep();
@@ -701,11 +710,24 @@ public:
     }
     /// Returns next time step (next to current step) of receiver.
     virtual TimeStep *giveNextStep() { return NULL; }
+    /** Generate new time step (and associate metastep).
+     *  The advantage of this method is that the associated metasteps 
+     *  are generated on the fly, which is not the case of giveNextStep method, 
+     *  which should only be called from solveYoursef, as it generate metasteps. 
+     *
+     *  This method in general allows to get external processing of individual
+     *  solution steps (using solveYourselfAt) from outside, othervise the only
+     *  way how to generate valid sequence is solveYorself method, 
+     *  but it method does not allow to get processing for individual steps.
+     *  
+     *  @return representation of next solution step 
+     */
+    TimeStep* generateNextStep();
     /// Does a pre-initialization of the next time step (implement if necessarry)
     virtual void preInitializeNextStep() {}
     /** Returns the solution step when Initial Conditions (IC) apply.
      *  @param force when set to true then receiver reply is returned instead of master (default)
-     */ 
+     */
     virtual TimeStep *giveSolutionStepWhenIcApply(bool force = false) {
         if ( master && (!force)) {
             return master->giveSolutionStepWhenIcApply();
@@ -715,7 +737,7 @@ public:
     }
     /** Returns number of first time step used by receiver.
      *  @param force when set to true then receiver reply is returned instead of master (default)
-     */ 
+     */
     virtual int giveNumberOfFirstStep(bool force = false) {
         if ( master && (!force)) {
             return master->giveNumberOfFirstStep();
@@ -729,7 +751,7 @@ public:
     MetaStep *giveMetaStep(int i);
     /** Returns total number of steps.
      *  @param force when set to true then receiver reply is returned instead of master (default)
-     */  
+     */
     int giveNumberOfSteps(bool force = false) {
         if ( master && (!force)) {
             return master->giveNumberOfSteps();
@@ -966,7 +988,7 @@ public:
 
     void assembleVectorFromContacts(FloatArray &answer, TimeStep *tStep, CharType type, ValueModeType mode,
                                     const UnknownNumberingScheme &s, Domain *domain, FloatArray *eNorms = NULL);
-        
+
 protected:
     /**
      * Packs receiver data when rebalancing load. When rebalancing happens, the local numbering will be lost on majority of processors.

@@ -72,9 +72,13 @@ public:
     virtual void computeInertiaForcesVector(FloatArray &answer, TimeStep *tStep);
     virtual void computeLumpedCapacityVector(FloatArray &answer, TimeStep *tStep);
 
+    //Compute volumetric load from element
     virtual void computeLoadVector(FloatArray &answer, Load *load, CharType type, ValueModeType mode, TimeStep *tStep);
+    //Boundary load by prescribed flux, convection, or radiation over surface
     virtual void computeBoundaryLoadVector(FloatArray &answer, BoundaryLoad *load, int boundary, CharType type, ValueModeType mode, TimeStep *tStep);
+    //Contribution to conductivity matrix from convection
     virtual void computeTangentFromBoundaryLoad(FloatMatrix &answer, BoundaryLoad *load, int boundary, MatResponseMode rmode, TimeStep *tStep);
+    //Boundary load by prescribed flux, convection, or radiation over length
     virtual void computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, int edge, CharType type, ValueModeType mode, TimeStep *tStep);
 
     //Compute radiative heat tranfer coefficient as 4*eps*sigma*T_infty^3
@@ -121,7 +125,7 @@ public:
     virtual int checkConsistency();
 
     virtual int EIPrimaryFieldI_evaluateFieldVectorAt(FloatArray &answer, PrimaryField &pf,
-                                                      FloatArray &coords, IntArray &dofId, ValueModeType mode,
+                                                      const FloatArray &coords, IntArray &dofId, ValueModeType mode,
                                                       TimeStep *tStep);
 
 #ifdef __OOFEG
@@ -132,7 +136,6 @@ public:
     //virtual void drawDeformedGeometry(oofegGraphicContext &gc, TimeStep *tStep, UnknownType) {}
 #endif
 
-protected:
     /**
      * Computes constitutive matrix of receiver.
      * @param answer Computed answer.
@@ -143,6 +146,8 @@ protected:
     virtual void computeConstitutiveMatrixAt(FloatMatrix &answer,
                                              MatResponseMode rMode, GaussPoint *gp,
                                              TimeStep *tStep);
+
+protected:
     /**
      * Computes the matrix @f$ P=\int_\Omega N^{\mathrm{T}} N\;\mathrm{d}\Omega @f$.
      * The result should be multiplied by corresponding coefficient and localized.
