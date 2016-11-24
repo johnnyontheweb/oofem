@@ -105,7 +105,8 @@ LinearStability :: initializeFrom(InputRecord *ir)
     IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_LinearStability_stype);
     solverType = ( GenEigvalSolverType ) val;
 
-	nMetaSteps = 0;
+
+    nMetaSteps = 0;
 
     return IRRT_OK;
 }

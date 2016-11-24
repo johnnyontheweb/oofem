@@ -613,7 +613,7 @@ void PrescribedGradientBCWeak :: assembleGPContrib(SparseMtrx &answer, TimeStep 
 	FloatMatrix KZero(1,1);
 	KZero.zero();
     for( int i :  trac_rows) {
-        answer.assemble(IntArray({i}), IntArray({i}), KZero);
+        answer.assemble(IntArray{i}, IntArray{i}, KZero);
     }
 }
 

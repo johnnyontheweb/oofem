@@ -40,6 +40,7 @@
 #include "statecountertype.h"
 #include "intarray.h"
 #include "error.h"
+#include "bctracker.h"
 #ifdef __PARALLEL_MODE
  #include "entityrenumberingscheme.h"
 #endif
@@ -192,7 +193,9 @@ private:
 
     /// Contact Manager
     std :: unique_ptr< ContactManager > contactManager;
-    
+
+    /// BC tracker (keeps track of BCs applied wia sets to components)
+    BCTracker bcTracker;
     
     /**
      * Map from an element's global number to its place
@@ -502,6 +505,8 @@ public:
     FractureManager *giveFractureManager();
     bool hasFractureManager();
 
+    BCTracker *giveBCTracker();
+    
     /**
      * Sets receiver's associated topology description.
      * @param topo New topology description for receiver.
@@ -526,10 +531,12 @@ public:
      * @param stream Context stream. If NULL then new file descriptor will be opened and closed
      * at the end else the stream given as parameter will be used and not closed at the end.
      * @param mode Determines amount of info in stream.
+     * @param obj Void pointer to an int array containing two values:time step number and
+     * version of a context file to be restored.
      * @return contextIOResultType.
      * @exception ContextIOERR If error encountered.
      */
-    contextIOResultType saveContext(DataStream &stream, ContextMode mode);
+    contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
     /**
      * Restores the domain state from output stream. Restores recursively the state of all
      * managed objects, like DofManagers and Elements.
@@ -540,10 +547,12 @@ public:
      * context.
      * @param stream Context file.
      * @param mode Determines amount of info in stream.
+     * @param obj Void pointer to an int array containing two values:time step number and
+     * version of a context file to be restored.
      * @return contextIOResultType.
      * @exception ContextIOERR exception if error encountered.
      */
-    contextIOResultType restoreContext(DataStream &stream, ContextMode mode);
+    contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
     /**
      * Returns default DofID array which defines physical meaning of particular DOFs.
      * of nodal dofs. Default values are determined using current domain type.
@@ -591,8 +600,6 @@ public:
      * Gives the current maximum dof ID used.
      */
     int giveMaxDofID() { return this->freeDofID - 1; }
-
-    void setNextFreeDofID(int dofid){ this->freeDofID = dofid;}
 
     /**
      * Returns receiver's associated connectivity table.
