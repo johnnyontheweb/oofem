@@ -202,14 +202,14 @@ namespace oofem {
 		virtual void drawDeformedGeometry(oofegGraphicContext & gc, TimeStep * tStep, UnknownType);
 #endif
 
-	protected:
-		virtual void computeEdgeLoadVectorAt(FloatArray &answer, Load *, int, TimeStep *, ValueModeType mode);
-		virtual void computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, int edge, CharType type, ValueModeType mode, TimeStep *tStep);
-		virtual int computeLoadGToLRotationMtrx(FloatMatrix &answer);
-		virtual void computeBmatrixAt(GaussPoint *, FloatMatrix &, int = 1, int = ALL_STRAINS);
-		virtual void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &);
-		virtual bool computeGtoLRotationMatrix(FloatMatrix &answer);
-		virtual void computeBodyLoadVectorAt(FloatArray &answer, Load *load, TimeStep *tStep, ValueModeType mode);
+protected:
+    virtual void computeEdgeLoadVectorAt(FloatArray &answer, Load *, int, TimeStep *, ValueModeType mode);
+    virtual void computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, int edge, CharType type, ValueModeType mode, TimeStep *tStep, bool global=true);
+    virtual int computeLoadGToLRotationMtrx(FloatMatrix &answer);
+    virtual void computeBmatrixAt(GaussPoint *, FloatMatrix &, int = 1, int = ALL_STRAINS);
+    virtual void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &);
+    virtual bool computeGtoLRotationMatrix(FloatMatrix &answer);
+    virtual void computeBodyLoadVectorAt(FloatArray &answer, Load *load, TimeStep *tStep, ValueModeType mode);
 
 		double giveKappayCoeff(TimeStep *tStep);
 		double giveKappazCoeff(TimeStep *tStep);
