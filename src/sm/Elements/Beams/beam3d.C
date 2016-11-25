@@ -709,11 +709,10 @@ namespace oofem {
 			answer.subtract(loadEndForces);
 		}
 
-		// add exact end forces due to nonnodal loading applied indirectly (via sets)
-		BCTracker *bct = this->domain->giveBCTracker();
-		BCTracker::entryListType bcList = bct->getElementRecords(this->number);
-		FloatArray help;
-		FloatMatrix t;
+    // add exact end forces due to nonnodal loading applied indirectly (via sets)
+    BCTracker *bct = this->domain->giveBCTracker();
+    BCTracker::entryListType bcList = bct->getElementRecords(this->number);
+    FloatArray help;
 
 		for (BCTracker::entryListType::iterator it = bcList.begin(); it != bcList.end(); ++it) {
 			GeneralBoundaryCondition *bc = this->domain->giveBc((*it).bcNumber);
