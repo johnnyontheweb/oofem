@@ -567,3 +567,12 @@ tests/sm/t3d.bmf
 /Debug/patch303-Lstatic.in
 /MinSizeRel/3wallsB-st.in
 /Debug/column2-buckling.in
+/MinSizeRel/beam3dsubsoil01.in
+/MinSizeRel/beam3dsubsoil02.in
+/hexgrid.vcxproj
+/hexgrid.vcxproj.filters
+/src/oofemlib/element.h.bak
+/src/oofemlib/elementBP.h
+/src/oofemlib/elementBP.h.bak
+/src/sm/Elements/Beams/beam3dBP.C
+/src/sm/Elements/Beams/beam3dBP.h
