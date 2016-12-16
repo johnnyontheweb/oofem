@@ -310,17 +310,12 @@ public:
     virtual int giveInternalStateAtNode(FloatArray &answer, InternalStateType type, InternalStateMode mode,
                                         int node, TimeStep *tStep);
     /// Shows sparse structure
-    virtual void showSparseMtrxStructure(CharType mtrx, oofegGraphicContext &gc, TimeStep *tStep);
+    void showSparseMtrxStructure(CharType mtrx, oofegGraphicContext &gc, TimeStep *tStep);
     /// Shows extended sparse structure (for example, due to nonlocal interactions for tangent stiffness)
     virtual void showExtendedSparseMtrxStructure(CharType mtrx, oofegGraphicContext &gc, TimeStep *tStep);
 
 #endif
 
-<<<<<<< HEAD
-    // Interface for b.c.s applied by Sets:
-    virtual void computeLoadVector(FloatArray &answer, Load *load, CharType type, ValueModeType mode, TimeStep *tStep);
-    virtual void computeBoundaryLoadVector(FloatArray &answer, BoundaryLoad *load, int boundary, CharType type, ValueModeType mode, TimeStep *tStep, bool global=true);
-=======
     // Interface for body loads applied by Sets:
     virtual void computeLoadVector(FloatArray &answer, BodyLoad *load, CharType type, ValueModeType mode, TimeStep *tStep);
     virtual void computeBoundarySurfaceLoadVector(FloatArray &answer, BoundaryLoad *load, int boundary, CharType type, ValueModeType mode, TimeStep *tStep, bool global=true);
@@ -340,7 +335,6 @@ public:
      */
     virtual void computeSurfaceNMatrix (FloatMatrix &answer, int boundaryID, const FloatArray& lcoords);
 
->>>>>>> remotes/originofficial/master
 
     /**
      * Computes constitutive matrix of receiver. Default implementation uses element cross section
@@ -352,7 +346,7 @@ public:
      */
     virtual void computeConstitutiveMatrixAt(FloatMatrix &answer,
                                              MatResponseMode rMode, GaussPoint *gp,
-                                             TimeStep *tStep) = 0;
+                                             TimeStep *tStep);
     /// Helper function which returns the structural cross-section for the element.
     StructuralCrossSection *giveStructuralCrossSection();
 
@@ -470,7 +464,7 @@ public:
      * @param gp Integration point.
      * @param tStep Time step.
      */
-    virtual void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep) = 0;
+    virtual void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep);
 
     /**
      * Computes the geometrical matrix of receiver in given integration point.

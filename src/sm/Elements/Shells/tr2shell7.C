@@ -62,7 +62,6 @@ IntArray Tr2Shell7 :: orderingEdgeNodes = {1, 2, 3, 10, 11, 12, 19, 4, 5, 6, 13,
 Tr2Shell7 :: Tr2Shell7(int n, Domain *aDomain) : Shell7Base(n, aDomain)
 {
     this->numberOfDofMans = 6;
-    this->numInPlaneIP = 6;
 }
 
 const IntArray &
@@ -138,7 +137,7 @@ Tr2Shell7 :: giveBoundaryLocationArray(IntArray &locationArray, const IntArray &
     locationArray.at(i)=eloc.at(localloc.at(i));
     dofIdArray->at(i) = dofID.at(localloc.at(i));
   }
-
+  
 }
 
 void

@@ -55,7 +55,7 @@ protected:
     BeamBaseElement (int n, Domain *d);
     virtual ~BeamBaseElement();
 
-protected:
+public:
     /** Computes element end force vector from applied loading in local coordinate system
      * @param answer computed end force vector due to non-nodal loading
      * @param tStep solution step

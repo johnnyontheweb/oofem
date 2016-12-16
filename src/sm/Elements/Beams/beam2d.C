@@ -471,11 +471,6 @@ Beam2d :: giveEndForcesVector(FloatArray &answer, TimeStep *tStep)
         answer.subtract(load);
     }
 
-        }
-      }
-    }
-
-
 }
 
 

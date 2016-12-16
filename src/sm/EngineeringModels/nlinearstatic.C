@@ -615,7 +615,7 @@ NonLinearStatic :: printOutputAt(FILE *file, TimeStep *tStep)
 
     this->giveDomain(1)->giveOutputManager()->doDofManOutput(file, tStep);
     this->giveDomain(1)->giveOutputManager()->doElementOutput(file, tStep);
-    this->printReactionForces(tStep, 1, file);
+    this->printReactionForces(tStep, 1);
 }
 
 

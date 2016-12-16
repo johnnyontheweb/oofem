@@ -79,7 +79,7 @@ public:
     virtual integrationDomain giveBoundaryEdgeIntegrationDomain(int iedge) const { return _Line; }
 
 
-
+    
     virtual double giveCharacteristicLength(const FEICellGeometry &cellgeo) const;
 
     // Bulk
@@ -102,7 +102,7 @@ public:
     // Surface
     virtual void surfaceEvalN(FloatArray &answer, int isurf, const FloatArray &lcoords, const FEICellGeometry &cellgeo);
     virtual double surfaceEvalNormal(FloatArray &answer, int isurf, const FloatArray &lcoords, const FEICellGeometry &cellgeo);
-    virtual void surfaceEvaldNdx(FloatMatrix &answer, int isurf, const FloatArray &lcoords, const FEICellGeometry &cellgeo);
+    //virtual void surfaceEvaldNdx (FloatMatrix&answer, int isurf, const FloatArray& lcoords, const FEICellGeometry& cellgeo);
     virtual void surfaceLocal2global(FloatArray &answer, int isurf, const FloatArray &lcoords, const FEICellGeometry &cellgeo);
     virtual double surfaceGiveTransformationJacobian(int isurf, const FloatArray &lcoords, const FEICellGeometry &cellgeo);
     virtual void computeLocalSurfaceMapping(IntArray &nodes, int iSurf);

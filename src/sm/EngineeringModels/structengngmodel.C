@@ -98,7 +98,7 @@ StructuralEngngModel :: ~StructuralEngngModel()
 
 
 void
-StructuralEngngModel :: printReactionForces(TimeStep *tStep, int di, FILE *out)
+StructuralEngngModel :: printReactionForces(TimeStep *tStep, int di)
 //
 // computes and prints reaction forces in all supported or restrained dofs
 //
@@ -108,6 +108,12 @@ StructuralEngngModel :: printReactionForces(TimeStep *tStep, int di, FILE *out)
 
     Domain *domain = this->giveDomain(di);
 
+    // test if solution step output is active
+    if ( !domain->giveOutputManager()->testTimeStepOutput(tStep) ) {
+        return;
+    }
+
+    FILE *outputStream = this->giveOutputStream();
     // map contains corresponding dofmanager and dofs numbers corresponding to prescribed equations
     // sorted according to dofmanger number and as a minor crit. according to dof number
     // this is necessary for extractor, since the sorted output is expected
@@ -116,7 +122,7 @@ StructuralEngngModel :: printReactionForces(TimeStep *tStep, int di, FILE *out)
     //
     // print header
     //
-    fprintf(out, "\n\n\tR E A C T I O N S  O U T P U T:\n\t_______________________________\n\n\n");
+    fprintf(outputStream, "\n\n\tR E A C T I O N S  O U T P U T:\n\t_______________________________\n\n\n");
 
     // compute reaction forces
     this->computeReaction(reactions, tStep, di);
@@ -126,7 +132,7 @@ StructuralEngngModel :: printReactionForces(TimeStep *tStep, int di, FILE *out)
     //
     for ( int i = 1; i <= dofManMap.giveSize(); i++ ) {
         if ( domain->giveOutputManager()->testDofManOutput(dofManMap.at(i), tStep) ) {
-            fprintf(out, "\tNode %8d iDof %2d reaction % .4e    [bc-id: %d]\n",
+            fprintf( outputStream, "\tNode %8d iDof %2d reaction % .4e    [bc-id: %d]\n",
                     domain->giveDofManager( dofManMap.at(i) )->giveLabel(),
                     dofidMap.at(i), reactions.at( eqnMap.at(i) ),
                     domain->giveDofManager( dofManMap.at(i) )->giveDofWithID( dofidMap.at(i) )->giveBcId() );
@@ -137,45 +143,6 @@ StructuralEngngModel :: printReactionForces(TimeStep *tStep, int di, FILE *out)
 void StructuralEngngModel :: terminate(TimeStep *tStep){
     EngngModel :: terminate(tStep);
 }
-
-void
-StructuralEngngModel :: buildReactionTable(IntArray &restrDofMans, IntArray &restrDofs,
-                                           IntArray &eqn, TimeStep *tStep, int di)
-{
-    // determine number of restrained dofs
-    Domain *domain = this->giveDomain(di);
-    int numRestrDofs = this->giveNumberOfDomainEquations( di, EModelDefaultPrescribedEquationNumbering() );
-    int ndofMan = domain->giveNumberOfDofManagers();
-    int rindex, count = 0;
-
-    // initialize corresponding dofManagers and dofs for each restrained dof
-    restrDofMans.resize(numRestrDofs);
-    restrDofs.resize(numRestrDofs);
-    eqn.resize(numRestrDofs);
-
-    for ( int i = 1; i <= ndofMan; i++ ) {
-        DofManager *inode = domain->giveDofManager(i);
-        for ( Dof *jdof: *inode ) {
-            if ( jdof->isPrimaryDof() && ( jdof->hasBc(tStep) ) ) { // skip slave dofs
-                rindex = jdof->__givePrescribedEquationNumber();
-                if ( rindex ) {
-                    count++;
-                    restrDofMans.at(count) = i;
-                    restrDofs.at(count) = jdof->giveDofID();
-                    eqn.at(count) = rindex;
-                } else {
-                    // NullDof has no equation number and no prescribed equation number
-                    //_error("No prescribed equation number assigned to supported DOF");
-                }
-            }
-        }
-    }
-    // Trim to size.
-    restrDofMans.resizeWithValues(count);
-    restrDofs.resizeWithValues(count);
-    eqn.resizeWithValues(count);
-}
-
 
 void
 StructuralEngngModel :: computeReaction(FloatArray &answer, TimeStep *tStep, int di)
@@ -261,18 +228,6 @@ StructuralEngngModel :: checkConsistency()
 
 
 void
-StructuralEngngModel :: printOutputAt(FILE *file, TimeStep *tStep)
-{
-    if ( !this->giveDomain(1)->giveOutputManager()->testTimeStepOutput(tStep) ) {
-        return; // Do not print even Solution step header
-    }
-
-    EngngModel :: printOutputAt(file, tStep);
-    this->printReactionForces(tStep, 1, file);
-}
-
-
-void
 StructuralEngngModel :: updateInternalState(TimeStep *tStep)
 {
     for ( auto &domain: domainList ) {
@@ -303,6 +258,44 @@ StructuralEngngModel :: updateInternalState(TimeStep *tStep)
     }
 }
 
+
+void
+StructuralEngngModel :: buildReactionTable(IntArray &restrDofMans, IntArray &restrDofs,
+                                           IntArray &eqn, TimeStep *tStep, int di)
+{
+    // determine number of restrained dofs
+    Domain *domain = this->giveDomain(di);
+    int numRestrDofs = this->giveNumberOfDomainEquations( di, EModelDefaultPrescribedEquationNumbering() );
+    int ndofMan = domain->giveNumberOfDofManagers();
+    int rindex, count = 0;
+
+    // initialize corresponding dofManagers and dofs for each restrained dof
+    restrDofMans.resize(numRestrDofs);
+    restrDofs.resize(numRestrDofs);
+    eqn.resize(numRestrDofs);
+
+    for ( int i = 1; i <= ndofMan; i++ ) {
+        DofManager *inode = domain->giveDofManager(i);
+        for ( Dof *jdof: *inode ) {
+            if ( jdof->isPrimaryDof() && ( jdof->hasBc(tStep) ) ) { // skip slave dofs
+                rindex = jdof->__givePrescribedEquationNumber();
+                if ( rindex ) {
+                    count++;
+                    restrDofMans.at(count) = i;
+                    restrDofs.at(count) = jdof->giveDofID();
+                    eqn.at(count) = rindex;
+                } else {
+                    // NullDof has no equation number and no prescribed equation number
+                    //_error("No prescribed equation number assigned to supported DOF");
+                }
+            }
+        }
+    }
+    // Trim to size.
+    restrDofMans.resizeWithValues(count);
+    restrDofs.resizeWithValues(count);
+    eqn.resizeWithValues(count);
+}
 
 
 #ifdef __OOFEG

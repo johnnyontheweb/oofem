@@ -257,11 +257,7 @@ void Tet1BubbleStokes :: computeLoadVector(FloatArray &answer, BodyLoad *load, C
 }
 
 
-<<<<<<< HEAD
-  void Tet1BubbleStokes :: computeBoundaryLoadVector(FloatArray &answer, BoundaryLoad *load, int iSurf, CharType type, ValueModeType mode, TimeStep *tStep, bool global)
-=======
   void Tet1BubbleStokes :: computeBoundarySurfaceLoadVector(FloatArray &answer, BoundaryLoad *load, int iSurf, CharType type, ValueModeType mode, TimeStep *tStep, bool global)
->>>>>>> remotes/originofficial/master
 {
     if ( type != ExternalForcesVector ) {
         answer.clear();

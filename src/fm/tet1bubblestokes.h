@@ -90,13 +90,8 @@ public:
     void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode mode, TimeStep *tStep);
 
     void computeExternalForcesVector(FloatArray &answer, TimeStep *tStep);
-<<<<<<< HEAD
-    virtual void computeLoadVector(FloatArray &answer, Load *load, CharType type, ValueModeType mode, TimeStep *tStep);
-    virtual void computeBoundaryLoadVector(FloatArray &answer, BoundaryLoad *load, int boundary, CharType type, ValueModeType mode, TimeStep *tStep, bool global=true);
-=======
     virtual void computeLoadVector(FloatArray &answer, BodyLoad *load, CharType type, ValueModeType mode, TimeStep *tStep);
     virtual void computeBoundarySurfaceLoadVector(FloatArray &answer, BoundaryLoad *load, int boundary, CharType type, ValueModeType mode, TimeStep *tStep, bool global=true);
->>>>>>> remotes/originofficial/master
 
     virtual const char *giveClassName() const { return "Tet1BubbleStokes"; }
     virtual const char *giveInputRecordName() const { return _IFT_Tet1BubbleStokes_Name; }

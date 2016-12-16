@@ -42,25 +42,10 @@
 namespace oofem {
 REGISTER_BoundaryCondition(ConstantSurfaceLoad);
 
-ConstantSurfaceLoad :: ConstantSurfaceLoad(int i, Domain *d) : BoundaryLoad(i, d) {
-    this->loadOffset = 0.0;
-}
-
 IRResultType
-ConstantSurfaceLoad :: initializeFrom(InputRecord *ir)
+ConstantSurfaceLoad::initializeFrom(InputRecord *ir)
 {
-    BoundaryLoad :: initializeFrom(ir);
-
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-    IR_GIVE_OPTIONAL_FIELD(ir, this->loadOffset, _IFT_ConstantSurfaceLoad_LoadOffset);
-    return IRRT_OK;
-}
-
-void
-ConstantSurfaceLoad :: giveInputRecord(DynamicInputRecord &input)
-{
-    BoundaryLoad :: giveInputRecord(input);
-    input.setField(this->loadOffset, _IFT_ConstantSurfaceLoad_LoadOffset);
+	return BoundaryLoad::initializeFrom(ir);
 }
 
 void

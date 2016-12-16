@@ -36,6 +36,7 @@
 #include "timestep.h"
 #include "element.h"
 #include "../sm/Elements/structuralelement.h"
+#include "../sm/Elements/Beams/beambaseelement.h"
 #include "../sm/Elements/Beams/beam3d.h"
 #include "gausspoint.h"
 #include "engngm.h"
@@ -119,9 +120,9 @@ namespace oofem {
 					beamIDs.push_back(elNum);
 					//beamIDs.push_back(elNum);
 
-					StructuralElement *SElem;
+					BeamBaseElement *SElem;
 
-					SElem = static_cast<StructuralElement *>(elem.get());
+					SElem = static_cast<BeamBaseElement *>(elem.get());
 
 					double ksi, l = elem->computeLength();
 					FloatArray Fl, loadEndForces;
@@ -129,7 +130,7 @@ namespace oofem {
 					SElem->giveInternalForcesVector(Fl, tStep);
 
 					// add exact end forces due to nonnodal loading
-					SElem->computeForceLoadVector(loadEndForces, tStep, VM_Total);
+					SElem->computeLocalForceLoadVector(loadEndForces, tStep, VM_Total);
 					if (loadEndForces.giveSize()) {
 						Fl.subtract(loadEndForces);
 					}
