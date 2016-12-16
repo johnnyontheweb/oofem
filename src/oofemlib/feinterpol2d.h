@@ -59,23 +59,11 @@ public:
      */
     virtual double giveArea(const FEICellGeometry &cellgeo) const;
 
-    /**
-     * Returns a characteristic length of the geometry, typically a diagonal or edge length.
-     * @param cellgeo Underlying cell geometry.
-     * @return Square root of area.
-     */
-    virtual double giveCharacteristicLength(const FEICellGeometry &cellgeo) const {return sqrt( this->giveArea(cellgeo) );}
-
-    /**
-     * Default implementation using Newton's method to find the local coordinates.
-     * Can be overloaded if desired.
-     */
-    virtual int global2local(FloatArray &answer, const FloatArray &gcoords, const FEICellGeometry &cellgeo);
-
-    virtual void giveJacobianMatrixAt(FloatMatrix &jacobianMatrix, const FloatArray &lcoords, const FEICellGeometry &cellgeo);
-
-    virtual bool inside(const FloatArray &lcoords) const;
-
+    /**@name Boundary interpolation services. 
+       Boundary is defined as entity of one dimension lower
+       than the interpolation represents
+    */
+    //@{
     virtual void boundaryEdgeGiveNodes(IntArray &answer, int boundary);
     virtual void boundaryEdgeEvalN(FloatArray &answer, int boundary, const FloatArray &lcoords, const FEICellGeometry &cellgeo);
     virtual double boundaryEdgeGiveTransformationJacobian(int boundary, const FloatArray &lcoords, const FEICellGeometry &cellgeo);
@@ -86,6 +74,22 @@ public:
     virtual double boundaryEvalNormal(FloatArray &answer, int boundary, const FloatArray &lcoords, const FEICellGeometry &cellgeo);
     virtual double boundaryGiveTransformationJacobian(int boundary, const FloatArray &lcoords, const FEICellGeometry &cellgeo);
     virtual void boundaryLocal2Global(FloatArray &answer, int boundary, const FloatArray &lcoords, const FEICellGeometry &cellgeo);
+
+    //@}
+
+    
+    /**@name Surface interpolation services */
+    //@{
+    virtual void boundarySurfaceEvalN(FloatArray &answer, int isurf, const FloatArray &lcoords, const FEICellGeometry &cellgeo);
+    virtual void boundarySurfaceEvaldNdx(FloatMatrix &answer, int isurf,
+					 const FloatArray &lcoords, const FEICellGeometry &cellgeo);
+    virtual double boundarySurfaceEvalNormal(FloatArray &answer, int isurf, const FloatArray &lcoords,
+					     const FEICellGeometry &cellgeo);
+    virtual void boundarySurfaceLocal2global(FloatArray &answer, int isurf,
+					      const FloatArray &lcoords, const FEICellGeometry &cellgeo) ;
+    virtual double boundarySurfaceGiveTransformationJacobian(int isurf, const FloatArray &lcoords,
+							     const FEICellGeometry &cellgeo) ;
+    //@}
 
     /**@name Edge interpolation services. */
     //@{
@@ -139,8 +143,6 @@ public:
                                                   const FEICellGeometry &cellgeo);
     //@}
 
-    virtual IntegrationRule *giveBoundaryIntegrationRule(int order, int boundary);
-    virtual IntegrationRule *giveBoundaryEdgeIntegrationRule(int order, int boundary);
 };
 } // end namespace oofem
 #endif // feinterpol2d_h

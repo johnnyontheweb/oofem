@@ -57,9 +57,17 @@ public:
     virtual ~Tr_Warp();
     virtual void computeFirstMomentOfArea(FloatArray &answer);
     virtual double computeVolumeAround(GaussPoint *gp);
+<<<<<<< HEAD
     virtual void giveEdgeDofMapping(IntArray &answer, int iEdge) const;
     virtual void computeLocalForceLoadVector(FloatArray &answer, TimeStep *tStep, ValueModeType mode);
     virtual void computeEdgeLoadVectorAt(FloatArray &answer, Load *load, TimeStep *tStep, ValueModeType mode);
+=======
+    void giveEdgeDofMapping(IntArray &answer, int iEdge) const;
+    virtual void computeEdgeLoadVectorAt(FloatArray &answer, Load *load, TimeStep *tStep, ValueModeType mode);
+    virtual void giveCharacteristicVector(FloatArray &answer, CharType mtrx, ValueModeType mode,
+					  TimeStep *tStep);
+
+>>>>>>> remotes/originofficial/master
 
     // definition
     virtual const char *giveInputRecordName() const { return _IFT_Tr_Warp_Name; }

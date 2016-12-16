@@ -1117,19 +1117,17 @@ Shell7Base :: computeConvectiveMassForce(FloatArray &answer, TimeStep *tStep)
 // External forces
 
 #if 1
-void
-Shell7Base :: computeEdgeLoadVectorAt(FloatArray &answer, Load *load, int iEdge, TimeStep *tStep, ValueModeType mode)
+void Shell7Base :: computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, int boundary, CharType type, ValueModeType mode, TimeStep *tStep, bool global)
 {
-    BoundaryLoad *edgeLoad = dynamic_cast< BoundaryLoad * >( load );
-    if ( edgeLoad ) {
-        this->computeTractionForce(answer, iEdge, edgeLoad, tStep, mode);
-    } else {
-        OOFEM_ERROR("Load type not supported");
-    }
+  answer.clear();
+  if ( type != ExternalForcesVector ) {
+    return;
+  }
+  this->computeTractionForce(answer, boundary, load, tStep, mode);
 }
 
 
-// Surface
+/*
 void
 Shell7Base :: computeSurfaceLoadVectorAt(FloatArray &answer, Load *load,
                                          int iSurf, TimeStep *tStep, ValueModeType mode)
@@ -1148,6 +1146,7 @@ Shell7Base :: computeSurfaceLoadVectorAt(FloatArray &answer, Load *load,
         OOFEM_ERROR("Load type not supported");
     }
 }
+*/
 
 void
 Shell7Base :: computePressureForce(FloatArray &answer, FloatArray solVec, const int iSurf, BoundaryLoad *surfLoad, TimeStep *tStep, ValueModeType mode)
@@ -1265,7 +1264,7 @@ Shell7Base :: evalInitialCovarNormalAt(FloatArray &nCov, const FloatArray &lCoor
 }
 
 void
-Shell7Base :: computeTractionForce(FloatArray &answer, const int iEdge, BoundaryLoad *edgeLoad, TimeStep *tStep, ValueModeType mode)
+Shell7Base :: computeTractionForce(FloatArray &answer, const int iEdge, BoundaryLoad *edgeLoad, TimeStep *tStep, ValueModeType mode, bool map2elementDOFs)
 {
 
     int approxOrder = edgeLoad->giveApproxOrder() + this->giveInterpolation()->giveInterpolationOrder();
@@ -1313,12 +1312,16 @@ Shell7Base :: computeTractionForce(FloatArray &answer, const int iEdge, Boundary
         
         Nf.plusProduct(N, fT, dL);
     }
-
+    /* Note: now used from computeBoundaryEdgeLoadVector, so result should be in global cs for edge dofs */
+    if (map2elementDOFs) {
     IntArray mask;
     this->giveEdgeDofMapping(mask, iEdge);
     answer.resize( Shell7Base :: giveNumberOfDofs()  );
     answer.zero();
     answer.assemble(Nf, mask);
+    } else {
+      answer = Nf;
+    }
 
 }
 
@@ -1997,7 +2000,7 @@ Shell7Base :: recoverValuesFromIP(std::vector<FloatArray> &recoveredValues, int 
 #if 0
     if (this->giveGlobalNumber() == 20) {
         for (FloatArray inod: recoveredValues) {
-            inod.printYourself("recovered-v√§rden");
+            inod.printYourself("recovered-v‰rden");
         }
     }
 #endif
@@ -2113,7 +2116,7 @@ Shell7Base :: nodalLeastSquareFitFromIP(std::vector<FloatArray> &recoveredValues
 
     temprecovedValues.beProductOf(Nhat,ipValues);
     temprecovedValuesT.beTranspositionOf(temprecovedValues);
-    ///TODO se √∂ver nodnumrering.
+    ///TODO se ˆver nodnumrering.
     IntArray strangeNodeNumbering = {2, 1, 3, 5, 4, 6, 7, 9, 8, 10, 12, 11, 13, 14, 15 };
     for (int i = 0; i < numNodes; i++ ) {
         if ( valueType == ISVT_TENSOR_S3 ) {
@@ -2173,7 +2176,7 @@ Shell7Base :: giveSPRcontribution(FloatMatrix &eltIPvalues, FloatMatrix &eltPoly
        a = [a1 ... a9] is the vector of coefficients, which is to be found by the polynomial least square fit.
     */
     
-    std :: unique_ptr< IntegrationRule > &iRule = this->integrationRulesArray[layer-1];                                     // St√§mmer det h√§r???
+    std :: unique_ptr< IntegrationRule > &iRule = this->integrationRulesArray[layer-1];                                     // St‰mmer det h‰r???
     IntegrationPoint *ip;
     int numEltIP = iRule->giveNumberOfIntegrationPoints();
     eltIPvalues.clear();
@@ -2492,7 +2495,7 @@ Shell7Base :: giveLayerContributionToSR(FloatMatrix &dSmatLayer, FloatMatrix &dS
         // Get (pointer to) current element in patch and calculate its addition to the patch
         Shell7Base *patchEl = static_cast<Shell7Base*>(d->giveElement(patchElNum));
         
-        std :: unique_ptr< IntegrationRule > &iRule = patchEl->integrationRulesArray[layer-1];                                     // St√§mmer det h√§r???
+        std :: unique_ptr< IntegrationRule > &iRule = patchEl->integrationRulesArray[layer-1];                                     // St‰mmer det h‰r???
         IntegrationPoint *ip;
         int numEltIP = iRule->giveNumberOfIntegrationPoints();
         
@@ -2513,17 +2516,17 @@ Shell7Base :: giveLayerContributionToSR(FloatMatrix &dSmatLayer, FloatMatrix &dS
 /*            FloatArray iRowP = {1,IpCoords.at(1),IpCoords.at(2),IpCoords.at(3),
                                 IpCoords.at(2)*IpCoords.at(3),IpCoords.at(1)*IpCoords.at(3),IpCoords.at(1)*IpCoords.at(2),
                                 IpCoords.at(1)*IpCoords.at(1),IpCoords.at(2)*IpCoords.at(2)};  */ 
-            // P = [1 x y z yz xz xy x¬≤ y¬≤ x¬≤y x¬≤z]
+            // P = [1 x y z yz xz xy x≤ y≤ x≤y x≤z]
             FloatArray iRowP = {1.0,IpCoords.at(1),IpCoords.at(2),IpCoords.at(3),
                                 IpCoords.at(2)*IpCoords.at(3),IpCoords.at(1)*IpCoords.at(3),IpCoords.at(1)*IpCoords.at(2),
                                 IpCoords.at(1)*IpCoords.at(1),IpCoords.at(2)*IpCoords.at(2),
                                 IpCoords.at(1)*IpCoords.at(1)*IpCoords.at(3),IpCoords.at(2)*IpCoords.at(2)*IpCoords.at(3)}; 
-            // P = [x y yz xz xy x¬≤ y¬≤ x¬≤y x¬≤z]
+            // P = [x y yz xz xy x≤ y≤ x≤y x≤z]
 //             FloatArray iRowP = {IpCoords.at(1),IpCoords.at(2),
 //                                 IpCoords.at(2)*IpCoords.at(3),IpCoords.at(1)*IpCoords.at(3),IpCoords.at(1)*IpCoords.at(2),
 //                                 IpCoords.at(1)*IpCoords.at(1),IpCoords.at(2)*IpCoords.at(2),
 //                                 IpCoords.at(1)*IpCoords.at(1)*IpCoords.at(3),IpCoords.at(2)*IpCoords.at(2)*IpCoords.at(3)};
-            // P = [x y yz xz xy x¬≤ y¬≤ x¬≥ y¬≥ xyz x¬≤z y¬≤z]
+            // P = [x y yz xz xy x≤ y≤ x≥ y≥ xyz x≤z y≤z]
 //             FloatArray iRowP = {IpCoords.at(1),IpCoords.at(2),
 //                                 IpCoords.at(2)*IpCoords.at(3),IpCoords.at(1)*IpCoords.at(3),IpCoords.at(1)*IpCoords.at(2),
 //                                 IpCoords.at(1)*IpCoords.at(1),IpCoords.at(2)*IpCoords.at(2),
@@ -2979,7 +2982,7 @@ Shell7Base :: givePolynomialGradientForStressRecAt(FloatArray &answer, FloatArra
     /* Return the special matrix {gradP} of the reciever evaluated at a global coordinate (of a Gauss point)
      * Used for integration of S_xz and S_yz such that
      * a(ij)*gradP = dS_ij/dx + dS_ij/dy, where a(ij) is a vector of coefficients to the polynomial
-     * P(x,y,z) = [1 x y z yz xz xy x¬≤ y¬≤ x¬≤z y¬≤z] (NB: z^2 term omitted)
+     * P(x,y,z) = [1 x y z yz xz xy x≤ y≤ x≤z y≤z] (NB: z^2 term omitted)
      * associated with stress component ij.
      * The gradient of P(x,y,z) is given by
      * dP/dx = [0 1 0 0 0 z y 2x 0]
@@ -3001,35 +3004,35 @@ Shell7Base :: giveZintegratedPolynomialGradientForStressRecAt(FloatArray &answer
     /* Return the special matrix {gradP} of the reciever evaluated at a global coordinate (of a Gauss point)
      * Used for integration of S_xz and S_yz such that
      * a(ij)*gradP = dS_ij/dx + dS_ij/dy, where a(ij) is a vector of coefficients to the polynomial
-     * P(x,y,z) = [1 x y z yz xz xy x¬≤ y¬≤ x¬≤z y¬≤z] (NB: z^2 term omitted)
+     * P(x,y,z) = [1 x y z yz xz xy x≤ y≤ x≤z y≤z] (NB: z^2 term omitted)
      * associated with stress component ij.
      * The gradient of P(x,y,z) is given by
      * dP/dx = [0 1 0 0 0 z y 2x 0 2xz 0]
      * dP/dy = [0 0 1 0 z 0 x 0 2y 0 2yz]
      * and the z-integration is then:
-     * I[dP/dx]dz = [0 z 0 0 0    z¬≤/2 yz 2xz 0   xz¬≤ 0  ]
-     * I[dP/dy]dz = [0 0 z 0 z¬≤/2 0    xz 0   2yz 0   yz¬≤]
+     * I[dP/dx]dz = [0 z 0 0 0    z≤/2 yz 2xz 0   xz≤ 0  ]
+     * I[dP/dy]dz = [0 0 z 0 z≤/2 0    xz 0   2yz 0   yz≤]
      * answer = IntgradP = [I[dP/dx]dz I[dP/dy]yz]^T
      */
     
     answer.zero();
-    // P = [1 x y z yz xz xy x¬≤ y¬≤]
+    // P = [1 x y z yz xz xy x≤ y≤]
 //     answer = {0,coords.at(3),           0,0,                                  0,0.5*coords.at(3)*coords.at(3),coords.at(2)*coords.at(3),2.0*coords.at(1)*coords.at(3),                            0,
 //               0,           0,coords.at(3),0,0.5*coords.at(3)*coords.at(3),                                  0,coords.at(1)*coords.at(3),                            0,2.0*coords.at(2)*coords.at(3)};
     
-    // P = [1 x y z yz xz xy x¬≤ y¬≤ x¬≤z y¬≤z]
+    // P = [1 x y z yz xz xy x≤ y≤ x≤z y≤z]
     answer = {0,coords.at(3),0,0,0,0.5*coords.at(3)*coords.at(3),coords.at(2)*coords.at(3),2.0*coords.at(1)*coords.at(3),0,coords.at(1)*coords.at(3)*coords.at(3),0,
               0,0,coords.at(3),0,0.5*coords.at(3)*coords.at(3),0,coords.at(1)*coords.at(3),0,2.0*coords.at(2)*coords.at(3),0,coords.at(2)*coords.at(3)*coords.at(3)};
     
-    // P = [x y yz xz xy x¬≤ y¬≤ x¬≤z y¬≤z]
+    // P = [x y yz xz xy x≤ y≤ x≤z y≤z]
 //     answer = {coords.at(3),0,0,0.5*coords.at(3)*coords.at(3),coords.at(2)*coords.at(3),2.0*coords.at(1)*coords.at(3),0,coords.at(1)*coords.at(3)*coords.at(3),0,
 //               0,coords.at(3),0.5*coords.at(3)*coords.at(3),0,coords.at(1)*coords.at(3),0,2.0*coords.at(2)*coords.at(3),0,coords.at(2)*coords.at(3)*coords.at(3)};
     
-    // P = [x y yz xz xy x¬≤ y¬≤ x¬≤z y¬≤z xyz]
+    // P = [x y yz xz xy x≤ y≤ x≤z y≤z xyz]
 //     answer = {coords.at(3),0,0,0.5*coords.at(3)*coords.at(3),coords.at(2)*coords.at(3),2.0*coords.at(1)*coords.at(3),0,coords.at(1)*coords.at(3)*coords.at(3),0,0.5*coords.at(2)*coords.at(3)*coords.at(3),
 //               0,coords.at(3),0.5*coords.at(3)*coords.at(3),0,coords.at(1)*coords.at(3),0,2.0*coords.at(2)*coords.at(3),0,coords.at(2)*coords.at(3)*coords.at(3),0.5*coords.at(1)*coords.at(3)*coords.at(3)};
         
-    // P = [x y yz xz xy x¬≤ y¬≤ x¬≥ y¬≥ xyz x¬≤z y¬≤z]
+    // P = [x y yz xz xy x≤ y≤ x≥ y≥ xyz x≤z y≤z]
 //     answer = {coords.at(3),0,0,0.5*coords.at(3)*coords.at(3),coords.at(2)*coords.at(3),2.0*coords.at(1)*coords.at(3),0,3.0*coords.at(1)*coords.at(1)*coords.at(3),0,0.5*coords.at(2)*coords.at(3)*coords.at(3),coords.at(1)*coords.at(3)*coords.at(3),0,
 //               0,coords.at(3),0.5*coords.at(3)*coords.at(3),0,coords.at(1)*coords.at(3),0,2.0*coords.at(2)*coords.at(3),0,3.0*coords.at(2)*coords.at(2)*coords.at(3),0.5*coords.at(1)*coords.at(3)*coords.at(3),0,coords.at(2)*coords.at(3)*coords.at(3)};
 
@@ -3040,25 +3043,25 @@ void
 Shell7Base :: giveZ2integratedPolynomial2GradientForStressRecAt(FloatArray &answer, FloatArray &coords)
 {
     /* 
-     * I[d(I[dP/dx]dz)/dx]dz = [0 0 0 0 0 0 0 z¬≤ 0  z¬≥/3 0   ]
-     * I[d(I[dP/dy]dz)/dy]dz = [0 0 0 0 0 0 0 0  z¬≤ 0    z¬≥/3]
-     * I[d(I[dP/dx]dz)/dy]dz = I[d(I[dP/dy]dz)/dx]dz = [0 0 0 0 0 0 z¬≤/2 0 0 0 0]
+     * I[d(I[dP/dx]dz)/dx]dz = [0 0 0 0 0 0 0 z≤ 0  z≥/3 0   ]
+     * I[d(I[dP/dy]dz)/dy]dz = [0 0 0 0 0 0 0 0  z≤ 0    z≥/3]
+     * I[d(I[dP/dx]dz)/dy]dz = I[d(I[dP/dy]dz)/dx]dz = [0 0 0 0 0 0 z≤/2 0 0 0 0]
      * answer = int2grad2P = [I[d(I[dP/dx]dz)/dx]dz I[d(I[dP/dx]dz)/dy]dz I[d(I[dP/dy]dz)/dy]dz]^T
      */
     
     answer.zero();
     
-    // P = [1 x y z yz xz xy x¬≤ y¬≤ x¬≤z y¬≤z]
+    // P = [1 x y z yz xz xy x≤ y≤ x≤z y≤z]
     answer = {0,0,0,0,0,0,0,coords.at(3)*coords.at(3),0,(1.0/3.0)*coords.at(3)*coords.at(3)*coords.at(3),0,
               0,0,0,0,0,0,0.5*coords.at(3)*coords.at(3),0,0,0,0,
               0,0,0,0,0,0,0,0,coords.at(3)*coords.at(3),0,(1.0/3.0)*coords.at(3)*coords.at(3)*coords.at(3)};
     
-    // P = [x y yz xz xy x¬≤ y¬≤ x¬≤z y¬≤z]
+    // P = [x y yz xz xy x≤ y≤ x≤z y≤z]
 //     answer = {0,0,0,0,0,coords.at(3)*coords.at(3),0,(1.0/3.0)*coords.at(3)*coords.at(3)*coords.at(3),0,
 //               0,0,0,0,0.5*coords.at(3)*coords.at(3),0,0,0,0,
 //               0,0,0,0,0,0,coords.at(3)*coords.at(3),0,(1.0/3.0)*coords.at(3)*coords.at(3)*coords.at(3)};
 //               
-    // P = [x y yz xz xy x¬≤ y¬≤ x¬≤z y¬≤z]
+    // P = [x y yz xz xy x≤ y≤ x≤z y≤z]
 //     answer = {0,0,0,0,0,coords.at(3)*coords.at(3),0,3.0*coords.at(1)*coords.at(3)*coords.at(3),0,0,(1.0/3.0)*coords.at(3)*coords.at(3)*coords.at(3),0,
 //               0,0,0,0,0.5*coords.at(3)*coords.at(3),0,0,0,0,(1.0/6.0)*coords.at(3)*coords.at(3)*coords.at(3),0,0,
 //               0,0,0,0,0,0,coords.at(3)*coords.at(3),0,3.0*coords.at(2)*coords.at(3)*coords.at(3),0,0,(1.0/3.0)*coords.at(3)*coords.at(3)*coords.at(3)};
@@ -3079,7 +3082,7 @@ Shell7Base :: computeBmatrixForStressRecAt(FloatArray &lcoords, FloatMatrix &ans
      */
  
     // set up virtual cell geometry for an qwedge
-    const int numNodes = this->interpolationForExport.giveNumberOfNodes();  ///TODO l√§gg till interpolationForExport f√∂r SR
+    const int numNodes = this->interpolationForExport.giveNumberOfNodes();  ///TODO l‰gg till interpolationForExport fˆr SR
     std::vector<FloatArray> nodes;
     giveFictiousNodeCoordsForExport(nodes, layer);
 

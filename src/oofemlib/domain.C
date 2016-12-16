@@ -93,8 +93,8 @@
 
 namespace oofem {
 	Domain::Domain(int n, int serNum, EngngModel *e) : defaultNodeDofIDArry(),
-		outputManager(new OutputManager(this)),
-		bcTracker(this)
+                                                     outputManager( new OutputManager(this) ),
+                                                     bcTracker(this)
 		// Constructor. Creates a new domain.
 	{
 		this->engineeringModel = e;
@@ -558,12 +558,12 @@ namespace oofem {
 		return fracManager.get();
 	}
 
-	BCTracker*
-		Domain::giveBCTracker()
-	{
-		return &bcTracker;
-	}
-
+BCTracker*
+Domain::giveBCTracker()
+{
+  return &bcTracker;
+}
+  
 	EngngModel *
 		Domain::giveEngngModel()
 	{

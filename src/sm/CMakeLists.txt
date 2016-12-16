@@ -30,6 +30,7 @@ set (sm_element
     Elements/Beams/libeam3dnl.C 
     Elements/Beams/libeam3dnl2.C 
     Elements/Beams/libeam3d2.C
+    Elements/Beams/beambaseelement.C
     Elements/Beams/beam2d.C 
     Elements/Beams/beam3d.C
     Elements/Plates/cct.C
@@ -83,11 +84,9 @@ set (sm_element
     Elements/tet21ghostsolid.C
     Elements/quad1platesubsoil.C 
     Elements/tria1platesubsoil.C
+    Elements/linedistributedspring.C
     Elements/trwarp.C
-    Elements/PlaneStress/basicelement.C
-    Elements/structural2delement.C
-    Elements/structural3delement.C
-    #Elements/phasefieldelement.C
+    Elements/nodalspringelement.C
     #qplanstrssphf.C
     )
 

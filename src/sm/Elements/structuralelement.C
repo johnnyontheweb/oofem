@@ -87,7 +87,7 @@ StructuralElement :: computeConstitutiveMatrixAt(FloatMatrix &answer,
 }
 #endif
 
-void StructuralElement :: computeLoadVector(FloatArray &answer, Load *load, CharType type, ValueModeType mode, TimeStep *tStep)
+void StructuralElement :: computeLoadVector(FloatArray &answer, BodyLoad *load, CharType type, ValueModeType mode, TimeStep *tStep)
 {
     if ( type != ExternalForcesVector ) {
         answer.clear();
@@ -106,7 +106,11 @@ void StructuralElement :: computeLoadVector(FloatArray &answer, Load *load, Char
     }
 }
 
+<<<<<<< HEAD
   void StructuralElement :: computeBoundaryLoadVector(FloatArray &answer, BoundaryLoad *load, int boundary, CharType type, ValueModeType mode, TimeStep *tStep, bool global)
+=======
+  void StructuralElement :: computeBoundarySurfaceLoadVector(FloatArray &answer, BoundaryLoad *load, int boundary, CharType type, ValueModeType mode, TimeStep *tStep, bool global)
+>>>>>>> remotes/originofficial/master
 {
     answer.clear();
     if ( type != ExternalForcesVector ) {
@@ -121,9 +125,9 @@ void StructuralElement :: computeLoadVector(FloatArray &answer, Load *load, Char
     FloatArray n_vec;
     FloatMatrix n, T;
     FloatArray force, globalIPcoords;
-    int nsd = fei->giveNsd();
+    //int nsd = fei->giveNsd();
 
-    std :: unique_ptr< IntegrationRule >iRule( fei->giveBoundaryIntegrationRule(load->giveApproxOrder(), boundary) );
+    std :: unique_ptr< IntegrationRule >iRule( fei->giveBoundarySurfaceIntegrationRule(load->giveApproxOrder(), boundary) );
 
     for ( auto &gp: *iRule ) {
         const FloatArray &lcoords = gp->giveNaturalCoordinates();
@@ -153,8 +157,7 @@ void StructuralElement :: computeLoadVector(FloatArray &answer, Load *load, Char
         }
 
         // Construct n-matrix
-        fei->boundaryEvalN( n_vec, boundary, lcoords, FEIElementGeometryWrapper(this) );
-        n.beNMatrixOf(n_vec, nsd);
+        this->computeSurfaceNMatrix(n, boundary, lcoords); // to allow adapttation on element level
 
         ///@todo Some way to ask for the thickness at a global coordinate maybe?
         double thickness = 1.0; // Should be the circumference for axisymm-elements.
@@ -164,6 +167,80 @@ void StructuralElement :: computeLoadVector(FloatArray &answer, Load *load, Char
 }
 
 
+void
+StructuralElement::computeSurfaceNMatrix (FloatMatrix &answer, int boundaryID, const FloatArray& lcoords)
+{
+  FloatArray n_vec;
+  this->giveInterpolation()->boundarySurfaceEvalN(n_vec, boundaryID, lcoords, FEIElementGeometryWrapper(this) );
+  answer.beNMatrixOf(n_vec, this->giveInterpolation()->giveNsd());
+}
+
+  
+void StructuralElement :: computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, int boundary, CharType type, ValueModeType mode, TimeStep *tStep, bool global)
+{
+    answer.clear();
+    if ( type != ExternalForcesVector ) {
+        return;
+    }
+
+    FEInterpolation *fei = this->giveInterpolation();
+    if ( !fei ) {
+        OOFEM_ERROR("No interpolator available");
+    }
+
+    FloatMatrix n, T;
+    FloatArray force, globalIPcoords;
+
+    std :: unique_ptr< IntegrationRule >iRule( fei->giveBoundaryEdgeIntegrationRule(load->giveApproxOrder(), boundary) );
+
+    for ( GaussPoint *gp: *iRule ) {
+        const FloatArray &lcoords = gp->giveNaturalCoordinates();
+
+        if ( load->giveFormulationType() == Load :: FT_Entity ) {
+            load->computeValueAt(force, tStep, lcoords, mode);
+        } else {
+            fei->boundaryEdgeLocal2Global( globalIPcoords, boundary, lcoords, FEIElementGeometryWrapper(this) );
+            load->computeValueAt(force, tStep, globalIPcoords, mode);
+        }
+
+        ///@todo Make sure this part is correct.
+        // We always want the global values in the end, so we might as well compute them here directly:
+        // transform force
+        if ( load->giveCoordSystMode() == Load :: CST_Global ) {
+            // then just keep it in global c.s
+        } else {
+            ///@todo Support this...
+            // transform from local boundary to element local c.s
+            if ( this->computeLoadLEToLRotationMatrix(T, boundary, gp) ) {
+               force.rotatedWith(T, 'n');
+            }
+            // then to global c.s
+            if ( this->computeLoadGToLRotationMtrx(T) ) {
+                force.rotatedWith(T, 't');
+            }
+        }
+
+        // Construct n-matrix
+        //fei->boundaryEdgeEvalN( n_vec, boundary, lcoords, FEIElementGeometryWrapper(this) );
+	//n.beNMatrixOf(n_vec, nsd);
+	this->computeEdgeNMatrix(n, boundary, lcoords); // to allow adapttation on element level
+
+        double dV = gp->giveWeight() * fei->boundaryEdgeGiveTransformationJacobian( boundary, lcoords, FEIElementGeometryWrapper(this) );
+        answer.plusProduct(n, force, dV);
+    }
+}
+
+void
+StructuralElement::computeEdgeNMatrix (FloatMatrix &answer, int boundaryID, const FloatArray& lcoords)
+{
+  FloatArray n_vec;
+  this->giveInterpolation()->boundaryEdgeEvalN (n_vec, boundaryID, lcoords, FEIElementGeometryWrapper(this) );
+  answer.beNMatrixOf(n_vec, this->giveInterpolation()->giveNsd());
+}
+
+				       
+
+  
 void
 StructuralElement :: computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode)
 // Computes numerically the load vector of the receiver due to the body
@@ -204,7 +281,7 @@ StructuralElement :: computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, 
 }
 
 void
-StructuralElement :: computePointLoadVectorAt(FloatArray &answer, Load *load, TimeStep *tStep, ValueModeType mode)
+StructuralElement :: computePointLoadVectorAt(FloatArray &answer, Load *load, TimeStep *tStep, ValueModeType mode, bool global)
 {
     FloatArray force, lcoords;
     FloatMatrix T, n;
@@ -228,6 +305,7 @@ StructuralElement :: computePointLoadVectorAt(FloatArray &answer, Load *load, Ti
     }
 }
 
+<<<<<<< HEAD
 void
 StructuralElement :: computeEdgeLoadVectorAt(FloatArray &answer, Load *load,
                                              int iEdge, TimeStep *tStep, ValueModeType mode)
@@ -380,6 +458,8 @@ StructuralElement :: computeSurfaceLoadVectorAt(FloatArray &answer, Load *load,
 
 
 
+=======
+>>>>>>> remotes/originofficial/master
 int 
 StructuralElement :: giveNumberOfIPForMassMtrxIntegration()
 {
@@ -451,80 +531,6 @@ StructuralElement :: computeConsistentMassMatrix(FloatMatrix &answer, TimeStep *
     }
 
     answer.symmetrized();
-}
-
-
-void
-StructuralElement :: computeLocalForceLoadVector(FloatArray &answer, TimeStep *tStep, ValueModeType mode)
-// computes the part of load vector, which is imposed by force loads acting
-// on element volume (surface).
-// Why is this function taken separately ?
-// When reactions forces are computed, they are computed from element::GiveRealStressVector
-// in this vector a real forces are stored (temperature part is subtracted).
-// so we need further subtract part corresponding to non-nodal loading.
-{
-    FloatArray helpLoadVector(1);
-    answer.clear();
-
-    // loop over body load array first
-    int nBodyLoads = this->giveBodyLoadArray()->giveSize();
-    for ( int i = 1; i <= nBodyLoads; i++ ) {
-        int id = bodyLoadArray.at(i);
-        Load *load = domain->giveLoad(id);
-        bcGeomType ltype = load->giveBCGeoType();
-        if ( ( ltype == BodyLoadBGT ) && ( load->giveBCValType() == ForceLoadBVT ) ) {
-            this->computeBodyLoadVectorAt(helpLoadVector, load, tStep, mode);
-            if ( helpLoadVector.giveSize() ) {
-                answer.add(helpLoadVector);
-            }
-        } else {
-            if ( load->giveBCValType() != TemperatureBVT && load->giveBCValType() != EigenstrainBVT ) {
-                // temperature and eigenstrain is handled separately at computeLoadVectorAt subroutine
-                OOFEM_ERROR("body load %d is of unsupported type (%d)", id, ltype);
-            }
-        }
-    }
-
-    // loop over boundary load array
-    int nBoundaryLoads = this->giveBoundaryLoadArray()->giveSize() / 2;
-    for ( int i = 1; i <= nBoundaryLoads; i++ ) {
-        int n = boundaryLoadArray.at(1 + ( i - 1 ) * 2);
-        int id = boundaryLoadArray.at(i * 2);
-        Load *load = domain->giveLoad(n);
-        bcGeomType ltype = load->giveBCGeoType();
-        if ( ltype == EdgeLoadBGT ) {
-            this->computeEdgeLoadVectorAt(helpLoadVector, load, id, tStep, mode);
-            if ( helpLoadVector.giveSize() ) {
-                answer.add(helpLoadVector);
-            }
-        } else if ( ltype == SurfaceLoadBGT ) {
-            this->computeSurfaceLoadVectorAt(helpLoadVector, load, id, tStep, mode);
-            if ( helpLoadVector.giveSize() ) {
-                answer.add(helpLoadVector);
-            }
-        } else if ( ltype == PointLoadBGT ) {
-            // id not used
-            this->computePointLoadVectorAt(helpLoadVector, load, tStep, mode);
-            if ( helpLoadVector.giveSize() ) {
-                answer.add(helpLoadVector);
-            }
-        } else {
-            OOFEM_ERROR("boundary load %d is of unsupported type (%d)", id, ltype);
-        }
-    }
-}
-
-
-void
-StructuralElement :: computeForceLoadVector(FloatArray &answer, TimeStep *tStep, ValueModeType mode)
-// computes the part of load vector, which is imposed by force loads acting
-// on element volume (surface).
-// Why is this function taken separately ?
-// When reactions forces are computed, they are computed from element::GiveRealStressVector
-// in this vector a real forces are stored (temperature part is subtracted).
-// so we need further sobstract part corresponding to non-nodeal loading.
-{
-    this->computeLocalForceLoadVector(answer, tStep, mode);
 }
 
 
@@ -993,7 +999,8 @@ StructuralElement :: giveCharacteristicVector(FloatArray &answer, CharType mtrx,
 //
 {
     if ( mtrx == ExternalForcesVector ) {
-        this->computeForceLoadVector(answer, tStep, mode);
+      //this->computeForceLoadVector(answer, tStep, mode); // bp: assembled by emodel 
+      answer.resize(0);
     } else if ( ( mtrx == InternalForcesVector ) && ( mode == VM_Total ) ) {
         this->giveInternalForcesVector(answer, tStep);
     } else if ( ( mtrx == LastEquilibratedInternalForcesVector ) && ( mode == VM_Total ) ) {
