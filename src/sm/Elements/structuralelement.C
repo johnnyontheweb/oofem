@@ -1078,7 +1078,7 @@ StructuralElement :: giveNonlocalLocationArray(IntArray &locationArray, const Un
 
     IntArray elemLocArry;
     // create lit of remote elements, contributing to receiver
-    std :: list< localIntegrationRecord > *integrationDomainList;
+    std :: vector< localIntegrationRecord > *integrationDomainList;
 
     locationArray.clear();
     // loop over element IP

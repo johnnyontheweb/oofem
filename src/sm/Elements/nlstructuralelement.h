@@ -218,7 +218,7 @@ public:
     virtual const char *giveClassName() const { return "NLStructuralElement"; }
 
 protected:
-    virtual int checkConsistency();
+    int checkConsistency();
     /**
      * Computes a matrix which, multiplied by the column matrix of nodal displacements,
      * gives the displacement gradient stored by columns.
