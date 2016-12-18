@@ -181,9 +181,9 @@ public:
      * @param lcoords Array containing (local) coordinates.
      * @param cellgeo Underlying cell geometry.
      */
-    virtual void evald2Ndx2(FloatMatrix &answer, const FloatArray &lcoords, const FEICellGeometry &cellgeo) {
-        OOFEM_ERROR("not implemented");
-    }
+    //virtual void evald2Ndx2(FloatMatrix &answer, const FloatArray &lcoords, const FEICellGeometry &cellgeo) {
+    //    OOFEM_ERROR("not implemented");
+    //}
     /**
      * Evaluates the matrix of derivatives of interpolation functions (shape functions) at given point.
      * These derivatives are wrt local (parent) coordinate system
@@ -191,15 +191,15 @@ public:
      * @param lcoords Array containing (local) coordinates.
      * @param cellgeo Underlying cell geometry.
      */
-    virtual void evaldNdxi(FloatMatrix &answer, const FloatArray &lcoords, const FEICellGeometry &cellgeo) {
-        OOFEM_ERROR("not implemented");
-    }
+    //virtual void evaldNdxi(FloatMatrix &answer, const FloatArray &lcoords, const FEICellGeometry &cellgeo) {
+    //    OOFEM_ERROR("not implemented");
+    //}
     /**
      * Returns a matrix containing the local coordinates for each node corresponding to the interpolation
      */
-    virtual void giveLocalNodeCoords(FloatMatrix &answer) {
-        OOFEM_ERROR("FEInterpolation::giveLocalNodeCoords: not implemented");
-    }
+    //virtual void giveLocalNodeCoords(FloatMatrix &answer) {
+    //    OOFEM_ERROR("FEInterpolation::giveLocalNodeCoords: not implemented");
+    //}
     /**
      * Evaluates global coordinates from given local ones.
      * @param answer Contains resulting global coordinates.

@@ -404,7 +404,7 @@ MITC4Shell :: giveJacobian(GaussPoint *gp, FloatMatrix &jacobianMatrix)
     this->giveThickness(a1, a2, a3, a4);
 
     interp_lin.evalN( h, lcoords,  FEIElementGeometryWrapper(this) );
-    interp_lin.evaldNdxi(dn, lcoords, FEIElementGeometryWrapper(this));
+	interp_lin.giveDerivatives(dn, lcoords);
 
     FloatArray hk1(4);
     // derivatives of interpolation functions
@@ -475,7 +475,7 @@ MITC4Shell :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int 
     this->giveThickness(a1, a2, a3, a4);
 
     interp_lin.evalN( h, lcoords,  FEIElementGeometryWrapper(this) );
-    interp_lin.evaldNdxi(dn, lcoords, FEIElementGeometryWrapper(this) );
+	interp_lin.giveDerivatives(dn, lcoords);
 
     FloatArray hkx(4), hky(4);
 
@@ -1427,7 +1427,7 @@ MITC4Shell :: computeSurfaceVolumeAround(GaussPoint *gp, int iSurf)
 
     weight = gp->giveWeight();
 
-    interp_lin.evaldNdxi(dn, lcoords, FEIElementGeometryWrapper(this));
+	interp_lin.giveDerivatives(dn, lcoords);
 
     for ( int i = 1; i <= dn.giveNumberOfRows(); i++ ) {
         double xl = x.at(i);

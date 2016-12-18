@@ -80,7 +80,7 @@ IntElLine1IntPen :: computeCovarBaseVectorAt(IntegrationPoint *ip, FloatArray &G
     FloatMatrix dNdxi;
     FEInterpolation *interp = this->giveInterpolation();
 //    interp->evaldNdxi( dNdxi, ip->giveNaturalCoordinates(), FEIElementGeometryWrapper(this) );
-    interp->evaldNdxi( dNdxi, xi_0, FEIElementGeometryWrapper(this) );
+    //interp->evaldNdxi( dNdxi, xi_0, FEIElementGeometryWrapper(this) );
 
     G.resize(2);
     G.zero();

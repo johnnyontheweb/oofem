@@ -195,7 +195,7 @@ Shell7Base :: evalInitialCovarBaseVectorsAt(const FloatArray &lcoords, FloatMatr
     FloatMatrix dNdxi;
 
     // In plane base vectors
-    this->fei->evaldNdxi( dNdxi, lcoords, FEIElementGeometryWrapper(this) );
+    //this->fei->evaldNdxi( dNdxi, lcoords, FEIElementGeometryWrapper(this) );
 
     FloatArray G1, G2, nodeCoords; 
     for ( int i = 1; i <= this->giveNumberOfDofManagers(); i++ ) {
@@ -296,14 +296,14 @@ Shell7Base :: setupInitialNodeDirectors()
     // Compute directors as normals to the surface
     FloatArray M(3), G1(3), G2(3), lcoords(2);
     FloatMatrix localNodeCoords;
-    this->giveInterpolation()->giveLocalNodeCoords(localNodeCoords);
+    //this->giveInterpolation()->giveLocalNodeCoords(localNodeCoords);
     
     int nDofMan = this->giveNumberOfDofManagers();
     this->initialNodeDirectors.resize(nDofMan);
     FloatMatrix dNdxi;
     for ( int node = 1; node <= nDofMan; node++ ) {
         lcoords.beColumnOf(localNodeCoords,node);      
-        this->fei->evaldNdxi( dNdxi, lcoords, FEIElementGeometryWrapper(this) );
+        //this->fei->evaldNdxi( dNdxi, lcoords, FEIElementGeometryWrapper(this) );
 
         G1.zero();
         G2.zero();
@@ -839,7 +839,7 @@ Shell7Base :: computeThicknessMappingCoeff(GaussPoint *gp, FloatArray &answer)
     const FloatArray &lcoords = gp->giveNaturalCoordinates();
 
     FloatMatrix dNdxi;
-    this->fei->evaldNdxi( dNdxi, lcoords, FEIElementGeometryWrapper(this) );
+    //this->fei->evaldNdxi( dNdxi, lcoords, FEIElementGeometryWrapper(this) );
 
     FloatArray M, dM1(3), dM2(3), dX1(3), dX2(3);
     double gam, dg1, dg2;
@@ -1687,7 +1687,7 @@ Shell7Base :: computeBmatrixAt(const FloatArray &lcoords, FloatMatrix &answer, i
     FloatArray N;
     FloatMatrix dNdxi;
     this->fei->evalN( N, lcoords, FEIElementGeometryWrapper(this) );
-    this->fei->evaldNdxi( dNdxi, lcoords, FEIElementGeometryWrapper(this) );
+    //this->fei->evaldNdxi( dNdxi, lcoords, FEIElementGeometryWrapper(this) );
 
     /*    18   18   6
      * 6 [B_u   0   0

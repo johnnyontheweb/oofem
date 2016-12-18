@@ -576,3 +576,7 @@ tests/sm/t3d.bmf
 /src/oofemlib/elementBP.h.bak
 /src/sm/Elements/Beams/beam3dBP.C
 /src/sm/Elements/Beams/beam3dBP.h
+/MinSizeRel/oofemPRE.exe
+/MinSizeRel/test_mitc4_p.in
+/MinSizeRel/test_mitc4shell.outOLD.nrm
+/hexgrid.vcxproj.user
