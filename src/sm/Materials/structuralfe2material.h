@@ -32,8 +32,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef structuralfe2material_h
-#define structuralfe2material_h
+#ifndef tutorialmaterial_h
+#define tutorialmaterial_h
 
 #include "Materials/structuralmaterial.h"
 #include "Materials/structuralms.h"
@@ -44,7 +44,6 @@
 //@{
 #define _IFT_StructuralFE2Material_Name "structfe2material"
 #define _IFT_StructuralFE2Material_fileName "filename"
-#define _IFT_StructuralFE2Material_useNumericalTangent "use_num_tangent"
 //@}
 
 namespace oofem {
@@ -62,15 +61,12 @@ protected:
     FloatMatrix tangent;
     bool oldTangent;
 
-    /// Interface normal direction
-    FloatArray mNormalDir;
-
 public:
     StructuralFE2MaterialStatus(int n, Domain * d, GaussPoint * g,  const std :: string & inputfile);
     virtual ~StructuralFE2MaterialStatus() {}
 
     EngngModel *giveRVE() { return this->rve.get(); }
-    PrescribedGradientHomogenization *giveBC();// { return this->bc; }
+    PrescribedGradientHomogenization *giveBC() { return this->bc; }
 
     void markOldTangent();
     void computeTangent(TimeStep *tStep);
@@ -91,11 +87,6 @@ public:
 
     virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
     virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-
-    const FloatArray &giveNormal() const { return mNormalDir; }
-    void letNormalBe(FloatArray iN) { mNormalDir = std :: move(iN); }
-
-    double giveRveLength();
 };
 
     
@@ -114,7 +105,6 @@ class StructuralFE2Material : public StructuralMaterial
 protected:
     std :: string inputfile;
     static int n;
-    bool useNumTangent;
 
 public:
     StructuralFE2Material(int n, Domain * d);
@@ -127,6 +117,7 @@ public:
     virtual bool isCharacteristicMtrxSymmetric(MatResponseMode rMode) { return true; }
 
     virtual MaterialStatus *CreateStatus(GaussPoint *gp) const;
+    const void giveDeviatoricProjectionMatrix(FloatMatrix &answer);
     // stress computation methods
     virtual void giveRealStressVector_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedE, TimeStep *tStep);
     
@@ -134,4 +125,4 @@ public:
 };
 
 } // end namespace oofem
-#endif // structuralfe2material_h
+#endif // structuralfe2material

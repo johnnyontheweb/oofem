@@ -40,7 +40,6 @@
 #include "spatiallocalizer.h"
 #include "element.h"
 #include "gausspoint.h"
-#include "mathfem.h"
 
 namespace oofem {
 REGISTER_EnrichmentFront(EnrFrontLinearBranchFuncOneEl)

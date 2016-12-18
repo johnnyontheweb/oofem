@@ -32,10 +32,9 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef prescribedgradient_h
-#define prescribedgradient_h
+#ifndef PrescribedGenStrainShell7_h
+#define PrescribedGenStrainShell7_h
 
-#include "prescribedgradienthomogenization.h"
 #include "boundarycondition.h"
 #include "dof.h"
 #include "bctype.h"
@@ -45,7 +44,9 @@
 
 ///@name Input fields for PrescribedTensor
 //@{
-#define _IFT_PrescribedGradient_Name "prescribedgradient"
+#define _IFT_PrescribedGenStrainShell7_Name "PrescribedGenStrainShell7"
+#define _IFT_PrescribedGenStrainShell7_centercoords "ccoord"
+#define _IFT_PrescribedGenStrainShell7_generalizedstrain "generalizedstrain"
 //@}
 
 namespace oofem {
@@ -55,21 +56,27 @@ namespace oofem {
  * This is typical boundary condition in multiscale analysis where @f$ d = \partial_x s@f$
  * would a macroscopic gradient at the integration point, i.e. this is a boundary condition for prolongation.
  * It is also convenient to use when one wants to test a arbitrary specimen for shear.
- * @author Mikael Öhman
- * @author Erik Svenning
+ * @author Jim Brouzoulis
  */
-class OOFEM_EXPORT PrescribedGradient : public BoundaryCondition, public PrescribedGradientHomogenization
+class OOFEM_EXPORT PrescribedGenStrainShell7 : public BoundaryCondition
 {
+protected:
+    /// Prescribed gradient @f$ d_{ij} @f$
+    FloatMatrix gradient;
+
+    /// Center coordinate @f$ \bar{x}_i @f$
+    FloatArray centerCoord;
+
 public:
     /**
      * Creates boundary condition with given number, belonging to given domain.
      * @param n Boundary condition number.
      * @param d Domain to which new object will belongs.
      */
-    PrescribedGradient(int n, Domain *d) : BoundaryCondition(n, d) { }
+    PrescribedGenStrainShell7(int n, Domain *d) : BoundaryCondition(n, d) { }
 
     /// Destructor
-    virtual ~PrescribedGradient() { }
+    virtual ~PrescribedGenStrainShell7() { }
 
     virtual double give(Dof *dof, ValueModeType mode, double time);
 
@@ -97,22 +104,48 @@ public:
     /**
      * Computes the homogenized, macroscopic, field (stress).
      * @param sigma Output quantity (typically stress).
+     * @param eid Equation ID to which sigma belongs.
      * @param tStep Active time step.
      */
-    virtual void computeField(FloatArray &sigma, TimeStep *tStep);
+    void computeField(FloatArray &sigma, EquationID eid, TimeStep *tStep);
 
     /**
      * Computes the macroscopic tangent for homogenization problems through sensitivity analysis.
      * @param tangent Output tangent.
+     * @param eid Equation ID to tangent belongs.
      * @param tStep Active time step.
      */
-    virtual void computeTangent(FloatMatrix &tangent, TimeStep *tStep);
+    void computeTangent(FloatMatrix &tangent, EquationID eid, TimeStep *tStep);
 
-    virtual void scale(double s) { mGradient.times(s); }
+    virtual void scale(double s) { gradient.times(s); }
 
-    virtual const char *giveClassName() const { return "PrescribedGradient"; }
-    virtual const char *giveInputRecordName() const { return _IFT_PrescribedGradient_Name; }
+    /**
+     * Set prescribed tensor.
+     * @param t New prescribed value.
+     */
+    virtual void setPrescribedGenStrainShell7(const FloatMatrix &t) { gradient = t; }
+
+    /**
+     * Sets the prescribed tensor from the matrix from given voigt notation.
+     * Assumes use of double values for off-diagonal, usually the way for strain in Voigt form.
+     * @param t Vector in voigt format.
+     */
+    virtual void setPrescribedGenStrainShell7Voigt(const FloatArray &t);
+
+    /**
+     * Set the center coordinate for the prescribed values to be set for.
+     * @param x Center coordinate.
+     */
+    virtual void setCenterCoordinate(const FloatArray &x) { centerCoord = x; }
+    /// Returns the center coordinate
+    virtual FloatArray &giveCenterCoordinate() { return centerCoord; }
+
+    virtual const char *giveClassName() const { return "PrescribedGenStrainShell7"; }
+    virtual const char *giveInputRecordName() const { return _IFT_PrescribedGenStrainShell7_Name; }
+
+protected:
+    double domainSize();
 };
 } // end namespace oofem
 
-#endif // prescribedgradient_h
+#endif // PrescribedGenStrainShell7_h

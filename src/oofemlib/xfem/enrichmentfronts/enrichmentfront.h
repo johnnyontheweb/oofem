@@ -90,7 +90,7 @@ struct EfInput
 class OOFEM_EXPORT EnrichmentFront
 {
 public:
-    EnrichmentFront(int iEIindex = 0) : mEIindex(iEIindex) { }
+    EnrichmentFront() { }
     virtual ~EnrichmentFront() { }
 
     /**
@@ -130,10 +130,8 @@ public:
     virtual bool propagationIsAllowed() const { return true; }
 
     const TipInfo &giveTipInfo() const { return mTipInfo; }
-    virtual void setTipInfo(const TipInfo &iTipInfo) { mTipInfo = iTipInfo; }
 
     void computeCrackTangent(FloatArray &oTangent, FloatArray &oNormal, bool &oFlipTangent, const EfInput &iEfInput) const;
-    int mEIindex;  /// reference to the associated enrichment item
 
 protected:
     TipInfo mTipInfo;

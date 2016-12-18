@@ -89,7 +89,6 @@ IntMatBilinearCZElastic :: giveFirstPKTraction_3d(FloatArray &answer, GaussPoint
     // update gp
     status->letTempJumpBe(jumpVector);
     status->letTempFirstPKTractionBe(answer);
-    status->letTempTractionBe(answer);
 }
 
 

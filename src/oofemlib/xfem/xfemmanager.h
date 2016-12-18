@@ -53,7 +53,6 @@
 //@{
 #define _IFT_XfemManager_Name "xfemmanager"
 #define _IFT_XfemManager_numberOfEnrichmentItems "numberofenrichmentitems"
-#define _IFT_XfemManager_numberOfNucleationCriteria "numberofnucleationcriteria"
 #define _IFT_XfemManager_numberOfGpPerTri "numberofgppertri"
 
 /// How many times a subtriangle should be refined
@@ -75,7 +74,6 @@ class IntArray;
 class Element;
 class DataStream;
 class DynamicInputRecord;
-class NucleationCriterion;
 //class InternalStateValueType;
 
 //
@@ -115,8 +113,6 @@ protected:
 
     int numberOfEnrichmentItems;
 
-    int numberOfNucleationCriteria;
-
     /**
      * The number of Gauss points to be used in each sub-triangle when
      * subdividing cut elements.
@@ -151,14 +147,6 @@ protected:
      */
     std :: vector< int >mMaterialModifyingEnrItemIndices;
 
-    /**
-     * Nucleation of new enrichment items. (For example, nucleation of new cracks.)
-     */
-    std::vector< std :: unique_ptr< NucleationCriterion > > mNucleationCriteria;
-
-    // IDs of all potential enriched dofs
-    IntArray mXFEMPotentialDofIDs;
-    
 public:
 
     /**
@@ -184,12 +172,7 @@ public:
     inline EnrichmentItem *giveEnrichmentItem(int n) { return enrichmentItemList [ n - 1 ].get(); }
     int giveNumberOfEnrichmentItems() const { return ( int ) enrichmentItemList.size(); }
 
-    inline NucleationCriterion *giveNucleationCriterion(int n) { return mNucleationCriteria [ n - 1 ].get(); }
-    int giveNumberOfNucleationCriteria() const { return ( int ) mNucleationCriteria.size(); }
-
     void createEnrichedDofs();
-    const IntArray &giveEnrichedDofIDs() const {return mXFEMPotentialDofIDs;}
-    IntArray giveEnrichedDofIDs(const DofManager &iDMan) const;
 
     /// Initializes receiver according to object description stored in input record.
     virtual IRResultType initializeFrom(InputRecord *ir);
@@ -228,17 +211,7 @@ public:
     virtual void updateYourself(TimeStep *tStep);
 
     void propagateFronts(bool &oAnyFronHasPropagated);
-    void initiateFronts(bool &oAnyFronHasPropagated, TimeStep *tStep);
     bool hasPropagatingFronts();
-    bool hasInitiationCriteria();
-
-    /// Remove all enrichment items
-    void clearEnrichmentItems();
-
-    void appendEnrichmentItems(std :: vector< std :: unique_ptr< EnrichmentItem > > &iEIlist);
-
-    void nucleateEnrichmentItems(bool &oNewItemsWereNucleated);
-    bool hasNucleationCriteria();
 
     bool giveVtkDebug() const { return mDebugVTK; }
     void setVtkDebug(bool iDebug) { mDebugVTK = iDebug; }

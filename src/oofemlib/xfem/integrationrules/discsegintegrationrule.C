@@ -38,9 +38,10 @@
 #include "fei1dlin.h"
 
 namespace oofem {
-DiscontinuousSegmentIntegrationRule :: DiscontinuousSegmentIntegrationRule(int n, Element *e, const std :: vector< Line > &iSegments) :
+DiscontinuousSegmentIntegrationRule :: DiscontinuousSegmentIntegrationRule(int n, Element *e, const std :: vector< Line > &iSegments, const FloatArray &iXS, const FloatArray &iXE) :
     GaussIntegrationRule(n, e),
-    mSegments(iSegments)
+    mSegments(iSegments),
+    mXS(iXS), mXE(iXE)
 {}
 
 DiscontinuousSegmentIntegrationRule :: ~DiscontinuousSegmentIntegrationRule() {}
@@ -57,12 +58,7 @@ int DiscontinuousSegmentIntegrationRule :: SetUpPointsOnLine(int iNumPointsPerSe
     this->gaussPoints.resize(numPointsTot);
     ////////////////////////////////////////////
 
-    double totalLength = 0.0;
-    for( Line &line : mSegments ) {
-    	totalLength += line.giveLength();
-    }
-
-    const FloatArray &xS = mSegments[0].giveVertex(1);
+    double totalLength = mXS.distance(mXE);
 
     std :: vector< FloatArray >newGPCoord;
 
@@ -76,13 +72,8 @@ int DiscontinuousSegmentIntegrationRule :: SetUpPointsOnLine(int iNumPointsPerSe
 
             const FloatArray &coord = gp->giveNaturalCoordinates();
 
-            global.resize( xS.giveSize() );
-            for ( int m = 1; m <= xS.giveSize(); m++ ) {
-
-//            	if( mSegments [ i ].giveNrVertices() < 2 ) {
-//            		printf("mSegments [ i ].giveNrVertices(): %d\n", mSegments [ i ].giveNrVertices() );
-//            	}
-
+            global.resize( mXS.giveSize() );
+            for ( int m = 1; m <= mXS.giveSize(); m++ ) {
                 global.at(m) = 0.5 * ( ( 1.0 - coord.at(1) ) * mSegments [ i ].giveVertex(1).at(m) + ( 1.0 + coord.at(1) ) * mSegments [ i ].giveVertex(2).at(m) );
             }
 
@@ -90,7 +81,7 @@ int DiscontinuousSegmentIntegrationRule :: SetUpPointsOnLine(int iNumPointsPerSe
 
 
             // Local coordinate along the line segment
-            double xi = 2.0 * ( global.distance(xS) / totalLength - 0.5 );
+            double xi = 2.0 * ( global.distance(mXS) / totalLength - 0.5 );
             gp->setNaturalCoordinates({ xi });
 
             gp->setSubPatchCoordinates({ xi });

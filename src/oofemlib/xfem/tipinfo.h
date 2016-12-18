@@ -9,7 +9,6 @@
 #define TIPINFO_H_
 
 #include "floatarray.h"
-#include "intarray.h"
 
 namespace oofem {
 /**
@@ -33,7 +32,6 @@ public:
     FloatArray mNormalDir;
     int mTipIndex;
     int mEdgeIndex; /// Local number of which edge the crack enters the element (2d)
-    IntArray mTipDofManNumbers; // List of dofmans that represent the edge of a listbased EI
 };
 
 struct TipPropagation {
@@ -43,7 +41,6 @@ struct TipPropagation {
     int mTipIndex;
     FloatArray mPropagationDir;
     double mPropagationLength;
-    IntArray mPropagationDofManNumbers; // new dofman which are to be added to the (listbased) enrichment
 };
 } // end namespace oofem
 

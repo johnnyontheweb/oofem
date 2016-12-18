@@ -110,6 +110,8 @@ NonlocalMaterialExtensionInterface :: buildNonlocalPointTable(GaussPoint *gp)
     NonlocalMaterialStatusExtensionInterface *statusExt =
         static_cast< NonlocalMaterialStatusExtensionInterface * >( gp->giveMaterialStatus()->
                                                                   giveInterface(NonlocalMaterialStatusExtensionInterfaceType) );
+    std :: list< localIntegrationRecord > *iList;
+
     if ( !statusExt ) {
         OOFEM_ERROR("local material status encountered");
     }
@@ -118,9 +120,10 @@ NonlocalMaterialExtensionInterface :: buildNonlocalPointTable(GaussPoint *gp)
         return;                                                  // already done
     }
 
-    auto iList = statusExt->giveIntegrationDomainList();
+    iList = statusExt->giveIntegrationDomainList();
 
     FloatArray gpCoords, jGpCoords, shiftedGpCoords;
+    SpatialLocalizer :: elementContainerType elemSet;
     if ( gp->giveElement()->computeGlobalCoordinates( gpCoords, gp->giveNaturalCoordinates() ) == 0 ) {
         OOFEM_ERROR("computeGlobalCoordinates of target failed");
     }
@@ -142,7 +145,7 @@ NonlocalMaterialExtensionInterface :: buildNonlocalPointTable(GaussPoint *gp)
     if ( px > 0. ) nx = 1; // periodicity taken into account
 
     for ( int ix = -nx; ix <= nx; ix++ ) { // loop over periodic images shifted in x-direction
-        SpatialLocalizer :: elementContainerType elemSet;
+
         shiftedGpCoords = gpCoords;
         shiftedGpCoords.at(1) += ix*px;
 
@@ -155,7 +158,7 @@ NonlocalMaterialExtensionInterface :: buildNonlocalPointTable(GaussPoint *gp)
         this->giveDomain()->giveSpatialLocalizer()->giveAllElementsWithIpWithinBox_EvenIfEmpty(elemSet, shiftedGpCoords, suprad);
 #endif
         // initialize iList
-        iList->reserve(elemSet.giveSize());
+
         for ( auto elindx: elemSet ) {
             Element *ielem = this->giveDomain()->giveElement(elindx);
             if ( regionMap.at( ielem->giveRegionNumber() ) == 0 ) {
@@ -185,7 +188,6 @@ NonlocalMaterialExtensionInterface :: buildNonlocalPointTable(GaussPoint *gp)
                 }
             }
         } // loop over elements
-        iList->shrink_to_fit();
     }
 
     statusExt->setIntegrationScale(integrationVolume); // store scaling factor
@@ -199,12 +201,13 @@ NonlocalMaterialExtensionInterface :: rebuildNonlocalPointTable(GaussPoint *gp, 
     NonlocalMaterialStatusExtensionInterface *statusExt =
         static_cast< NonlocalMaterialStatusExtensionInterface * >( gp->giveMaterialStatus()->
                                                                   giveInterface(NonlocalMaterialStatusExtensionInterfaceType) );
+    std :: list< localIntegrationRecord > *iList;
 
     if ( !statusExt ) {
         OOFEM_ERROR("local material status encountered");
     }
 
-    auto iList = statusExt->giveIntegrationDomainList();
+    iList = statusExt->giveIntegrationDomainList();
     iList->clear();
 
     if ( contributingElems == NULL ) {
@@ -226,7 +229,6 @@ NonlocalMaterialExtensionInterface :: rebuildNonlocalPointTable(GaussPoint *gp, 
         }
 
         // initialize iList
-        iList->reserve(_size);
         for ( int _e = 1; _e <= _size; _e++ ) {
             Element *ielem = this->giveDomain()->giveElement( contributingElems->at(_e) );
             if ( regionMap.at( ielem->giveRegionNumber() ) == 0 ) {
@@ -272,7 +274,7 @@ NonlocalMaterialExtensionInterface :: rebuildNonlocalPointTable(GaussPoint *gp, 
 }
 
 
-std :: vector< localIntegrationRecord > *
+std :: list< localIntegrationRecord > *
 NonlocalMaterialExtensionInterface :: giveIPIntegrationList(GaussPoint *gp)
 {
     NonlocalMaterialStatusExtensionInterface *statusExt =

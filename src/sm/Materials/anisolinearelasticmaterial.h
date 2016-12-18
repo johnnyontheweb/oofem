@@ -70,10 +70,16 @@ protected:
 
 public:
 
-    AnisotropicLinearElasticMaterial(int n, Domain *d) : LinearElasticMaterial(n, d), stiffmat(6,6), alpha(3)
-    {}
+    AnisotropicLinearElasticMaterial(int n, Domain *d) : LinearElasticMaterial(n, d)
+    {
+        stiffmat.resize(6, 6);
+        stiffmat.zero();
+        alpha.resize(3);
+        alpha.zero();
+    }
     virtual ~AnisotropicLinearElasticMaterial()
     {}
+
 
     // identification and auxiliary functions
     virtual const char *giveInputRecordName() const { return _IFT_AnisotropicLinearElasticMaterial_Name; }

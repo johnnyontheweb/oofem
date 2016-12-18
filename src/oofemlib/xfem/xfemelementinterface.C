@@ -58,7 +58,6 @@ XfemElementInterface :: XfemElementInterface(Element *e) :
     mUsePlaneStrain(false)
 {
     mpCZIntegrationRules.clear();
-    mpCZExtraIntegrationRules.clear();
 }
 
 XfemElementInterface :: ~XfemElementInterface()
@@ -66,24 +65,20 @@ XfemElementInterface :: ~XfemElementInterface()
 
 void XfemElementInterface :: XfemElementInterface_createEnrBmatrixAt(FloatMatrix &oAnswer, GaussPoint &iGP, Element &iEl)
 {
-    ComputeBOrBHMatrix(oAnswer, iGP, iEl, false, iGP.giveNaturalCoordinates());
+    ComputeBOrBHMatrix(oAnswer, iGP, iEl, false);
 }
 
 void XfemElementInterface :: XfemElementInterface_createEnrBHmatrixAt(FloatMatrix &oAnswer, GaussPoint &iGP, Element &iEl)
 {
-    ComputeBOrBHMatrix(oAnswer, iGP, iEl, true, iGP.giveNaturalCoordinates());
+    ComputeBOrBHMatrix(oAnswer, iGP, iEl, true);
 }
 
-void XfemElementInterface :: ComputeBOrBHMatrix(FloatMatrix &oAnswer, GaussPoint &iGP, Element &iEl, bool iComputeBH, const FloatArray &iNaturalGpCoord)
+void XfemElementInterface :: ComputeBOrBHMatrix(FloatMatrix &oAnswer, GaussPoint &iGP, Element &iEl, bool iComputeBH)
 {
     /*
      * Computes the B or BH matrix.
      * iComputeBH = true implies that BH is computed,
      * while B is computed if iComputeBH = false.
-     *
-     * We could take the natural coordinates directly from the Gauss point instead of entering them separately.
-     * However, there are situations where one wants to add a small perturbation to the coordinates and hence
-     * it is easier to enter them separately.
      */
     const int dim = 2;
     const int nDofMan = iEl.giveNumberOfDofManagers();
@@ -102,8 +97,8 @@ void XfemElementInterface :: ComputeBOrBHMatrix(FloatMatrix &oAnswer, GaussPoint
     FloatArray N;
     FEInterpolation *interp = iEl.giveInterpolation();
     const FEIElementGeometryWrapper geomWrapper(& iEl);
-    interp->evaldNdx(dNdx, iNaturalGpCoord, geomWrapper);
-    interp->evalN(N, iNaturalGpCoord, geomWrapper);
+    interp->evaldNdx(dNdx, iGP.giveNaturalCoordinates(), geomWrapper);
+    interp->evalN(N, iGP.giveNaturalCoordinates(), geomWrapper);
 
     const IntArray &elNodes = iEl.giveDofManArray();
 
@@ -174,27 +169,26 @@ void XfemElementInterface :: ComputeBOrBHMatrix(FloatMatrix &oAnswer, GaussPoint
                 EnrichmentItem *ei = xMan->giveEnrichmentItem(nodeEiIndices [ i ]);
 
                 if ( ei->isDofManEnriched(* dMan) ) {
-//                    int numEnr = ei->giveNumDofManEnrichments(* dMan);
+                    int numEnr = ei->giveNumDofManEnrichments(* dMan);
 
                     // Enrichment function derivative in Gauss point
                     std :: vector< FloatArray >efgpD;
-                    ei->evaluateEnrFuncDerivAt(efgpD, globalCoord, iNaturalGpCoord, globalNodeInd, * element, N, dNdx, elNodes);
+                    ei->evaluateEnrFuncDerivAt(efgpD, globalCoord, iGP.giveNaturalCoordinates(), globalNodeInd, * element, N, dNdx, elNodes);
                     // Enrichment function in Gauss Point
                     std :: vector< double >efGP;
-                    ei->evaluateEnrFuncAt(efGP, globalCoord, iNaturalGpCoord, globalNodeInd, * element, N, elNodes);
+                    ei->evaluateEnrFuncAt(efGP, globalCoord, iGP.giveNaturalCoordinates(), globalNodeInd, * element, N, elNodes);
 
 
                     const FloatArray &nodePos = node->giveNodeCoordinates();
 
-//                    double levelSetNode  = 0.0;
-//                    ei->evalLevelSetNormalInNode(levelSetNode, globalNodeInd, nodePos);
+                    double levelSetNode  = 0.0;
+                    ei->evalLevelSetNormalInNode(levelSetNode, globalNodeInd, nodePos);
 
                     std :: vector< double >efNode;
                     FloatArray nodeNaturalCoord;
                     iEl.computeLocalCoordinates(nodeNaturalCoord, nodePos);
                     ei->evaluateEnrFuncInNode(efNode, * node);
 
-                    int numEnr = efGP.size();
                     for ( int k = 0; k < numEnr; k++ ) {
                         // matrix to be added anytime a node is enriched
                         // Creates nabla*(ef*N)
@@ -301,7 +295,7 @@ void XfemElementInterface :: XfemElementInterface_createEnrNmatrixAt(FloatMatrix
             EnrichmentItem *ei = xMan->giveEnrichmentItem(nodeEiIndices [ i ]);
 
             if ( ei->isDofManEnriched(* dMan) ) {
-//                int numEnr = ei->giveNumDofManEnrichments(* dMan);
+                int numEnr = ei->giveNumDofManEnrichments(* dMan);
 
 
                 // Enrichment function in Gauss Point
@@ -318,7 +312,6 @@ void XfemElementInterface :: XfemElementInterface_createEnrNmatrixAt(FloatMatrix
                 ei->evaluateEnrFuncInNode(efNode, * node);
 
 
-                int numEnr = efGP.size();
                 for ( int k = 0; k < numEnr; k++ ) {
                     if ( iSetDiscontContribToZero ) {
                         NdNode [ nodeCounter ] = 0.0;
@@ -899,13 +892,6 @@ void XfemElementInterface :: updateYourselfCZ(TimeStep *tStep)
             mpCZIntegrationRules [ i ]->updateYourself(tStep);
         }
     }
-
-    for ( size_t i = 0; i < numSeg; i++ ) {
-        if ( mpCZExtraIntegrationRules [ i ] != NULL ) {
-            mpCZExtraIntegrationRules [ i ]->updateYourself(tStep);
-        }
-    }
-
 }
 
 void XfemElementInterface :: computeDisplacementJump(oofem :: GaussPoint &iGP, oofem :: FloatArray &oJump, const oofem :: FloatArray &iSolVec, const oofem :: FloatMatrix &iNMatrix)

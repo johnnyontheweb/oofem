@@ -112,7 +112,7 @@ RCSDNLMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint *gp,
     this->updateDomainBeforeNonlocAverage(tStep);
 
     // compute nonlocal strain increment first
-    auto list = this->giveIPIntegrationList(gp); // !
+    std :: list< localIntegrationRecord > *list = this->giveIPIntegrationList(gp); // !
 
     for ( auto &lir: *list ) {
         nonlocStatus = static_cast< RCSDNLMaterialStatus * >( this->giveStatus(lir.nearGp) );

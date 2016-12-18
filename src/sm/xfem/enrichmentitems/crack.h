@@ -61,7 +61,6 @@ public:
     virtual IRResultType initializeFrom(InputRecord *ir);
 
     void AppendCohesiveZoneGaussPoint(GaussPoint *ipGP);
-    void ClearCohesiveZoneGaussPoints() {mCohesiveZoneGaussPoints.clear(); mCohesiveZoneArcPositions.clear();}
 
     virtual void callGnuplotExportModule(GnuplotExportModule &iExpMod, TimeStep *tStep);
 

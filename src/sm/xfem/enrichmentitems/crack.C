@@ -38,9 +38,6 @@
 #include "gausspoint.h"
 #include "geometry.h"
 
-#include "engngm.h"
-#include "Materials/structuralfe2material.h"
-
 namespace oofem {
 REGISTER_EnrichmentItem(Crack)
 
@@ -60,16 +57,7 @@ void Crack :: AppendCohesiveZoneGaussPoint(GaussPoint *ipGP)
 {
     StructuralInterfaceMaterialStatus *matStat = dynamic_cast< StructuralInterfaceMaterialStatus * >( ipGP->giveMaterialStatus() );
 
-    // Check that the material status is of an allowed type.
-    if(matStat == NULL) {
-    	StructuralFE2MaterialStatus *fe2ms = dynamic_cast<StructuralFE2MaterialStatus*> ( ipGP->giveMaterialStatus() );
-
-    	if(fe2ms == NULL) {
-    		OOFEM_ERROR("The material status is not of an allowed type.")
-    	}
-    }
-
-//    if ( matStat ) {
+    if ( matStat ) {
         // Compute arc length position of the Gauss point
         const FloatArray &coord =  ipGP->giveGlobalCoordinates();
         double tangDist = 0.0, arcPos = 0.0;
@@ -87,9 +75,9 @@ void Crack :: AppendCohesiveZoneGaussPoint(GaussPoint *ipGP)
 
         mCohesiveZoneGaussPoints.insert(iteratorGP, ipGP);
         mCohesiveZoneArcPositions.insert(iteratorPos, arcPos);
-//    } else {
-//        OOFEM_ERROR("matStat == NULL.")
-//    }
+    } else {
+        OOFEM_ERROR("matStat == NULL.")
+    }
 }
 
 void Crack :: callGnuplotExportModule(GnuplotExportModule &iExpMod, TimeStep *tStep)

@@ -71,43 +71,28 @@ void XfemSolverInterface::propagateXfemInterfaces(TimeStep *tStep, StructuralEng
 
     if(domain->hasXfemManager()) {
         XfemManager *xMan = domain->giveXfemManager();
-        bool frontsHavePropagated = false;
-        if ( xMan->hasInitiationCriteria() ) {
-            // TODO: generalise this?
-            // Intitiate delaminations (only implemented for listbasedEI/delamination. Treated the same way as propagation)
-            xMan->initiateFronts(frontsHavePropagated,tStep);
-        }
 
         if( xMan->hasPropagatingFronts() ) {
             // Propagate crack tips
+            bool frontsHavePropagated = false;
             xMan->propagateFronts(frontsHavePropagated);
 
-        }
+            if(frontsHavePropagated) {
+                mNeedsVariableMapping = true;
 
-        bool eiWereNucleated = false;
-        if( xMan->hasNucleationCriteria() ) {
-        	xMan->nucleateEnrichmentItems(eiWereNucleated);
-       }
-
-        if(frontsHavePropagated || eiWereNucleated) {
-            mNeedsVariableMapping = false;
-            
-            if ( mNeedsVariableMapping ) {
                 mapVariables(tStep, ioEngngModel);
-            } else {
-                ioEngngModel.giveDomain(1)->postInitialize();
-                ioEngngModel.forceEquationNumbering();
-            }
 
-            if(iRecomputeStepAfterCrackProp) {
-                printf("Recomputing time step.\n");
-                ioEngngModel.forceEquationNumbering();
-                ioEngngModel.solveYourselfAt(tStep);
-                ioEngngModel.updateYourself( tStep );
-                ioEngngModel.terminate( tStep );
+                if(iRecomputeStepAfterCrackProp) {
+                    printf("Recomputing time step.\n");
+                    ioEngngModel.forceEquationNumbering();
+                    ioEngngModel.solveYourselfAt(tStep);
+                    ioEngngModel.updateYourself( tStep );
+                    ioEngngModel.terminate( tStep );
 
+                }
             }
         }
+
     }
 
 }
@@ -143,14 +128,12 @@ void XfemSolverInterface::mapVariables(TimeStep *tStep, StructuralEngngModel &io
 
 
 
-#if 1
         // Map primary variables ...
         LSPrimaryVariableMapper primMapper;
         FloatArray u;
         primMapper.mapPrimaryVariables(u, * domain, * dNew, VM_Total, * tStep);
 
         xfemUpdatePrimaryField(ioEngngModel, tStep, u);
-        
         // ... and write to PrimaryField
 //        field->update(VM_Total, tStep, u);
 
@@ -161,6 +144,7 @@ void XfemSolverInterface::mapVariables(TimeStep *tStep, StructuralEngngModel &io
 
         // Map state variables
         int numEl = dNew->giveNumberOfElements();
+
         for ( int i = 1; i <= numEl; i++ ) {
             ////////////////////////////////////////////////////////
             // Map state variables for regular Gauss points
@@ -202,13 +186,14 @@ void XfemSolverInterface::mapVariables(TimeStep *tStep, StructuralEngngModel &io
                                 if(!siMatStat->giveNewlyInserted()) {
                                     interface->MSMI_map_cz(* gp, * domain, elemSet, * tStep, * siMatStat);
                                 }
+
                             }
                         }
                     }
                 }
             }
         }
-#endif
+
 
 
 

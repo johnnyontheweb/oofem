@@ -38,8 +38,6 @@
 #include "floatarray.h"
 #include "dynamicinputrecord.h"
 #include "classfactory.h"
-#include "Elements/structuralelement.h"
-#include "mathfem.h"
 
 namespace oofem {
 REGISTER_Material(TutorialMaterial);
@@ -92,7 +90,7 @@ TutorialMaterial :: giveRealStressVector_3d(FloatArray &answer, GaussPoint *gp,
     TutorialMaterialStatus *status = static_cast< TutorialMaterialStatus * >( this->giveStatus(gp) );
 
     // subtract stress thermal expansion
-    this->giveStressDependentPartOfStrainVector_3d(strain, gp, totalStrain, tStep, VM_Total);
+    this->giveStressDependentPartOfStrainVector(strain, gp, totalStrain, tStep, VM_Total);
     
     FloatArray trialElastStrain;
     trialElastStrain.beDifferenceOf(strain, status->givePlasticStrain());
@@ -108,21 +106,10 @@ TutorialMaterial :: giveRealStressVector_3d(FloatArray &answer, GaussPoint *gp,
     
     double J2 = this->computeSecondStressInvariant(devTrialStress);
     double effectiveTrialStress = sqrt(3 * J2);
-
-#if 1
-    double temperatureScaling = 1.0;
-#else
-    double temperature;
-    FloatArray et;
-    static_cast< StructuralElement *>(gp->giveIntegrationRule()->giveElement())->computeResultingIPTemperatureAt(et, tStep, gp, VM_Total);
-    temperature = et.at(1) + 800;
-
-    double temperatureScaling = temperature <= 400 ? 1.0 : 1.0 - (temperature - 400) * 0.5 / 400;
-#endif
-
+    
     // evaluate the yield surface
     double k = status->giveK();
-    double phiTrial = effectiveTrialStress - ( temperatureScaling * this->sig0 +  temperatureScaling * H * k );
+    double phiTrial = effectiveTrialStress - ( this->sig0 +  H * k );
     
     if ( phiTrial < 0.0 ) { // elastic
         answer = trialStress;
@@ -130,7 +117,7 @@ TutorialMaterial :: giveRealStressVector_3d(FloatArray &answer, GaussPoint *gp,
         status->letTempPlasticStrainBe(status->givePlasticStrain());
     } else { // plastic loading
         double G = D.giveShearModulus();
-        double mu = phiTrial / ( 3.0 * G + temperatureScaling * H ); // plastic multiplier
+        double mu = phiTrial / ( 3.0 * G + H ); // plastic multiplier
         answer = devTrialStress * ( 1.0 - 3.0*G*mu/effectiveTrialStress); // radial return
         answer.add(sphTrialStress);
         k += mu;
@@ -179,24 +166,13 @@ TutorialMaterial :: give3dMaterialStiffnessMatrix(FloatMatrix &answer, MatRespon
 
     double J2 = this->computeSecondStressInvariant(devTrialStress);
     double effectiveTrialStress = sqrt(3 * J2);
-
-#if 1
-    double temperatureScaling = 1.0;
-#else
-    double temperature;
-    FloatArray et;
-    static_cast< StructuralElement *>(gp->giveIntegrationRule()->giveElement())->computeResultingIPTemperatureAt(et, tStep, gp, VM_Total);
-    temperature = et.at(1) + 800;
-
-    double temperatureScaling = temperature <= 400 ? 1.0 : 1.0 - (temperature - 400) * 0.5 / 400;
-#endif
-
+    
     // evaluate the yield surface
     double k = status->giveK();
-    double phiTrial = effectiveTrialStress - ( temperatureScaling * this->sig0 + temperatureScaling * H * k );
+    double phiTrial = effectiveTrialStress - ( this->sig0 + H * k );
     
     FloatMatrix elasticStiffness;
-    D.give3dMaterialStiffnessMatrix(elasticStiffness, ElasticStiffness, gp, tStep);
+    D.give3dMaterialStiffnessMatrix(elasticStiffness, mode, gp, tStep);
     
     if ( phiTrial < 0.0 ) { // elastic
         answer = elasticStiffness;
@@ -204,14 +180,14 @@ TutorialMaterial :: give3dMaterialStiffnessMatrix(FloatMatrix &answer, MatRespon
         double G = D.giveShearModulus();
         // E_t = elasticStiffness - correction
         // correction =  2.0 * G * ( 2.0 * G / h *( sig0 + kappa ) / sigtre *openProd(nu,nu) + mu*3*G/sigtre *Idev);
-        double h = 3.0 * G + temperatureScaling * H;
+        double h = 3.0 * G + H;
         double mu = phiTrial / h; // plasic multiplier
         
         FloatArray nu = (3.0/2.0 / effectiveTrialStress ) * devTrialStress; 
         FloatMatrix Idev, correction;
         giveDeviatoricProjectionMatrix(Idev);
         
-        correction.plusDyadUnsym(nu, nu, 2.0 * G / h * ( temperatureScaling * this->sig0 + temperatureScaling * H * k ));
+        correction.plusDyadUnsym(nu, nu, 2.0 * G / h * ( this->sig0 + H * k ));
         correction.add(mu * 3.0 * G, Idev);
         correction.times(2.0 * G / effectiveTrialStress);
         answer = elasticStiffness;
