@@ -63,8 +63,6 @@ public:
     TrPlanestressRotAllman(int, Domain *);
     virtual ~TrPlanestressRotAllman() { }
 
-
-    
 protected:
     virtual void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int = 1, int = ALL_STRAINS);
     virtual void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer);

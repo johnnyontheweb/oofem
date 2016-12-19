@@ -70,9 +70,9 @@ public:
     virtual void computeGaussPoints();
     virtual int computeNumberOfDofs();
 
-    virtual void computeExternalForcesVector(FloatArray &answer, TimeStep *tStep, ValueModeType mode);
+    void computeExternalForcesVector(FloatArray &answer, TimeStep *tStep, ValueModeType mode);
     void computeEdgeBCSubVectorAt(FloatArray &answer, Load *load, int iEdge, TimeStep *tStep, ValueModeType mode, int indx);
-    virtual void computeInternalForcesVector(FloatArray &answer, TimeStep *tStep);
+    void computeInternalForcesVector(FloatArray &answer, TimeStep *tStep);
 
     virtual double computeEdgeVolumeAround(GaussPoint *gp, int iEdge);
     virtual double giveThicknessAt(const FloatArray &gcoords);

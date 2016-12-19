@@ -44,7 +44,7 @@ namespace oofem {
 /**
  * This class implements an isoparametric four-node quadrilateral plane-
  * stress phase field finite element. Each node has 3 degrees of freedom.
- * @todo in development
+ * TODO This element is in development!
  */
 class PlaneStressPhF2d : public PlaneStress2d, public PhaseFieldElement
 {

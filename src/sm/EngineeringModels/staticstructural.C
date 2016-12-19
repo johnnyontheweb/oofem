@@ -35,8 +35,6 @@
 #include "../sm/EngineeringModels/staticstructural.h"
 #include "../sm/Elements/structuralelement.h"
 #include "../sm/Elements/structuralelementevaluator.h"
-#include "dofmanager.h"
-#include "set.h"
 #include "timestep.h"
 #include "sparsemtrx.h"
 #include "nummet.h"
@@ -139,12 +137,6 @@ StaticStructural :: initializeFrom(InputRecord *ir)
         commBuff = new CommunicatorBuff( this->giveNumberOfProcesses() );
         communicator = new NodeCommunicator(this, commBuff, this->giveRank(),
                                             this->giveNumberOfProcesses());
-
-        if ( ir->hasField(_IFT_StaticStructural_nonlocalExtension) ) {
-            nonlocalExt = 1;
-            nonlocCommunicator = new ElementCommunicator(this, commBuff, this->giveRank(),
-                                                         this->giveNumberOfProcesses());
-        }
     }
 
 #endif
@@ -201,7 +193,7 @@ void StaticStructural :: solveYourselfAt(TimeStep *tStep)
     this->field->applyBoundaryCondition(tStep); ///@todo Temporary hack, advanceSolution should apply the boundary conditions directly.
 
     neq = this->giveNumberOfDomainEquations( di, EModelDefaultEquationNumbering() );
-    if ( tStep->giveNumber() == 1 ) {
+    if (tStep->giveNumber()==1) {
         this->field->initialize(VM_Total, tStep, this->solution, EModelDefaultEquationNumbering() );
     } else {
         this->field->initialize(VM_Total, tStep->givePreviousStep(), this->solution, EModelDefaultEquationNumbering() );
@@ -228,15 +220,7 @@ void StaticStructural :: solveYourselfAt(TimeStep *tStep)
     if ( this->initialGuessType == IG_Tangent ) {
         OOFEM_LOG_RELEVANT("Computing initial guess\n");
         FloatArray extrapolatedForces(neq);
-#if 1
         this->assembleExtrapolatedForces( extrapolatedForces, tStep, TangentStiffnessMatrix, this->giveDomain(di) );
-#else
-        ///@todo This should replace "assembleExtrapolatedForces" after the last bugs have been corrected.
-        FloatArray incrementOfPrescribed;
-        this->field->initialize(VM_Incremental, tStep, incrementOfPrescribed, EModelDefaultEquationNumbering() );
-        this->assembleVector(extrapolatedForces, tStep, MatrixProductAssembler(TangentAssembler(TangentStiffness), incrementOfPrescribed),
-                             VM_Unknown, EModelDefaultEquationNumbering(), this->giveDomain(di) );
-#endif
         extrapolatedForces.negated();
         ///@todo Need to find a general way to support this before enabling it by default.
         //this->assembleVector(extrapolatedForces, tStep, LinearizedDilationForceAssembler(), VM_Incremental, EModelDefaultEquationNumbering(), this->giveDomain(di) );
@@ -247,18 +231,16 @@ void StaticStructural :: solveYourselfAt(TimeStep *tStep)
         this->assembleVectorFromElements(this->internalForces, tStep, InternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(di));
         this->internalForces.printYourself("internal forces");
 #endif
-        if ( extrapolatedForces.computeNorm() > 0. ) {
-            OOFEM_LOG_RELEVANT("Computing old tangent\n");
-            this->updateComponent( tStep, NonLinearLhs, this->giveDomain(di) );
-            SparseLinearSystemNM *linSolver = nMethod->giveLinearSolver();
-            OOFEM_LOG_RELEVANT("Solving for increment\n");
-            linSolver->solve(*stiffnessMatrix, extrapolatedForces, incrementOfSolution);
-            OOFEM_LOG_RELEVANT("Initial guess found\n");
-            this->solution.add(incrementOfSolution);
-            
-            this->field->update(VM_Total, tStep, this->solution, EModelDefaultEquationNumbering());
-            this->field->applyBoundaryCondition(tStep); ///@todo Temporary hack to override the incorrect values that is set by "update" above. Remove this when that is fixed.
-        }
+        OOFEM_LOG_RELEVANT("Computing old tangent\n");
+        this->updateComponent( tStep, NonLinearLhs, this->giveDomain(di) );
+        SparseLinearSystemNM *linSolver = nMethod->giveLinearSolver();
+        OOFEM_LOG_RELEVANT("Solving for increment\n");
+        linSolver->solve(*stiffnessMatrix, extrapolatedForces, incrementOfSolution);
+        OOFEM_LOG_RELEVANT("Initial guess found\n");
+        this->solution.add(incrementOfSolution);
+        
+        this->field->update(VM_Total, tStep, this->solution, EModelDefaultEquationNumbering());
+        this->field->applyBoundaryCondition(tStep); ///@todo Temporary hack to override the incorrect values that is set by "update" above. Remove this when that is fixed.
     } else if ( this->initialGuessType != IG_None ) {
         OOFEM_ERROR("Initial guess type: %d not supported", initialGuessType);
     } else {

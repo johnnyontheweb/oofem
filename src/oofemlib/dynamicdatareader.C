@@ -72,9 +72,7 @@ bool
 DynamicDataReader :: peakNext(const std :: string &keyword)
 {
     std :: string nextKey;
-    auto temp = this->it;
-    temp++;
-    (*temp)->giveRecordKeywordField(nextKey);
+    (*this->it)->giveRecordKeywordField(nextKey);
     return keyword.compare( nextKey ) == 0;
 }
 

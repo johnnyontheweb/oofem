@@ -111,6 +111,8 @@ public:
 
     virtual NumericalMethod *giveNumericalMethod(MetaStep *mStep);
 
+    virtual void terminate(TimeStep *tStep);
+
     virtual fMode giveFormulation() { return TL; }
 
     virtual const char *giveInputRecordName() const { return _IFT_IncrementalLinearStatic_Name; }

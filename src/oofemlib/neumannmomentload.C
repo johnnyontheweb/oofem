@@ -42,7 +42,6 @@
 #include "feinterpol.h"
 #include "gausspoint.h"
 #include "timestep.h"
-#include "mathfem.h"
 
 
 namespace oofem {

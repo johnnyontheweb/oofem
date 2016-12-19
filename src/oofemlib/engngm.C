@@ -94,8 +94,6 @@
 namespace oofem {
 EngngModel :: EngngModel(int i, EngngModel *_master) : domainNeqs(), domainPrescribedNeqs()
 {
-    suppressOutput = false;
-
     number = i;
     defaultErrEstimator = NULL;
     numberOfSteps = 0;
@@ -222,17 +220,27 @@ int EngngModel :: instanciateYourself(DataReader *dr, InputRecord *ir, const cha
         this->dataOutputFileName.append(".oofeg");
     }
 
+    if ( ( outputStream = fopen(this->dataOutputFileName.c_str(), "w") ) == NULL ) {
+        OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str());
+    }
 
     this->Instanciate_init(); // Must be done after initializeFrom
 
-
+    fprintf(outputStream, "%s", PRG_HEADER);
     this->startTime = time(NULL);
+    fprintf( outputStream, "\nStarting analysis on: %s\n", ctime(& this->startTime) );
+
+    fprintf(outputStream, "%s\n", desc);
 
 #  ifdef VERBOSE
     OOFEM_LOG_DEBUG( "Reading all data from input file %s\n", dr->giveDataSourceName() );
 #  endif
+#ifdef __PARALLEL_MODE
+    if ( this->isParallel() ) {
+        fprintf(outputStream, "Problem rank is %d/%d on %s\n\n", this->rank, this->numProcs, this->processor_name);
+    }
 
-    simulationDescription = std::string(desc);
+#endif
 
     // instanciate receiver
     this->initializeFrom(ir);
@@ -315,29 +323,6 @@ EngngModel :: initializeFrom(InputRecord *ir)
     force_load_rebalance_in_first_step = _val;
 
 #endif
-
-    suppressOutput = ir->hasField(_IFT_EngngModel_suppressOutput);
-
-    if ( suppressOutput ) {
-        printf("Suppressing output.\n");
-    }
-    else {
-
-        if ( ( outputStream = fopen(this->dataOutputFileName.c_str(), "w") ) == NULL ) {
-            OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str());
-        }
-
-        fprintf(outputStream, "%s", PRG_HEADER);
-        fprintf(outputStream, "\nStarting analysis on: %s\n", ctime(& this->startTime) );
-        fprintf(outputStream, "%s\n", simulationDescription.c_str());
-
-#ifdef __PARALLEL_MODE
-        if ( this->isParallel() ) {
-            fprintf(outputStream, "Problem rank is %d/%d on %s\n\n", this->rank, this->numProcs, this->processor_name);
-        }
-#endif
-    }
-
     return IRRT_OK;
 }
 
@@ -515,6 +500,7 @@ void
 EngngModel :: solveYourself()
 {
     int smstep = 1, sjstep = 1;
+    FILE *out = this->giveOutputStream();
 
     this->timer.startTimer(EngngModelTimer :: EMTT_AnalysisTimer);
 
@@ -555,10 +541,8 @@ EngngModel :: solveYourself()
             OOFEM_LOG_INFO("EngngModel info: user time consumed by solution step %d: %.2fs\n",
                            this->giveCurrentStep()->giveNumber(), _steptime);
 
-            if(!suppressOutput) {
-            	fprintf(this->giveOutputStream(), "\nUser time consumed by solution step %d: %.3f [s]\n\n",
-            			this->giveCurrentStep()->giveNumber(), _steptime);
-            }
+            fprintf(out, "\nUser time consumed by solution step %d: %.3f [s]\n\n",
+                    this->giveCurrentStep()->giveNumber(), _steptime);
 
 #ifdef __PARALLEL_MODE
             if ( loadBalancingFlag ) {
@@ -672,6 +656,7 @@ void
 EngngModel :: terminate(TimeStep *tStep)
 {
     this->doStepOutput(tStep);
+    fflush( this->giveOutputStream() );
     this->saveStepContext(tStep);
 }
 
@@ -679,11 +664,10 @@ EngngModel :: terminate(TimeStep *tStep)
 void
 EngngModel :: doStepOutput(TimeStep *tStep)
 {
-    if(!suppressOutput) {
-        this->printOutputAt(this->giveOutputStream(), tStep);
-        fflush( this->giveOutputStream() );
-    }
+    FILE *File = this->giveOutputStream();
 
+    // print output
+    this->printOutputAt(File, tStep);
     // export using export manager
     exportModuleManager->doOutput(tStep);
 }
@@ -706,10 +690,11 @@ EngngModel :: saveStepContext(TimeStep *tStep)
 
 
 void
-EngngModel :: printOutputAt(FILE *file, TimeStep *tStep)
+EngngModel :: printOutputAt(FILE *File, TimeStep *tStep)
 {
     int domCount = 0;
 
+    // fprintf (File,"\nOutput for time step number %d \n\n",tStep->giveNumber());
     for ( auto &domain: domainList ) {
         domCount += domain->giveOutputManager()->testTimeStepOutput(tStep);
     }
@@ -718,14 +703,14 @@ EngngModel :: printOutputAt(FILE *file, TimeStep *tStep)
         return;              // do not print even Solution step header
     }
 
-    fprintf(file, "\n==============================================================");
-    fprintf(file, "\nOutput for time %.8e ", tStep->giveTargetTime() * this->giveVariableScale(VST_Time) );
-    fprintf(file, "\n==============================================================\n");
+    fprintf(File, "\n==============================================================");
+    fprintf(File, "\nOutput for time %.8e ", tStep->giveTargetTime() * this->giveVariableScale(VST_Time) );
+    fprintf(File, "\n==============================================================\n");
     for ( auto &domain: domainList ) {
-        fprintf( file, "Output for domain %3d\n", domain->giveNumber() );
+        fprintf( File, "Output for domain %3d\n", domain->giveNumber() );
 
-        domain->giveOutputManager()->doDofManOutput(file, tStep);
-        domain->giveOutputManager()->doElementOutput(file, tStep);
+        domain->giveOutputManager()->doDofManOutput(File, tStep);
+        domain->giveOutputManager()->doElementOutput(File, tStep);
     }
 }
 
@@ -1239,8 +1224,8 @@ void EngngModel :: assembleVectorFromElements(FloatArray &answer, TimeStep *tSte
                 element->giveInterpolation()->boundaryEdgeGiveNodes(bNodes, boundary);
                 if ( element->computeDofTransformationMatrix(R, bNodes, false) ) {
                   charVec.rotatedWith(R, 't');
-    }
-
+                }
+                
                 va.locationFromElementNodes(loc, *element, bNodes, s, & dofids);
                 answer.assemble(charVec, loc);
                 
@@ -1315,33 +1300,18 @@ EngngModel :: assembleExtrapolatedForces(FloatArray &answer, TimeStep *tStep, Ch
         ///@todo This is not perfect. It is probably no good for viscoelastic materials, and possibly other scenarios that are rate dependent
         ///(tangent will be computed for the previous step, with whatever deltaT it had)
         element->giveCharacteristicMatrix(charMatrix, type, tStep);
-        if ( charMatrix.isNotEmpty() ) {
-            ///@note Temporary work-around for active b.c. used in multiscale (it can't support VM_Incremental easily).
-            //element->computeVectorOf(VM_Incremental, tStep, delta_u);
-            element->computeVectorOf(VM_Total, tStep, delta_u);
-            FloatArray tmp;
+        element->computeVectorOf(VM_Incremental, tStep, delta_u);
+        charVec.beProductOf(charMatrix, delta_u);
+        if ( element->giveRotationMatrix(R) ) {
+            charVec.rotatedWith(R, 't');
+        }
 
-            if(tStep->isTheFirstStep() ) {
-            	tmp = delta_u;
-            	tmp.zero();
-            }
-            else {
-            	element->computeVectorOf(VM_Total, tStep->givePreviousStep(), tmp);
-            }
-
-            delta_u.subtract(tmp);
-            charVec.beProductOf(charMatrix, delta_u);
-            if ( element->giveRotationMatrix(R) ) {
-                charVec.rotatedWith(R, 't');
-            }
-
-            ///@todo Deal with element deactivation and reactivation properly.
-    #ifdef _OPENMP
-    #pragma omp critical
-    #endif
-            {
-                answer.assemble(charVec, loc);
-            }
+        ///@todo Deal with element deactivation and reactivation properly.
+#ifdef _OPENMP
+ #pragma omp critical
+#endif
+        {
+            answer.assemble(charVec, loc);
         }
     }
 
@@ -1466,7 +1436,7 @@ contextIOResultType EngngModel :: saveContext(DataStream *stream, ContextMode mo
 
 
     for ( auto &domain: domainList ) {
-        domain->saveContext(*stream, mode);
+        domain->saveContext(*stream, mode, obj);
     }
 
 
@@ -1573,7 +1543,7 @@ contextIOResultType EngngModel :: restoreContext(DataStream *stream, ContextMode
     }
 
     for ( auto &domain: domainList ) {
-        domain->restoreContext(*stream, mode);
+        domain->restoreContext(*stream, mode, obj);
     }
 
     // restore nMethod
@@ -1770,17 +1740,13 @@ EngngModel :: giveMetaStep(int i)
 }
 
 void
-EngngModel::letOutputBaseFileNameBe(const std :: string &src)
-{
-    this->dataOutputFileName = src;
+EngngModel::letOutputBaseFileNameBe(const std :: string &src) {
+  this->dataOutputFileName = src;
 
-    if ( outputStream ) fclose(outputStream);
-
-    if ( !suppressOutput ) {
-        if ( ( outputStream = fopen(this->dataOutputFileName.c_str(), "w") ) == NULL ) {
-            OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str());
-        }
-    }
+  if ( outputStream) fclose(outputStream);
+  if ( ( outputStream = fopen(this->dataOutputFileName.c_str(), "w") ) == NULL ) {
+    OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str());
+  }
 }
 
 FILE *
@@ -1816,22 +1782,18 @@ EngngModel :: terminateAnalysis()
 {
     int rsec = 0, rmin = 0, rhrs = 0;
     int usec = 0, umin = 0, uhrs = 0;
+    FILE *out = this->giveOutputStream();
     time_t endTime = time(NULL);
     this->timer.stopTimer(EngngModelTimer :: EMTT_AnalysisTimer);
 
 
+    fprintf(out, "\nFinishing analysis on: %s\n", ctime(& endTime) );
     // compute real time consumed
     this->giveAnalysisTime(rhrs, rmin, rsec, uhrs, umin, usec);
-
-    if(!suppressOutput) {
-        FILE *out = this->giveOutputStream();
-        fprintf(out, "\nFinishing analysis on: %s\n", ctime(& endTime) );
-        fprintf(out, "Real time consumed: %03dh:%02dm:%02ds\n", rhrs, rmin, rsec);
-        fprintf(out, "User time consumed: %03dh:%02dm:%02ds\n\n\n", uhrs, umin, usec);
-    }
-
+    fprintf(out, "Real time consumed: %03dh:%02dm:%02ds\n", rhrs, rmin, rsec);
     OOFEM_LOG_FORCED("\n\nANALYSIS FINISHED\n\n\n");
     OOFEM_LOG_FORCED("Real time consumed: %03dh:%02dm:%02ds\n", rhrs, rmin, rsec);
+    fprintf(out, "User time consumed: %03dh:%02dm:%02ds\n\n\n", uhrs, umin, usec);
     OOFEM_LOG_FORCED("User time consumed: %03dh:%02dm:%02ds\n", uhrs, umin, usec);
     exportModuleManager->terminate();
 }
@@ -1864,11 +1826,13 @@ EngngModel :: checkProblemConsistency()
 void
 EngngModel :: postInitialize()
 {
+
     // set meta step bounds
     int istep = this->giveNumberOfFirstStep(true);
     for ( auto &metaStep: metaStepList ) {
         istep = metaStep.setStepBounds(istep);
     }
+
 
     for ( auto &domain: domainList ) {
         domain->postInitialize();

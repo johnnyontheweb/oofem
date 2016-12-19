@@ -47,8 +47,6 @@
 #include "datastream.h"
 #include "contextioerr.h"
 #include "classfactory.h"
-#include "outputmanager.h"
-#include "mathfem.h"
 
 //#define THROW_CIOERR(e) throw ContextIOERR(e, __FILE__, __LINE__); // km???
 
@@ -160,6 +158,10 @@ FreeWarping :: computeCenterOfGravity()
         } else   {
             OOFEM_ERROR("Zero crosssection area");
         }
+    }
+    fprintf(outputStream, "\n Center of gravity:");
+    for ( int j = 1; j <= noCS; ++j ) {
+        fprintf( outputStream, "\n  CrossSection %d  x = %f     y = %f", j, CG.at(j, 1), CG.at(j, 2) );
     }
 }
 
@@ -358,26 +360,19 @@ void FreeWarping :: solveYourselfAt(TimeStep *tStep)
 
 
 void
-FreeWarping :: updateDomainLinks()
+FreeWarping :: terminate(TimeStep *tStep)
 {
-    EngngModel :: updateDomainLinks();
-    this->giveNumericalMethod( this->giveCurrentMetaStep() )->setDomain( this->giveDomain(1) );
+    fflush( this->giveOutputStream() );
+    this->printReactionForces(tStep, 1); // computed reaction forces have the mening of torsional stiffness
+    StructuralEngngModel :: terminate(tStep);
 }
 
 
 void
-FreeWarping :: printOutputAt(FILE *file, TimeStep *tStep)
+FreeWarping :: updateDomainLinks()
 {
-    if ( this->giveDomain(1)->giveOutputManager()->testTimeStepOutput(tStep) ) {
-        return;
-    }
-
-    EngngModel :: printOutputAt(file, tStep);
-
-    fprintf(file, "\n Center of gravity:");
-    for ( int j = 1; j <= this->giveDomain(1)->giveNumberOfCrossSectionModels(); ++j ) {
-        fprintf(file, "\n  CrossSection %d  x = %f     y = %f", j, CG.at(j, 1), CG.at(j, 2) );
-    }
+    EngngModel :: updateDomainLinks();
+    this->giveNumericalMethod( this->giveCurrentMetaStep() )->setDomain( this->giveDomain(1) );
 }
 
 
@@ -439,6 +434,8 @@ FreeWarping :: updateStiffnessMatrix(SparseMtrx *answer)
         }
     }
 }
+
+
 
 
 void

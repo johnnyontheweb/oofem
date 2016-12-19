@@ -33,7 +33,6 @@
  */
 
 #include "constantpressureload.h"
-#include "dynamicinputrecord.h"
 #include "function.h"
 #include "floatarray.h"
 #include "timestep.h"
@@ -59,14 +58,6 @@ ConstantPressureLoad :: initializeFrom(InputRecord *ir)
     }
 #endif
     return BoundaryLoad :: initializeFrom(ir);
-}
-
-
-void
-ConstantPressureLoad :: giveInputRecord(DynamicInputRecord &input)
-{
-    BoundaryLoad :: giveInputRecord(input);
-    input.setField(this->loadOffset, _IFT_ConstantPressureLoad_LoadOffset);
 }
 
 void

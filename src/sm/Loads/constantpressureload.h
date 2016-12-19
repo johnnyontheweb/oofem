@@ -81,7 +81,6 @@ public:
     void updateLoad(const FloatArray &newValue) { componentArray = newValue; }
 
     virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
     virtual bcGeomType giveBCGeoType() const { return SurfaceLoadBGT; }
 
     virtual const char *giveClassName() const { return "ConstantPressureLoad"; }

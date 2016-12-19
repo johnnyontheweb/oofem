@@ -55,7 +55,6 @@ class DataStream;
  * 
  * @author Mikael Öhman
  * @author Jim Brouzoulis 
- * @author Erik Svenning
  * @author many others (please add yourselves)
  */
 class OOFEM_EXPORT IntArray
@@ -250,9 +249,8 @@ public:
      * The size of receiver is changed accordingly.
      * @param value Value to insert.
      * @param allocChunk If reallocation needed, an additional space for allocChunk values will be allocated.
-     * @return True if value is inserted, false if value is already in array.
      */
-    bool insertSortedOnce(int value, int allocChunk = 0);
+    void insertSortedOnce(int value, int allocChunk = 0);
     /**
      * Erase the element of given value.
      * If the value is found receiver will shrink accordingly,
@@ -317,18 +315,7 @@ public:
      * Prints receiver on stdout with custom name.  
      * @param name Display name of reciever.
      */
-    void printYourself(const std::string name) const;
-
-    /**
-     * Print receiver to file
-     * @param filename Name of recieving file.
-     * @param showDimensions Determins if dimesions should be included in output
-     */
-    void printYourselfToFile(const std::string filename, const bool showDimensions=true) const;
-
-    /// Returns true if no element is NAN or infinite
-    bool isFinite() const;
-
+    void printYourself(const std::string name) const;    
     /**
      * Breaks encapsulation. Avoid using this unless absolutely necessary.
      * @return Internal pointer to stored values.

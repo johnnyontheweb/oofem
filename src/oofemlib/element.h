@@ -319,7 +319,7 @@ public:
     /**
      * Computes the tangent contribution of the given load at the given boundary.
      * @note Elements which do not have an contribution should resize the vector to be empty.
-     * @param answer Requested contribution of load (in Global c.s.).
+     * @param answer Requested contribution of load.
      * @param load Load to compute contribution from.
      * @param boundary Surface number.
      * @param rmode Mode of the contribution.

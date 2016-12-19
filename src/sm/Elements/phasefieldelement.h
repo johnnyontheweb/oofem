@@ -59,6 +59,7 @@ public:
 
     virtual const char *giveClassName() const { return "PhaseFieldElement"; }
 
+    int computeNumberOfDofs();
     void computeLocationArrayOfDofIDs(const IntArray &dofIdArray, IntArray &answer);
 
     double computeFreeEnergy( GaussPoint *gp, TimeStep *tStep );

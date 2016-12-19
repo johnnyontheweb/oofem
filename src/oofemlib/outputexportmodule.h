@@ -61,8 +61,6 @@ class DofManager;
 class OOFEM_EXPORT OutputExportModule : public ExportModule
 {
 protected:
-    FILE *outputStream;
-
     /// Set which contains nodes which should be exported
     IntArray nodeSets;
 

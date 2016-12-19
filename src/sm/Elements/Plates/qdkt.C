@@ -531,6 +531,10 @@ QDKTPlate :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType t
 }
 
 
+
+//
+// The element interface required by SPRNodalRecoveryModelInterface
+//
 void
 QDKTPlate :: SPRNodalRecoveryMI_giveSPRAssemblyPoints(IntArray &pap)
 {

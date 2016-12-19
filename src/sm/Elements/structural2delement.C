@@ -37,7 +37,6 @@
 #include "gausspoint.h"
 #include "CrossSections/structuralcrosssection.h"
 #include "gaussintegrationrule.h"
-#include "mathfem.h"
 
 namespace oofem {
 Structural2DElement :: Structural2DElement(int n, Domain *aDomain) :
@@ -467,10 +466,10 @@ AxisymElement :: computeVolumeAround(GaussPoint *gp)
 // Returns the portion of the receiver which is attached to gp.
 {
   // note: radius is accounted by interpolation (of Fei2d*Axi type)
-    double determinant = fabs( static_cast< FEInterpolation2d * >( this->giveInterpolation() )->
-                               giveTransformationJacobian( gp->giveNaturalCoordinates(), * this->giveCellGeometryWrapper() ) );
+  double determinant = fabs( static_cast< FEInterpolation2d * >( this->giveInterpolation() )->
+                             giveTransformationJacobian( gp->giveNaturalCoordinates(), * this->giveCellGeometryWrapper() ) );
 
-    double weight = gp->giveWeight();
+  double weight = gp->giveWeight();
   return determinant * weight;
   
 }

@@ -704,7 +704,6 @@ VTKXMLExportModule :: setupVTKPiece(VTKPiece &vtkPiece, TimeStep *tStep, int reg
         //-------------------------------------------
         IntArray cellNodes;
         vtkPiece.setNumberOfCells(numRegionEl);
-        IntArray regionElInd;
 
         int offset = 0;
         int cellNum = 0;
@@ -727,8 +726,6 @@ VTKXMLExportModule :: setupVTKPiece(VTKPiece &vtkPiece, TimeStep *tStep, int reg
             if ( elem->giveParallelMode() != Element_local ) {
                 continue;
             }
-
-            regionElInd.followedBy(ei);
 
             cellNum++;
 
@@ -756,7 +753,7 @@ VTKXMLExportModule :: setupVTKPiece(VTKPiece &vtkPiece, TimeStep *tStep, int reg
         this->exportIntVars(vtkPiece, mapG2L, mapL2G, region, tStep);
         this->exportExternalForces(vtkPiece, mapG2L, mapL2G, region, tStep);
 
-        this->exportCellVars(vtkPiece, regionElInd, tStep);
+        this->exportCellVars(vtkPiece, elems, tStep);
     } // end of default piece for simple geometry elements
 }
 
@@ -768,9 +765,9 @@ VTKXMLExportModule :: writeVTKPiece(VTKPiece &vtkPiece, TimeStep *tStep)
     // (so-called) composite element consisting of several VTK cells (layered structures, XFEM, etc.).
 
     if ( !vtkPiece.giveNumberOfCells() ) { // handle piece with no elements. Otherwise ParaView complains if the whole vtu file is without <Piece></Piece>
-//          fprintf(this->fileStream, "<Piece NumberOfPoints=\"0\" NumberOfCells=\"0\">\n");
-//          fprintf(this->fileStream, "<Cells>\n<DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\"> </DataArray>\n</Cells>\n");
-//          fprintf(this->fileStream, "</Piece>\n");
+         fprintf(this->fileStream, "<Piece NumberOfPoints=\"0\" NumberOfCells=\"0\">\n");
+         fprintf(this->fileStream, "<Cells>\n<DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\"> </DataArray>\n</Cells>\n");
+         fprintf(this->fileStream, "</Piece>\n");
         return;
     }
 
@@ -1540,7 +1537,7 @@ VTKXMLExportModule :: getNodalVariableFromPrimaryField(FloatArray &answer, DofMa
             if ( size == recoveredVal->giveSize() ) {
                 answer.at(j) = recoveredVal->at(j);
             } else {
-                OOFEM_WARNING("Recovered variable size mismatch for %d for id %d", type, id);
+                OOFEM_WARNING("recovered variable size mismatch for %d", type);
                 answer.at(j) = 0.0;
             }
         } else if ( dman->hasDofID(id) ) {
@@ -1561,7 +1558,7 @@ VTKXMLExportModule :: getNodalVariableFromPrimaryField(FloatArray &answer, DofMa
             if ( size == recoveredVal->giveSize() ) {
                 answer.at(j) = recoveredVal->at(j);
             } else {
-                OOFEM_WARNING("Recovered variable size mismatch for \"%s\" for dof id %d. Size is %d, should be %d", __UnknownTypeToString(type), id, recoveredVal->giveSize(), size);
+                OOFEM_WARNING("recovered variable size mismatch for %d", type);
                 answer.at(j) = 0.0;
             }
         }

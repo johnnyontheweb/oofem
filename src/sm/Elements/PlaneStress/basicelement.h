@@ -82,4 +82,4 @@ protected:
     virtual int giveNumberOfIPForMassMtrxIntegration() { return 4; }
 };
 } // end namespace oofem
-#endif // basicelement_h
+#endif // trplanstrss_h

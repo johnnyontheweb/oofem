@@ -168,7 +168,7 @@ public:
     virtual int giveCurrentNumberOfIterations() {return currentIterations;}
 
 #ifdef __OOFEG
-    virtual void showSparseMtrxStructure(int type, oofegGraphicContext &gc, TimeStep *tStep);
+    void showSparseMtrxStructure(int type, oofegGraphicContext &gc, TimeStep *tStep);
 #endif
 
     virtual int estimateMaxPackSize(IntArray &commMap, DataStream &buff, int packUnpackType);

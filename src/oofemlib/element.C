@@ -454,6 +454,7 @@ Element :: giveBoundaryLocationArray(IntArray &locationArray, const IntArray &bN
 
 
 Material *Element :: giveMaterial()
+// Returns the material of the receiver.
 {
 #ifdef DEBUG
     if ( !material ) {
@@ -465,6 +466,7 @@ Material *Element :: giveMaterial()
 
 
 CrossSection *Element :: giveCrossSection()
+// Returns the crossSection of the receiver.
 {
 #ifdef DEBUG
     if ( !crossSection ) {
@@ -484,6 +486,7 @@ Element :: giveRegionNumber()
 
 DofManager *
 Element :: giveDofManager(int i) const
+// Returns the i-th node of the receiver.
 {
 #ifdef DEBUG
     if ( ( i <= 0 ) || ( i > dofManArray.giveSize() ) ) {
@@ -495,6 +498,7 @@ Element :: giveDofManager(int i) const
 
 void
 Element :: addDofManager(DofManager *dMan)
+// Adds a new dMan to the dofManArray
 {
 #ifdef DEBUG
     if ( dMan == NULL ) {
@@ -504,10 +508,12 @@ Element :: addDofManager(DofManager *dMan)
     int size =  dofManArray.giveSize();
     this->dofManArray.resizeWithValues( size + 1 );
     this->dofManArray.at(size + 1) = dMan->giveGlobalNumber();
+    
 }
 
 ElementSide *
 Element :: giveSide(int i) const
+// Returns the i-th side of the receiver.
 {
 #ifdef DEBUG
     if ( ( i <= 0 ) || ( i > dofManArray.giveSize() ) ) {
@@ -580,7 +586,7 @@ Element :: computeTangentFromSurfaceLoad(FloatMatrix &answer, SurfaceLoad *load,
     answer.clear();
 }
 
-void
+  void
 Element :: computeTangentFromEdgeLoad(FloatMatrix &answer, EdgeLoad *load, int boundary, MatResponseMode rmode, TimeStep *tStep)
 {
     answer.clear();
@@ -729,6 +735,7 @@ Element :: postInitialize()
 
 void
 Element :: printOutputAt(FILE *file, TimeStep *tStep)
+// Performs end-of-step operations.
 {
     fprintf( file, "element %d (%8d) :\n", this->giveLabel(), this->giveNumber() );
 
@@ -833,7 +840,10 @@ Element :: initForNewStep()
 
 
 contextIOResultType Element :: saveContext(DataStream &stream, ContextMode mode, void *obj)
-// saves full element context (saves state variables, that completely describe current state)
+//
+// saves full element context (saves state variables, that completely describe
+// current state)
+//
 {
     contextIOResultType iores;
     int _val;
@@ -918,7 +928,10 @@ contextIOResultType Element :: saveContext(DataStream &stream, ContextMode mode,
 
 
 contextIOResultType Element :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
-// restores full element context (saves state variables, that completely describe current state)
+//
+// restores full element context (saves state variables, that completely describe
+// current state)
+//
 {
     contextIOResultType iores;
     int _nrules;
@@ -1115,7 +1128,7 @@ Element :: giveLengthInDir(const FloatArray &normalToCrackPlane)
 
     return maxDis - minDis;
 }
-
+    
 double 
 Element :: giveCharacteristicLengthForPlaneElements(const FloatArray &normalToCrackPlane) 
 //
@@ -1131,7 +1144,7 @@ Element :: giveCharacteristicLengthForPlaneElements(const FloatArray &normalToCr
         return this->computeMeanSize();
     }
 }
-
+    
 double 
 Element :: giveCharacteristicLengthForAxisymmElements(const FloatArray &normalToCrackPlane) 
 //
@@ -1384,17 +1397,16 @@ int
 Element :: adaptiveMap(Domain *oldd, TimeStep *tStep)
 {
     int result = 1;
-    CrossSection *cs = this->giveCrossSection();
+    MaterialModelMapperInterface *interface = static_cast< MaterialModelMapperInterface * >
+                                              ( this->giveMaterial()->giveInterface(MaterialModelMapperInterfaceType) );
+
+    if ( !interface ) {
+        return 0;
+    }
 
     for ( auto &iRule: integrationRulesArray ) {
-        for ( auto &gp: *iRule ) {
-            MaterialModelMapperInterface *interface = static_cast< MaterialModelMapperInterface * >
-                ( cs->giveMaterial(gp)->giveInterface(MaterialModelMapperInterfaceType) );
-            if ( interface ) {
-                result &= interface->MMI_map(gp, oldd, tStep);
-            } else {
-                result = 0;
-            }
+        for ( GaussPoint *gp: *iRule ) {
+            result &= interface->MMI_map(gp, oldd, tStep);
         }
     }
 

@@ -107,7 +107,7 @@ ContactDefinition :: createContactDofs()
 
 
 void
-ContactDefinition :: computeContactForces(FloatArray &answer, TimeStep *tStep, ValueModeType mode,
+ContactDefinition :: computeContactForces(FloatArray &answer, TimeStep *tStep, CharType type, ValueModeType mode,
                                 const UnknownNumberingScheme &s, Domain *domain, FloatArray *eNorms)
 {
     //Loop through all the contact elements and let them return their internal forces vector
@@ -118,7 +118,7 @@ ContactDefinition :: computeContactForces(FloatArray &answer, TimeStep *tStep, V
     for ( auto &master : this->masterElementList ) {
         
         // These acts as external forces so move them to the lhs
-        master->computeContactForces(Fc, tStep, mode, s, domain, eNorms);
+        master->computeContactForces(Fc, tStep, type, mode, s, domain, eNorms);
         Fc.negated();
         
         if ( Fc.giveSize() ) {
@@ -135,7 +135,7 @@ ContactDefinition :: computeContactForces(FloatArray &answer, TimeStep *tStep, V
 
 void
 ContactDefinition :: computeContactTangent(SparseMtrx &answer, TimeStep *tStep,
-                      const UnknownNumberingScheme &r_s, const UnknownNumberingScheme &c_s)
+                      CharType type, const UnknownNumberingScheme &r_s, const UnknownNumberingScheme &c_s)
 {
   
     FloatMatrix Kc;
@@ -145,7 +145,7 @@ ContactDefinition :: computeContactTangent(SparseMtrx &answer, TimeStep *tStep,
         
         //if ( master->isInContact() ) { // tangent becomes singular with this
             //printf("node in contact: computeContactTangent\n\n");
-            master->computeContactTangent(Kc, tStep);
+            master->computeContactTangent(Kc, type, tStep);
             // do this in contact element?
             Kc.negated(); // should be negated!
            

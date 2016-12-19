@@ -63,8 +63,6 @@ public:
     virtual IRResultType initializeFrom(InputRecord *ir);
     virtual int computeNumberOfDofs() { return 5; }
 
-    virtual void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep);
-
 protected:
     virtual void computeBkappaMatrixAt(GaussPoint *gp, FloatMatrix &answer);
     virtual void computeNkappaMatrixAt(GaussPoint *gp, FloatArray &answer);

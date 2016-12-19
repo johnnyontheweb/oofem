@@ -33,7 +33,6 @@
  */
 
 #include "constantsurfaceload.h"
-#include "dynamicinputrecord.h"
 #include "function.h"
 #include "floatarray.h"
 #include "timestep.h"
@@ -43,9 +42,9 @@ namespace oofem {
 REGISTER_BoundaryCondition(ConstantSurfaceLoad);
 
 IRResultType
-ConstantSurfaceLoad::initializeFrom(InputRecord *ir)
+ConstantSurfaceLoad :: initializeFrom(InputRecord *ir)
 {
-	return BoundaryLoad::initializeFrom(ir);
+    return BoundaryLoad :: initializeFrom(ir);
 }
 
 void

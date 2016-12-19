@@ -273,7 +273,7 @@ public:
      * Returns DofID value of receiver, which determines type of
      * of unknown connected to receiver (e.g., u-displacement, v-displacement, ...).
      */
-    DofIDItem giveDofID() const { return dofID; }
+    DofIDItem giveDofID() { return dofID; }
     /**
      * Sets the ID of receiver.
      */

@@ -47,21 +47,18 @@ SparseLinearSystemNM :: ~SparseLinearSystemNM()
 NM_Status SparseLinearSystemNM :: solve(SparseMtrx &A, FloatMatrix &B, FloatMatrix &X)
 {
     NM_Status status = NM_None;
-    int neq = A.giveNumberOfRows();
+    int ncol = A.giveNumberOfRows();
     int nrhs = B.giveNumberOfColumns();
     if ( A.giveNumberOfRows() != B.giveNumberOfRows() ) {
         OOFEM_ERROR("A and B matrix mismatch");
     }
-    FloatArray bi(neq), xi(neq);
-    if ( X.giveNumberOfRows() != neq || X.giveNumberOfColumns() != nrhs ) {
-        X.resize(neq, nrhs);
-    }
+    FloatArray bi(ncol), xi(ncol);
+    X.resize(ncol, nrhs);
     for ( int i = 1; i <= nrhs; ++i ) {
         B.copyColumn(bi, i);
-        X.copyColumn(xi, i);
-        status = this->solve(A, bi, xi);
+        status &= this->solve(A, bi, xi);
         if ( status & NM_NoSuccess ) {
-            return status;
+            return NM_NoSuccess;
         }
         X.setColumn(xi, i);
     }

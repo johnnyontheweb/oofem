@@ -357,6 +357,9 @@ void
 NonLinearStatic :: terminate(TimeStep *tStep)
 {
     this->doStepOutput(tStep);
+    this->printReactionForces(tStep, 1);
+    // update load vectors before storing context
+    fflush( this->giveOutputStream() );
     this->updateLoadVectors(tStep);
     this->saveStepContext(tStep);
 }
@@ -601,21 +604,20 @@ NonLinearStatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *
 
 
 void
-NonLinearStatic :: printOutputAt(FILE *file, TimeStep *tStep)
+NonLinearStatic :: printOutputAt(FILE *File, TimeStep *tStep)
 {
     if ( !this->giveDomain(1)->giveOutputManager()->testTimeStepOutput(tStep) ) {
         return;                                                                      // do not print even Solution step header
     }
 
-    fprintf(file, "\n\nOutput for time %.3e, solution step number %d\n", tStep->giveTargetTime(), tStep->giveNumber() );
-    fprintf(file, "Reached load level : %20.6f in %d iterations\n\n",
+    fprintf( File, "\n\nOutput for time %.3e, solution step number %d\n", tStep->giveTargetTime(), tStep->giveNumber() );
+    fprintf(File, "Reached load level : %20.6f in %d iterations\n\n",
             cumulatedLoadLevel + loadLevel, currentIterations);
 
-    nMethod->printState(file);
+    nMethod->printState(File);
 
-    this->giveDomain(1)->giveOutputManager()->doDofManOutput(file, tStep);
-    this->giveDomain(1)->giveOutputManager()->doElementOutput(file, tStep);
-    this->printReactionForces(tStep, 1);
+    this->giveDomain(1)->giveOutputManager()->doDofManOutput(File, tStep);
+    this->giveDomain(1)->giveOutputManager()->doElementOutput(File, tStep);
 }
 
 

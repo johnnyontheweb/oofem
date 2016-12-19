@@ -108,7 +108,7 @@ private:
     int ndofel = 0;
 
     /// mcrd
-    int mcrd = 0;
+    int mcrd = 2;
 
     /// mlvarx
     int mlvarx = 1;
@@ -181,14 +181,14 @@ public:
         return hasTangentFlag;
     }
     virtual void letTempTangentBe(FloatMatrix &src) {
-		tempAmatrx = src;
+        tempAmatrx = src;
         hasTangentFlag = true;
     }
-    virtual void letTempRhsBe(FloatMatrix &src) {
-		tempRHS = src;
+    virtual FloatMatrix &letTempRhsBe(FloatMatrix &src) {
+        return tempRHS = src;
     }
-    virtual void letTempSvarsBe(FloatArray &src) {
-		tempSvars = src;
+    virtual FloatArray &letTempSvarsBe(FloatArray &src) {
+        return tempSvars = src;
     }
     virtual const FloatArray &giveStateVector() const {
         return svars;
@@ -204,9 +204,7 @@ public:
 
     virtual IRResultType initializeFrom(InputRecord *ir);
     virtual void giveInputRecord(DynamicInputRecord &input);
-	virtual void postInitialize();
-
-	virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    virtual void postInitialize();
 
     // definition & identification
     virtual const char *giveClassName() const { return "AbaqusUserElement"; }
@@ -220,18 +218,15 @@ public:
 
 protected:
     virtual void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep) {
-        OOFEM_ERROR("Function not defined for AbaqusUserElement and should never be called. This is a bug.");
-    }
-    virtual void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) {
-        OOFEM_ERROR("Function not defined for AbaqusUserElement and should never be called. This is a bug.");
+        OOFEM_ERROR("function not defined for abaqusUserElement and should never be called. This is a bug.");
     }
 
     virtual void computeBmatrixAt(GaussPoint *, FloatMatrix &, int = 1, int = ALL_STRAINS) {
-        OOFEM_ERROR("Function not defined for AbaqusUserElement and should never be called. This is a bug.");
+        OOFEM_ERROR("function not defined for abaqusUserElement and should never be called. This is a bug.");
     }
 
     virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) {
-        OOFEM_ERROR("Function not defined for AbaqusUserElement and should never be called. This is a bug.");
+        OOFEM_ERROR("function not defined for abaqusUserElement and should never be called. This is a bug.");
         return 0;
     }
 };

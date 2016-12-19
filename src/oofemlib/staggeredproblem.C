@@ -183,7 +183,7 @@ StaggeredProblem :: initializeFrom(InputRecord *ir)
     IR_GIVE_FIELD(ir, inputStreamNames [ 1 ], _IFT_StaggeredProblem_prob2);
     IR_GIVE_OPTIONAL_FIELD(ir, inputStreamNames [ 2 ], _IFT_StaggeredProblem_prob3);
     
-
+    
     renumberFlag = true; // The staggered problem itself should always try to check if the sub-problems needs renumbering.
 
     coupledModels.resize(3);
@@ -196,29 +196,6 @@ StaggeredProblem :: initializeFrom(InputRecord *ir)
         domainPrescribedNeqs.clear();
         domainList.clear();
     }
-
-    suppressOutput = ir->hasField(_IFT_EngngModel_suppressOutput);
-
-    if ( suppressOutput ) {
-        printf("Suppressing output.\n");
-    } else {
-
-        if ( ( outputStream = fopen(this->dataOutputFileName.c_str(), "w") ) == NULL ) {
-            OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str());
-        }
-
-        fprintf(outputStream, "%s", PRG_HEADER);
-        fprintf(outputStream, "\nStarting analysis on: %s\n", ctime(& this->startTime) );
-        fprintf(outputStream, "%s\n", simulationDescription.c_str());
-
-#ifdef __PARALLEL_MODE
-        if ( this->isParallel() ) {
-            fprintf(outputStream, "Problem rank is %d/%d on %s\n\n", this->rank, this->numProcs, this->processor_name);
-        }
-#endif
-    }
-
-
 
     return IRRT_OK;
 }
@@ -431,6 +408,7 @@ StaggeredProblem :: solveYourself()
     }
 
     int smstep = 1, sjstep = 1;
+    FILE *out = this->giveOutputStream();
     this->timer.startTimer(EngngModelTimer :: EMTT_AnalysisTimer);
 
     if ( sp->giveCurrentStep() ) {
@@ -465,10 +443,8 @@ StaggeredProblem :: solveYourself()
             OOFEM_LOG_INFO("EngngModel info: user time consumed by solution step %d: %.2fs\n",
                            sp->giveCurrentStep()->giveNumber(), _steptime);
 
-            if(!suppressOutput) {
-            	fprintf(this->giveOutputStream(), "\nUser time consumed by solution step %d: %.3f [s]\n\n",
-                        sp->giveCurrentStep()->giveNumber(), _steptime);
-            }
+            fprintf(out, "\nUser time consumed by solution step %d: %.3f [s]\n\n",
+                    sp->giveCurrentStep()->giveNumber(), _steptime);
 
 #ifdef __PARALLEL_MODE
             if ( loadBalancingFlag ) {
@@ -488,7 +464,7 @@ void
 StaggeredProblem :: solveYourselfAt(TimeStep *tStep)
 {
 #ifdef VERBOSE
-    OOFEM_LOG_RELEVANT("Solving [step number %5d, time %e]\n", tStep->giveNumber(), tStep->giveTargetTime());
+    OOFEM_LOG_RELEVANT( "Solving [step number %5d, time %e]\n", tStep->giveNumber(), tStep->giveTargetTime() );
 #endif
     for ( auto &emodel: emodelList ) {
         emodel->solveYourselfAt(tStep);
@@ -531,11 +507,18 @@ StaggeredProblem :: terminate(TimeStep *tStep)
     for ( auto &emodel: emodelList ) {
         emodel->terminate(tStep);
     }
+
+    fflush( this->giveOutputStream() );
 }
 
 void
 StaggeredProblem :: doStepOutput(TimeStep *tStep)
 {
+    FILE *File = this->giveOutputStream();
+
+    // print output
+    this->printOutputAt(File, tStep);
+    // export using export manager
     for ( auto &emodel: emodelList ) {
         emodel->giveExportModuleManager()->doOutput(tStep);
     }
@@ -543,9 +526,13 @@ StaggeredProblem :: doStepOutput(TimeStep *tStep)
 
 
 void
-StaggeredProblem :: printOutputAt(FILE *file, TimeStep *tStep)
+StaggeredProblem :: printOutputAt(FILE *File, TimeStep *tStep)
 {
-    // Subproblems handle the output themselves.
+    FILE *slaveFile;
+    for ( auto &emodel: emodelList ) {
+        slaveFile = emodel->giveOutputStream();
+        emodel->printOutputAt(slaveFile, tStep);
+    }
 }
 
 

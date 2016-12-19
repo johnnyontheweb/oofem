@@ -56,7 +56,6 @@
 #define _IFT_LayeredCrossSection_widths "widths"
 #define _IFT_LayeredCrossSection_midsurf "midsurf"
 #define _IFT_LayeredCrossSection_nintegrationpoints "nintegrationpoints"
-#define _IFT_LayeredCrossSection_initiationlimits "initiationlimits"
 //@}
 
 namespace oofem {
@@ -157,7 +156,6 @@ public:
     virtual double give(CrossSectionProperty a, GaussPoint *gp);
     virtual double give(CrossSectionProperty a, const FloatArray &coords, Element *elem, bool local);
     int giveNumberOfLayers();
-	int giveLayer(GaussPoint *gp);
 
     /// Returns the total thickness of all layers.
     double computeIntegralThick();

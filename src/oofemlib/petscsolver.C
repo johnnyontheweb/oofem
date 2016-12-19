@@ -54,8 +54,7 @@ PetscSolver :: ~PetscSolver() { }
 NM_Status PetscSolver :: solve(SparseMtrx &A, FloatArray &b, FloatArray &x)
 {
     int neqs = b.giveSize();
-    if ( x.giveSize() != neqs )
-        x.resize(neqs);
+    x.resize(neqs);
 
     PetscSparseMtrx *Lhs = dynamic_cast< PetscSparseMtrx * >(&A);
     if ( !Lhs ) {
@@ -71,8 +70,7 @@ NM_Status PetscSolver :: solve(SparseMtrx &A, FloatArray &b, FloatArray &x)
     Lhs->createVecGlobal(& globRhsVec);
     Lhs->scatterL2G(b, globRhsVec);
 
-    Lhs->createVecGlobal(& globSolVec);
-    Lhs->scatterL2G(x, globSolVec);
+    VecDuplicate(globRhsVec, & globSolVec);
 
     //VecView(globRhsVec,PETSC_VIEWER_STDOUT_WORLD);
     NM_Status s = this->petsc_solve(*Lhs, globRhsVec, globSolVec);
@@ -99,9 +97,6 @@ PetscSolver :: petsc_solve(PetscSparseMtrx &Lhs, Vec b, Vec x)
     /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      *  Create the linear solver and set various options
      *  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-#ifdef _OPENMP
- #pragma omp critical
-#endif
     if ( !Lhs.kspInit ) {
 #ifdef __PARALLEL_MODE
         MPI_Comm comm = engngModel->giveParallelComm();
@@ -173,9 +168,7 @@ PetscSolver :: petsc_solve(PetscSparseMtrx &Lhs, Vec b, Vec x)
     }
 
     timer.stopTimer();
-    if ( this->engngModel->giveProblemScale() == macroScale ) {
-    	OOFEM_LOG_INFO( "PetscSolver:  User time consumed by solution: %.2fs, KSPConvergedReason: %d, number of iterations: %d\n", timer.getUtime(), reason, nite );
-    }
+    OOFEM_LOG_INFO( "PetscSolver:  User time consumed by solution: %.2fs, KSPConvergedReason: %d, number of iterations: %d\n", timer.getUtime(), reason, nite );
 
     if ( reason < 0 ) {
         return NM_NoSuccess;
