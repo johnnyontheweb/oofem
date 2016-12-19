@@ -79,8 +79,8 @@ IntElLine1IntPen :: computeCovarBaseVectorAt(IntegrationPoint *ip, FloatArray &G
 
     FloatMatrix dNdxi;
     FEInterpolation *interp = this->giveInterpolation();
-//    interp->evaldNdxi( dNdxi, ip->giveNaturalCoordinates(), FEIElementGeometryWrapper(this) );
-    //interp->evaldNdxi( dNdxi, xi_0, FEIElementGeometryWrapper(this) );
+    //interp->evaldNdxi( dNdxi, ip->giveNaturalCoordinates(), FEIElementGeometryWrapper(this) );
+    interp->evaldNdxi( dNdxi, xi_0, FEIElementGeometryWrapper(this) );
 
     G.resize(2);
     G.zero();
@@ -476,7 +476,7 @@ IntElLine1IntPen :: computeNmatrixAt(GaussPoint *ip, FloatMatrix &answer)
 
     FloatArray N;
     FEInterpolation *interp = this->giveInterpolation();
-//    interp->evalN( N, ip->giveNaturalCoordinates(), FEIElementGeometryWrapper(this) );
+    interp->evalN( N, ip->giveNaturalCoordinates(), FEIElementGeometryWrapper(this) );
 
     double xi_0 = 0.;
     FloatArray xiScaled = {0.};

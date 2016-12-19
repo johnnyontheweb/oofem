@@ -1768,7 +1768,7 @@ Shell7BaseXFEM :: computeEnrichedBmatrixAt(const FloatArray &lCoords, FloatMatri
         FloatArray N;
         FloatMatrix dNdxi;
         this->fei->evalN( N, lCoords, FEIElementGeometryWrapper(this) );
-        //this->fei->evaldNdxi( dNdxi, lCoords, FEIElementGeometryWrapper(this) );
+        this->fei->evaldNdxi( dNdxi, lCoords, FEIElementGeometryWrapper(this) );
 
         /*    18   18   6
          * 6 [B_u   0   0
