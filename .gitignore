@@ -580,3 +580,6 @@ tests/sm/t3d.bmf
 /MinSizeRel/test_mitc4_p.in
 /MinSizeRel/test_mitc4shell.outOLD.nrm
 /hexgrid.vcxproj.user
+/MinSizeRel/test_verifica_modale-modal.in
+/src/sm/Elements/Beams/beam3d.C.bak
+/src/sm/EngineeringModels/eigenNEW.c

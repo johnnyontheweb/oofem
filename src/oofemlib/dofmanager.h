@@ -439,9 +439,7 @@ public:
      * @return If receiver contains only primary DOFs, false is returned.
      */
     virtual bool giveMasterDofMans(IntArray &masters);
-
 	virtual void givePrimaryDofs(IntArray &primary);
-
     virtual IRResultType initializeFrom(InputRecord *ir);
     virtual void giveInputRecord(DynamicInputRecord &input);
 
