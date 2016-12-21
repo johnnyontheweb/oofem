@@ -222,7 +222,8 @@ LineDistributedSpring :: computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *
 int
 LineDistributedSpring :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep)
 {
-  return StructuralElement :: giveIPValue(answer, gp, type, tStep);
+  //return StructuralElement :: giveIPValue(answer, gp, type, tStep);
+	return 0;
 }
 
 Interface *
