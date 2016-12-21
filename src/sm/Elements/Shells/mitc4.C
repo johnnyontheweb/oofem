@@ -34,6 +34,7 @@
 
 #include "mitc4.h"
 #include "Materials/structuralms.h"
+#include "Materials/structuralmaterial.h"
 #include "CrossSections/structuralcrosssection.h"
 #include "CrossSections/simplecrosssection.h"
 #include "fei2dquadlin.h"
@@ -677,9 +678,35 @@ MITC4Shell :: computeLocalBaseVectors(FloatArray &e1, FloatArray &e2, FloatArray
 {
     FloatArray help;
 
-    // compute e1' = [N4-N3]  and  help = [N2-N3]
-    e1.beDifferenceOf( * this->giveNode(2)->giveCoordinates(), * this->giveNode(1)->giveCoordinates() );
-    help.beDifferenceOf( * this->giveNode(3)->giveCoordinates(), * this->giveNode(1)->giveCoordinates() );
+    FloatArray coordA, coordB;
+
+    // compute A - (node1+node4)/2
+    coordB.beDifferenceOf( * this->giveNode(1)->giveCoordinates(), * this->giveNode(4)->giveCoordinates() );
+    coordB.times(0.5);
+    coordB.add( * this->giveNode(4)->giveCoordinates() );
+
+    // compute B - (node2+node3)/2
+    coordA.beDifferenceOf( * this->giveNode(2)->giveCoordinates(), * this->giveNode(3)->giveCoordinates() );
+    coordA.times(0.5);
+    coordA.add( * this->giveNode(3)->giveCoordinates() );
+
+    // compute e1' = [B-A]
+    e1.beDifferenceOf(coordA, coordB);
+
+
+
+    // compute A - (node2+node1)/2
+    coordB.beDifferenceOf( * this->giveNode(1)->giveCoordinates(), * this->giveNode(2)->giveCoordinates() );
+    coordB.times(0.5);
+    coordB.add( * this->giveNode(2)->giveCoordinates() );
+
+    // compute B - (node3+node4)/2
+    coordA.beDifferenceOf( * this->giveNode(4)->giveCoordinates(), * this->giveNode(3)->giveCoordinates() );
+    coordA.times(0.5);
+    coordA.add( * this->giveNode(3)->giveCoordinates() );
+
+    // compute e1' = [B-A]
+    help.beDifferenceOf(coordA, coordB);
 
     // let us normalize e1'
     e1.normalize();
@@ -1206,7 +1233,7 @@ MITC4Shell :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int
                                                          InternalStateType type, TimeStep *tStep)
 {
     double x1 = 0.0, x2 = 0.0, x3 = 0.0, y = 0.0;
-    FloatMatrix A(3, 3);
+    FloatMatrix A(4, 4);
     FloatMatrix b, r;
     FloatArray val;
     double u, v, w;
@@ -1217,8 +1244,8 @@ MITC4Shell :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int
         giveIPValue(val, gp, type, tStep);
         if ( size == 0 ) {
             size = val.giveSize();
-            b.resize(3, size);
-            r.resize(3, size);
+            b.resize(4, size);
+            r.resize(4, size);
             A.zero();
             r.zero();
         }
@@ -1226,31 +1253,31 @@ MITC4Shell :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int
         const FloatArray &coord = gp->giveNaturalCoordinates();
         u = coord.at(1);
         v = coord.at(2);
-        w = coord.at(3); // not used
+        w = coord.at(3);
 
         A.at(1, 1) += 1;
         A.at(1, 2) += u;
         A.at(1, 3) += v;
-        //A.at(1, 4) += w;
+        A.at(1, 4) += w;
         A.at(2, 1) += u;
         A.at(2, 2) += u * u;
         A.at(2, 3) += u * v;
-        //A.at(2, 4) += u * w;
+        A.at(2, 4) += u * w;
         A.at(3, 1) += v;
         A.at(3, 2) += v * u;
         A.at(3, 3) += v * v;
-        //A.at(3, 4) += v * w;
-        //A.at(4, 1) += w;
-        //A.at(4, 2) += w * u;
-        //A.at(4, 3) += w * v;
-        //A.at(4, 4) += w * w;
+        A.at(3, 4) += v * w;
+        A.at(4, 1) += w;
+        A.at(4, 2) += w * u;
+        A.at(4, 3) += w * v;
+        A.at(4, 4) += w * w;
 
         for ( int j = 1; j <= size; j++ ) {
             y = val.at(j);
             r.at(1, j) += y;
             r.at(2, j) += y * u;
             r.at(3, j) += y * v;
-            //r.at(4, j) += y * w;
+            r.at(4, j) += y * w;
         }
     }
 
@@ -1283,7 +1310,7 @@ MITC4Shell :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int
 
     answer.resize(size);
     for ( int j = 1; j <= size; j++ ) {
-		answer.at(j) = b.at(1, j) + x1 *b.at(2, j) + x2 * b.at(3, j); // *x3 * b.at(4, j);
+		answer.at(j) = b.at(1, j) + x1 *b.at(2, j) + x2 * b.at(3, j) + x3 * b.at(4, j);
     }
 }
 
