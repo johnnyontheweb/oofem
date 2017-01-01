@@ -38,6 +38,7 @@
 #include "../sm/Elements/structuralelement.h"
 #include "../sm/Elements/Beams/beambaseelement.h"
 #include "../sm/Elements/Beams/beam3d.h"
+#include "../sm/Elements/Beams/beam2d.h"
 #include "gausspoint.h"
 #include "engngm.h"
 #include "material.h"
@@ -127,12 +128,14 @@ namespace oofem {
 					double ksi, l = elem->computeLength();
 					FloatArray Fl, loadEndForces;
 
-					SElem->giveInternalForcesVector(Fl, tStep);
-
-					// add exact end forces due to nonnodal loading
-					SElem->computeLocalForceLoadVector(loadEndForces, tStep, VM_Total);
-					if (loadEndForces.giveSize()) {
-						Fl.subtract(loadEndForces);
+					// get end forces considering the reduction due to winkler soil presence
+					if (strcmp(SElem->giveClassName(), "Beam3d") == 0 || strcmp(SElem->giveClassName(), "beam3d") == 0){
+						Beam3d *B3d = static_cast<Beam3d *>(SElem);
+						B3d->giveEndForcesVector(Fl, tStep);
+					}
+					else {
+						Beam2d *B2d = static_cast<Beam2d *>(SElem);
+						B2d->giveEndForcesVector(Fl, tStep);
 					}
 
 					map< double, FloatArray >ForceDict;
