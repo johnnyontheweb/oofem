@@ -161,35 +161,55 @@ namespace oofem {
 	void
 		MITC4Shell::giveDirectorVectors(FloatArray &V1, FloatArray &V2, FloatArray &V3, FloatArray &V4)
 	{
-		FloatArray *c1, *c2, *c3, *c4;
-		V1.resize(3);
-		V2.resize(3);
-		V3.resize(3);
-		V4.resize(3);
-		c1 = this->giveNode(1)->giveCoordinates();
-		c2 = this->giveNode(2)->giveCoordinates();
-		c3 = this->giveNode(3)->giveCoordinates();
-		c4 = this->giveNode(4)->giveCoordinates();
-		V1.at(1) = this->giveCrossSection()->give(CS_DirectorVectorX, *c1, this, false);
-		V1.at(2) = this->giveCrossSection()->give(CS_DirectorVectorY, *c1, this, false);
-		V1.at(3) = this->giveCrossSection()->give(CS_DirectorVectorZ, *c1, this, false);
+		if (this->giveCrossSection()->hasProperty(CS_DirectorVectorX)) {
+			FloatArray *c1, *c2, *c3, *c4;
+			V1.resize(3);
+			V2.resize(3);
+			V3.resize(3);
+			V4.resize(3);
+			c1 = this->giveNode(1)->giveCoordinates();
+			c2 = this->giveNode(2)->giveCoordinates();
+			c3 = this->giveNode(3)->giveCoordinates();
+			c4 = this->giveNode(4)->giveCoordinates();
+			V1.at(1) = this->giveCrossSection()->give(CS_DirectorVectorX, *c1, this, false);
+			V1.at(2) = this->giveCrossSection()->give(CS_DirectorVectorY, *c1, this, false);
+			V1.at(3) = this->giveCrossSection()->give(CS_DirectorVectorZ, *c1, this, false);
 
-		V2.at(1) = this->giveCrossSection()->give(CS_DirectorVectorX, *c2, this, false);
-		V2.at(2) = this->giveCrossSection()->give(CS_DirectorVectorY, *c2, this, false);
-		V2.at(3) = this->giveCrossSection()->give(CS_DirectorVectorZ, *c2, this, false);
+			V2.at(1) = this->giveCrossSection()->give(CS_DirectorVectorX, *c2, this, false);
+			V2.at(2) = this->giveCrossSection()->give(CS_DirectorVectorY, *c2, this, false);
+			V2.at(3) = this->giveCrossSection()->give(CS_DirectorVectorZ, *c2, this, false);
 
-		V3.at(1) = this->giveCrossSection()->give(CS_DirectorVectorX, *c3, this, false);
-		V3.at(2) = this->giveCrossSection()->give(CS_DirectorVectorY, *c3, this, false);
-		V3.at(3) = this->giveCrossSection()->give(CS_DirectorVectorZ, *c3, this, false);
+			V3.at(1) = this->giveCrossSection()->give(CS_DirectorVectorX, *c3, this, false);
+			V3.at(2) = this->giveCrossSection()->give(CS_DirectorVectorY, *c3, this, false);
+			V3.at(3) = this->giveCrossSection()->give(CS_DirectorVectorZ, *c3, this, false);
 
-		V4.at(1) = this->giveCrossSection()->give(CS_DirectorVectorX, *c4, this, false);
-		V4.at(2) = this->giveCrossSection()->give(CS_DirectorVectorY, *c4, this, false);
-		V4.at(3) = this->giveCrossSection()->give(CS_DirectorVectorZ, *c4, this, false);
+			V4.at(1) = this->giveCrossSection()->give(CS_DirectorVectorX, *c4, this, false);
+			V4.at(2) = this->giveCrossSection()->give(CS_DirectorVectorY, *c4, this, false);
+			V4.at(3) = this->giveCrossSection()->give(CS_DirectorVectorZ, *c4, this, false);
 
-		V1.normalize();
-		V2.normalize();
-		V3.normalize();
-		V4.normalize();
+			V1.normalize();
+			V2.normalize();
+			V3.normalize();
+			V4.normalize();
+		}
+		else {
+			FloatArray a, b;
+			a.add(*this->giveNode(1)->giveCoordinates());
+			a.add(*this->giveNode(4)->giveCoordinates());
+			a.subtract(*this->giveNode(2)->giveCoordinates());
+			a.subtract(*this->giveNode(3)->giveCoordinates());
+
+			b.add(*this->giveNode(1)->giveCoordinates());
+			b.add(*this->giveNode(2)->giveCoordinates());
+			b.subtract(*this->giveNode(3)->giveCoordinates());
+			b.subtract(*this->giveNode(4)->giveCoordinates());
+
+			V1.beVectorProductOf(a, b);
+			V1.normalize();
+			V2 = V1;
+			V3 = V1;
+			V4 = V1;
+		}
 	}
 
 
@@ -539,26 +559,25 @@ namespace oofem {
 		answer.at(5, 4) = -a1 / 32. * ((V21.dotProduct({ x1 - x2, y1 - y2, z1 - z2 }) * (sb * (1. + r2))) + (V21.dotProduct({ x1 - x4, y1 - y4, z1 - z4 }) * (sa * (1. + r1))));
 		answer.at(5, 5) = a1 / 32. * ((V11.dotProduct({ x1 - x2, y1 - y2, z1 - z2 }) * (sb * (1. + r2))) + (V11.dotProduct({ x1 - x4, y1 - y4, z1 - z4 }) * (sa * (1. + r1))));
 
-		answer.at(5, 7) = 1. / 32. * (-(a1 * V1.at(1) + a2 * V2.at(1)) * (sb * (1. + r2)) + (a2 * V2.at(1) + a3 * V3.at(1)) * (sa * (1. - r1)));
-		answer.at(5, 8) = 1. / 32. * (-(a1 * V1.at(2) + a2 * V2.at(2)) * (sb * (1. + r2)) + (a2 * V2.at(2) + a3 * V3.at(2)) * (sa * (1. - r1)));
-		answer.at(5, 9) = 1. / 32. * (-(a1 * V1.at(3) + a2 * V2.at(3)) * (sb * (1. + r2)) + (a2 * V2.at(3) + a3 * V3.at(3)) * (sa * (1. - r1)));
-		answer.at(5, 10) = -a1 / 32. * ((V21.dotProduct({ x1 - x2, y1 - y2, z1 - z2 }) * (sb * (1. + r2))) + (V21.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * (sa * (1. - r1))));
-		answer.at(5, 11) = a1 / 32. * ((V11.dotProduct({ x1 - x2, y1 - y2, z1 - z2 }) * (sb * (1. + r2))) + (V11.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * (sa * (1. - r1))));
+		answer.at(5, 6) = 1. / 32. * (-(a1 * V1.at(1) + a2 * V2.at(1)) * (sb * (1. + r2)) + (a2 * V2.at(1) + a3 * V3.at(1)) * (sa * (1. - r1)));
+		answer.at(5, 7) = 1. / 32. * (-(a1 * V1.at(2) + a2 * V2.at(2)) * (sb * (1. + r2)) + (a2 * V2.at(2) + a3 * V3.at(2)) * (sa * (1. - r1)));
+		answer.at(5, 8) = 1. / 32. * (-(a1 * V1.at(3) + a2 * V2.at(3)) * (sb * (1. + r2)) + (a2 * V2.at(3) + a3 * V3.at(3)) * (sa * (1. - r1)));
+		answer.at(5, 9) = -a1 / 32. * ((V21.dotProduct({ x1 - x2, y1 - y2, z1 - z2 }) * (sb * (1. + r2))) + (V21.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * (sa * (1. - r1))));
+		answer.at(5, 10) = a1 / 32. * ((V11.dotProduct({ x1 - x2, y1 - y2, z1 - z2 }) * (sb * (1. + r2))) + (V11.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * (sa * (1. - r1))));
 
-		answer.at(5, 13) = 1. / 32. * (-(a3 * V3.at(1) + a4 * V4.at(1)) * (sb * (1. - r2)) - (a2 * V2.at(1) + a3 * V3.at(1)) * (sa * (1. - r1)));
-		answer.at(5, 14) = 1. / 32. * (-(a3 * V3.at(2) + a4 * V4.at(2)) * (sb * (1. - r2)) - (a2 * V2.at(2) + a3 * V3.at(2)) * (sa * (1. - r1)));
-		answer.at(5, 15) = 1. / 32. * (-(a3 * V3.at(3) + a4 * V4.at(3)) * (sb * (1. - r2)) - (a2 * V2.at(3) + a3 * V3.at(3)) * (sa * (1. - r1)));
-		answer.at(5, 16) = -a1 / 32. * ((V21.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * (sb * (1. - r2))) + (V21.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * (sa * (1. - r1))));
-		answer.at(5, 17) = a1 / 32. * ((V11.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * (sb * (1. - r2))) + (V11.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * (sa * (1. - r1))));
+		answer.at(5, 11) = 1. / 32. * (-(a3 * V3.at(1) + a4 * V4.at(1)) * (sb * (1. - r2)) - (a2 * V2.at(1) + a3 * V3.at(1)) * (sa * (1. - r1)));
+		answer.at(5, 12) = 1. / 32. * (-(a3 * V3.at(2) + a4 * V4.at(2)) * (sb * (1. - r2)) - (a2 * V2.at(2) + a3 * V3.at(2)) * (sa * (1. - r1)));
+		answer.at(5, 13) = 1. / 32. * (-(a3 * V3.at(3) + a4 * V4.at(3)) * (sb * (1. - r2)) - (a2 * V2.at(3) + a3 * V3.at(3)) * (sa * (1. - r1)));
+		answer.at(5, 14) = -a1 / 32. * ((V21.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * (sb * (1. - r2))) + (V21.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * (sa * (1. - r1))));
+		answer.at(5, 15) = a1 / 32. * ((V11.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * (sb * (1. - r2))) + (V11.dotProduct({ x2 - x3, y2 - y3, z2 - z3 }) * (sa * (1. - r1))));
 
-		answer.at(5, 19) = 1. / 32. * ((a3 * V3.at(1) + a4 * V4.at(1)) * (sb * (1. - r2)) - (a1 * V1.at(1) + a4 * V4.at(1)) * (sa * (1. + r1)));
-		answer.at(5, 20) = 1. / 32. * ((a3 * V3.at(2) + a4 * V4.at(2)) * (sb * (1. - r2)) - (a1 * V1.at(2) + a4 * V4.at(2)) * (sa * (1. + r1)));
-		answer.at(5, 21) = 1. / 32. * ((a3 * V3.at(3) + a4 * V4.at(3)) * (sb * (1. - r2)) - (a1 * V1.at(3) + a4 * V4.at(3)) * (sa * (1. + r1)));
-		answer.at(5, 22) = -a1 / 32. * ((V21.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * (sb * (1. - r2))) + (V21.dotProduct({ x1 - x4, y1 - y4, z1 - z4 }) * (sa * (1. + r1))));
-		answer.at(5, 23) = a1 / 32. * ((V11.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * (sb * (1. - r2))) + (V11.dotProduct({ x1 - x4, y1 - y4, z1 - z4 }) * (sa * (1. + r1))));
+		answer.at(5, 16) = 1. / 32. * ((a3 * V3.at(1) + a4 * V4.at(1)) * (sb * (1. - r2)) - (a1 * V1.at(1) + a4 * V4.at(1)) * (sa * (1. + r1)));
+		answer.at(5, 17) = 1. / 32. * ((a3 * V3.at(2) + a4 * V4.at(2)) * (sb * (1. - r2)) - (a1 * V1.at(2) + a4 * V4.at(2)) * (sa * (1. + r1)));
+		answer.at(5, 18) = 1. / 32. * ((a3 * V3.at(3) + a4 * V4.at(3)) * (sb * (1. - r2)) - (a1 * V1.at(3) + a4 * V4.at(3)) * (sa * (1. + r1)));
+		answer.at(5, 19) = -a1 / 32. * ((V21.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * (sb * (1. - r2))) + (V21.dotProduct({ x1 - x4, y1 - y4, z1 - z4 }) * (sa * (1. + r1))));
+		answer.at(5, 20) = a1 / 32. * ((V11.dotProduct({ x4 - x3, y4 - y3, z4 - z3 }) * (sb * (1. - r2))) + (V11.dotProduct({ x1 - x4, y1 - y4, z1 - z4 }) * (sa * (1. + r1))));
 
-
-
+	
 		answer.at(1, 1) = hkx.at(1);
 		answer.at(1, 4) = -r3 / 2. *a1 *hkx.at(1) * V21.at(1);
 		answer.at(1, 5) = r3 / 2. *a1 *hkx.at(1) * V11.at(1);
