@@ -64,7 +64,7 @@ namespace oofem {
 
 	FEI3dLineLin Beam3d::interp;
 
-Beam3d :: Beam3d(int n, Domain *aDomain) : BeamBaseElement(n, aDomain)
+	Beam3d::Beam3d(int n, Domain *aDomain) : BeamBaseElement(n, aDomain)
 	{
 		numberOfDofMans = 2;
 		referenceNode = 0;
@@ -245,10 +245,10 @@ Beam3d :: Beam3d(int n, Domain *aDomain) : BeamBaseElement(n, aDomain)
 	}
 
 
-void
-Beam3d :: computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, int edge, CharType type, ValueModeType mode, TimeStep *tStep, bool global)
-{
-    answer.clear();
+	void
+		Beam3d::computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, int edge, CharType type, ValueModeType mode, TimeStep *tStep, bool global)
+	{
+		answer.clear();
 
 		if (edge != 1) {
 			OOFEM_ERROR("Beam3D only has 1 edge (the midline) that supports loads. Attempted to apply load to edge %d", edge);
@@ -283,12 +283,12 @@ Beam3d :: computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, 
 			answer.plusProduct(N, t, dl);
 		}
 
-    if (global) {
-      // Loads from sets expects global c.s.
-      this->computeGtoLRotationMatrix(T);
-      answer.rotatedWith(T, 't');
-    }
-}
+		if (global) {
+			// Loads from sets expects global c.s.
+			this->computeGtoLRotationMatrix(T);
+			answer.rotatedWith(T, 't');
+		}
+	}
 
 
 	int
@@ -364,7 +364,7 @@ Beam3d :: computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, 
 	}
 
 
-  
+
 	void
 		Beam3d::B3SSMI_getUnknownsGtoLRotationMatrix(FloatMatrix &answer)
 		// Returns the rotation matrix for element unknowns
@@ -404,7 +404,7 @@ Beam3d :: computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, 
 			return 1;
 		}
 		else {
-        return BeamBaseElement :: giveIPValue(answer, gp, type, tStep);
+			return BeamBaseElement::giveIPValue(answer, gp, type, tStep);
 		}
 	}
 
@@ -621,7 +621,7 @@ Beam3d :: computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, 
 		this->subsoilMat = 0;
 		IR_GIVE_OPTIONAL_FIELD(ir, this->subsoilMat, _IFT_Beam3d_subsoilmat);
 
-    return BeamBaseElement :: initializeFrom(ir);
+		return BeamBaseElement::initializeFrom(ir);
 	}
 
 	void
@@ -677,7 +677,17 @@ Beam3d :: computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, 
 		this->computeVectorOf(VM_Total, tStep, u);
 		answer.beProductOf(stiffness, u);
 #else
-    BeamBaseElement :: giveInternalForcesVector(answer, tStep, useUpdatedGpRecord);
+		BeamBaseElement::giveInternalForcesVector(answer, tStep, useUpdatedGpRecord);
+		if (subsoilMat) {
+			// add internal forces due to subsoil interaction
+			// @todo: linear subsoil assumed here; more general approach should integrate internal forces
+			FloatMatrix k;
+			FloatArray u, F;
+			this->computeSubSoilStiffnessMatrix(k, TangentStiffness, tStep);
+			this->computeVectorOf(VM_Total, tStep, u);
+			F.beProductOf(k, u);
+			answer.add(F);
+		}
 #endif
 	}
 
@@ -705,47 +715,48 @@ Beam3d :: computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, 
 		this->giveInternalForcesVector(answer, tStep);
 
 		// add exact end forces due to nonnodal loading
-    this->computeLocalForceLoadVector(loadEndForces, tStep, VM_Total); // will compute only contribution of loads applied directly on receiver (not using sets)
+		this->computeLocalForceLoadVector(loadEndForces, tStep, VM_Total); // will compute only contribution of loads applied directly on receiver (not using sets)
 		if (loadEndForces.giveSize()) {
 			answer.subtract(loadEndForces);
 		}
 
-    // add exact end forces due to nonnodal loading applied indirectly (via sets)
-    BCTracker *bct = this->domain->giveBCTracker();
-    BCTracker::entryListType bcList = bct->getElementRecords(this->number);
-    FloatArray help;
+		// add exact end forces due to nonnodal loading applied indirectly (via sets)
+		BCTracker *bct = this->domain->giveBCTracker();
+		BCTracker::entryListType bcList = bct->getElementRecords(this->number);
+		FloatArray help;
 
-    for (BCTracker::entryListType::iterator it = bcList.begin(); it != bcList.end(); ++it) {
-      GeneralBoundaryCondition *bc = this->domain->giveBc((*it).bcNumber);
-      BodyLoad *bodyLoad;
-      BoundaryLoad *boundaryLoad;
-      if (bc->isImposed(tStep)) {
-        if ((bodyLoad = dynamic_cast<BodyLoad*>(bc))) { // body load
-          this->computeBodyLoadVectorAt(help,bodyLoad, tStep, VM_Total); // this one is local
-          answer.subtract(help);
-        } else if ((boundaryLoad = dynamic_cast<BoundaryLoad*>(bc))) {
-          // compute Boundary Edge load vector in GLOBAL CS !!!!!!!
-          this->computeBoundaryEdgeLoadVector(help, boundaryLoad, (*it).boundaryId,
-					      ExternalForcesVector, VM_Total, tStep, false);
-          // get it transformed back to local c.s.
-          // this->computeGtoLRotationMatrix(t);
-          // help.rotatedWith(t, 'n');
-          answer.subtract(help);
-        }
-      }
-    }
-    
-    if (subsoilMat) {
-      // @todo: linear subsoil assumed here; more general approach should integrate internal forces
-      FloatMatrix k;
-      FloatArray u, F;
-      this->computeSubSoilStiffnessMatrix(k, TangentStiffness, tStep);
-      this->computeVectorOf(VM_Total, tStep, u);
-      F.beProductOf(k, u);
-      answer.add(F);
-    }
-}
-
+		for (BCTracker::entryListType::iterator it = bcList.begin(); it != bcList.end(); ++it) {
+			GeneralBoundaryCondition *bc = this->domain->giveBc((*it).bcNumber);
+			BodyLoad *bodyLoad;
+			BoundaryLoad *boundaryLoad;
+			if (bc->isImposed(tStep)) {
+				if ((bodyLoad = dynamic_cast<BodyLoad*>(bc))) { // body load
+					this->computeBodyLoadVectorAt(help, bodyLoad, tStep, VM_Total); // this one is local
+					answer.subtract(help);
+				}
+				else if ((boundaryLoad = dynamic_cast<BoundaryLoad*>(bc))) {
+					// compute Boundary Edge load vector in GLOBAL CS !!!!!!!
+					this->computeBoundaryEdgeLoadVector(help, boundaryLoad, (*it).boundaryId,
+						ExternalForcesVector, VM_Total, tStep, false);
+					// get it transformed back to local c.s.
+					// this->computeGtoLRotationMatrix(t);
+					// help.rotatedWith(t, 'n');
+					answer.subtract(help);
+				}
+			}
+		}
+		/*
+		if (subsoilMat) {
+		// @todo: linear subsoil assumed here; more general approach should integrate internal forces
+		FloatMatrix k;
+		FloatArray u, F;
+		this->computeSubSoilStiffnessMatrix(k, TangentStiffness, tStep);
+		this->computeVectorOf(VM_Total, tStep, u);
+		F.beProductOf(k, u);
+		answer.add(F);
+		}
+		*/
+	}
 
 
 	void
@@ -782,7 +793,7 @@ Beam3d :: computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, 
 		Beam3d::computeBodyLoadVectorAt(FloatArray &answer, Load *load, TimeStep *tStep, ValueModeType mode)
 	{
 		FloatArray lc(1);
-    BeamBaseElement :: computeBodyLoadVectorAt(answer, load, tStep, mode);
+		BeamBaseElement::computeBodyLoadVectorAt(answer, load, tStep, mode);
 		answer.times(this->giveCrossSection()->give(CS_Area, lc, this));
 	}
 
@@ -796,9 +807,9 @@ Beam3d :: computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, 
 		GaussPoint *gp = integrationRulesArray[0]->getIntegrationPoint(0);
 
 		/*
-     * SructuralElement::computeMassMatrix(answer, tStep);
-		 * answer.times(this->giveCrossSection()->give('A'));
-		 */
+	 * SructuralElement::computeMassMatrix(answer, tStep);
+	 * answer.times(this->giveCrossSection()->give('A'));
+	 */
 		double l = this->computeLength();
 		double kappay = this->giveKappayCoeff(tStep);
 		double kappaz = this->giveKappazCoeff(tStep);
@@ -975,7 +986,7 @@ Beam3d :: computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, 
 	void
 		Beam3d::updateLocalNumbering(EntityRenumberingFunctor &f)
 	{
-    BeamBaseElement :: updateLocalNumbering(f);
+		BeamBaseElement::updateLocalNumbering(f);
 		if (this->referenceNode) {
 			this->referenceNode = f(this->referenceNode, ERS_DofManager);
 		}
