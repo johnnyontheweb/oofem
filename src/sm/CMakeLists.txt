@@ -136,7 +136,8 @@ set (sm_emodel
     EngineeringModels/incrementallinearstatic.C
     EngineeringModels/freewarping.C 
     EngineeringModels/structuralmaterialevaluator.C
-	EngineeringModels/responsespectrum.C
+    EngineeringModels/responsespectrum.C
+    EngineeringModels/dummyenum.C
     )
 
 set (sm_loads

@@ -1,0 +1,3 @@
+dummy.out
+-> NextFEM model 1/2/2017 1:40:56 PM
+dummyenum writeall 0 ist 150 unktype 25 doftype 10 domtype 40 matmode 50 elgeom 25 valmode 20 dofid 30 chartype 250 matrespmode 25 matmapalgo 5 meshpack 5 xfemstate 10
