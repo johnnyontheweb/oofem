@@ -252,9 +252,9 @@ TrPlaneStrRot3d :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalState
 
     if ( type == IST_CurvatureTensor || type == IST_ShellStrainTensor ) {
         if ( type == IST_CurvatureTensor ) {
-			cht = LocalCurvatureTensor;
+			cht = GlobalCurvatureTensor;
         } else {
-			cht = LocalStrainTensor;
+			cht = GlobalStrainTensor;
         }
 
         this->giveCharacteristicTensor(globTensor, cht, gp, tStep);
@@ -269,9 +269,9 @@ TrPlaneStrRot3d :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalState
         return 1;
     } else if ( type == IST_ShellMomentTensor || type == IST_ShellForceTensor ) {
         if ( type == IST_ShellMomentTensor ) {
-			cht = LocalMomentumTensor;
+			cht = GlobalMomentumTensor;
         } else {
-			cht = LocalForceTensor;
+			cht = GlobalForceTensor;
         }
 
         this->giveCharacteristicTensor(globTensor, cht, gp, tStep);
