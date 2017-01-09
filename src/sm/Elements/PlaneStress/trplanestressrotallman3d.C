@@ -222,9 +222,9 @@ TrPlanestressRotAllman3d :: giveIPValue(FloatArray &answer, GaussPoint *gp, Inte
     if ( type == IST_ShellForceTensor || type == IST_ShellStrainTensor ) {
         double c = 1.0;
         if ( type == IST_ShellForceTensor ) {
-            cht = GlobalForceTensor;
+			cht = LocalForceTensor;
         } else {
-            cht = GlobalStrainTensor;
+			cht = LocalStrainTensor;
             c = 2.0; // tensor components reported
         }
 

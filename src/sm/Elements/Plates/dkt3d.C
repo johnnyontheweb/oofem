@@ -237,9 +237,9 @@ DKTPlate3d :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
 
     if (  type == IST_CurvatureTensor || type == IST_ShellStrainTensor ) {
         if ( type == IST_CurvatureTensor ) {
-            cht = GlobalCurvatureTensor;
+            cht = LocalCurvatureTensor;
         } else {
-            cht = GlobalStrainTensor;
+			cht = LocalStrainTensor;
         }
 
         this->giveCharacteristicTensor(globTensor, cht, gp, tStep);
@@ -254,9 +254,9 @@ DKTPlate3d :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
         return 1;
     } else if ( type == IST_ShellMomentTensor || type == IST_ShellForceTensor ) {
         if ( type == IST_ShellMomentTensor ) {
-            cht = GlobalMomentumTensor;
+			cht = LocalMomentumTensor;
         } else {
-            cht = GlobalForceTensor;
+			cht = LocalForceTensor;
         }
 
         this->giveCharacteristicTensor(globTensor, cht, gp, tStep);
