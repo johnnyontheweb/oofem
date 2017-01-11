@@ -247,7 +247,7 @@ TrPlaneStrRot3d :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalState
 {
     FloatMatrix globTensor;
     CharTensor cht;
-
+	
     answer.resize(6);
 
     if ( type == IST_CurvatureTensor || type == IST_ShellStrainTensor ) {
@@ -273,15 +273,15 @@ TrPlaneStrRot3d :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalState
         } else {
 			cht = LocalForceTensor;
         }
-
+		double t = this->giveCrossSection()->give(CS_Thickness, gp);
         this->giveCharacteristicTensor(globTensor, cht, gp, tStep);
 
-        answer.at(1) = globTensor.at(1, 1); //xx
-        answer.at(2) = globTensor.at(2, 2); //yy
-        answer.at(3) = globTensor.at(3, 3); //zz
-        answer.at(4) = globTensor.at(2, 3); //yz
-        answer.at(5) = globTensor.at(1, 3); //xz
-        answer.at(6) = globTensor.at(2, 3); //yz
+        answer.at(1) = globTensor.at(1, 1)*t; //xx
+		answer.at(2) = globTensor.at(2, 2)*t; //yy
+		answer.at(3) = globTensor.at(3, 3)*t; //zz
+		answer.at(4) = globTensor.at(2, 3)*t; //yz
+		answer.at(5) = globTensor.at(1, 3)*t; //xz
+		answer.at(6) = globTensor.at(2, 3)*t; //yz
 
         return 1;
     } else {

@@ -238,7 +238,15 @@ TrPlanestressRotAllman3d :: giveIPValue(FloatArray &answer, GaussPoint *gp, Inte
         answer.at(5) = c * globTensor.at(1, 3); //xz
         answer.at(6) = c * globTensor.at(1, 2); //xy
         // mutiply stresses by thickness to get forces
-
+		if (type == IST_ShellForceTensor) {
+			double t = this->giveCrossSection()->give(CS_Thickness, gp);
+			answer.at(1) = answer.at(1)*t;
+			answer.at(2) = answer.at(2)*t;
+			answer.at(3) = answer.at(3)*t;
+			answer.at(4) = answer.at(4)*t;
+			answer.at(5) = answer.at(5)*t;
+			answer.at(6) = answer.at(6)*t;
+		}
         return 1;
     } else if ( type == IST_ShellMomentTensor || type == IST_CurvatureTensor ) {
         answer.clear();

@@ -1065,7 +1065,7 @@ MITC4Shell :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
     answer.resize(6);
 
     if (  type == IST_ShellStrainTensor ) {
-        this->giveCharacteristicTensor(globTensor, LocalStrainTensor, gp, tStep);
+		this->giveCharacteristicTensor(globTensor, LocalStrainTensor, gp, tStep);
 		answer.at(1) = globTensor.at(1, 1); //xx
 		answer.at(2) = globTensor.at(2, 2); //yy
 		answer.at(3) = 0.0; //zz
@@ -1076,7 +1076,7 @@ MITC4Shell :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
         return 1;
     } else if ( type == IST_ShellForceTensor ) {
 		this->giveCharacteristicTensor(globTensor, LocalForceTensor, gp, tStep);
-		double t = this->giveCrossSection()->give(CS_Thickness, gp)/2;
+		double t = this->giveCrossSection()->give(CS_Thickness, gp);
 
         answer.at(1) = globTensor.at(1, 1)*t; //xx
         answer.at(2) = globTensor.at(2, 2)*t; //yy

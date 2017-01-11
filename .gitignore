@@ -584,3 +584,12 @@ tests/sm/t3d.bmf
 /src/sm/Elements/Beams/beam3d.C.bak
 /src/sm/EngineeringModels/eigenNEW.c
 /MinSizeRel/linedistributedspring01.in
+/MinSizeRel/2_walls_tria-st.in
+/MinSizeRel/2_walls_tria-st2.in
+/MinSizeRel/3wallsB_tria-st.in
+/MinSizeRel/3wallsB_tria2-st.in
+/MinSizeRel/oofem_global.exe
+/MinSizeRel/pianoRigStatic3-rsX.in
+/MinSizeRel/ring_pin-hook.in
+/MinSizeRel/ring_pin-tr02.in
+/MinSizeRel/ring_pin_2-hook.in
