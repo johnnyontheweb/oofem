@@ -46,6 +46,11 @@
 
 #define _IFT_TR_SHELL01_Name "tr_shell01"
 
+///@name Additional Input fields for TR_SHELL01
+//@{
+#define _IFT_TR_SHELL01_FirstLocalAxis "lcs1"
+//@}
+
 namespace oofem {
 /**
  * This class implements an triangular three-node shell finite element, composed of
@@ -70,6 +75,9 @@ protected:
 
     static IntArray loc_plate;
     static IntArray loc_membrane;
+
+	// 1st local axis
+	FloatArray la1;
 
 public:
     /// Constructor

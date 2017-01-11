@@ -41,6 +41,8 @@
 //@{
 #define _IFT_TrPlaneStrRot_Name "trplanestrrot"
 #define _IFT_TrPlaneStrRot_niprot "niprot"
+// optional record for 1st local axes
+#define _IFT_TrPlaneStrRot_FirstLocalAxis "lcs1"
 //@}
 
 namespace oofem {
@@ -61,6 +63,7 @@ protected:
 public:
     TrPlaneStrRot(int, Domain *);
     virtual ~TrPlaneStrRot() { }
+	FloatArray la1;
 
 protected:
     virtual void computeGaussPoints();

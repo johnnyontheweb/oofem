@@ -76,7 +76,7 @@ protected:
 
 public:
     TrPlaneStrRot3d(int n, Domain * d);
-    virtual ~TrPlaneStrRot3d() { }
+	virtual ~TrPlaneStrRot3d() { }
 
 protected:
     void giveLocalCoordinates(FloatArray &answer, FloatArray &global);

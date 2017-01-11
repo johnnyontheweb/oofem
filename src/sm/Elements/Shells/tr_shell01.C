@@ -82,14 +82,22 @@ TR_SHELL01 :: initializeFrom(InputRecord *ir)
     }
 #endif
 
+	// optional record for 1st local axes
+	la1.resize(3);
+	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_TR_SHELL01_FirstLocalAxis);
+
     result = plate->initializeFrom(ir);
     if ( result != IRRT_OK ) {
         return result;
     }
+	plate->la1 = la1;
+
     result = membrane->initializeFrom(ir);
     if ( result != IRRT_OK ) {
         return result;
     }
+	membrane->la1 = la1;
 
     return IRRT_OK;
 }
@@ -419,7 +427,7 @@ TR_SHELL01 :: ZZErrorEstimatorI_computeLocalStress(FloatArray &answer, FloatArra
 void
 TR_SHELL01 :: SpatialLocalizerI_giveBBox(FloatArray &bb0, FloatArray &bb1)
 {
-    FloatArray lt3, gt3; // global vector in the element thickness direction of lenght thickeness/2
+    FloatArray lt3, gt3; // global vector in the element thickness direction of lenght thickness/2
     const FloatMatrix *GtoLRotationMatrix = plate->computeGtoLRotationMatrix();
 
     // setup vector in the element local cs. perpendicular to element plane of thickness/2 length

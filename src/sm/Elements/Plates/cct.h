@@ -44,6 +44,8 @@
 #include "sprnodalrecoverymodel.h"
 
 #define _IFT_CCTPlate_Name "cctplate"
+// optional record for 1st local axes
+#define _IFT_CCTPlate_FirstLocalAxis "lcs1"
 
 namespace oofem {
 class FEI2dTrLin;
@@ -77,6 +79,8 @@ public:
     virtual int testElementExtension(ElementExtension ext) { return ( ( ext == Element_EdgeLoadSupport ) ? 1 : 0 ); }
     // overloaded to take into account possible element local cs (in derived cct3d)
     virtual double computeArea();
+
+	FloatArray la1;
 
 protected:
     virtual void computeGaussPoints();
