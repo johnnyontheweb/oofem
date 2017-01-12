@@ -1065,7 +1065,7 @@ MITC4Shell :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
     answer.resize(6);
 
     if (  type == IST_ShellStrainTensor ) {
-		this->giveCharacteristicTensor(globTensor, LocalStrainTensor, gp, tStep);
+		this->giveCharacteristicTensor(globTensor, GlobalStrainTensor, gp, tStep);
 		answer.at(1) = globTensor.at(1, 1); //xx
 		answer.at(2) = globTensor.at(2, 2); //yy
 		answer.at(3) = 0.0; //zz
@@ -1075,7 +1075,7 @@ MITC4Shell :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
 
         return 1;
     } else if ( type == IST_ShellForceTensor ) {
-		this->giveCharacteristicTensor(globTensor, LocalForceTensor, gp, tStep);
+		this->giveCharacteristicTensor(globTensor, GlobalForceTensor, gp, tStep);
 		double t = this->giveCrossSection()->give(CS_Thickness, gp);
 
         answer.at(1) = globTensor.at(1, 1)*t; //xx
@@ -1098,8 +1098,10 @@ MITC4Shell :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
 		gp2 = integrationRulesArray[0]->getIntegrationPoint(base*2 + 1);
 		stress1 = static_cast<StructuralMaterialStatus *>(gp1->giveMaterialStatus())->giveStressVector();
 		stress2 = static_cast<StructuralMaterialStatus *>(gp2->giveMaterialStatus())->giveStressVector();
-		c1 = gp1->giveNaturalCoordinates();
-		c2 = gp2->giveNaturalCoordinates();
+		//c1 = gp1->giveNaturalCoordinates();
+		//c2 = gp2->giveNaturalCoordinates(); // not correct, to be solved
+		c1 = gp1->giveGlobalCoordinates();
+		c2 = gp2->giveGlobalCoordinates();
 		t = this->giveCrossSection()->give(CS_Thickness, gp);
 		dist = c1.distance(c2) * t / 2;
 
@@ -1128,8 +1130,8 @@ MITC4Shell :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
 		gp2 = integrationRulesArray[0]->getIntegrationPoint(base*2 + 1);
 		strain1 = static_cast<StructuralMaterialStatus *>(gp1->giveMaterialStatus())->giveStrainVector();
 		strain2 = static_cast<StructuralMaterialStatus *>(gp2->giveMaterialStatus())->giveStrainVector();
-		c1 = gp1->giveNaturalCoordinates();
-		c2 = gp2->giveNaturalCoordinates();
+		c1 = gp1->giveGlobalCoordinates();
+		c2 = gp2->giveGlobalCoordinates();
 
 		dist = c1.distance(c2) * this->giveCrossSection()->give(CS_Thickness, gp) / 2;
 
