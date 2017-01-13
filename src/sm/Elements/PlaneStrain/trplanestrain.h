@@ -46,6 +46,8 @@
 #include "mmashapefunctprojection.h"
 
 #define _IFT_TrPlaneStrain_Name "trplanestrain"
+// optional record for 1st local axes
+#define _IFT_TrPlaneStrain_FirstLocalAxis "lcs1"
 
 namespace oofem {
 class FEI2dTrLin;
@@ -87,6 +89,8 @@ public:
                                                                   IntArray &controlNode, IntArray &controlDof,
                                                                   HuertaErrorEstimator :: AnalysisMode aMode);
     virtual void HuertaErrorEstimatorI_computeNmatrixAt(GaussPoint *gp, FloatMatrix &answer);
+
+	FloatArray la1;
 
 #ifdef __OOFEG
     virtual void drawRawGeometry(oofegGraphicContext &gc, TimeStep *tStep);

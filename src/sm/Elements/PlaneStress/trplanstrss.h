@@ -46,6 +46,8 @@
 #include "mmashapefunctprojection.h"
 
 #define _IFT_TrPlaneStress2d_Name "trplanestress2d"
+// optional record for 1st local axes
+#define _IFT_TrPlaneStress2d_FirstLocalAxis "lcs1"
 
 namespace oofem {
 class FEI2dTrLin;
@@ -75,6 +77,8 @@ public:
     virtual double giveCharacteristicSize(GaussPoint *gp, FloatArray &normalToCrackPlane, ElementCharSizeMethod method);
     virtual double giveParentElSize() const { return 0.5; }
     virtual Interface *giveInterface(InterfaceType);
+
+	FloatArray la1;
 
 #ifdef __OOFEG
     virtual void drawRawGeometry(oofegGraphicContext &gc, TimeStep *tStep);
