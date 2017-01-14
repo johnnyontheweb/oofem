@@ -45,6 +45,7 @@
 #include <memory>
 
 #define _IFT_TR_SHELL02_Name "tr_shell02"
+#define _IFT_TR_SHELL02_FirstLocalAxis "lcs1"
 
 namespace oofem {
 /**
@@ -75,6 +76,9 @@ public:
     TR_SHELL02(int n, Domain * d);
     /// Destructor
     virtual ~TR_SHELL02() {}
+
+	// 1st local axis
+	FloatArray la1;
 
     virtual FEInterpolation *giveInterpolation() const { return plate->giveInterpolation(); }
 

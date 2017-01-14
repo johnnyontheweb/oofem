@@ -105,6 +105,7 @@ public:
 
 protected:
     virtual int giveNumberOfIPForMassMtrxIntegration() { return 1; }
+	// virtual int  global2local(FloatArray &answer, const FloatArray &lcoords, const FEICellGeometry &cellgeo);
 };
 } // end namespace oofem
 #endif // trplanstrain_h

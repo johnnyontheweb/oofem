@@ -459,6 +459,11 @@ TrPlanestressRotAllman :: initializeFrom(InputRecord *ir)
         return result;
     }
     numberOfGaussPoints = 4;
+	// optional record for 1st local axes
+	la1.resize(3);
+	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_TrPlanestressRotAllman_FirstLocalAxis);
+
     return IRRT_OK;
 }
 

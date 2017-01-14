@@ -88,6 +88,22 @@ TrPlaneStress2d :: giveInterface(InterfaceType interface)
     return NULL;
 }
 
+IRResultType
+TrPlaneStress2d::initializeFrom(InputRecord *ir)
+{
+	IRResultType result = TrPlaneStress2d::initializeFrom(ir);
+	if (result != IRRT_OK) {
+		return result;
+	}
+
+	// optional record for 1st local axes
+	la1.resize(3);
+	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_TrPlaneStress2d_FirstLocalAxis);
+
+	return IRRT_OK;
+}
+
 double
 TrPlaneStress2d :: giveArea()
 // returns the area occupied by the receiver

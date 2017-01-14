@@ -41,6 +41,7 @@
 //@{
 #define _IFT_TrPlanestressRotAllman_Name "trplanestressrotallman"
 //@}
+#define _IFT_TrPlanestressRotAllman_FirstLocalAxis "lcs1"
 
 namespace oofem {
 class FEI2dTrQuad;
@@ -62,6 +63,8 @@ protected:
 public:
     TrPlanestressRotAllman(int, Domain *);
     virtual ~TrPlanestressRotAllman() { }
+
+	FloatArray la1;
 
 protected:
     virtual void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int = 1, int = ALL_STRAINS);

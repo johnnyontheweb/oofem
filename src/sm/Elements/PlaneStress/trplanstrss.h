@@ -90,6 +90,7 @@ public:
     // definition & identification
     virtual const char *giveInputRecordName() const { return _IFT_TrPlaneStress2d_Name; }
     virtual const char *giveClassName() const { return "TrPlaneStress2d"; }
+	virtual IRResultType initializeFrom(InputRecord *ir);
 
     virtual void NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,
                                                             InternalStateType type, TimeStep *tStep);

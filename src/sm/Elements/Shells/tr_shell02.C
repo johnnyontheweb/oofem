@@ -68,18 +68,25 @@ TR_SHELL02 :: initializeFrom(InputRecord *ir)
     if ( result != IRRT_OK ) {
         return result;
     }
+	
+	// optional record for 1st local axes
+	la1.resize(3);
+	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_TR_SHELL02_FirstLocalAxis);
 
-    result = plate->initializeFrom(ir);
+	result = plate->initializeFrom(ir);
     if ( result != IRRT_OK ) {
         return result;
     }
+	plate->la1 = la1;
 
     result = membrane->initializeFrom(ir);
     if ( result != IRRT_OK ) {
         return result;
     }
+	membrane->la1 = la1;
 
-    return IRRT_OK;
+	return IRRT_OK;
 }
 
 void

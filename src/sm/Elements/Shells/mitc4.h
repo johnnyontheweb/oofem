@@ -43,6 +43,7 @@
 //#include "eleminterpmapperinterface.h"//
 
 #define _IFT_MITC4Shell_Name "mitc4shell"
+#define _IFT_MITC4Shell_FirstLocalAxis "lcs1"
 
 namespace oofem {
 	class FEI2dQuadLin;
@@ -85,6 +86,8 @@ namespace oofem {
 
 		MITC4Shell(int n, Domain *d);
 		virtual ~MITC4Shell() { }
+
+		FloatArray la1;
 
 		virtual FEInterpolation *giveInterpolation() const;
 		virtual FEInterpolation *giveInterpolation(DofIDItem id) const;

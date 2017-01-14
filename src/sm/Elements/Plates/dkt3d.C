@@ -134,6 +134,11 @@ DKTPlate3d :: computeGtoLRotationMatrix()
         // let us normalize
         e3.normalize();
 
+		if (la1.computeNorm() != 0) {
+			// custom local axes
+			e1 = la1;
+		}
+
         // now from e3' x e1' compute e2'
         e2.beVectorProductOf(e3, e1);
 

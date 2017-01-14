@@ -95,15 +95,15 @@ IRResultType
 TrPlaneStrain :: initializeFrom(InputRecord *ir)
 {
     numberOfGaussPoints = 1;
-	// optional record for 1st local axes
-	la1.resize(3);
-	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
-	//IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_CCTPlate_FirstLocalAxis);
-
     IRResultType result = PlaneStrainElement :: initializeFrom(ir);
     if ( result != IRRT_OK ) {
         return result;
     }
+
+	// optional record for 1st local axes
+	la1.resize(3);
+	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_TrPlaneStrain_FirstLocalAxis);
 
     if ( numberOfGaussPoints != 1 ) {
         numberOfGaussPoints = 1;
@@ -112,7 +112,50 @@ TrPlaneStrain :: initializeFrom(InputRecord *ir)
     return IRRT_OK;
 }
 
-
+// #define POINT_TOL 1.e-3
+//int
+//TrPlaneStrain :: global2local(FloatArray &answer, const FloatArray &coords, const FEICellGeometry &cellgeo)
+//{
+//	double detJ, x1, x2, x3, y1, y2, y3;
+//
+//	x1 = cellgeo.giveVertexCoordinates(1)->at(xind);
+//	x2 = cellgeo.giveVertexCoordinates(2)->at(xind);
+//	x3 = cellgeo.giveVertexCoordinates(3)->at(xind);
+//
+//	y1 = cellgeo.giveVertexCoordinates(1)->at(yind);
+//	y2 = cellgeo.giveVertexCoordinates(2)->at(yind);
+//	y3 = cellgeo.giveVertexCoordinates(3)->at(yind);
+//
+//	detJ = x1 * (y2 - y3) + x2 * (-y1 + y3) + x3 * (y1 - y2);
+//
+//	answer.resize(3);
+//	answer.at(1) = ((x2 * y3 - x3 * y2) + (y2 - y3) * coords.at(xind) + (x3 - x2) * coords.at(yind)) / detJ;
+//	answer.at(2) = ((x3 * y1 - x1 * y3) + (y3 - y1) * coords.at(xind) + (x1 - x3) * coords.at(yind)) / detJ;
+//
+//	// check if point is inside
+//	bool inside = true;
+//	for (int i = 1; i <= 2; i++) {
+//		if (answer.at(i) < (0. - POINT_TOL)) {
+//			answer.at(i) = 0.;
+//			inside = false;
+//		}
+//		else if (answer.at(i) > (1. + POINT_TOL)) {
+//			answer.at(i) = 1.;
+//			inside = false;
+//		}
+//	}
+//
+//	if ((answer.at(1) + answer.at(2)) > 1.0) {
+//		const double temp = 0.5*(answer.at(1) + answer.at(2) - 1.);
+//		answer.at(1) -= temp;
+//		answer.at(2) -= temp;
+//		inside = false;
+//	}
+//
+//	answer.at(3) = 1. - answer.at(1) - answer.at(2);
+//
+//	return inside;
+//}
 
 void
 TrPlaneStrain :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,

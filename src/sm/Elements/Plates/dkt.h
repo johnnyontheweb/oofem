@@ -44,6 +44,7 @@
 #include "sprnodalrecoverymodel.h"
 
 #define _IFT_DKTPlate_Name "dktplate"
+#define _IFT_DKTPlate_FirstLocalAxis "lcs1"
 
 // enable or disable element vertex moment cache; enabling will speed up postprocessing
 #define DKT_EnableVertexMomentsCache
@@ -81,6 +82,8 @@ protected:
 public:
     DKTPlate(int n, Domain *d);
     virtual ~DKTPlate() { }
+
+	FloatArray la1;
 
     virtual FEInterpolation *giveInterpolation() const;
     virtual FEInterpolation *giveInterpolation(DofIDItem id) const;
