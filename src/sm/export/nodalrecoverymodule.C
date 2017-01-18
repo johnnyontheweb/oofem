@@ -345,7 +345,8 @@ namespace oofem {
 					int node = nodes_it->first;
 					Node* nd = d->giveNode(node);
 					FloatArray resps = nodes_it->second;
-					if (resps.giveSize()) {
+					double chRes = resps.computeNorm();
+					if (resps.giveSize() && chRes != 0 && isnan(chRes) == false) {
 						fprintf(this->stream, "%10.3e;%s;%d;", curTime, resp.c_str(), nd->giveLabel());
 
 						for (auto &val : resps) {
