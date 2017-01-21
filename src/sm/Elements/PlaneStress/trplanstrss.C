@@ -91,7 +91,7 @@ TrPlaneStress2d :: giveInterface(InterfaceType interface)
 IRResultType
 TrPlaneStress2d::initializeFrom(InputRecord *ir)
 {
-	IRResultType result = TrPlaneStress2d::initializeFrom(ir);
+	IRResultType result = NLStructuralElement::initializeFrom(ir);
 	if (result != IRRT_OK) {
 		return result;
 	}
