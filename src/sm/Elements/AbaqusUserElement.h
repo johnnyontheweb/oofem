@@ -158,6 +158,9 @@ private:
     /// File containing the uel function
     std :: string filename;
 
+	/// Pointer to the dynamically loaded uelInit function (translated to C)
+	void(*uelInit)();
+
 public:
     /// Constructor
     AbaqusUserElement(int n, Domain *d);
