@@ -245,7 +245,9 @@ void AbaqusUserElement :: giveInternalForcesVector(FloatArray &answer, TimeStep 
         //this->getSvars();
         double period = 0., pnewdt = 0.;
         double dtime = tStep->giveTimeIncrement();
-        double time[] = {tStep->giveTargetTime() - dtime, tStep->giveTargetTime()};
+		double ttime = tStep->giveTargetTime();
+		double time[] = { ttime, ttime };
+		// see description at http://abaqus.software.polimi.it/v6.12/books/sub/default.htm
         this->uel(
             loc_rhs.givePointer(),
             loc_amatrx.givePointer(),
