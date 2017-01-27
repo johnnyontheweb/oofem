@@ -114,7 +114,7 @@ IRResultType AbaqusUserElement :: initializeFrom(InputRecord *ir)
     }
 	// optional init call for initialization vectors
 	* ( FARPROC * ) ( & this->uelInit ) = GetProcAddress( ( HMODULE ) this->uelobj, "init_" );  //works for MinGW 32bit
-	this->uelInit(); // call with no error management, this is optional.
+	if (this->uelInit) this->uelInit(); // call with no error management, this is optional.
 #else
     this->uelobj = dlopen(filename.c_str(), RTLD_NOW);
     if ( !this->uelobj ) {
