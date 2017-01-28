@@ -41,6 +41,7 @@
 #include "classfactory.h"
 #include "domain.h"
 #include "engngm.h"
+#include <memory>
 
 namespace oofem {
 
@@ -61,7 +62,8 @@ InverseIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Float
         OOFEM_ERROR("matrices size mismatch");
     }
 
-    SparseLinearSystemNM *solver = GiveClassFactory().createSparseLinSolver(ST_Direct, domain, engngModel);
+    // SparseLinearSystemNM *solver = GiveClassFactory().createSparseLinSolver(ST_Direct, domain, engngModel);
+	std::unique_ptr< SparseLinearSystemNM > solver(GiveClassFactory().createSparseLinSolver(ST_Direct, domain, engngModel));
    
     int nn = a.giveNumberOfColumns();
     int nc = min(2 * nroot, nroot + 8);
