@@ -41,6 +41,8 @@
 #include "dofmanager.h"
 #include "element.h"
 #include "unknownnumberingscheme.h"
+#include <math.h>
+
 
 namespace oofem {
 

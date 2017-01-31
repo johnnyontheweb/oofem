@@ -60,6 +60,7 @@
 #include "dynamicinputrecord.h"
 #include "inputrecord.h"
 #include "../sm/Elements/structuralelement.h"
+#include <math.h>
 
 
 #ifdef __OOFEG

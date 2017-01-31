@@ -37,6 +37,7 @@
 #include "gausspoint.h"
 #include "CrossSections/structuralcrosssection.h"
 #include "gaussintegrationrule.h"
+#include <math.h>
 
 namespace oofem {
 Structural2DElement :: Structural2DElement(int n, Domain *aDomain) :

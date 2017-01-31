@@ -49,6 +49,7 @@
 #include "element.h"
 #include "node.h"
 #include "unknownnumberingscheme.h"
+#include <math.h>
 
 #ifdef __OOFEG
 #include "oofeggraphiccontext.h"

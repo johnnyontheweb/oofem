@@ -42,6 +42,7 @@
 #include "../sm/Materials/structuralms.h"
 #include "Materials/isolinearelasticmaterial.h"
 #include "gausspoint.h"
+#include <math.h>
 
 ///@name Input fields for ConcreteDPM
 //@{

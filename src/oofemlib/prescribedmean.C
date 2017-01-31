@@ -40,6 +40,7 @@
 #include "gausspoint.h"
 #include "sparsemtrx.h"
 #include "function.h"
+#include <math.h> // for "fabs"
 
 namespace oofem
 {

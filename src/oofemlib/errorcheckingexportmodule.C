@@ -35,6 +35,7 @@
 #include <vector>
 #include <cstdio>
 #include <iostream>
+#include <math.h>
 
 #include "errorcheckingexportmodule.h"
 #include "engngm.h"

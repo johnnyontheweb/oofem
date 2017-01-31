@@ -42,7 +42,7 @@
 #include "feinterpol.h"
 #include "gausspoint.h"
 #include "timestep.h"
-
+#include <math.h> // for "fabs"
 
 namespace oofem {
 REGISTER_BoundaryCondition(NeumannMomentLoad);

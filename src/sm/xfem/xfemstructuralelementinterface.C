@@ -55,6 +55,7 @@
 #include "vtkxmlexportmodule.h"
 
 #include <string>
+#include <math.h>
 #include <sstream>
 
 namespace oofem {

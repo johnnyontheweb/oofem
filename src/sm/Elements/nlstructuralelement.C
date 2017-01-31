@@ -46,6 +46,7 @@
 #include "dynamicinputrecord.h"
 #include "gausspoint.h"
 #include "engngm.h"
+#include <math.h>
 
 namespace oofem {
 NLStructuralElement :: NLStructuralElement(int n, Domain *aDomain) :

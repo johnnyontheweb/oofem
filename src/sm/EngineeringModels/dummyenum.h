@@ -39,6 +39,7 @@
 #include "datastream.h"
 #include "oofemtxtdatareader.h"
 #include "elementgeometrytype.h"
+#include <cstring>
 
 ///@name Input fields for DummyEnum
 //@{

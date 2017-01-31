@@ -136,9 +136,9 @@ public:
 
 	virtual void postInitialize();
 
-	virtual void ResponseSpectrum::getGPOutputAt(GaussPoint *gp, TimeStep *tStep, std::map<std::string, FloatArray> *&ips);
-	virtual void ResponseSpectrum::getIntRuleOutputAt(IntegrationRule *iRule, TimeStep *tStep, std::map<int, std::map<std::string, FloatArray>> *&ir);
-	virtual void ResponseSpectrum::getIntPointStatusOutputAt(IntegrationPointStatus *iStatus, TimeStep *tStep, MaterialMode materialMode, std::map<std::string, FloatArray> *&ir);
+	virtual void getGPOutputAt(GaussPoint *gp, TimeStep *tStep, std::map<std::string, FloatArray> *&ips);
+	virtual void getIntRuleOutputAt(IntegrationRule *iRule, TimeStep *tStep, std::map<int, std::map<std::string, FloatArray>> *&ir);
+	virtual void getIntPointStatusOutputAt(IntegrationPointStatus *iStatus, TimeStep *tStep, MaterialMode materialMode, std::map<std::string, FloatArray> *&ir);
 	virtual double calcSpectrumOrdinate(double period);
 	virtual void computeExternalLoadReactionContribution(FloatArray &reactions, TimeStep *tStep, int di);
 	virtual void buildReactionTable(IntArray &restrDofMans, IntArray &restrDofs,

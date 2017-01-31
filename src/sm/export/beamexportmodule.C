@@ -47,7 +47,8 @@
 #include "constantedgeload.h"
 #include "fei3dlinelin.h"
 #include "inputrecord.h"
-#include "../sm/engineeringmodels/responseSpectrum.h"
+#include "../sm/EngineeringModels/responsespectrum.h"
+#include <math.h>
 
 using namespace std;
 

@@ -14,6 +14,7 @@
 #include "spatiallocalizer.h"
 #include "element.h"
 #include "gausspoint.h"
+#include <math.h>
 
 namespace oofem {
 REGISTER_EnrichmentFront(EnrFrontCohesiveBranchFuncOneEl)

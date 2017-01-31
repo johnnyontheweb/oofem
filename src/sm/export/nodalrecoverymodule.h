@@ -38,8 +38,9 @@
 #include "exportmodule.h"
 #include "nodalrecoverymodel.h"
 #include "floatarray.h"
-#include "../sm/engineeringmodels/responseSpectrum.h"
+#include "../sm/EngineeringModels/responsespectrum.h"
 #include <map>
+#include <math.h>
 #include "cltypes.h"
 
 ///@name Input fields for Beam export module

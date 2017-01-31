@@ -37,6 +37,7 @@
 #include "gausspoint.h"
 #include "CrossSections/structuralcrosssection.h"
 #include "gaussintegrationrule.h"
+#include <math.h>
 
 namespace oofem {
 Structural3DElement :: Structural3DElement(int n, Domain *aDomain) :

@@ -43,11 +43,11 @@
 #include "classfactory.h"
 #include "generalboundarycondition.h"
 #include "inputrecord.h"
-#include "../sm/engineeringmodels/responseSpectrum.h"
+#include "../sm/EngineeringModels/responsespectrum.h"
 #include "cltypes.h"
 #include "materialinterface.h"
 #include "nodalaveragingrecoverymodel.h"
-
+#include <math.h>
 #include <vector>
 
 using namespace std;

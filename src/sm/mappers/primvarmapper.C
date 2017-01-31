@@ -49,7 +49,7 @@
 #include "prescribedgradientbcweak.h"
 #include "prescribedgradientbcneumann.h"
 #include "unknownnumberingscheme.h"
-
+#include <math.h>
 #include <fstream>
 
 namespace oofem {
