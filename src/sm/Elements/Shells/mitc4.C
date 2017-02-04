@@ -360,6 +360,11 @@ MITC4Shell :: initializeFrom(InputRecord *ir)
     IR_GIVE_OPTIONAL_FIELD(ir, nPointsZ, _IFT_MITC4Shell_nipZ);
     IR_GIVE_OPTIONAL_FIELD(ir, nlGeometry, _IFT_NLStructuralElement_nlgeoflag);
 
+	// optional record for 1st local axes
+	la1.resize(3);
+	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, la1, _IFT_MITC4Shell_FirstLocalAxis);
+
     return this->NLStructuralElement :: initializeFrom(ir);
 }
 
