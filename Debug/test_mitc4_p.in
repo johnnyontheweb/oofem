@@ -61,13 +61,13 @@ mitc4shell 19 nodes 4 13 14 25 24 crossSect 2 mat 1   boundaryLoads 2 4 1
 mitc4shell 20 nodes 4 12 13 24 23 crossSect 2 mat 1   boundaryLoads 2 4 1
 # fictitious section for LumpedMass elements
 SimpleCS 1 thick 0 drillstiffness 0
-SimpleCS 2 thick 300 drillstiffness 1e11
+SimpleCS 2 thick 300 drillstiffness 1e11  directorX 0 directorY -1 directorZ 0
 IsoLE 1 d 2.5E-09 E 30000 n 0.3 tAlpha 0
 BoundaryCondition 1 loadTimeFunction 1 DOFs 6 1 2 3 4 5 6  values 6 0 0 0 0 0 0  set 1
 BoundaryCondition 2 loadTimeFunction 1 DOFs 6 1 2 3 4 5 6  values 6 0 0 0 0 0 0  set 2
 BoundaryCondition 3 loadTimeFunction 1 DOFs 6 1 2 3 4 5 6  values 6 0 0 0 0 0 0  set 3
 # NodalLoad 4 loadTimeFunction 2 Components 1 -10000 DOFs 1 2 set 4
-ConstantSurfaceLoad 4 loadType 2 dofs 1 2 Components 1 1.0 loadTimeFunction 1
+ConstantSurfaceLoad 4 loadType 2 dofs 6 1 2 3 4 5 6 Components 6 0 1.0 0 0 0 0 loadTimeFunction 1
 ConstantFunction 1 f(t) 1.0
 PiecewiseLinFunction 2 npoints 2 t 2 0.0 1 f(t) 2 0.0 1.0
 set 1 nodes 1 1

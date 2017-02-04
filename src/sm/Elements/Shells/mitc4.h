@@ -40,9 +40,11 @@
 #include "sprnodalrecoverymodel.h"
 #include "nodalaveragingrecoverymodel.h"
 #include "spatiallocalizer.h"
+#include "load.h"
 //#include "eleminterpmapperinterface.h"//
 
 #define _IFT_MITC4Shell_Name "mitc4shell"
+#define _IFT_MITC4Shell_nipZ "nipz"
 #define _IFT_MITC4Shell_FirstLocalAxis "lcs1"
 
 namespace oofem {
@@ -76,11 +78,13 @@ namespace oofem {
 		static IntArray shellOrdering;
 		/// Ordering for the drilling dofs (the out-of-plane rotations)
 		static IntArray drillOrdering;
+
 		/**
 		* Transformation Matrix form GtoL(3,3) is stored
 		* at the element level for computation efficiency.
 		*/
 		FloatMatrix GtoLRotationMatrix;
+    int nPointsXY, nPointsZ;
 
 	public:
 
@@ -102,14 +106,10 @@ namespace oofem {
 		virtual void NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node, InternalStateType type, TimeStep *tStep);
 
 		virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep);
-		virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord = 0);
-		//virtual void giveGPForcesVector(FloatArray &answer, TimeStep *tStep, GaussPoint *gp, int useUpdatedGpRecord = 0);
-		//virtual void giveGPStrainVector(FloatArray &answer, TimeStep *tStep, GaussPoint *gp, int useUpdatedGpRecord = 0);
 
 		// transformation
-		virtual bool computeGtoLRotationMatrix(FloatMatrix &answer);
-		int computeIFGToLRotationMtrx(FloatMatrix &answer);
-		virtual int computeLoadGToLRotationMtrx(FloatMatrix &answer);
+    bool computeGtoLRotationMatrix(FloatMatrix &answer);
+    int computeLoadGToLRotationMtrx(FloatMatrix &answer);
 		void computeLToDirectorRotationMatrix(FloatMatrix &answer1, FloatMatrix &answer2, FloatMatrix &answer3, FloatMatrix &answer4);
 		virtual int computeLoadLEToLRotationMatrix(FloatMatrix &answer, int iEdge, GaussPoint *gp);
 
@@ -120,9 +120,7 @@ namespace oofem {
 		virtual void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int = 1, int = ALL_STRAINS);
 		virtual void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer);
 		virtual void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep);
-		virtual void computeStrainVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep);
 		virtual void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep);
-		virtual void computeVectorOfUnknowns(ValueModeType mode, TimeStep* tStep, FloatArray &shellUnknowns, FloatArray &drillUnknowns);
 
 
 	private:
@@ -132,7 +130,7 @@ namespace oofem {
 		void giveDirectorVectors(FloatArray &V1, FloatArray &V2, FloatArray &V3, FloatArray &V4);
 		void giveLocalDirectorVectors(FloatArray &V1, FloatArray &V2, FloatArray &V3, FloatArray &V4);
 		void giveThickness(double &a1, double &a2, double &a3, double &a4);
-		void giveJacobian(GaussPoint *gp, FloatMatrix &jacobianMatrix);
+    void giveJacobian(FloatArray lcoords, FloatMatrix &jacobianMatrix);
 		void giveLocalCoordinates(FloatArray &answer, FloatArray &global);
 		const FloatMatrix *computeGtoLRotationMatrix();
 		virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
@@ -142,7 +140,9 @@ namespace oofem {
 		virtual bool computeLocalCoordinates(FloatArray &answer, const FloatArray &coords);
 		virtual double computeVolumeAround(GaussPoint *gp);
 		void computeLocalBaseVectors(FloatArray &e1, FloatArray &e2, FloatArray &e3);
+    void givedNdx(FloatArray &hkx, FloatArray &hky, FloatArray coords);
 
+    void giveMidplaneIPValue(FloatArray &answer, int gpXY, InternalStateType type, TimeStep *tStep);
 
 		// definition & identification
 		virtual const char *giveClassName() const { return "MITC4Shell"; }
@@ -150,7 +150,7 @@ namespace oofem {
 		virtual IRResultType initializeFrom(InputRecord *ir);
 		virtual int computeNumberOfDofs() { return 24; }
 		virtual int computeNumberOfGlobalDofs() { return 24; }
-		virtual integrationDomain giveIntegrationDomain() const { return _Cube; }
+    virtual integrationDomain giveIntegrationDomain() const { return _3dDegShell; }
 		virtual MaterialMode giveMaterialMode() { return _3dDegeneratedShell; }
 
 
@@ -162,7 +162,10 @@ namespace oofem {
 		virtual IntegrationRule *GetSurfaceIntegrationRule(int approxOrder);
 		virtual void computeSurfaceNMatrixAt(FloatMatrix &answer, int iSurf, GaussPoint *sgp);
 		virtual void giveSurfaceDofMapping(IntArray &answer, int iSurf) const;
+
+    virtual void computeSurfaceNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords);
+    virtual void computeEdgeNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords);
+ 
 	};
 } // end namespace oofem
 #endif // mitc4_h
-
