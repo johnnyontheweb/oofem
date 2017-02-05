@@ -402,8 +402,17 @@ namespace oofem {
 						GKyAy = MatStiffness.at(2, 2);
 						GKzAz = MatStiffness.at(3, 3);
 
-						psi_y = EJzz / GKyAy;
-						psi_z = EJyy / GKzAz;
+						if (GKyAy < 1e-6) {
+							psi_y = 0;
+						} else {
+							psi_y = EJzz / GKyAy;
+						}
+
+						if (GKzAz < 1e-6) {
+							psi_z = 0;
+						} else {
+							psi_z = EJyy / GKzAz;
+						}
 
 						double vy_0, vy_l, vz_0, vz_l;			// transversal displacements
 						double phiy_0, phiy_l, phiz_0, phiz_l;	// rotation / first derivatives
