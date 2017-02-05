@@ -114,6 +114,7 @@ public:
     virtual const char* giveClassName() const { return "SymCompCol"; }
     virtual SparseMtrxType giveType() const { return SMT_SymCompCol; }
     virtual bool isAntisymmetric() const { return false; }
+	virtual int sanityCheck(bool* verdict);
 
 
     const double &val(int i) const { return val_(i); }

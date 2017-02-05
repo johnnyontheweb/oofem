@@ -166,6 +166,88 @@ TimeStep *LinearStatic :: giveNextStep()
 }
 
 
+bool findDofGivenEquation(int badRow, Domain* d, int* nodeNum, int* elementNum, DofIDItem* dof)
+// also elements beacuse of internal dofs
+{
+	// initialize stuff
+	int dType = 0;
+	int eqN = 0;
+	*nodeNum = 0;
+	*elementNum = 0;
+	int curNode = 0;
+	bool breakFlag = false; // find the first
+	for (std::unique_ptr<DofManager> &node : d->giveDofManagers()) {
+		if (!node->giveNumberOfDofs()) continue;
+
+		IntArray mstrDofs, locArr;
+		node->givePrimaryDofs(mstrDofs);
+		node->giveLocationArray(mstrDofs, locArr, EModelDefaultEquationNumbering());
+		curNode = node->giveNumber();
+
+		int partialDofCount = locArr.giveSize();
+		if (partialDofCount) {
+			// search for our dofs in there
+			for (int myDofIndex = 1; myDofIndex <= partialDofCount; myDofIndex++)
+			{
+				dType = mstrDofs.at(myDofIndex);
+				eqN = locArr.at(myDofIndex);
+				// found the node
+				if (eqN == badRow){
+					*nodeNum = curNode;
+					*dof = (DofIDItem)dType;
+					return true;
+				}
+			}
+		}
+	}
+
+	// no nodes found... is it an element internal dof?
+	for (int ielem = 1; ielem <= d->giveNumberOfElements(); ielem++) {
+		Element *element = d->giveElement(ielem);
+
+		// the following may be simplified.
+		// retrieve internal dof managers and location array
+		for (int i = 1; i <= element->giveNumberOfInternalDofManagers(); i++) {
+			DofManager *intDofMan = element->giveInternalDofManager(i);
+
+			if (!intDofMan) continue; // you may never know...
+
+			IntArray mstrDofs, locArr;
+			IntArray nodalArray, ids;
+			IntArray dofIdArray;
+			int curElem = 0;
+			locArr.clear();
+
+			element->giveInternalDofManDofIDMask(i, ids);
+			intDofMan->giveLocationArray(ids, nodalArray, EModelDefaultEquationNumbering());
+			locArr.followedBy(nodalArray);
+
+			intDofMan->giveMasterDofIDArray(ids, mstrDofs);
+			dofIdArray.followedBy(mstrDofs);
+
+			int partialDofCount = locArr.giveSize();
+			if (partialDofCount) {
+				// search for our dofs in there
+				for (int myDofIndex = 1; myDofIndex <= partialDofCount; myDofIndex++)
+				{
+					int dType = dofIdArray.at(myDofIndex);
+					int eqN = locArr.at(myDofIndex);
+
+					if (eqN == badRow){
+						*elementNum = curElem;
+						*dof = (DofIDItem)dType;
+						return true;
+					}
+				}
+			}
+		}
+	}  // end of search among internal dof managers
+
+	// found nothing
+	return false;
+}
+
+
 void LinearStatic :: solveYourself()
 {
     if ( this->isParallel() ) {
@@ -246,6 +328,33 @@ void LinearStatic :: solveYourselfAt(TimeStep *tStep)
     //
     this->giveNumericalMethod( this->giveMetaStep( tStep->giveMetaStepNumber() ) );
 
+
+	// look for zero filled rows and invalid fp numbers
+	int badRow = 0; // equation number
+	bool saneMatrix;
+	badRow = stiffnessMatrix->sanityCheck(&saneMatrix);
+	if (!saneMatrix){
+		int nodeNum = 0, elemNum = 0;
+		DofIDItem dofID;
+		bool isZero = (badRow >= 0); // determine if it is because of zero or NaNs and INFs
+		badRow = abs(badRow);
+
+		// search for dof id...
+		bool found = findDofGivenEquation(badRow, this->giveDomain(1), &nodeNum, &elemNum, &dofID);
+
+		if (found){
+			if (isZero) {
+				OOFEM_WARNING("Lability likely detected at %s %d - dof %s", nodeNum ? "node" : "element", nodeNum ? nodeNum : elemNum, __DofIDItemToString(dofID).c_str());
+			}
+			else {
+				OOFEM_WARNING("Invalid floating point number detected for %s %d - dof %s", nodeNum ? "node" : "element", nodeNum ? nodeNum : elemNum, __DofIDItemToString(dofID).c_str());
+			}
+		}
+		else {
+			OOFEM_WARNING("Problem detected at equation %d of the stiffness matrix. Couldn't pinpoint the associated node or element", badRow);
+		}
+	}
+
     //
     // call numerical model to solve arose problem
     //
@@ -254,6 +363,19 @@ void LinearStatic :: solveYourselfAt(TimeStep *tStep)
 #endif
     NM_Status s = nMethod->solve(*stiffnessMatrix, loadVector, displacementVector);
     if ( !( s & NM_Success ) ) {
+		badRow = stiffnessMatrix->giveErrorFlag();
+		int nodeNum = 0, elemNum = 0;
+		DofIDItem dofID;
+
+		// search for dof id...
+		bool found = findDofGivenEquation(badRow, this->giveDomain(1), &nodeNum, &elemNum, &dofID);
+		if (found){
+				OOFEM_WARNING("Lability likely detected at %s %d - dof %s", nodeNum ? "node" : "element", nodeNum ? nodeNum : elemNum, __DofIDItemToString(dofID).c_str());
+		}
+		else {
+			OOFEM_WARNING("Problem detected at equation %d of the stiffness matrix. Couldn't pinpoint the associated node or element", badRow);
+		}
+
         OOFEM_ERROR("No success in solving system.");
     }
 

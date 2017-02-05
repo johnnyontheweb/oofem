@@ -1,0 +1,23 @@
+singleB.out
+-> single beam
+Linearstatic nsteps 1
+domain 3dShell
+OutputManager tstep_all dofman_all element_all
+ndofman 2 nelem 1 ncrosssect 4 nmat 1 nbc 3 nic 0 nltf 2 nset 3
+node 1 coords 3 0 0 0 
+node 2 coords 3 2 0 0
+Beam3d 1 nodes 2 1 2 mat 1 crossSect 3 refAngle 0
+# DofsToCondense 6 4 5 6 10 11 12  
+SimpleCS 1 thick 0 drillstiffness 0
+SimpleCS 2 area 0.00212 Iy 1.33809999169898E-06 Iz 3.4919999052363E-06 Ik 4.83009989693528E-06 shearareay 0.000460000010207295 shearareaz 0.0012800000840798 thick 0.1 width 0.096
+SimpleCS 3 area 0.00116399955004454 Iy 5.88196769513161E-07 Iz 1.82709209184395E-06 Ik 2.41528891820053E-06 shearareay 0.00116399955004454 shearareaz 0.00116399955004454 thick 0.1 width 0.05
+SimpleCS 4 area 0.000881999905686826 Iy 2.99123371405585E-07 Iz 9.51459469433757E-07 Ik 1.25058284083934E-06 shearareay 0.000881999905686826 shearareaz 0.000881999905686826 thick 0.1 width 0.05
+IsoLE 1 d 0 E 210000000 n 0.3 tAlpha 1.2E-05
+BoundaryCondition 1 loadTimeFunction 1 DOFs 5 1 2 3 5 6  values 5 0 0 0 0 0  set 1
+BoundaryCondition 2 loadTimeFunction 1 DOFs 5 1 2 3 5 6  values 5 0 0 0 0 0  set 2
+ConstantEdgeLoad 3 loadTimeFunction 2  csType 0 Components 1 -15 DOFs 1 3
+ConstantFunction 1 f(t) 1.0
+PiecewiseLinFunction 2 npoints 2 t 2 0.0 1 f(t) 2 0.0 1.0
+set 1 nodes 1 1
+set 2 nodes 1 2
+set 3 elementedges 2 1 1

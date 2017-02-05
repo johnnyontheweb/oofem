@@ -94,6 +94,7 @@ public:
     virtual void writeToFile(const char *fname) const;
     virtual SparseMtrxType giveType() const { return SMT_SkylineU; }
     virtual bool isAsymmetric() const { return true; }
+	virtual int sanityCheck(bool* verdict);
     virtual const char *giveClassName() const { return "SkylineU"; }
 
 protected:

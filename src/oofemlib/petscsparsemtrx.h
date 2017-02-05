@@ -98,6 +98,7 @@ public:
     void printMatlab() const;
     virtual SparseMtrxType  giveType() const;
     virtual bool isAsymmetric() const;
+	virtual int sanityCheck(bool* verdict);
     virtual void writeToFile(const char *fname) const;
     virtual const char *giveClassName() const { return "PetscSparseMtrx"; }
 

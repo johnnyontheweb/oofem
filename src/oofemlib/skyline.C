@@ -295,6 +295,10 @@ FloatArray *Skyline :: backSubstitutionWith(FloatArray &y) const
     int ack, ack1, acs, n;
     int size = this->giveNumberOfRows();
 
+	if (errorFlag){
+		return & y;
+	}
+
     /************************************/
     /*  modification of right hand side */
     /************************************/
@@ -317,6 +321,10 @@ FloatArray *Skyline :: backSubstitutionWith(FloatArray &y) const
     /*****************/
     for ( int k = 1; k <= n; k++ ) {
         acs = adr.at(k);
+		if (fabs(mtrx[acs]) < tol) {
+			errorFlag = k;
+			return &y;
+		}
         y.at(k) /= mtrx [ acs ];
     }
 
@@ -553,7 +561,11 @@ SparseMtrx *Skyline :: factorized()
         for ( int i = ack1 - 1; i > ack; i-- ) {
             g = mtrx [ i ];
             acs = adr.at(acrk);
-            acrk++;
+			if ( fabs( mtrx [ acs ] ) < tol ) {
+				errorFlag = acrk;
+				return this;
+			}
+			acrk++;
             mtrx [ i ] /= mtrx [ acs ];
             s += mtrx [ i ] * g;
         }
@@ -1042,4 +1054,39 @@ void Skyline :: ldl_feti_sky(FloatArray &x, FloatArray &y,
     // increment version
     //this->version++;
 }
+
+int Skyline :: sanityCheck(bool* verdict)
+{
+	for (int i = 1; i <= nRows; i++) {
+		bool rowAllZero = true;
+		for (int j = 1; j <= nColumns; j++) {
+			// check the tolerance
+			// if below or not stored, go to next index
+			if (!this->isAllocatedAt(i, j)) {
+				continue;
+			}  // automatically takes care of lower half of the matrix
+			else {
+				double n = fabs(this->at(i, j));
+				if (isnan(n) || isinf(n)){  // bad!
+					*verdict = false;
+					return -i;
+				} else if ((n) < tol) {
+					continue;
+
+					// if above, we've found a non zero entry, set the flag and skip the rest of the row.
+				} else {
+					rowAllZero = false;
+					break;
+				}
+			}
+		}
+		// check the result for the whole row. if all zero, set flags and quit, return row index
+		if (rowAllZero) {
+			*verdict = false;
+			return i;
+		}
+
+	}
+}
+
 } // end namespace oofem

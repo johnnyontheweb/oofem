@@ -971,4 +971,12 @@ int PetscSparseMtrx :: giveDomainIndex() const
 {
     return di;
 }
+
+int PetscSparseMtrx::sanityCheck(bool* verdict)
+{
+	// unsupported
+	OOFEM_WARNING("Sanity check not supported for this type of matrix");
+	*verdict = true;
+	return 0;
+}
 } // end namespace oofem

@@ -67,6 +67,10 @@ protected:
     int nRows;
     /// Number of columns.
     int nColumns;
+	/// tolerance for zero entries. val<tol is considered zero
+	double tol = 1e-6;
+	/// error flag. if !=0 it represents the bad row
+	mutable int errorFlag = 0;
 
     /**
      * Allows to track if receiver changes.
@@ -273,6 +277,14 @@ public:
     virtual SparseMtrxType giveType() const = 0;
     /// Returns true if asymmetric
     virtual bool isAsymmetric() const = 0;
+	/// Checks the matrix for empty rows/cols
+	virtual int sanityCheck(bool* verdict){
+		OOFEM_WARNING("Sanity check not implemented for this type of matrix");
+		*verdict = true;
+		return 0;
+	}
+	/// return internal error flag with row position
+	virtual int giveErrorFlag() const { return errorFlag; }
 
     virtual const char *giveClassName() const = 0;
     /// Error printing helper.

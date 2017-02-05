@@ -124,6 +124,7 @@ public:
     virtual const char* giveClassName() const { return "CompCol"; }
     virtual SparseMtrxType giveType() const { return SMT_CompCol; }
     virtual bool isAsymmetric() const { return true; }
+	virtual int sanityCheck(bool* verdict);
 
     // Breaks encapsulation, but access is needed for PARDISO solver;
     const FloatArray &giveValues() { return val_; }

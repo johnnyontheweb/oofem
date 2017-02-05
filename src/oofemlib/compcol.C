@@ -441,4 +441,40 @@ void CompCol :: timesT(const FloatArray &x, FloatArray &answer) const
         answer(i) = r;
     }
 }
+
+int CompCol::sanityCheck(bool* verdict)
+{
+	for (int i = 1; i <= nRows; i++) {
+		bool rowAllZero = true;
+		for (int j = 1; j <= nColumns; j++) {
+			// check the tolerance
+			// if below or not stored, go to next index
+			if (!this->isAllocatedAt(i, j)) {
+				continue;
+			}  // automatically takes care of lower half of the matrix
+			else {
+				double n = fabs(this->at(i, j));
+				if (isnan(n) || isinf(n)){  // bad!
+					*verdict = false;
+					return -i;
+				}
+				else if ((n) < tol) {
+					continue;
+
+					// if above, we've found a non zero entry, set the flag and skip the rest of the row.
+				}
+				else {
+					rowAllZero = false;
+					break;
+				}
+			}
+		}
+		// check the result for the whole row. if all zero, set flags and quit, return row index
+		if (rowAllZero) {
+			*verdict = false;
+			return i;
+		}
+
+	}
+}
 } // end namespace oofem
