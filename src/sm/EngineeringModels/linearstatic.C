@@ -344,14 +344,14 @@ void LinearStatic :: solveYourselfAt(TimeStep *tStep)
 
 		if (found){
 			if (isZero) {
-				OOFEM_WARNING("Lability likely detected at %s %d - dof %s", nodeNum ? "node" : "element", nodeNum ? nodeNum : elemNum, __DofIDItemToString(dofID).c_str());
+				OOFEM_WARNING("Likely lability detected at %s %d - dof %s", nodeNum ? "node" : "element", nodeNum ? nodeNum : elemNum, __DofIDItemToString(dofID).c_str());
 			}
 			else {
 				OOFEM_WARNING("Invalid floating point number detected for %s %d - dof %s", nodeNum ? "node" : "element", nodeNum ? nodeNum : elemNum, __DofIDItemToString(dofID).c_str());
 			}
 		}
 		else {
-			OOFEM_WARNING("Problem detected at equation %d of the stiffness matrix. Couldn't pinpoint the associated node or element", badRow);
+			OOFEM_WARNING("Problem detected at equation %d of the stiffness matrix. Cannot pinpoint the associated node or element", badRow);
 		}
 	}
 
@@ -370,10 +370,10 @@ void LinearStatic :: solveYourselfAt(TimeStep *tStep)
 		// search for dof id...
 		bool found = findDofGivenEquation(badRow, this->giveDomain(1), &nodeNum, &elemNum, &dofID);
 		if (found){
-				OOFEM_WARNING("Lability likely detected at %s %d - dof %s", nodeNum ? "node" : "element", nodeNum ? nodeNum : elemNum, __DofIDItemToString(dofID).c_str());
+				OOFEM_WARNING("Likely lability detected at %s %d - dof %s", nodeNum ? "node" : "element", nodeNum ? nodeNum : elemNum, __DofIDItemToString(dofID).c_str());
 		}
 		else {
-			OOFEM_WARNING("Problem detected at equation %d of the stiffness matrix. Couldn't pinpoint the associated node or element", badRow);
+			OOFEM_WARNING("Problem detected at equation %d of the stiffness matrix. Cannot pinpoint the associated node or element", badRow);
 		}
 
         OOFEM_ERROR("No success in solving system.");
