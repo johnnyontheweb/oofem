@@ -463,23 +463,39 @@ namespace oofem {
 
 
 
-						// timoshenko formulation for transversal displacements
+						
+
+						if (psi_y == 0.0) {  // Euler Bernoulli formulation
+							ay = bl.at(2) / 24 / EJzz;
+							dy = phiz_0;
+							fy = vy_0;
+							by = (2 *(vy_0 - vy_l) + l*(phiz_l + phiz_0)) / (l_3) - 2 * ay*l;
+							cy = -(3 *(vy_0 - vy_l) + l*(2 * phiz_0 + phiz_l)) / l_2 + ay*l_2;
+						}
+						else { // timoshenko formulation for transversal displacements
+							ay = bl.at(2) / 24 / EJzz;
+							dy = phiz_0;
+							fy = vy_0;
+							by = (2 / l*(vy_0 - vy_l) + (phiz_l + phiz_0)) / (l_2 + 12 * psi_y) - 2 * ay*l;
+							cy = -(72 * EJzz*GKyAy*l* (vy_0 - vy_l) + GKyAy*l_2*(24 * EJzz*(2 * phiz_0 + phiz_l) - l_3*bl.at(2)) + 12 * EJzz*(12 * EJzz*(phiz_0 - phiz_l) - l_3*bl.at(2))) / (24 * EJzz*l* (GKyAy*l_2 + 12 * EJzz));
+						}
 
 
 
-						ay = bl.at(2) / 24 / EJzz;
-						dy = phiz_0;
-						fy = vy_0;
-						by = (2 / l*(vy_0 - vy_l) + (phiz_l + phiz_0)) / (l_2 + 12 * psi_y) - 2 * ay*l;
-						cy = -(72 * EJzz*GKyAy*l* (vy_0 - vy_l) + GKyAy*l_2*(24 * EJzz*(2 * phiz_0 + phiz_l) - l_3*bl.at(2)) + 12 * EJzz*(12 * EJzz*(phiz_0 - phiz_l) - l_3*bl.at(2))) / (24 * EJzz*l* (GKyAy*l_2 + 12 * EJzz));
-
-
-
-						az = bl.at(3) / 24 / EJyy;
-						dz = phiy_0;
-						fz = vz_0;
-						bz = (2 / l*(vz_0 - vz_l) + (phiy_l + phiy_0)) / (l_2 + 12 * psi_z) - 2 * az*l;
-						cz = -(72 * EJyy*GKzAz*l* (vz_0 - vz_l) + GKzAz*l_2*(24 * EJyy*(2 * phiy_0 + phiy_l) - l_3*bl.at(3)) + 12 * EJyy*(12 * EJyy*(phiy_0 - phiy_l) - l_3*bl.at(3))) / (24 * EJyy*l* (GKzAz*l_2 + 12 * EJyy));
+						if (psi_z == 0.0) {
+							az = bl.at(3) / 24 / EJyy;
+							dz = phiy_0;
+							fz = vz_0;
+							bz = (2 *(vz_0 - vz_l) + l*(phiy_l + phiy_0)) / (l_3) - 2 * az*l;
+							cz = -(3 *(vz_0 - vz_l) + l*(2 * phiy_0 + phiy_l)) / l_2 + az*l_2;
+						}
+						else {
+							az = bl.at(3) / 24 / EJyy;
+							dz = phiy_0;
+							fz = vz_0;
+							bz = (2 / l*(vz_0 - vz_l) + (phiy_l + phiy_0)) / (l_2 + 12 * psi_z) - 2 * az*l;
+							cz = -(72 * EJyy*GKzAz*l* (vz_0 - vz_l) + GKzAz*l_2*(24 * EJyy*(2 * phiy_0 + phiy_l) - l_3*bl.at(3)) + 12 * EJyy*(12 * EJyy*(phiy_0 - phiy_l) - l_3*bl.at(3))) / (24 * EJyy*l* (GKzAz*l_2 + 12 * EJyy));
+						}
 
 						// axial displacements
 						cnx = dx_0;
@@ -496,8 +512,19 @@ namespace oofem {
 
 					FloatArray disps(6);
 					disps.at(1) = anx*pos_2 + bnx*pos + cnx;
-					disps.at(2) = ay*pos_4 + by*pos_3 + (cy - 12 * ay*psi_y)*pos_2 + (dy - 6 * by*psi_y)*pos + fy;
-					disps.at(3) = az*pos_4 + bz*pos_3 + (cz - 12 * az*psi_z)*pos_2 + (dz - 6 * bz*psi_z)*pos + fz;
+					if (psi_y == 0.0) {
+						disps.at(2) = ay*pos_4 + by*pos_3 + cy*pos_2 + dy*pos + fy;
+					}
+					else {
+						disps.at(2) = ay*pos_4 + by*pos_3 + (cy - 12 * ay*psi_y)*pos_2 + (dy - 6 * by*psi_y)*pos + fy;
+					}
+					if (psi_z == 0) {
+						disps.at(3) = az*pos_4 + bz*pos_3 + cz*pos_2 + dz*pos + fz;
+					}
+					else {
+						disps.at(3) = az*pos_4 + bz*pos_3 + (cz - 12 * az*psi_z)*pos_2 + (dz - 6 * bz*psi_z)*pos + fz;
+					}
+					
 					disps.at(4) = atx*pos_2 + btx*pos + ctx;
 					disps.at(5) = -(4 * az*pos_3 + 3 * bz*pos_2 + 2 * cz*pos + dz);  // inverted signs for rotations about y.
 					disps.at(6) = 4 * ay*pos_3 + 3 * by*pos_2 + 2 * cy*pos + dy;
