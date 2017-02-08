@@ -48,7 +48,7 @@
 #include "contact/contactelement.h"
 #include "unknownnumberingscheme.h"
 
-
+#include <math.h>
 #include <climits>
 #include <cstdlib>
 

@@ -77,7 +77,7 @@
 #include "sparsemtrxtype.h"
 #include "activebc.h"
 #include "classfactory.h"
-
+#include <math.h>
 #include <set>
 
 namespace oofem {
