@@ -191,7 +191,7 @@ namespace oofem {
 							CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
 
 							// transform to local coordinates
-							compArr.rotatedWith(T, 'n');
+							if (CLoad->giveCoordSystMode() == Load::CoordSystType::CST_Global)	compArr.rotatedWith(T, 'n');
 							FinalLoads.add(compArr);
 						}
 					}
@@ -280,7 +280,7 @@ namespace oofem {
 								// transform to local coordinates
 								d->giveElement(elNum)->computeGtoLRotationMatrix(T);
 								T.resizeWithData(6, 6);
-								compArr.rotatedWith(T, 'n');
+								if (CLoad->giveCoordSystMode() == Load::CoordSystType::CST_Global)	compArr.rotatedWith(T, 'n');
 
 								// add loads to our map
 								BeamLoads[elNum] += compArr;
