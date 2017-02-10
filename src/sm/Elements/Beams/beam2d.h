@@ -85,7 +85,7 @@ public:
     virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep);
     virtual int giveLocalCoordinateSystem(FloatMatrix &answer);
     virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord = 0);
-    virtual void giveEndForcesVector(FloatArray &answer, TimeStep *tStep);
+    virtual void giveEndForcesVector(FloatArray &answer, TimeStep *tStep, bool useWink = true);
 
     virtual int testElementExtension(ElementExtension ext) { return ( ext == Element_EdgeLoadSupport ); }
 

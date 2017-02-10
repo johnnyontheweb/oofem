@@ -127,19 +127,19 @@ namespace oofem {
 					SElem = static_cast<BeamBaseElement *>(elem.get());
 
 					double ksi, l = elem->computeLength();
-					FloatArray Fl, loadEndForces;
+					FloatArray Fl, Fl2, loadEndForces;
 
 					// get end forces considering the reduction due to winkler soil presence
 					if (strcmp(SElem->giveClassName(), "Beam3d") == 0 || strcmp(SElem->giveClassName(), "beam3d") == 0){
 						Beam3d *B3d = static_cast<Beam3d *>(SElem);
-						B3d->giveEndForcesVector(Fl, tStep);
+						B3d->giveEndForcesVector(Fl, tStep, true);
 					}
 					else {
 						Beam2d *B2d = static_cast<Beam2d *>(SElem);
-						B2d->giveEndForcesVector(Fl, tStep);
+						B2d->giveEndForcesVector(Fl, tStep, true);
 					}
 
-					map< double, FloatArray >ForceDict;
+					map< double, FloatArray >ForceDict, winkDict;
 					FloatArray I, E, Diff, dI, dE;
 
 					I.resize(6);
@@ -165,6 +165,45 @@ namespace oofem {
 					FloatArray FinalLoads;
 					FinalLoads.resize(6);
 					FinalLoads.zero();
+
+					double wy, wz;
+					wy = wz = 0.0;
+					double qIy, qIz, qEy, qEz;
+					qIy = qIz = qEy = qEz = 0.0;
+
+					// get end forces without the reduction due to winkler soil presence
+					if (strcmp(SElem->giveClassName(), "Beam3d") == 0 || strcmp(SElem->giveClassName(), "beam3d") == 0){
+						Beam3d *B3d = static_cast<Beam3d *>(SElem);
+						B3d->giveEndForcesVector(Fl2, tStep, false);
+						FloatArray compArr, diff;
+						diff.beDifferenceOf(Fl, Fl2);
+						compArr.resize(6);
+
+						wy = compArr.at(2) = -(diff.at(2) + diff.at(8)) / l;
+						wz = compArr.at(3) = -(diff.at(3) + diff.at(9)) / l;
+						FinalLoads.add(compArr);
+
+						qIy = -(3 * diff.at(2) - diff.at(8)) / l;
+						qIz = -(3 * diff.at(3) - diff.at(9)) / l;
+						qEy = -(3 * diff.at(8) - diff.at(2)) / l;
+						qEz = -(3 * diff.at(9) - diff.at(3)) / l;
+					}
+					else {
+						Beam2d *B2d = static_cast<Beam2d *>(SElem);
+						B2d->giveEndForcesVector(Fl2, tStep, false);
+						FloatArray compArr, diff;
+						diff.beDifferenceOf(Fl, Fl2);
+						compArr.resize(6);
+
+						wy = compArr.at(2) = -(diff.at(2) + diff.at(8)) / l;  // @TODO: check array positions for 2d beams
+						wz = compArr.at(3) = -(diff.at(3) + diff.at(9)) / l;
+						FinalLoads.add(compArr);
+
+						qIy = -(3 * diff.at(2) - diff.at(8)) / l;
+						qIz = -(3 * diff.at(3) - diff.at(9)) / l;
+						qEy = -(3 * diff.at(8) - diff.at(2)) / l;
+						qEz = -(3 * diff.at(9) - diff.at(3)) / l;
+					}
 
 					FloatMatrix T;
 					elem->computeGtoLRotationMatrix(T);
@@ -198,10 +237,16 @@ namespace oofem {
 
 					addComponents(I, FinalLoads, 0.0, l, true);
 					ForceDict[0.0] = I;
+					FloatArray wI, wE;
+					wI.resize(2); wE.resize(2);
+					wI.at(1) = qIy; wI.at(2) = qIz;
+					wE.at(1) = qEy; wE.at(2) = qEz;
+					winkDict[0.0] = wI;
 
 					for (GaussPoint *gp : *elem->giveDefaultIntegrationRulePtr()) {
 						//double dV = elem->computeVolumeAround(gp);
 						FloatArray ipState;
+						FloatArray winkState;
 						double pos;
 
 						ksi = 0.5 + 0.5 * gp->giveNaturalCoordinate(1);
@@ -216,12 +261,19 @@ namespace oofem {
 						addComponents(ipState, FinalLoads, pos, l, true);
 
 						ForceDict[pos] = ipState;
+
+						winkState.resize(2);
+						winkState.at(1) = qIy * (l - pos) / l + qEy * pos / l;
+						winkState.at(2) = qIz * (l - pos) / l + qEz * pos / l;
+						winkDict[pos] = winkState;
 					}
 
 					addComponents(E, FinalLoads, l, l, true);
 					ForceDict[l] = E;
+					winkDict[l] = wE;
 
 					BeamForces[elem->giveNumber()] = ForceDict;
+					BeamWinkler[elem->giveNumber()] = winkDict;
 					//BeamForces[elem->giveLabel()] = ForceDict;
 
 					//pair <double, double> loadPair;
@@ -438,33 +490,6 @@ namespace oofem {
 						dx_l = disps->at(1);
 						tx_l = disps->at(4);
 
-
-						// euler-bernoulli formulation
-						//ey = vy_0;
-						//dy = phiz_0;
-						//ay = bl.at(2) / 24 / EJzz;
-
-						//Ay = (vy_l - vy_0) / l_2 - ay*l_2 - dy / l;
-						//By = (phiz_l - phiz_0) / l - ay*l_2 * 4;
-
-						//by = (By - 2 * Ay) / l;
-						//cy = 3 * Ay - By;
-
-
-						//ez = vz_0;
-						//dz = -phiy_0; // inverted signs for angles
-						//az = bl.at(3) / 24 / EJyy;
-
-						//Az = (vz_l - vz_0) / l_2 - az*l_2 - dz / l;
-						//Bz = (-phiy_l + phiy_0) / l - az*l_2 * 4; // inverted signs for angles
-
-						//bz = (Bz - 2 * Az) / l;
-						//cz = 3 * Az - Bz;
-
-
-
-						
-
 						if (psi_y == 0.0) {  // Euler Bernoulli formulation
 							ay = bl.at(2) / 24 / EJzz;
 							dy = phiz_0;
@@ -479,8 +504,6 @@ namespace oofem {
 							by = (2 / l*(vy_0 - vy_l) + (phiz_l + phiz_0)) / (l_2 + 12 * psi_y) - 2 * ay*l;
 							cy = -(72 * EJzz*GKyAy*l* (vy_0 - vy_l) + GKyAy*l_2*(24 * EJzz*(2 * phiz_0 + phiz_l) - l_3*bl.at(2)) + 12 * EJzz*(12 * EJzz*(phiz_0 - phiz_l) - l_3*bl.at(2))) / (24 * EJzz*l* (GKyAy*l_2 + 12 * EJzz));
 						}
-
-
 
 						if (psi_z == 0.0) {
 							az = bl.at(3) / 24 / EJyy;
@@ -512,12 +535,14 @@ namespace oofem {
 
 					FloatArray disps(6);
 					disps.at(1) = anx*pos_2 + bnx*pos + cnx;
+
 					if (psi_y == 0.0) {
 						disps.at(2) = ay*pos_4 + by*pos_3 + cy*pos_2 + dy*pos + fy;
 					}
 					else {
 						disps.at(2) = ay*pos_4 + by*pos_3 + (cy - 12 * ay*psi_y)*pos_2 + (dy - 6 * by*psi_y)*pos + fy;
 					}
+
 					if (psi_z == 0) {
 						disps.at(3) = az*pos_4 + bz*pos_3 + cz*pos_2 + dz*pos + fz;
 					}
@@ -555,6 +580,7 @@ namespace oofem {
 			// square and save
 			BeamDisplacementsList.push_back(BeamDisplacements);
 			BeamForcesList.push_back(BeamForces);
+			BeamWinklerList.push_back(BeamWinkler);
 			//BeamExportModule::addMultiply(combBeamDisplacements, BeamDisplacements,,1.0);
 			//BeamExportModule::addMultiply(combBeamForces, BeamForces,,1.0);
 
@@ -570,39 +596,48 @@ namespace oofem {
 
 				BeamDisplacements = combBeamDisplacements;
 				BeamForces = combBeamForces;
+				BeamWinkler = combBeamWinkler;
 
 				combBeamDisplacements.clear();
 				combBeamForces.clear();
+				combBeamWinkler.clear();
 			}
 
 			double curTime = tStep->giveTargetTime();
 			map<int, map<double, FloatArray>>::iterator BForces_it = BeamForces.begin();
 			map<int, map<double, FloatArray>>::iterator BDisps_it = BeamDisplacements.begin();
+			map<int, map<double, FloatArray>>::iterator BWinks_it = BeamWinkler.begin();
 			for (;
 				BForces_it != BeamForces.end();
-				++BForces_it, ++BDisps_it)
+				++BForces_it, ++BDisps_it, ++BWinks_it)
 			{
 				map< double, FloatArray > &BForces = BForces_it->second;
 				map< double, FloatArray > &BDisps = BDisps_it->second;
+				map< double, FloatArray > &BWinks = BWinks_it->second;
 				Element* elem = d->giveElement(BForces_it->first);
 				int ID = elem->giveLabel();
 
 				map<double, FloatArray >::iterator forces_it = BForces.begin();
 				map<double, FloatArray >::iterator disps_it = BDisps.begin();
+				map<double, FloatArray >::iterator winks_it = BWinks.begin();
 
 				for (;
 					forces_it != BForces.end();
-					++forces_it, ++disps_it)
+					++forces_it, ++disps_it, winks_it)
 				{
 					double pos = forces_it->first;
 					FloatArray forces = forces_it->second;
 					FloatArray disps = disps_it->second;
+					FloatArray winks = winks_it->second;
 					fprintf(this->stream, "%10.3e;%d;%10.3e;", curTime, ID, pos);
 
 					for (auto &val : forces) {
 						fprintf(this->stream, "%10.3e;", val);
 					}
 					for (auto &val : disps) {
+						fprintf(this->stream, "%10.3e;", val);
+					}
+					for (auto &val : winks) {
 						fprintf(this->stream, "%10.3e;", val);
 					}
 					fprintf(this->stream, "\n");
@@ -636,6 +671,7 @@ namespace oofem {
 
 			BeamDisplacements.clear();
 			BeamForces.clear();
+			BeamWinkler.clear();
 
 			fflush(this->stream);
 		}
@@ -734,6 +770,13 @@ namespace oofem {
 		}
 		calcRoot(combBeamForces);
 
+		list<map<int, map<double, FloatArray>>>::iterator winks_it = BeamWinklerList.begin();
+		for (; winks_it != BeamWinklerList.end(); ++winks_it)
+		{
+			addMultiply(combBeamWinkler, *winks_it, *winks_it);  // mult by 1.0
+		}
+		calcRoot(combBeamWinkler);
+
 	}
 
 	void BeamExportModule::CQC(){
@@ -763,6 +806,18 @@ namespace oofem {
 			}
 		}
 		calcRoot(combBeamForces);
+
+		list<map<int, map<double, FloatArray>>>::iterator winks_it = BeamWinklerList.begin();
+
+		for (int i = 1; winks_it != BeamWinklerList.end(); ++winks_it, i++)
+		{
+			list<map<int, map<double, FloatArray>>>::iterator winks_it2 = BeamWinklerList.begin();
+			for (int j = 1; winks_it2 != BeamWinklerList.end(); ++winks_it2, j++)
+			{
+				addMultiply(combBeamWinkler, *winks_it, *winks_it2, rhos.at(i, j));
+			}
+		}
+		calcRoot(combBeamWinkler);
 	}
 
 	void
@@ -773,7 +828,7 @@ namespace oofem {
 			OOFEM_ERROR("failed to open file %s", fileName.c_str());
 		}
 		// ";" as separator
-		fprintf(this->stream, "#Time;BeamNo;DistanceFromI;N_x;T_y;T_z;M_x;M_y;M_z;dx;dy;dz;rx;ry;rz;");
+		fprintf(this->stream, "#Time;BeamNo;DistanceFromI;N_x;T_y;T_z;M_x;M_y;M_z;dx;dy;dz;rx;ry;rz;q_winky;q_winkz;");
 		//for ( int var: this->ists ) {
 		//    fprintf(this->stream, "%s    ", __InternalStateTypeToString( ( InternalStateType ) var) );
 		//}

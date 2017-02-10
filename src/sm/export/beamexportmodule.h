@@ -88,12 +88,15 @@ private:
 	
 	std::map< int, std::map< double, FloatArray > >BeamForces;
 	std::map< int, std::map< double, FloatArray > >BeamDisplacements;
+	std::map< int, std::map< double, FloatArray > >BeamWinkler;
 
 	std::list<std::map< int, std::map< double, FloatArray > > >BeamForcesList;
 	std::list<std::map< int, std::map< double, FloatArray > > >BeamDisplacementsList;
+	std::list<std::map< int, std::map< double, FloatArray > > >BeamWinklerList;
 
 	std::map< int, std::map< double, FloatArray > >combBeamForces;
 	std::map< int, std::map< double, FloatArray > >combBeamDisplacements;
+	std::map< int, std::map< double, FloatArray > >combBeamWinkler;
 
 	virtual void populateElResults(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src);
 	virtual void addMultiply(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src, std::map<int, std::map<double, FloatArray>> &src2, double fact = 1.0);

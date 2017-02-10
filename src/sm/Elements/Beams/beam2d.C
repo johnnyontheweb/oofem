@@ -458,12 +458,18 @@ Beam2d :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useU
 
 
 void
-Beam2d :: giveEndForcesVector(FloatArray &answer, TimeStep *tStep)
+Beam2d :: giveEndForcesVector(FloatArray &answer, TimeStep *tStep, bool useWink)
 {
     // stress equivalent vector in nodes (vector of internal forces)
     FloatArray load;
 
-    this->giveInternalForcesVector(answer, tStep, false);
+	if (useWink) {
+		this->giveInternalForcesVector(answer, tStep, false);
+	}
+	else
+	{
+		BeamBaseElement::giveInternalForcesVector(answer, tStep, false);
+	}
 
     // subtract exact end forces due to nonnodal loading
     this->computeLocalForceLoadVector(load, tStep, VM_Total);

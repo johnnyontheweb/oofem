@@ -707,12 +707,18 @@ namespace oofem {
 
 
 	void
-		Beam3d::giveEndForcesVector(FloatArray &answer, TimeStep *tStep)
+		Beam3d::giveEndForcesVector(FloatArray &answer, TimeStep *tStep, bool useWink)
 	{
 		// computes exact global end-forces vector
 		FloatArray loadEndForces;
 
-		this->giveInternalForcesVector(answer, tStep);
+		if (useWink) {
+			this->giveInternalForcesVector(answer, tStep);
+		}
+		else
+		{
+			BeamBaseElement::giveInternalForcesVector(answer, tStep, false);
+		}
 
 		// add exact end forces due to nonnodal loading
 		this->computeLocalForceLoadVector(loadEndForces, tStep, VM_Total); // will compute only contribution of loads applied directly on receiver (not using sets)

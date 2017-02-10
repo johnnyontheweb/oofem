@@ -104,7 +104,7 @@ namespace oofem {
 		virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep);
 		virtual int giveLocalCoordinateSystem(FloatMatrix &answer);
 		virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *, int useUpdatedGpRecord = 0);
-		void giveEndForcesVector(FloatArray &answer, TimeStep *tStep);
+		void giveEndForcesVector(FloatArray &answer, TimeStep *tStep, bool useWink = true);
 
 		virtual int computeGlobalCoordinates(FloatArray &answer, const FloatArray &lcoords);
 
