@@ -50,7 +50,8 @@ SimpleTransportCrossSection :: initializeFrom(InputRecord *ir)
 {
     IRResultType result;                // Required by IR_GIVE_FIELD macro
 
-    IR_GIVE_FIELD(ir, this->matNumber, _IFT_SimpleTransportCrossSection_material);
+    //IR_GIVE_FIELD(ir, this->matNumber, _IFT_SimpleTransportCrossSection_material);
+	IR_GIVE_OPTIONAL_FIELD(ir, this->matNumber, _IFT_SimpleTransportCrossSection_material);
     this->propertyDictionary.clear();
     if ( ir->hasField(_IFT_SimpleTransportCrossSection_thickness) ) {
         double thickness;
@@ -92,7 +93,8 @@ SimpleTransportCrossSection :: giveMaterial()
 int
 SimpleTransportCrossSection :: giveIPValue(FloatArray &answer, GaussPoint *ip, InternalStateType type, TimeStep *tStep)
 {
-    return this->domain->giveMaterial(this->matNumber)->giveIPValue(answer, ip, type, tStep);
+	//return this->domain->giveMaterial(this->matNumber)->giveIPValue(answer, ip, type, tStep);
+	return this->domain->giveMaterial(ip->giveElement()->giveMaterialNumber())->giveIPValue(answer, ip, type, tStep);
 }
 
 
