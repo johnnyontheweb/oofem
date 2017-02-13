@@ -93,7 +93,7 @@ SimpleTransportCrossSection :: giveMaterial()
 int
 SimpleTransportCrossSection :: giveIPValue(FloatArray &answer, GaussPoint *ip, InternalStateType type, TimeStep *tStep)
 {
-	if ( !this->matNumber ) {
+	if ( this->matNumber < 0 ) {
 		return this->domain->giveMaterial(ip->giveElement()->giveMaterialNumber())->giveIPValue(answer, ip, type, tStep);
 	}
 	else {
