@@ -86,14 +86,16 @@ SimpleTransportCrossSection :: checkConsistency()
 TransportMaterial *
 SimpleTransportCrossSection :: giveMaterial()
 {
-    return dynamic_cast< TransportMaterial * >( this->domain->giveMaterial(this->matNumber) );
+	if (!(this->matNumber < 1) && !(this->matNumber > this->domain->giveMaterials().size())) {
+		return dynamic_cast< TransportMaterial * >( this->domain->giveMaterial(this->matNumber) );
+	}
 }
 
 
 int
 SimpleTransportCrossSection :: giveIPValue(FloatArray &answer, GaussPoint *ip, InternalStateType type, TimeStep *tStep)
 {
-	if ( this->matNumber < 0 ) {
+	if (this->matNumber < 1 || this->matNumber > this->domain->giveMaterials().size()) {
 		return this->domain->giveMaterial(ip->giveElement()->giveMaterialNumber())->giveIPValue(answer, ip, type, tStep);
 	}
 	else {
