@@ -68,7 +68,7 @@ protected:
     /// Number of columns.
     int nColumns;
 	/// tolerance for zero entries. val<tol is considered zero
-	double tol = 1e-6;
+	double tol = 1e-12;
 	/// error flag. if !=0 it represents the bad row
 	mutable int errorFlag = 0;
 
