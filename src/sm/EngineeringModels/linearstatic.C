@@ -182,7 +182,7 @@ bool findDofGivenEquation(int badRow, Domain* d, int* nodeNum, int* elementNum, 
 		IntArray mstrDofs, locArr;
 		node->givePrimaryDofs(mstrDofs);
 		node->giveLocationArray(mstrDofs, locArr, EModelDefaultEquationNumbering());
-		curNode = node->giveNumber();
+		curNode = node->giveLabel();
 
 		int partialDofCount = locArr.giveSize();
 		if (partialDofCount) {
@@ -221,6 +221,7 @@ bool findDofGivenEquation(int badRow, Domain* d, int* nodeNum, int* elementNum, 
 			element->giveInternalDofManDofIDMask(i, ids);
 			intDofMan->giveLocationArray(ids, nodalArray, EModelDefaultEquationNumbering());
 			locArr.followedBy(nodalArray);
+			curElem = element->giveLabel();
 
 			intDofMan->giveMasterDofIDArray(ids, mstrDofs);
 			dofIdArray.followedBy(mstrDofs);
