@@ -136,7 +136,7 @@ void AbaqusUserElement :: postInitialize()
 {
     NLStructuralElement :: postInitialize();
 
-    this->ndofel = this->numberOfDofMans * this->nCoords;
+    this->ndofel = this->numberOfDofMans * this->nCoords; // dofs.giveSize();
     this->mlvarx = this->ndofel;
     this->nrhs = 2;
     this->rhs.resize(this->ndofel, this->nrhs);
@@ -151,7 +151,7 @@ void AbaqusUserElement :: postInitialize()
     this->DU.resize(this->ndofel, this->nrhs);
 
 	if (!this->coords.isNotEmpty()) {
-		this->mcrd = 0;
+		this->mcrd = 1;
 		for (auto j : this->dofs)
 		{
 			switch ((DofIDItem)j)
@@ -204,7 +204,7 @@ void AbaqusUserElement :: computeStiffnessMatrix(FloatMatrix &answer, MatRespons
     if ( !hasTangent() ) {
         // use uel to calculate the tangent
         FloatArray forces;
-        giveInternalForcesVector(forces, tStep, 0); // U, DU, 0);
+        giveInternalForcesVector(forces, tStep, U, DU, 0);
     }
     // give tangent
     answer = giveTempTangent();

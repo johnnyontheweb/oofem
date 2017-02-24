@@ -603,3 +603,5 @@ tests/sm/t3d.bmf
 /src/sm/Elements/AbaqusUserElement.h.bak
 /src/sm/Elements/AbaqusUserElementNEW.C
 /src/sm/Elements/AbaqusUserElementNEW.h
+/src/sm/EngineeringModels/nldeidynamic.C.bak
+/src/sm/EngineeringModels/nldeidynamicMOD.bp
