@@ -599,3 +599,7 @@ tests/sm/t3d.bmf
 /MinSizeRel/tettoia.in
 /MinSizeRel/termica-thermal.in
 /MinSizeRel/testLine3.in
+/src/sm/Elements/AbaqusUserElement.C.bak
+/src/sm/Elements/AbaqusUserElement.h.bak
+/src/sm/Elements/AbaqusUserElementNEW.C
+/src/sm/Elements/AbaqusUserElementNEW.h

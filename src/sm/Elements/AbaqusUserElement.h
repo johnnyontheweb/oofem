@@ -108,7 +108,7 @@ private:
     int ndofel = 0;
 
     /// mcrd
-    int mcrd = 2;
+    int mcrd = 0;
 
     /// mlvarx
     int mlvarx = 1;
@@ -187,11 +187,11 @@ public:
         tempAmatrx = src;
         hasTangentFlag = true;
     }
-    virtual FloatMatrix &letTempRhsBe(FloatMatrix &src) {
-        return tempRHS = src;
+    virtual void letTempRhsBe(FloatMatrix &src) {
+		tempRHS = src;
     }
-    virtual FloatArray &letTempSvarsBe(FloatArray &src) {
-        return tempSvars = src;
+    virtual void letTempSvarsBe(FloatArray &src) {
+		tempSvars = src;
     }
     virtual const FloatArray &giveStateVector() const {
         return svars;
@@ -207,13 +207,16 @@ public:
 
     virtual IRResultType initializeFrom(InputRecord *ir);
     virtual void giveInputRecord(DynamicInputRecord &input);
-    virtual void postInitialize();
+	virtual void postInitialize();
+
+	virtual void printOutputAt(FILE *file, TimeStep *tStep);
 
     // definition & identification
     virtual const char *giveClassName() const { return "AbaqusUserElement"; }
     virtual const char *giveInputRecordName() const { return _IFT_AbaqusUserElement_Name; }
     virtual integrationDomain giveIntegrationDomain() const {
-        return _UnknownIntegrationDomain;
+        // return _Unknown_integrationDomain;
+		return _UnknownIntegrationDomain;
     }
     virtual Element_Geometry_Type giveGeometryType() const {
         return EGT_line_1;
