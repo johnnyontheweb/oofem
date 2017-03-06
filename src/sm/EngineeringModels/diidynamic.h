@@ -113,7 +113,7 @@ public:
     virtual fMode giveFormulation() { return TL; }
 
     virtual void printDofOutputAt(FILE *stream, Dof *iDof, TimeStep *tStep);
-
+	virtual void terminate(TimeStep *tStep);
     void timesMtrx(FloatArray &answer, FloatArray &vec, CharType type, Domain *domain, TimeStep *tStep);
     void assembleLoadVector(FloatArray &_loadVector, Domain *domain, ValueModeType mode, TimeStep *tStep);
     void determineConstants(TimeStep *tStep);

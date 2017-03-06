@@ -595,6 +595,14 @@ contextIOResultType DIIDynamic :: saveContext(DataStream *stream, ContextMode mo
     return CIO_OK;
 }
 
+void
+DIIDynamic::terminate(TimeStep *tStep)
+{
+	StructuralEngngModel::terminate(tStep);
+	this->printReactionForces(tStep, 1);
+	fflush(this->giveOutputStream());
+}
+
 contextIOResultType DIIDynamic :: restoreContext(DataStream *stream, ContextMode mode, void *obj)
 {
     int closeFlag = 0;
