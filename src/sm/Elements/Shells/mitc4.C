@@ -1463,4 +1463,68 @@ MITC4Shell :: computeSurfaceNMatrix(FloatMatrix &answer, int boundaryID, const F
     answer.beNMatrixOf(n_vec, 6);
 }
 
+void
+MITC4Shell::computeConsistentMassMatrix(FloatMatrix &answer, TimeStep *tStep, double &mass, const double *ipDensity)
+// Computes numerically the consistent (full) mass matrix of the receiver.
+{
+	int nip, ndofs = computeNumberOfDofs();
+	double density, dV;
+	FloatMatrix n;
+	GaussIntegrationRule iRule(1, this, 1, 1);
+	IntArray mask;
+
+	answer.resize(ndofs, ndofs);
+	answer.zero();
+	if (!this->isActivated(tStep)) {
+		return;
+	}
+
+	if ((nip = this->giveNumberOfIPForMassMtrxIntegration()) == 0) {
+		OOFEM_ERROR("no integration points available");
+	}
+
+	iRule.setUpIntegrationPoints(this->giveIntegrationDomain(),
+		nPointsXY, nPointsZ, this->giveMaterialMode());
+
+	this->giveMassMtrxIntegrationgMask(mask);
+
+	mass = 0.;
+
+	for (GaussPoint *gp : iRule) {
+		this->computeNmatrixAt(gp->giveSubPatchCoordinates(), n);
+		density = this->giveCrossSection()->give('d', gp);
+
+		if (ipDensity != NULL) {
+			// Override density if desired
+			density = *ipDensity;
+		}
+
+		dV = this->computeVolumeAround(gp);
+		mass += density * dV;
+
+		if (mask.isEmpty()) {
+			answer.plusProductSymmUpper(n, n, density * dV);
+		}
+		else {
+			for (int i = 1; i <= ndofs; i++) {
+				for (int j = i; j <= ndofs; j++) {
+					double summ = 0.;
+					for (int k = 1; k <= n.giveNumberOfRows(); k++) {
+						if (mask.at(k) == 0) {
+							continue;
+						}
+
+						summ += n.at(k, i) * n.at(k, j);
+					}
+
+					answer.at(i, j) += summ * density * dV;
+				}
+			}
+		}
+	}
+
+	answer.symmetrized();
+}
+
+
 } // end namespace oofem
