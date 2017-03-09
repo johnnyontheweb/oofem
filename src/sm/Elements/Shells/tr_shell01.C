@@ -458,6 +458,55 @@ TR_SHELL01 :: SpatialLocalizerI_giveBBox(FloatArray &bb0, FloatArray &bb1)
     }
 }
 
+int
+TR_SHELL01::computeLoadLEToLRotationMatrix(FloatMatrix &answer, int iEdge, GaussPoint *gp)
+{
+	FloatArray e1, e2, e3, help, xl, yl;
+
+	// compute e1' = [N2-N1]  and  help = [N3-N1]
+	e1.beDifferenceOf(*this->giveNode(2)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
+	help.beDifferenceOf(*this->giveNode(3)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
+
+	// let us normalize e1'
+	e1.normalize();
+
+	// compute e3' : vector product of e1' x help
+	e3.beVectorProductOf(e1, help);
+	// let us normalize
+	e3.normalize();
+
+	if (la1.computeNorm() != 0) {
+		// custom local axes
+		e1 = la1;
+	}
+
+	// now from e3' x e1' compute e2'
+	e2.beVectorProductOf(e3, e1);
+
+	IntArray edgeNodes;
+	((FEI2dTrLin*)(this->giveInterpolation()))->computeLocalEdgeMapping(edgeNodes, iEdge);
+
+	xl.beDifferenceOf(*this->giveNode(edgeNodes.at(2))->giveCoordinates(), *this->giveNode(edgeNodes.at(1))->giveCoordinates());
+
+	xl.normalize();
+	yl.beVectorProductOf(e3, xl);
+
+	answer.resize(6, 6);
+	answer.zero();
+
+	answer.at(1, 1) = answer.at(4, 4) = e1.dotProduct(xl);
+	answer.at(1, 2) = answer.at(4, 5) = e1.dotProduct(yl);
+	answer.at(1, 3) = answer.at(4, 6) = e1.dotProduct(e3);
+	answer.at(2, 1) = answer.at(5, 4) = e2.dotProduct(xl);
+	answer.at(2, 2) = answer.at(5, 5) = e2.dotProduct(yl);
+	answer.at(2, 3) = answer.at(5, 6) = e2.dotProduct(e3);
+	answer.at(3, 1) = answer.at(6, 4) = e3.dotProduct(xl);
+	answer.at(3, 2) = answer.at(6, 5) = e3.dotProduct(yl);
+	answer.at(3, 3) = answer.at(6, 6) = e3.dotProduct(e3);
+
+	return 1;
+}
+
 //
 // io routines
 //
