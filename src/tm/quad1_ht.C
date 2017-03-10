@@ -147,6 +147,18 @@ Quad1_ht :: giveInterface(InterfaceType interface)
 }
 
 
+void
+Quad1_ht::printOutputAt(FILE *file, TimeStep *tStep)
+// Performs end-of-step operations.
+{
+	FloatArray v;
+	GaussPoint *gp;
+
+	fprintf(file, "element %d (%8d):\n", this->giveLabel(), number);
+
+}
+
+
 #ifdef __OOFEG
 void Quad1_ht :: drawRawGeometry(oofegGraphicContext &gc, TimeStep *tStep)
 {

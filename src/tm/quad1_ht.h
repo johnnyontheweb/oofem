@@ -83,6 +83,9 @@ public:
 protected:
     virtual void computeGaussPoints();
     virtual double computeEdgeVolumeAround(GaussPoint *gp, int iEdge);
+
+private:
+	virtual void printOutputAt(FILE *file, TimeStep *tStep);
 };
 
 /**
