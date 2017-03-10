@@ -933,52 +933,52 @@ MITC4Shell :: printOutputAt(FILE *file, TimeStep *tStep)
 
     fprintf(file, "element %d (%8d):\n", this->giveLabel(), number);
 
-    for ( int i = 0; i < nPointsXY; i++ ) {
-        fprintf(file, "  GP %d :", i + 1);
+    //for ( int i = 0; i < nPointsXY; i++ ) {
+    //    fprintf(file, "  GP %d :", i + 1);
 
-        this->giveMidplaneIPValue(v, i, IST_ShellForceTensor, tStep);
-        fprintf(file, "  forces     ");
-        for ( auto &val : v ) {
-            fprintf(file, " %.4e", val);
-        }
+    //    this->giveMidplaneIPValue(v, i, IST_ShellForceTensor, tStep);
+    //    fprintf(file, "  forces     ");
+    //    for ( auto &val : v ) {
+    //        fprintf(file, " %.4e", val);
+    //    }
 
-        this->giveMidplaneIPValue(v, i, IST_ShellMomentTensor, tStep);
-        fprintf(file, "\n          moments    ");
-        for ( auto &val : v ) {
-            fprintf(file, " %.4e", val);
-        }
+    //    this->giveMidplaneIPValue(v, i, IST_ShellMomentTensor, tStep);
+    //    fprintf(file, "\n          moments    ");
+    //    for ( auto &val : v ) {
+    //        fprintf(file, " %.4e", val);
+    //    }
 
-        this->giveMidplaneIPValue(v, i, IST_ShellStrainTensor, tStep);
-        fprintf(file, "\n          strains    ");
-        for ( auto &val : v ) {
-            fprintf(file, " %.4e", val);
-        }
+    //    this->giveMidplaneIPValue(v, i, IST_ShellStrainTensor, tStep);
+    //    fprintf(file, "\n          strains    ");
+    //    for ( auto &val : v ) {
+    //        fprintf(file, " %.4e", val);
+    //    }
 
-        this->giveMidplaneIPValue(v, i, IST_CurvatureTensor, tStep);
-        fprintf(file, "\n          curvatures ");
-        for ( auto &val : v ) {
-            fprintf(file, " %.4e", val);
-        }
+    //    this->giveMidplaneIPValue(v, i, IST_CurvatureTensor, tStep);
+    //    fprintf(file, "\n          curvatures ");
+    //    for ( auto &val : v ) {
+    //        fprintf(file, " %.4e", val);
+    //    }
 
-        for ( int j = 0; j < nPointsZ; j++ ) {
-            gp = integrationRulesArray [ 0 ]->getIntegrationPoint(nPointsZ * i + j);
+    //    for ( int j = 0; j < nPointsZ; j++ ) {
+    //        gp = integrationRulesArray [ 0 ]->getIntegrationPoint(nPointsZ * i + j);
 
-            fprintf(file, "\n          GP %d.%d :", i + 1, j + 1);
+    //        fprintf(file, "\n          GP %d.%d :", i + 1, j + 1);
 
-            this->giveIPValue(v, gp, IST_StrainTensor, tStep);
-            fprintf(file, "    strains    ");
-            for ( auto &val : v ) {
-                fprintf(file, " %.4e", val);
-            }
+    //        this->giveIPValue(v, gp, IST_StrainTensor, tStep);
+    //        fprintf(file, "    strains    ");
+    //        for ( auto &val : v ) {
+    //            fprintf(file, " %.4e", val);
+    //        }
 
-            this->giveIPValue(v, gp, IST_StressTensor, tStep);
-            fprintf(file, "\n                      stresses   ");
-            for ( auto &val : v ) {
-                fprintf(file, " %.4e", val);
-            }
-        }
-        fprintf(file, "\n");
-    }
+    //        this->giveIPValue(v, gp, IST_StressTensor, tStep);
+    //        fprintf(file, "\n                      stresses   ");
+    //        for ( auto &val : v ) {
+    //            fprintf(file, " %.4e", val);
+    //        }
+    //    }
+    //    fprintf(file, "\n");
+    //}
 }
 
 void

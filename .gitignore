@@ -605,3 +605,8 @@ tests/sm/t3d.bmf
 /src/sm/Elements/AbaqusUserElementNEW.h
 /src/sm/EngineeringModels/nldeidynamic.C.bak
 /src/sm/EngineeringModels/nldeidynamicMOD.bp
+/MinSizeRel/compare.xlsx
+/MinSizeRel/plotDisp_vs_time.PNG
+/MinSizeRel/point.in
+/MinSizeRel/thermal2.in
+/MinSizeRel/thermal5_edges.in

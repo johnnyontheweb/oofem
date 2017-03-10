@@ -288,40 +288,40 @@ TR_SHELL01 :: printOutputAt(FILE *file, TimeStep *tStep)
     IntegrationRule *iRule = this->giveDefaultIntegrationRulePtr();
     fprintf( file, "element %d (%8d) :\n", this->giveLabel(), this->giveNumber() );
 
-    for ( auto &gp: *iRule ) {
-        fprintf( file, "  GP %2d.%-2d :", iRule->giveNumber(), gp->giveNumber() );
-        // Strain - Curvature
-        this->giveIPValue(v, gp, IST_ShellStrainTensor, tStep);
+    //for ( auto &gp: *iRule ) {
+    //    fprintf( file, "  GP %2d.%-2d :", iRule->giveNumber(), gp->giveNumber() );
+    //    // Strain - Curvature
+    //    this->giveIPValue(v, gp, IST_ShellStrainTensor, tStep);
 
-        fprintf(file, "  strains    ");
-        // eps_x, eps_y, eps_z, eps_yz, eps_xz, eps_xy
-        fprintf(file, " %.4e %.4e %.4e %.4e %.4e %.4e ",
-                v.at(1), v.at(2), v.at(3), v.at(4), v.at(5), v.at(6) );
+    //    fprintf(file, "  strains    ");
+    //    // eps_x, eps_y, eps_z, eps_yz, eps_xz, eps_xy
+    //    fprintf(file, " %.4e %.4e %.4e %.4e %.4e %.4e ",
+    //            v.at(1), v.at(2), v.at(3), v.at(4), v.at(5), v.at(6) );
 
-        this->giveIPValue(v, gp, IST_CurvatureTensor, tStep);
+    //    this->giveIPValue(v, gp, IST_CurvatureTensor, tStep);
 
-        fprintf(file, "\n              curvatures ");
-        // k_x, k_y, k_z, k_yz, k_xz, k_xy
-        fprintf(file, " %.4e %.4e %.4e %.4e %.4e %.4e ",
-                v.at(1), v.at(2), v.at(3), v.at(4), v.at(5), v.at(6) );
+    //    fprintf(file, "\n              curvatures ");
+    //    // k_x, k_y, k_z, k_yz, k_xz, k_xy
+    //    fprintf(file, " %.4e %.4e %.4e %.4e %.4e %.4e ",
+    //            v.at(1), v.at(2), v.at(3), v.at(4), v.at(5), v.at(6) );
 
-        // Forces - Moments
-        this->giveIPValue(v, gp, IST_ShellForceTensor, tStep);
+    //    // Forces - Moments
+    //    this->giveIPValue(v, gp, IST_ShellForceTensor, tStep);
 
-        fprintf(file, "\n              stresses   ");
-        // n_x, n_y, n_z, v_yz, v_xz, v_xy
-        fprintf(file, " %.4e %.4e %.4e %.4e %.4e %.4e ",
-                v.at(1), v.at(2), v.at(3), v.at(4), v.at(5), v.at(6) );
+    //    fprintf(file, "\n              stresses   ");
+    //    // n_x, n_y, n_z, v_yz, v_xz, v_xy
+    //    fprintf(file, " %.4e %.4e %.4e %.4e %.4e %.4e ",
+    //            v.at(1), v.at(2), v.at(3), v.at(4), v.at(5), v.at(6) );
 
-        this->giveIPValue(v, gp, IST_ShellMomentTensor, tStep);
+    //    this->giveIPValue(v, gp, IST_ShellMomentTensor, tStep);
 
-        fprintf(file, "\n              moments    ");
-        // m_x, m_y, m_z, m_yz, m_xz, m_xy
-        fprintf(file, " %.4e %.4e %.4e %.4e %.4e %.4e ",
-                v.at(1), v.at(2), v.at(3), v.at(4), v.at(5), v.at(6) );
+    //    fprintf(file, "\n              moments    ");
+    //    // m_x, m_y, m_z, m_yz, m_xz, m_xy
+    //    fprintf(file, " %.4e %.4e %.4e %.4e %.4e %.4e ",
+    //            v.at(1), v.at(2), v.at(3), v.at(4), v.at(5), v.at(6) );
 
-        fprintf(file, "\n");
-    }
+    //    fprintf(file, "\n");
+    //}
 }
 
 
