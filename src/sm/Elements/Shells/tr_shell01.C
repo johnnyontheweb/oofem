@@ -180,7 +180,8 @@ void TR_SHELL01 :: computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, Ti
 
 
 }
-  
+
+
 bool
 TR_SHELL01 :: giveRotationMatrix(FloatMatrix &answer)
 {
@@ -506,6 +507,31 @@ TR_SHELL01::computeLoadLEToLRotationMatrix(FloatMatrix &answer, int iEdge, Gauss
 
 	return 1;
 }
+
+int
+TR_SHELL01::computeLoadGToLRotationMtrx(FloatMatrix &answer)
+// Returns the rotation matrix of the receiver of the size [5,6]
+// f(local) = T * f(global)
+{
+	return this->plate->computeLoadGToLRotationMtrx(answer);
+}
+
+void
+TR_SHELL01::computeEdgeNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords)
+{
+	FloatArray n_vec;
+	this->giveInterpolation()->boundaryEdgeEvalN(n_vec, boundaryID, lcoords, FEIElementGeometryWrapper(this));
+	answer.beNMatrixOf(n_vec, 6);
+}
+
+void
+TR_SHELL01::computeSurfaceNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords)
+{
+	FloatArray n_vec;
+	this->giveInterpolation()->boundarySurfaceEvalN(n_vec, boundaryID, lcoords, FEIElementGeometryWrapper(this));
+	answer.beNMatrixOf(n_vec, 6);
+}
+
 
 //
 // io routines

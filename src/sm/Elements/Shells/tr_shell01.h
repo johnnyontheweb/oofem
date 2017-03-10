@@ -99,6 +99,7 @@ public:
     virtual void giveCharacteristicMatrix(FloatMatrix &answer, CharType mtrx, TimeStep *tStep);
     virtual double computeVolumeAround(GaussPoint *gp);
     virtual bool giveRotationMatrix(FloatMatrix &answer);
+	int computeLoadGToLRotationMtrx(FloatMatrix &answer);
 
     virtual void updateYourself(TimeStep *tStep);
     virtual void updateInternalState(TimeStep *tStep);
@@ -166,6 +167,11 @@ public:
     { OOFEM_ERROR("calling of this function is not allowed"); }
     virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord)
     { OOFEM_ERROR("calling of this function is not allowed"); }
+
+private:
+	const FloatMatrix *computeGtoLRotationMatrix();
+	virtual void computeSurfaceNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords);
+	virtual void computeEdgeNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords);
 };
 } // end namespace oofem
 #endif
