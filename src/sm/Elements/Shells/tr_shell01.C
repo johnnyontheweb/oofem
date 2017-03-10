@@ -113,6 +113,50 @@ TR_SHELL01 :: postInitialize()
 }
 
 void
+TR_SHELL01::giveNodeCoordinates(double &x1, double &x2, double &x3,
+double &y1, double &y2, double &y3,
+double &z1, double &z2, double &z3)
+{
+	FloatArray nc1(3), nc2(3), nc3(3);
+
+	this->giveLocalCoordinates(nc1, *(this->giveNode(1)->giveCoordinates()));
+	this->giveLocalCoordinates(nc2, *(this->giveNode(2)->giveCoordinates()));
+	this->giveLocalCoordinates(nc3, *(this->giveNode(3)->giveCoordinates()));
+
+	x1 = nc1.at(1);
+	x2 = nc2.at(1);
+	x3 = nc3.at(1);
+
+	y1 = nc1.at(2);
+	y2 = nc2.at(2);
+	y3 = nc3.at(2);
+
+	z1 = nc1.at(3);
+	z2 = nc2.at(3);
+	z3 = nc3.at(3);
+}
+
+void
+TR_SHELL01::giveLocalCoordinates(FloatArray &answer, FloatArray &global)
+// Returns global coordinates given in global vector
+// transformed into local coordinate system of the
+// receiver
+{
+	FloatArray offset;
+	// test the parametr
+	if (global.giveSize() != 3) {
+		OOFEM_ERROR("cannot transform coordinates - size mismatch");
+		exit(1);
+	}
+
+	this->computeGtoLRotationMatrix();
+
+	offset = global;
+	offset.subtract(*this->giveNode(1)->giveCoordinates());
+	answer.beProductOf(this->plate->GtoLRotationMatrix, offset);
+}
+
+void
 TR_SHELL01 :: updateLocalNumbering(EntityRenumberingFunctor &f)
 {
     StructuralElement :: updateLocalNumbering(f);
@@ -530,6 +574,29 @@ TR_SHELL01::computeSurfaceNMatrix(FloatMatrix &answer, int boundaryID, const Flo
 	FloatArray n_vec;
 	this->giveInterpolation()->boundarySurfaceEvalN(n_vec, boundaryID, lcoords, FEIElementGeometryWrapper(this));
 	answer.beNMatrixOf(n_vec, 6);
+}
+
+
+const FloatMatrix *
+TR_SHELL01::computeGtoLRotationMatrix()
+{
+	return this->plate->computeGtoLRotationMatrix();
+}
+
+
+double
+TR_SHELL01::computeEdgeVolumeAround(GaussPoint *gp, int iEdge)
+{
+	std::vector< FloatArray >lc = {
+		FloatArray(3), FloatArray(3), FloatArray(3)
+	};
+	this->giveNodeCoordinates(lc[0].at(1), lc[1].at(1), lc[2].at(1),
+		lc[0].at(2), lc[1].at(2), lc[2].at(2),
+		lc[0].at(3), lc[1].at(3), lc[2].at(3));
+
+
+	double detJ = this->plate->interp_lin.edgeGiveTransformationJacobian(iEdge, gp->giveNaturalCoordinates(), FEIVertexListGeometryWrapper(lc));
+	return detJ * gp->giveWeight();
 }
 
 

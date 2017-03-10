@@ -169,9 +169,14 @@ public:
     { OOFEM_ERROR("calling of this function is not allowed"); }
 
 private:
+	void giveNodeCoordinates(double &x1, double &x2, double &x3,
+		double &y1, double &y2, double &y3,
+		double &z1, double &z2, double &z3);
+	void giveLocalCoordinates(FloatArray &answer, FloatArray &global);
 	const FloatMatrix *computeGtoLRotationMatrix();
 	virtual void computeSurfaceNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords);
 	virtual void computeEdgeNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords);
+	virtual double computeEdgeVolumeAround(GaussPoint *gp, int iEdge);
 };
 } // end namespace oofem
 #endif
