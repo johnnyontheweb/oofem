@@ -105,7 +105,6 @@ namespace oofem {
 		virtual SPRPatchType SPRNodalRecoveryMI_givePatchType();
 		virtual void NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node, InternalStateType type, TimeStep *tStep);
 
-		virtual void computeConsistentMassMatrix(FloatMatrix &answer, TimeStep *tStep, double &mass, const double *ipDensity = NULL);
 		virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep);
 
 		// transformation
@@ -166,6 +165,7 @@ namespace oofem {
 
     virtual void computeSurfaceNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords);
     virtual void computeEdgeNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords);
+	virtual void setupIRForMassMtrxIntegration(IntegrationRule &iRule);
  
 	};
 } // end namespace oofem
