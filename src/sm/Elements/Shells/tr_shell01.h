@@ -177,6 +177,7 @@ private:
 	virtual void computeSurfaceNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords);
 	virtual void computeEdgeNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords);
 	virtual double computeEdgeVolumeAround(GaussPoint *gp, int iEdge);
+	virtual double computeSurfaceVolumeAround(GaussPoint *gp, int iSurf);
 };
 } // end namespace oofem
 #endif

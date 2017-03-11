@@ -599,6 +599,11 @@ TR_SHELL01::computeEdgeVolumeAround(GaussPoint *gp, int iEdge)
 	return detJ * gp->giveWeight();
 }
 
+double
+TR_SHELL01::computeSurfaceVolumeAround(GaussPoint *gp, int iSurf)
+{
+	return this->computeVolumeAround(gp);
+}
 
 //
 // io routines
