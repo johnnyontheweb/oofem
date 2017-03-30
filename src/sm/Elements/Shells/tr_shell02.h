@@ -154,8 +154,8 @@ protected:
     { OOFEM_ERROR("calling of this function is not allowed"); }
     virtual void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
     { OOFEM_ERROR("calling of this funciton is not allowed"); }
-    virtual void computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode)
-    { OOFEM_ERROR("calling of this function is not allowed"); }
+	virtual void computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode);
+    // { OOFEM_ERROR("calling of this function is not allowed"); }
 
 public:
     virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep)

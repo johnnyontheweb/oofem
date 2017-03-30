@@ -39,6 +39,7 @@
 #include "gausspoint.h"
 #include "classfactory.h"
 #include "node.h"
+#include "load.h"
 
 #ifdef __OOFEG
  #include "node.h"
@@ -68,25 +69,18 @@ TR_SHELL02 :: initializeFrom(InputRecord *ir)
     if ( result != IRRT_OK ) {
         return result;
     }
-	
-	// optional record for 1st local axes
-	la1.resize(3);
-	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
-	IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_TR_SHELL02_FirstLocalAxis);
 
-	result = plate->initializeFrom(ir);
+    result = plate->initializeFrom(ir);
     if ( result != IRRT_OK ) {
         return result;
     }
-	plate->la1 = la1;
 
     result = membrane->initializeFrom(ir);
     if ( result != IRRT_OK ) {
         return result;
     }
-	membrane->la1 = la1;
 
-	return IRRT_OK;
+    return IRRT_OK;
 }
 
 void
@@ -226,6 +220,12 @@ TR_SHELL02 :: computeVolumeAround(GaussPoint *gp)
     return plate->computeVolumeAround(gp);
 }
 
+void
+TR_SHELL02 :: computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode)
+{
+        OOFEM_ERROR("This function is not implemented yet.");
+}
+
 int
 TR_SHELL02 :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep)
 {
@@ -350,7 +350,7 @@ TR_SHELL02 :: ZZErrorEstimatorI_giveIntegrationRule()
 void
 TR_SHELL02 :: ZZErrorEstimatorI_computeLocalStress(FloatArray &answer, FloatArray &sig)
 {
-    // sig is global ShellForceMomentumTensor
+    // sig is global ShellForceMomentTensor
     FloatMatrix globTensor(3, 3);
     const FloatMatrix *GtoLRotationMatrix = plate->computeGtoLRotationMatrix();
     FloatMatrix LtoGRotationMatrix;
