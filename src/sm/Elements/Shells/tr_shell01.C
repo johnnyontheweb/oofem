@@ -313,17 +313,9 @@ TR_SHELL01 :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
         membrane->giveIPValue(aux, membraneGP, type, tStep);
         answer.add(aux);
         return 1;
-	} else if (type == IST_StressTensor) {
-		FloatArray help;
+	} else if (type == IST_StressTensor || type == IST_StrainTensor) {
 		answer.resize(6);
-		help = static_cast< StructuralMaterialStatus * >(gp->giveMaterialStatus())->giveStressVector();
-
-		answer.at(1) = help.at(1); // nx
-		answer.at(2) = help.at(2); // ny
-		answer.at(3) = 0.0; // nz
-		answer.at(4) = help.at(8); // vyz
-		answer.at(5) = help.at(7); // vxy
-		answer.at(6) = help.at(3); // vxy
+		answer.zero();
 		return 1;
     } else {
         return StructuralElement :: giveIPValue(answer, gp, type, tStep);

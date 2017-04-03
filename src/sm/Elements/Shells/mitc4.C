@@ -1051,7 +1051,18 @@ MITC4Shell :: giveMidplaneIPValue(FloatArray &answer, int gpXY, InternalStateTyp
         IntegrationRule *iRule = new GaussIntegrationRule(1, this, 1, 10);
         GaussPoint *midGP = new GaussPoint( iRule, 1, coords, 1, this->giveMaterialMode() );
 
-        this->giveIPValue(answer, midGP, IST_StrainTensor, tStep);
+        // this->giveIPValue(answer, midGP, IST_StrainTensor, tStep);
+		FloatMatrix globTensor;
+		CharTensor cht;
+
+		cht = GlobalStrainTensor;
+		this->giveCharacteristicTensor(globTensor, cht, gp, tStep);
+		answer.at(1) = globTensor.at(1, 1); //xx
+		answer.at(2) = globTensor.at(2, 2); //yy
+		answer.at(3) = globTensor.at(3, 3); //zz
+		answer.at(4) = 2 * globTensor.at(2, 3); //yz
+		answer.at(5) = 2 * globTensor.at(1, 3); //xz
+		answer.at(6) = 2 * globTensor.at(1, 2); //xy
     } else {
         OOFEM_ERROR("MITC4Shell :: giveMidplaneIPValue - unknown type");
     }
@@ -1118,29 +1129,25 @@ MITC4Shell :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
     answer.resize(6);
 
     if (  type == IST_StrainTensor ) {
-        cht = GlobalStrainTensor;
-
-        this->giveCharacteristicTensor(globTensor, cht, gp, tStep);
-
-        answer.at(1) = globTensor.at(1, 1); //xx
-        answer.at(2) = globTensor.at(2, 2); //yy
-        answer.at(3) = globTensor.at(3, 3); //zz
-        answer.at(4) = 2 * globTensor.at(2, 3); //yz
-        answer.at(5) = 2 * globTensor.at(1, 3); //xz
-        answer.at(6) = 2 * globTensor.at(1, 2); //xy
+  //      cht = GlobalStrainTensor;
+		//this->giveCharacteristicTensor(globTensor, cht, gp, tStep);
+		//answer.at(1) = globTensor.at(1, 1); //xx
+  //      answer.at(2) = globTensor.at(2, 2); //yy
+  //      answer.at(3) = globTensor.at(3, 3); //zz
+  //      answer.at(4) = 2 * globTensor.at(2, 3); //yz
+  //      answer.at(5) = 2 * globTensor.at(1, 3); //xz
+  //      answer.at(6) = 2 * globTensor.at(1, 2); //xy
 
         return 1;
     } else if ( type == IST_StressTensor ) {
-        cht = GlobalForceTensor;
-
-        this->giveCharacteristicTensor(globTensor, cht, gp, tStep);
-
-        answer.at(1) = globTensor.at(1, 1); //xx
-        answer.at(2) = globTensor.at(2, 2); //yy
-        answer.at(3) = globTensor.at(3, 3); //zz
-        answer.at(4) = globTensor.at(2, 3); //yz
-        answer.at(5) = globTensor.at(1, 3); //xz
-        answer.at(6) = globTensor.at(1, 2); //xy
+        //cht = GlobalForceTensor;
+        //this->giveCharacteristicTensor(globTensor, cht, gp, tStep);
+        //answer.at(1) = globTensor.at(1, 1); //xx
+        //answer.at(2) = globTensor.at(2, 2); //yy
+        //answer.at(3) = globTensor.at(3, 3); //zz
+        //answer.at(4) = globTensor.at(2, 3); //yz
+        //answer.at(5) = globTensor.at(1, 3); //xz
+        //answer.at(6) = globTensor.at(1, 2); //xy
 
         return 1;
     } else if ( type == IST_ShellMomentTensor || type == IST_ShellForceTensor || type == IST_CurvatureTensor || type == IST_ShellStrainTensor ) {
