@@ -628,7 +628,22 @@ MITC4Shell :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int 
     answer.at(6, 20) = hkx.at(4);
     answer.at(6, 22) = -r3 / 2. * a4 * ( hkx.at(4) * V24.at(2) + hky.at(4) * V24.at(1) );
     answer.at(6, 23) = r3 / 2. * a4 * ( hky.at(4) * V14.at(1) + hky.at(4) * V14.at(2) );
+
+	
 }
+
+//void
+//MITC4Shell :: giveInternalForcesVector(FloatArray &answer,
+//    TimeStep *tStep, int useUpdatedGpRecord)
+//{
+//	FloatMatrix stiffness;
+//	FloatArray u;
+//
+//	this->computeStiffnessMatrix(stiffness, SecantStiffness, tStep);
+//	this->computeVectorOf(VM_Total, tStep, u);
+//	answer.beProductOf(stiffness, u);
+//
+//}
 
 void
 MITC4Shell :: giveThickness(double &a1, double &a2, double &a3, double &a4)
@@ -861,6 +876,7 @@ MITC4Shell::computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, T
 	for (GaussPoint *gp : *integrationRulesArray[0]) {
 		double dV = this->computeVolumeAround(gp);
 		double drillCoeff = this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp);
+		double E = this->giveMaterial()->give('E', gp);
 
 		// Drilling stiffness is here for improved numerical properties
 		if (drillCoeff > 0.) {
@@ -868,7 +884,7 @@ MITC4Shell::computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, T
 			for (int j = 0; j < num; j++) {      // TODO: adapt when evalN is fixed for mitc4
 				n(j >> 1) -= gp->giveWeight() / 8;  //    | +1 - (-1) |^3 = 2^3 normalized to 1.
 			}
-			drillStiffness.plusDyadSymmUpper(n, drillCoeff * dV);
+			drillStiffness.plusDyadSymmUpper(n, 0.0005*E*drillCoeff * dV);
 			drillCoeffFlag = true;
 		}
 	}
@@ -933,52 +949,54 @@ MITC4Shell :: printOutputAt(FILE *file, TimeStep *tStep)
 
     fprintf(file, "element %d (%8d):\n", this->giveLabel(), number);
 
-    //for ( int i = 0; i < nPointsXY; i++ ) {
-    //    fprintf(file, "  GP %d :", i + 1);
+#ifdef DEBUG
+    for ( int i = 0; i < nPointsXY; i++ ) {
+        fprintf(file, "  GP %d :", i + 1);
 
-    //    this->giveMidplaneIPValue(v, i, IST_ShellForceTensor, tStep);
-    //    fprintf(file, "  forces     ");
-    //    for ( auto &val : v ) {
-    //        fprintf(file, " %.4e", val);
-    //    }
+        this->giveMidplaneIPValue(v, i, IST_ShellForceTensor, tStep);
+        fprintf(file, "  forces     ");
+        for ( auto &val : v ) {
+            fprintf(file, " %.4e", val);
+        }
 
-    //    this->giveMidplaneIPValue(v, i, IST_ShellMomentTensor, tStep);
-    //    fprintf(file, "\n          moments    ");
-    //    for ( auto &val : v ) {
-    //        fprintf(file, " %.4e", val);
-    //    }
+        this->giveMidplaneIPValue(v, i, IST_ShellMomentTensor, tStep);
+        fprintf(file, "\n          moments    ");
+        for ( auto &val : v ) {
+            fprintf(file, " %.4e", val);
+        }
 
-    //    this->giveMidplaneIPValue(v, i, IST_ShellStrainTensor, tStep);
-    //    fprintf(file, "\n          strains    ");
-    //    for ( auto &val : v ) {
-    //        fprintf(file, " %.4e", val);
-    //    }
+        this->giveMidplaneIPValue(v, i, IST_ShellStrainTensor, tStep);
+        fprintf(file, "\n          strains    ");
+        for ( auto &val : v ) {
+            fprintf(file, " %.4e", val);
+        }
 
-    //    this->giveMidplaneIPValue(v, i, IST_CurvatureTensor, tStep);
-    //    fprintf(file, "\n          curvatures ");
-    //    for ( auto &val : v ) {
-    //        fprintf(file, " %.4e", val);
-    //    }
+        this->giveMidplaneIPValue(v, i, IST_CurvatureTensor, tStep);
+        fprintf(file, "\n          curvatures ");
+        for ( auto &val : v ) {
+            fprintf(file, " %.4e", val);
+        }
 
-    //    for ( int j = 0; j < nPointsZ; j++ ) {
-    //        gp = integrationRulesArray [ 0 ]->getIntegrationPoint(nPointsZ * i + j);
+        for ( int j = 0; j < nPointsZ; j++ ) {
+            gp = integrationRulesArray [ 0 ]->getIntegrationPoint(nPointsZ * i + j);
 
-    //        fprintf(file, "\n          GP %d.%d :", i + 1, j + 1);
+            fprintf(file, "\n          GP %d.%d :", i + 1, j + 1);
 
-    //        this->giveIPValue(v, gp, IST_StrainTensor, tStep);
-    //        fprintf(file, "    strains    ");
-    //        for ( auto &val : v ) {
-    //            fprintf(file, " %.4e", val);
-    //        }
+            this->giveIPValue(v, gp, IST_StrainTensor, tStep);
+            fprintf(file, "    strains    ");
+            for ( auto &val : v ) {
+                fprintf(file, " %.4e", val);
+            }
 
-    //        this->giveIPValue(v, gp, IST_StressTensor, tStep);
-    //        fprintf(file, "\n                      stresses   ");
-    //        for ( auto &val : v ) {
-    //            fprintf(file, " %.4e", val);
-    //        }
-    //    }
-    //    fprintf(file, "\n");
-    //}
+            this->giveIPValue(v, gp, IST_StressTensor, tStep);
+            fprintf(file, "\n                      stresses   ");
+            for ( auto &val : v ) {
+                fprintf(file, " %.4e", val);
+            }
+        }
+        fprintf(file, "\n");
+    }
+#endif
 }
 
 void
