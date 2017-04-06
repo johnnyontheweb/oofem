@@ -793,7 +793,7 @@ Element :: isCast(TimeStep *tStep)
     double castingTime;    
     double tNow = tStep->giveIntrinsicTime();
     
-    if ( integrationRulesArray.size() > 1 ) {
+    if ( integrationRulesArray.size() > 0 ) {
       
       for ( int i = 0; i < (int)integrationRulesArray.size(); i++ ) {
         IntegrationRule *iRule;
@@ -806,15 +806,6 @@ Element :: isCast(TimeStep *tStep)
             return false;
           }          
         }
-      }
-    } else {
-      
-      for ( GaussPoint *gp: *this->giveDefaultIntegrationRulePtr() ) {
-        castingTime =  this->giveCrossSection()->giveMaterial(gp)->giveCastingTime();
-        
-         if (tNow < castingTime ) {
-           return false;
-         }
       }
     }
     
