@@ -178,6 +178,7 @@ namespace oofem {
 		virtual integrationDomain giveIntegrationDomain() const { return _Line; }
 		virtual Element_Geometry_Type giveGeometryType() const { return EGT_line_1; }
 		virtual void updateLocalNumbering(EntityRenumberingFunctor &f);
+		virtual Material* giveSubSoilMaterial();
 
 		/*
 		/// Subsoil support implemented directly enabling the postprocessing of end-forces

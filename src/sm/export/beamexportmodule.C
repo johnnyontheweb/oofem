@@ -139,7 +139,7 @@ namespace oofem {
 						B2d->giveEndForcesVector(Fl, tStep, true);
 					}
 
-					map< double, FloatArray >ForceDict, winkDict;
+					map< double, FloatArray >ForceDict;
 					FloatArray I, E, Diff, dI, dE;
 
 					I.resize(6);
@@ -166,44 +166,45 @@ namespace oofem {
 					FinalLoads.resize(6);
 					FinalLoads.zero();
 
-					double wy, wz;
-					wy = wz = 0.0;
-					double qIy, qIz, qEy, qEz;
-					qIy = qIz = qEy = qEz = 0.0;
+					// temporary stuff for winker
+					//double wy, wz;
+					//wy = wz = 0.0;
+					//double qIy, qIz, qEy, qEz;
+					//qIy = qIz = qEy = qEz = 0.0;
 
 					// get end forces without the reduction due to winkler soil presence
-					if (strcmp(SElem->giveClassName(), "Beam3d") == 0 || strcmp(SElem->giveClassName(), "beam3d") == 0){
-						Beam3d *B3d = static_cast<Beam3d *>(SElem);
-						B3d->giveEndForcesVector(Fl2, tStep, false);
-						FloatArray compArr, diff;
-						diff.beDifferenceOf(Fl, Fl2);
-						compArr.resize(6);
+					//if (strcmp(SElem->giveClassName(), "Beam3d") == 0 || strcmp(SElem->giveClassName(), "beam3d") == 0){
+					//	Beam3d *B3d = static_cast<Beam3d *>(SElem);
+					//	B3d->giveEndForcesVector(Fl2, tStep, false);
+					//	FloatArray compArr, diff;
+					//	diff.beDifferenceOf(Fl, Fl2);
+					//	compArr.resize(6);
 
-						wy = compArr.at(2) = -(diff.at(2) + diff.at(8)) / l;
-						wz = compArr.at(3) = -(diff.at(3) + diff.at(9)) / l;
-						FinalLoads.add(compArr);
+					//	wy = compArr.at(2) = -(diff.at(2) + diff.at(8)) / l;
+					//	wz = compArr.at(3) = -(diff.at(3) + diff.at(9)) / l;
+					//	FinalLoads.add(compArr);
 
-						qIy = -(3 * diff.at(2) - diff.at(8)) / l;
-						qIz = -(3 * diff.at(3) - diff.at(9)) / l;
-						qEy = -(3 * diff.at(8) - diff.at(2)) / l;
-						qEz = -(3 * diff.at(9) - diff.at(3)) / l;
-					}
-					else {
-						Beam2d *B2d = static_cast<Beam2d *>(SElem);
-						B2d->giveEndForcesVector(Fl2, tStep, false);
-						FloatArray compArr, diff;
-						diff.beDifferenceOf(Fl, Fl2);
-						compArr.resize(6);
+					//	qIy = -(3 * diff.at(2) - diff.at(8)) / l;
+					//	qIz = -(3 * diff.at(3) - diff.at(9)) / l;
+					//	qEy = -(3 * diff.at(8) - diff.at(2)) / l;
+					//	qEz = -(3 * diff.at(9) - diff.at(3)) / l;
+					//}
+					//else {
+					//	Beam2d *B2d = static_cast<Beam2d *>(SElem);
+					//	B2d->giveEndForcesVector(Fl2, tStep, false);
+					//	FloatArray compArr, diff;
+					//	diff.beDifferenceOf(Fl, Fl2);
+					//	compArr.resize(6);
 
-						wy = compArr.at(2) = -(diff.at(2) + diff.at(8)) / l;  // @TODO: check array positions for 2d beams
-						wz = compArr.at(3) = -(diff.at(3) + diff.at(9)) / l;
-						FinalLoads.add(compArr);
+					//	wy = compArr.at(2) = -(diff.at(2) + diff.at(8)) / l;  // @TODO: check array positions for 2d beams
+					//	wz = compArr.at(3) = -(diff.at(3) + diff.at(9)) / l;
+					//	FinalLoads.add(compArr);
 
-						qIy = -(3 * diff.at(2) - diff.at(8)) / l;
-						qIz = -(3 * diff.at(3) - diff.at(9)) / l;
-						qEy = -(3 * diff.at(8) - diff.at(2)) / l;
-						qEz = -(3 * diff.at(9) - diff.at(3)) / l;
-					}
+					//	qIy = -(3 * diff.at(2) - diff.at(8)) / l;
+					//	qIz = -(3 * diff.at(3) - diff.at(9)) / l;
+					//	qEy = -(3 * diff.at(8) - diff.at(2)) / l;
+					//	qEz = -(3 * diff.at(9) - diff.at(3)) / l;
+					//}
 
 					FloatMatrix T;
 					elem->computeGtoLRotationMatrix(T);
@@ -237,11 +238,13 @@ namespace oofem {
 
 					addComponents(I, FinalLoads, 0.0, l, true);
 					ForceDict[0.0] = I;
-					FloatArray wI, wE;
-					wI.resize(2); wE.resize(2);
-					wI.at(1) = qIy; wI.at(2) = qIz;
-					wE.at(1) = qEy; wE.at(2) = qEz;
-					winkDict[0.0] = wI;
+
+					// temporary stuff for winkler
+					//FloatArray wI, wE;
+					//wI.resize(2); wE.resize(2);
+					//wI.at(1) = qIy; wI.at(2) = qIz;
+					//wE.at(1) = qEy; wE.at(2) = qEz;
+					//winkDict[0.0] = wI;
 
 					for (GaussPoint *gp : *elem->giveDefaultIntegrationRulePtr()) {
 						//double dV = elem->computeVolumeAround(gp);
@@ -262,18 +265,18 @@ namespace oofem {
 
 						ForceDict[pos] = ipState;
 
-						winkState.resize(2);
-						winkState.at(1) = qIy * (l - pos) / l + qEy * pos / l;
-						winkState.at(2) = qIz * (l - pos) / l + qEz * pos / l;
-						winkDict[pos] = winkState;
+						//winkState.resize(2);
+						//winkState.at(1) = qIy * (l - pos) / l + qEy * pos / l;
+						//winkState.at(2) = qIz * (l - pos) / l + qEz * pos / l;
+						//winkDict[pos] = winkState;
 					}
 
 					addComponents(E, FinalLoads, l, l, true);
 					ForceDict[l] = E;
-					winkDict[l] = wE;
+					/*winkDict[l] = wE;*/
 
 					BeamForces[elem->giveNumber()] = ForceDict;
-					BeamWinkler[elem->giveNumber()] = winkDict;
+					//BeamWinkler[elem->giveNumber()] = winkDict;
 					//BeamForces[elem->giveLabel()] = ForceDict;
 
 					//pair <double, double> loadPair;
@@ -360,6 +363,12 @@ namespace oofem {
 				}
 			}
 
+			// in the next section all deflections are calculated.
+			// beam on soil deflections and forces are calculated by directly solving the 4th order ODE for winkler formulation v(IV) + 4*lambda^4*v = q.
+			// Boundary conditions considered are those relative to shears and moments (relative to v(III) and V(II)).
+			// Displacements and rotations are calculated using the closed form primitives, integration coefficients are chosen so that the results matches the expected values on the first node.
+			// For beam on soil formulation, Timoshenko contribution is negleted.
+
 			for (auto beamPair : BeamForces)
 			{
 				int elNum = beamPair.first;
@@ -431,6 +440,14 @@ namespace oofem {
 				double anx, bnx, cnx;
 				double az, bz, cz, dz, fz;
 				double atx, btx, ctx;
+				bool hasWinklerY, hasWinklerZ;
+				hasWinklerY = hasWinklerZ = false;
+				double wy, wz;  // winkler stiffness
+				double lambdaY=0.0, lambdaZ=0.0;
+				FloatArray W0(6), WL(6);
+
+				// saving winkler reaction for each gp
+				map< double, FloatArray > WinkDict;
 
 				for (GaussPoint *gp : *elem->giveDefaultIntegrationRulePtr()) {
 					FloatArray ipState;
@@ -443,7 +460,7 @@ namespace oofem {
 					pos_3 = pos_2*pos;
 					pos_4 = pos_2*pos_2;
 
-					// calculate this stuff on the first pass. Section are supposed prismatic (constant section)
+					// calculate this stuff on the first pass. Constant section along the length
 					if (!calc){
 						SCSect->give3dBeamStiffMtrx(MatStiffness, ElasticStiffness, gp, tStep);
 
@@ -456,13 +473,15 @@ namespace oofem {
 
 						if (GKyAy < 1e-6) {
 							psi_y = 0;
-						} else {
+						}
+						else {
 							psi_y = EJzz / GKyAy;
 						}
 
 						if (GKzAz < 1e-6) {
 							psi_z = 0;
-						} else {
+						}
+						else {
 							psi_z = EJyy / GKzAz;
 						}
 
@@ -475,6 +494,7 @@ namespace oofem {
 						//map<double, FloatArray> &td = BeamDisplacements[elNum];
 						FloatArray &bl = BeamLoads[elNum];
 						FloatArray *disps = &dI;
+
 						vy_0 = disps->at(2);
 						vz_0 = disps->at(3);
 						phiy_0 = -disps->at(5); // inverted signs for angles about y. in this case phi is used as first derivative
@@ -490,34 +510,133 @@ namespace oofem {
 						dx_l = disps->at(1);
 						tx_l = disps->at(4);
 
-						if (psi_y == 0.0) {  // Euler Bernoulli formulation
-							ay = bl.at(2) / 24 / EJzz;
-							dy = phiz_0;
-							fy = vy_0;
-							by = (2 *(vy_0 - vy_l) + l*(phiz_l + phiz_0)) / (l_3) - 2 * ay*l;
-							cy = -(3 *(vy_0 - vy_l) + l*(2 * phiz_0 + phiz_l)) / l_2 + ay*l_2;
-						}
-						else { // timoshenko formulation for transversal displacements
-							ay = bl.at(2) / 24 / EJzz;
-							dy = phiz_0;
-							fy = vy_0;
-							by = (2 / l*(vy_0 - vy_l) + (phiz_l + phiz_0)) / (l_2 + 12 * psi_y) - 2 * ay*l;
-							cy = -(72 * EJzz*GKyAy*l* (vy_0 - vy_l) + GKyAy*l_2*(24 * EJzz*(2 * phiz_0 + phiz_l) - l_3*bl.at(2)) + 12 * EJzz*(12 * EJzz*(phiz_0 - phiz_l) - l_3*bl.at(2))) / (24 * EJzz*l* (GKyAy*l_2 + 12 * EJzz));
+						Beam3d *B3d = static_cast<Beam3d *>(elem);
+						Material* subSoilMatTemp = B3d->giveSubSoilMaterial();
+						if (subSoilMatTemp != NULL)
+						{
+							StructuralMaterial* subSoilMat = (StructuralMaterial*)subSoilMatTemp;
+							FloatMatrix subMat;
+							subSoilMat->give3dBeamSubSoilStiffMtrx(subMat, MatResponseMode::TangentStiffness, gp, tStep);
+							wy = subMat.at(2, 2);
+							if (wy > 1e-6) hasWinklerY = true;
+
+							W0.at(2) = dI.at(2)*wy;
+							WL.at(2) = dE.at(2)*wy;
+
+
+							wz = subMat.at(3, 3);
+							if (wz > 1e-6) hasWinklerZ = true;
+
+							W0.at(3) = dI.at(3)*wz;
+							WL.at(3) = dE.at(3)*wz;
 						}
 
-						if (psi_z == 0.0) {
-							az = bl.at(3) / 24 / EJyy;
-							dz = phiy_0;
-							fz = vz_0;
-							bz = (2 *(vz_0 - vz_l) + l*(phiy_l + phiy_0)) / (l_3) - 2 * az*l;
-							cz = -(3 *(vz_0 - vz_l) + l*(2 * phiy_0 + phiy_l)) / l_2 + az*l_2;
+						WinkDict[0.0] = W0;
+
+						if (hasWinklerY) {
+							lambdaY = sqrt(sqrt(wy / 4 / EJzz));
+							FloatMatrix odeMtrx (4, 4);
+							FloatArray rhs(4);
+
+							FloatArray abcd(4);
+
+							double lambda_3 = 2 * lambdaY*lambdaY*lambdaY;
+
+							odeMtrx.at(1, 2) = 2.0 * lambdaY * lambdaY;
+							odeMtrx.at(1, 4) = -2.0 * lambdaY * lambdaY;
+							odeMtrx.at(2, 1) = -2.0 * lambdaY * lambdaY * sin(l*lambdaY) *exp(l*lambdaY);
+							odeMtrx.at(2, 2) = 2.0 * lambdaY * lambdaY * cos(l*lambdaY) *exp(l*lambdaY);
+							odeMtrx.at(2, 3) = 2.0 * lambdaY * lambdaY * sin(l*lambdaY) /exp(l*lambdaY);
+							odeMtrx.at(2, 4) = -2.0 * lambdaY * lambdaY * cos(l*lambdaY) /exp(l*lambdaY);
+							odeMtrx.at(3, 1) = -lambda_3;
+							odeMtrx.at(3, 2) = lambda_3;
+							odeMtrx.at(3, 3) = lambda_3;
+							odeMtrx.at(3, 4) = lambda_3;
+							odeMtrx.at(4, 1) = -lambda_3*exp(l*lambdaY)*(cos(l*lambdaY) + sin(l*lambdaY));
+							odeMtrx.at(4, 2) = lambda_3*exp(l*lambdaY)*(cos(l*lambdaY) - sin(l*lambdaY));
+							odeMtrx.at(4, 3) = lambda_3*(cos(l*lambdaY) - sin(l*lambdaY)) / exp(l*lambdaY);
+							odeMtrx.at(4, 4) = lambda_3*(cos(l*lambdaY) + sin(l*lambdaY)) / exp(l*lambdaY);
+
+							rhs.at(1) = beamPair.second[0.0].at(6)/EJzz;
+							rhs.at(2) = beamPair.second[l].at(6) / EJzz;
+							rhs.at(3) = beamPair.second[0.0].at(2)/EJzz;
+							rhs.at(4) = beamPair.second[l].at(2)/EJzz;
+
+							odeMtrx.solveForRhs(rhs, abcd);
+
+							ay = abcd.at(1);
+							by = abcd.at(2);
+							cy = abcd.at(3);
+							dy = abcd.at(4);
 						}
 						else {
-							az = bl.at(3) / 24 / EJyy;
-							dz = phiy_0;
-							fz = vz_0;
-							bz = (2 / l*(vz_0 - vz_l) + (phiy_l + phiy_0)) / (l_2 + 12 * psi_z) - 2 * az*l;
-							cz = -(72 * EJyy*GKzAz*l* (vz_0 - vz_l) + GKzAz*l_2*(24 * EJyy*(2 * phiy_0 + phiy_l) - l_3*bl.at(3)) + 12 * EJyy*(12 * EJyy*(phiy_0 - phiy_l) - l_3*bl.at(3))) / (24 * EJyy*l* (GKzAz*l_2 + 12 * EJyy));
+							if (psi_y == 0.0) {  // Euler Bernoulli formulation
+								ay = bl.at(2) / 24 / EJzz;
+								dy = phiz_0;
+								fy = vy_0;
+								by = (2 * (vy_0 - vy_l) + l*(phiz_l + phiz_0)) / (l_3)-2 * ay*l;
+								cy = -(3 * (vy_0 - vy_l) + l*(2 * phiz_0 + phiz_l)) / l_2 + ay*l_2;
+							}
+							else { // timoshenko formulation for transversal displacements
+								ay = bl.at(2) / 24 / EJzz;
+								dy = phiz_0;
+								fy = vy_0;
+								by = (2 / l*(vy_0 - vy_l) + (phiz_l + phiz_0)) / (l_2 + 12 * psi_y) - 2 * ay*l;
+								cy = -(72 * EJzz*GKyAy*l* (vy_0 - vy_l) + GKyAy*l_2*(24 * EJzz*(2 * phiz_0 + phiz_l) - l_3*bl.at(2)) + 12 * EJzz*(12 * EJzz*(phiz_0 - phiz_l) - l_3*bl.at(2))) / (24 * EJzz*l* (GKyAy*l_2 + 12 * EJzz));
+							}
+						}
+
+						if (hasWinklerZ) {
+							lambdaZ = sqrt(sqrt(wz / 4 / EJyy));
+							FloatMatrix odeMtrx(4, 4);
+							FloatArray rhs(4);
+
+							FloatArray abcd(4);
+
+							double lambda_3 = 2 * lambdaZ*lambdaZ*lambdaZ;
+
+							odeMtrx.at(1, 2) = 2.0 * lambdaZ * lambdaZ;
+							odeMtrx.at(1, 4) = -2.0 * lambdaZ * lambdaZ;
+							odeMtrx.at(2, 1) = 2.0 * lambdaZ * lambdaZ * sin(l*lambdaZ) *exp(l*lambdaZ);
+							odeMtrx.at(2, 2) = -2.0 * lambdaZ * lambdaZ * cos(l*lambdaZ) *exp(l*lambdaZ);
+							odeMtrx.at(2, 3) = -2.0 * lambdaZ * lambdaZ * sin(l*lambdaZ) / exp(l*lambdaZ);
+							odeMtrx.at(2, 4) = 2.0 * lambdaZ * lambdaZ * cos(l*lambdaZ) / exp(l*lambdaZ);
+							odeMtrx.at(3, 1) = -lambda_3;
+							odeMtrx.at(3, 2) = lambda_3;
+							odeMtrx.at(3, 3) = lambda_3;
+							odeMtrx.at(3, 4) = lambda_3;
+							odeMtrx.at(4, 1) = -lambda_3*exp(l*lambdaZ)*(cos(l*lambdaZ) + sin(l*lambdaZ));
+							odeMtrx.at(4, 2) = lambda_3*exp(l*lambdaZ)*(cos(l*lambdaZ) - sin(l*lambdaZ));
+							odeMtrx.at(4, 3) = lambda_3*(cos(l*lambdaZ) - sin(l*lambdaZ)) / exp(l*lambdaZ);
+							odeMtrx.at(4, 4) = lambda_3*(cos(l*lambdaZ) + sin(l*lambdaZ)) / exp(l*lambdaZ);
+
+							rhs.at(1) = -beamPair.second[0.0].at(5) / EJyy;
+							rhs.at(2) = -beamPair.second[l].at(5) / EJyy;
+							rhs.at(3) = beamPair.second[0.0].at(3)/EJyy;
+							rhs.at(4) = beamPair.second[l].at(3)/EJyy;
+
+							odeMtrx.solveForRhs(rhs, abcd);
+
+							az = abcd.at(1);
+							bz = abcd.at(2);
+							cz = abcd.at(3);
+							dz = abcd.at(4);
+						}
+						else {
+							if (psi_z == 0.0) {  // Euler Bernoulli formulation
+								az = bl.at(3) / 24 / EJyy;
+								dz = phiy_0;
+								fz = vz_0;
+								bz = (2 * (vz_0 - vz_l) + l*(phiy_l + phiy_0)) / (l_3)-2 * az*l;
+								cz = -(3 * (vz_0 - vz_l) + l*(2 * phiy_0 + phiy_l)) / l_2 + az*l_2;
+							}
+							else { // timoshenko formulation for transversal displacements
+								az = bl.at(3) / 24 / EJyy;
+								dz = phiy_0;
+								fz = vz_0;
+								bz = (2 / l*(vz_0 - vz_l) + (phiy_l + phiy_0)) / (l_2 + 12 * psi_z) - 2 * az*l;
+								cz = -(72 * EJyy*GKzAz*l* (vz_0 - vz_l) + GKzAz*l_2*(24 * EJyy*(2 * phiy_0 + phiy_l) - l_3*bl.at(3)) + 12 * EJyy*(12 * EJyy*(phiy_0 - phiy_l) - l_3*bl.at(3))) / (24 * EJyy*l* (GKzAz*l_2 + 12 * EJyy));
+							}
 						}
 
 						// axial displacements
@@ -534,37 +653,75 @@ namespace oofem {
 					}
 
 					FloatArray disps(6);
+					FloatArray wink(6); // winkler reactions
 					disps.at(1) = anx*pos_2 + bnx*pos + cnx;
+					double lamxY, lamxZ;
+					lamxY = lambdaY*pos;
+					lamxZ = lambdaZ*pos;
 
-					if (psi_y == 0.0) {
-						disps.at(2) = ay*pos_4 + by*pos_3 + cy*pos_2 + dy*pos + fy;
+					if (hasWinklerY)
+					{
+						// displacement
+						disps.at(2) = -dI.at(2) - exp(lamxY)*(ay*cos(lamxY) + by*sin(lamxY)) - (cy*cos(lamxY) + dy*sin(lamxY)) / exp(lamxY) + (ay + cy);
+						wink.at(2) = disps.at(2)*wy;
+						// rotation
+						disps.at(6) = dI.at(6) - exp(lamxY)*(lambdaY*(ay + by)*cos(lamxY) + lambdaY*(by - ay)*sin(lamxY)) + (lambdaY*(cy - dy)*cos(lamxY) + lambdaY*(cy + dy)*sin(lamxY)) / (exp(lamxY)) + lambdaY * (ay + by - cy + dy);
+
+						// now we need to adjust the diagrams
+						BeamForces[elem->giveNumber()].at(pos).at(6) = - 2 * lambdaY*lambdaY*EJzz* (exp(lamxY)*(by*cos(lamxY) - ay*sin(lamxY)) + (-dy*cos(lamxY) + cy*sin(lamxY)) / exp(lamxY));
+						BeamForces[elem->giveNumber()].at(pos).at(2) = 2 * lambdaY*lambdaY*lambdaY*EJzz* (-exp(lamxY)*(lambdaY*(ay - by)*cos(lamxY) + lambdaY*(by + ay)*sin(lamxY)) + (lambdaY*(cy + dy)*cos(lamxY) + lambdaY*(-cy + dy)*sin(lamxY)) / (exp(lamxY)));
+					}
+					else{
+						// displacement
+						if (psi_y == 0.0) {
+							disps.at(2) = ay*pos_4 + by*pos_3 + cy*pos_2 + dy*pos + fy;
+						}
+						else {
+							disps.at(2) = ay*pos_4 + by*pos_3 + (cy - 12 * ay*psi_y)*pos_2 + (dy - 6 * by*psi_y)*pos + fy;
+						}
+						// rotation
+						disps.at(6) = 4 * ay*pos_3 + 3 * by*pos_2 + 2 * cy*pos + dy;
+					}
+
+					if (hasWinklerZ) {
+						// displacement
+						disps.at(3) = -dI.at(3) - exp(lamxZ)*(az*cos(lamxZ) + bz*sin(lamxZ)) - (cz*cos(lamxZ) + dz*sin(lamxZ)) / exp(lamxZ) + (az + cz);
+						wink.at(3) = disps.at(3)*wz;
+						// rotation
+						disps.at(5) = dI.at(5) + exp(lamxZ)*(lambdaZ*(az + bz)*cos(lamxZ) + lambdaZ*(bz - az)*sin(lamxZ)) - (lambdaZ*(cz - dz)*cos(lamxZ) + lambdaZ*(cz + dz)*sin(lamxZ)) / (exp(lamxZ)) - lambdaZ * (az + bz - cz + dz);
+
+						// now we need to adjust the diagrams
+						BeamForces[elem->giveNumber()].at(pos).at(5) = - 2 * lambdaZ*lambdaZ*EJyy* (exp(lamxZ)*(bz*cos(lamxZ) - az*sin(lamxZ)) + (-dz*cos(lamxZ) + cz*sin(lamxZ)) / exp(lamxZ));
+						BeamForces[elem->giveNumber()].at(pos).at(3) = 2 * lambdaZ*lambdaZ*lambdaZ*EJyy* (-exp(lamxZ)*(lambdaZ*(az - bz)*cos(lamxZ) + lambdaZ*(bz + az)*sin(lamxZ)) + (lambdaZ*(cz + dz)*cos(lamxZ) + lambdaZ*(-cz + dz)*sin(lamxZ)) / (exp(lamxZ)));
 					}
 					else {
-						disps.at(2) = ay*pos_4 + by*pos_3 + (cy - 12 * ay*psi_y)*pos_2 + (dy - 6 * by*psi_y)*pos + fy;
-					}
-
-					if (psi_z == 0) {
-						disps.at(3) = az*pos_4 + bz*pos_3 + cz*pos_2 + dz*pos + fz;
-					}
-					else {
-						disps.at(3) = az*pos_4 + bz*pos_3 + (cz - 12 * az*psi_z)*pos_2 + (dz - 6 * bz*psi_z)*pos + fz;
+						// displacement
+						if (psi_z == 0) {
+							disps.at(3) = az*pos_4 + bz*pos_3 + cz*pos_2 + dz*pos + fz;
+						}
+						else {
+							disps.at(3) = az*pos_4 + bz*pos_3 + (cz - 12 * az*psi_z)*pos_2 + (dz - 6 * bz*psi_z)*pos + fz;
+						}
+						// rotation
+						disps.at(5) = -(4 * az*pos_3 + 3 * bz*pos_2 + 2 * cz*pos + dz);  // inverted signs for rotations about y.
 					}
 					
 					disps.at(4) = atx*pos_2 + btx*pos + ctx;
-					disps.at(5) = -(4 * az*pos_3 + 3 * bz*pos_2 + 2 * cz*pos + dz);  // inverted signs for rotations about y.
-					disps.at(6) = 4 * ay*pos_3 + 3 * by*pos_2 + 2 * cy*pos + dy;
 
 					//disps -= (dI+ddN*ksi);
 
 					DispDict[pos] = disps;
+					WinkDict[pos] = wink;
 
 					//ipDisp.beProductOf(shapeFunctions, rl);
 				}
 
 				DispDict[l] = dE; // -dNE;
+				WinkDict[l] = WL;
 
 				// save the displacements
 				BeamDisplacements[elem->giveNumber()] = DispDict;
+				BeamWinkler[elem->giveNumber()] = WinkDict;
 				//BeamDisplacements[elem->giveLabel()] = DispDict;
 
 			}
@@ -623,7 +780,7 @@ namespace oofem {
 
 				for (;
 					forces_it != BForces.end();
-					++forces_it, ++disps_it, winks_it)
+					++forces_it, ++disps_it, ++winks_it)
 				{
 					double pos = forces_it->first;
 					FloatArray forces = forces_it->second;
@@ -637,9 +794,9 @@ namespace oofem {
 					for (auto &val : disps) {
 						fprintf(this->stream, "%10.3e;", val);
 					}
-					for (auto &val : winks) {
-						fprintf(this->stream, "%10.3e;", val);
-					}
+					fprintf(this->stream, "%10.3e;", winks.at(2));
+					fprintf(this->stream, "%10.3e;", winks.at(3));
+
 					fprintf(this->stream, "\n");
 				}
 

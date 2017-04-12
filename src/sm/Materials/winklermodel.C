@@ -116,16 +116,17 @@ WinklerMaterial::give3dBeamSubSoilStiffMtrx(FloatMatrix &answer, MatResponseMode
   if (this->c1.giveSize() == 6) {
     answer.beDiagonal(this->c1);
 
-    if (globalFromulation) {
-      Beam3dSubsoilMaterialInterface *ei = (Beam3dSubsoilMaterialInterface*) gp->giveElement()->giveInterface(Beam3dSubsoilMaterialInterfaceType);
-      FloatMatrix T;
-      if (ei) {
-	ei->B3SSMI_getUnknownsGtoLRotationMatrix (T);
-	answer.rotatedWith(T, 't');
-      } else {
-	OOFEM_ERROR("Beam3dSubsoilMaterialInterface required from element");
-      }
-    }
+	if (globalFromulation) {
+		Beam3dSubsoilMaterialInterface *ei = (Beam3dSubsoilMaterialInterface*)gp->giveElement()->giveInterface(Beam3dSubsoilMaterialInterfaceType);
+		FloatMatrix T;
+		if (ei) {
+			ei->B3SSMI_getUnknownsGtoLRotationMatrix(T);
+			answer.rotatedWith(T, 't');
+		}
+		else {
+			OOFEM_ERROR("Beam3dSubsoilMaterialInterface required from element");
+		}
+	}
     
   } else {
     OOFEM_ERROR ("C1 attribute size error (shouldequal to 6 for 3dBeamSubsoil mode)");

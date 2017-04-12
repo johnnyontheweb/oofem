@@ -56,6 +56,7 @@ namespace oofem {
  * @author Vit Smilauer
  * @author Mikael Öhman
  * @author Giovanni Rinaldin
+ * @author Francesco Pontarin
  */
 class OOFEM_EXPORT BeamExportModule : public ExportModule
 {

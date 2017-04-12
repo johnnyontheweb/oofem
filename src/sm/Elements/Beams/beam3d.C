@@ -1079,6 +1079,13 @@ namespace oofem {
 		answer.symmetrized();
 	}
 
+	Material*
+		Beam3d::giveSubSoilMaterial()
+	{
+		if (this->subsoilMat!=0) return this->domain->giveMaterial(subsoilMat);
+		return NULL;
+	}
+
 
 
 
