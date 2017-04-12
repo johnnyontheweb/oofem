@@ -658,3 +658,5 @@ tests/sm/t3d.bmf
 /src/sm/Elements/Shells/Shells.rar
 /src/sm/Elements/structuralelement.C.bak
 /src/sm/Elements/structuralelement.h.bak
+/src/sm/CrossSections/layeredcrosssection.Cold
+/src/sm/CrossSections/layeredcrosssection.hold
