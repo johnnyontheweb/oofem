@@ -520,15 +520,15 @@ namespace oofem {
 							wy = subMat.at(2, 2);
 							if (wy > 1e-6) hasWinklerY = true;
 
-							W0.at(2) = dI.at(2)*wy;
-							WL.at(2) = dE.at(2)*wy;
+							W0.at(2) = -dI.at(2)*wy;
+							WL.at(2) = -dE.at(2)*wy;
 
 
 							wz = subMat.at(3, 3);
 							if (wz > 1e-6) hasWinklerZ = true;
 
-							W0.at(3) = dI.at(3)*wz;
-							WL.at(3) = dE.at(3)*wz;
+							W0.at(3) = -dI.at(3)*wz;
+							WL.at(3) = -dE.at(3)*wz;
 						}
 
 						WinkDict[0.0] = W0;
@@ -685,14 +685,14 @@ namespace oofem {
 
 					if (hasWinklerZ) {
 						// displacement
-						disps.at(3) = -dI.at(3) - exp(lamxZ)*(az*cos(lamxZ) + bz*sin(lamxZ)) - (cz*cos(lamxZ) + dz*sin(lamxZ)) / exp(lamxZ) + (az + cz);
+						disps.at(3) = -dI.at(3) + exp(lamxZ)*(az*cos(lamxZ) + bz*sin(lamxZ)) - (cz*cos(lamxZ) + dz*sin(lamxZ)) / exp(lamxZ) - (az + cz);
 						wink.at(3) = disps.at(3)*wz;
 						// rotation
-						disps.at(5) = dI.at(5) + exp(lamxZ)*(lambdaZ*(az + bz)*cos(lamxZ) + lambdaZ*(bz - az)*sin(lamxZ)) - (lambdaZ*(cz - dz)*cos(lamxZ) + lambdaZ*(cz + dz)*sin(lamxZ)) / (exp(lamxZ)) - lambdaZ * (az + bz - cz + dz);
+						disps.at(5) = dI.at(5) - exp(lamxZ)*(lambdaZ*(az + bz)*cos(lamxZ) + lambdaZ*(bz - az)*sin(lamxZ)) - (lambdaZ*(cz - dz)*cos(lamxZ) + lambdaZ*(cz + dz)*sin(lamxZ)) / (exp(lamxZ)) + lambdaZ * (az + bz - cz + dz);
 
 						// now we need to adjust the diagrams
-						BeamForces[elem->giveNumber()].at(pos).at(5) = - 2 * lambdaZ*lambdaZ*EJyy* (exp(lamxZ)*(bz*cos(lamxZ) - az*sin(lamxZ)) + (-dz*cos(lamxZ) + cz*sin(lamxZ)) / exp(lamxZ));
-						BeamForces[elem->giveNumber()].at(pos).at(3) = 2 * lambdaZ*lambdaZ*lambdaZ*EJyy* (-exp(lamxZ)*(lambdaZ*(az - bz)*cos(lamxZ) + lambdaZ*(bz + az)*sin(lamxZ)) + (lambdaZ*(cz + dz)*cos(lamxZ) + lambdaZ*(-cz + dz)*sin(lamxZ)) / (exp(lamxZ)));
+						BeamForces[elem->giveNumber()].at(pos).at(5) =  2 * lambdaZ*lambdaZ*EJyy* (exp(lamxZ)*(bz*cos(lamxZ) - az*sin(lamxZ)) + (-dz*cos(lamxZ) + cz*sin(lamxZ)) / exp(lamxZ));
+						BeamForces[elem->giveNumber()].at(pos).at(3) = -2 * lambdaZ*lambdaZ*lambdaZ*EJyy* (-exp(lamxZ)*(lambdaZ*(az - bz)*cos(lamxZ) + lambdaZ*(bz + az)*sin(lamxZ)) + (lambdaZ*(cz + dz)*cos(lamxZ) + lambdaZ*(-cz + dz)*sin(lamxZ)) / (exp(lamxZ)));
 					}
 					else {
 						// displacement
