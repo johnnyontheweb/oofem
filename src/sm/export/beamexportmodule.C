@@ -595,8 +595,8 @@ namespace oofem {
 
 							double lambda_3 = 2 * lambdaZ*lambdaZ*lambdaZ;
 
-							odeMtrx.at(1, 2) = 2.0 * lambdaZ * lambdaZ;
-							odeMtrx.at(1, 4) = -2.0 * lambdaZ * lambdaZ;
+							odeMtrx.at(1, 2) = -2.0 * lambdaZ * lambdaZ;
+							odeMtrx.at(1, 4) = 2.0 * lambdaZ * lambdaZ;
 							odeMtrx.at(2, 1) = 2.0 * lambdaZ * lambdaZ * sin(l*lambdaZ) *exp(l*lambdaZ);
 							odeMtrx.at(2, 2) = -2.0 * lambdaZ * lambdaZ * cos(l*lambdaZ) *exp(l*lambdaZ);
 							odeMtrx.at(2, 3) = -2.0 * lambdaZ * lambdaZ * sin(l*lambdaZ) / exp(l*lambdaZ);
@@ -610,8 +610,8 @@ namespace oofem {
 							odeMtrx.at(4, 3) = lambda_3*(cos(l*lambdaZ) - sin(l*lambdaZ)) / exp(l*lambdaZ);
 							odeMtrx.at(4, 4) = lambda_3*(cos(l*lambdaZ) + sin(l*lambdaZ)) / exp(l*lambdaZ);
 
-							rhs.at(1) = -beamPair.second[0.0].at(5) / EJyy;
-							rhs.at(2) = -beamPair.second[l].at(5) / EJyy;
+							rhs.at(1) = beamPair.second[0.0].at(5) / EJyy;
+							rhs.at(2) = beamPair.second[l].at(5) / EJyy;
 							rhs.at(3) = beamPair.second[0.0].at(3)/EJyy;
 							rhs.at(4) = beamPair.second[l].at(3)/EJyy;
 
@@ -662,8 +662,8 @@ namespace oofem {
 					if (hasWinklerY)
 					{
 						// displacement
-						disps.at(2) = -dI.at(2) - exp(lamxY)*(ay*cos(lamxY) + by*sin(lamxY)) - (cy*cos(lamxY) + dy*sin(lamxY)) / exp(lamxY) + (ay + cy);
-						wink.at(2) = disps.at(2)*wy;
+						disps.at(2) = dI.at(2) + exp(lamxY)*(ay*cos(lamxY) + by*sin(lamxY)) + (cy*cos(lamxY) + dy*sin(lamxY)) / exp(lamxY) - (ay + cy);
+						wink.at(2) = -disps.at(2)*wy;
 						// rotation
 						disps.at(6) = dI.at(6) - exp(lamxY)*(lambdaY*(ay + by)*cos(lamxY) + lambdaY*(by - ay)*sin(lamxY)) + (lambdaY*(cy - dy)*cos(lamxY) + lambdaY*(cy + dy)*sin(lamxY)) / (exp(lamxY)) + lambdaY * (ay + by - cy + dy);
 
@@ -685,14 +685,14 @@ namespace oofem {
 
 					if (hasWinklerZ) {
 						// displacement
-						disps.at(3) = -dI.at(3) + exp(lamxZ)*(az*cos(lamxZ) + bz*sin(lamxZ)) - (cz*cos(lamxZ) + dz*sin(lamxZ)) / exp(lamxZ) - (az + cz);
-						wink.at(3) = disps.at(3)*wz;
+						disps.at(3) = dI.at(3) + exp(lamxZ)*(az*cos(lamxZ) + bz*sin(lamxZ)) + (cz*cos(lamxZ) + dz*sin(lamxZ)) / exp(lamxZ) - (az + cz);
+						wink.at(3) = -disps.at(3)*wz;
 						// rotation
-						disps.at(5) = dI.at(5) - exp(lamxZ)*(lambdaZ*(az + bz)*cos(lamxZ) + lambdaZ*(bz - az)*sin(lamxZ)) - (lambdaZ*(cz - dz)*cos(lamxZ) + lambdaZ*(cz + dz)*sin(lamxZ)) / (exp(lamxZ)) + lambdaZ * (az + bz - cz + dz);
+						disps.at(5) = dI.at(5) + exp(lamxZ)*(lambdaZ*(az + bz)*cos(lamxZ) + lambdaZ*(bz - az)*sin(lamxZ)) - (lambdaZ*(cz - dz)*cos(lamxZ) + lambdaZ*(cz + dz)*sin(lamxZ)) / (exp(lamxZ)) - lambdaZ * (az + bz - cz + dz);
 
 						// now we need to adjust the diagrams
 						BeamForces[elem->giveNumber()].at(pos).at(5) =  2 * lambdaZ*lambdaZ*EJyy* (exp(lamxZ)*(bz*cos(lamxZ) - az*sin(lamxZ)) + (-dz*cos(lamxZ) + cz*sin(lamxZ)) / exp(lamxZ));
-						BeamForces[elem->giveNumber()].at(pos).at(3) = -2 * lambdaZ*lambdaZ*lambdaZ*EJyy* (-exp(lamxZ)*(lambdaZ*(az - bz)*cos(lamxZ) + lambdaZ*(bz + az)*sin(lamxZ)) + (lambdaZ*(cz + dz)*cos(lamxZ) + lambdaZ*(-cz + dz)*sin(lamxZ)) / (exp(lamxZ)));
+						BeamForces[elem->giveNumber()].at(pos).at(3) = 2 * lambdaZ*lambdaZ*lambdaZ*EJyy* (-exp(lamxZ)*(lambdaZ*(az - bz)*cos(lamxZ) + lambdaZ*(bz + az)*sin(lamxZ)) + (lambdaZ*(cz + dz)*cos(lamxZ) + lambdaZ*(-cz + dz)*sin(lamxZ)) / (exp(lamxZ)));
 					}
 					else {
 						// displacement
