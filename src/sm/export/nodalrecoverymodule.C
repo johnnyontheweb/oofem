@@ -124,7 +124,7 @@ namespace oofem {
 		Domain *d = emodel->giveDomain(1);
 		int ireg;
 		int nnodes = d->giveNumberOfDofManagers(), inode;
-		int j, jsize;
+		int j;
 		FloatArray iVal(3);
 		FloatArray t(9);
 		const FloatArray *val = NULL;

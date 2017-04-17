@@ -159,11 +159,11 @@ void AbaqusUserElement :: postInitialize()
 			case D_u:
 			case D_v:
 			case D_w:
-				this->mcrd = max(this->mcrd, j);
+				this->mcrd = std::max(this->mcrd, j);
 			}
 		}
 
-		this->mcrd = max(this->mcrd, this->nCoords);
+		this->mcrd = std::max(this->mcrd, this->nCoords);
 
 		this->coords.resize(this->mcrd, this->numberOfDofMans);
 		// this->coords.resize(this->numberOfDofMans, this->mcrd);
