@@ -660,3 +660,9 @@ tests/sm/t3d.bmf
 /src/sm/Elements/structuralelement.h.bak
 /src/sm/CrossSections/layeredcrosssection.Cold
 /src/sm/CrossSections/layeredcrosssection.hold
+/MinSizeRel/2_walls-st.in
+/MinSizeRel/2_walls_triaIntegrazione-st.in
+/MinSizeRel/testDyn.in
+/MinSizeRel/testDynShell.in
+/MinSizeRel/testNFRig-st.outGR.bem
+/MinSizeRel/testNFRig-stGR.in

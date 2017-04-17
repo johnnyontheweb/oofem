@@ -62,7 +62,7 @@ namespace oofem {
 	IRResultType
 		BeamExportModule::initializeFrom(InputRecord *ir)
 	{
-		IRResultType result;                 // Required by IR_GIVE_FIELD macro
+		// IRResultType result;                 // Required by IR_GIVE_FIELD macro
 		isRespSpec = ir->hasField(_IFT_BeamExportModule_isrespspec);
 
 		if (isRespSpec) {
@@ -380,7 +380,7 @@ namespace oofem {
 				double l = elem->computeLength();
 				double l_2 = l*l;
 				double l_3 = l_2*l;
-				double l_4 = l_2*l_2;
+				// double l_4 = l_2*l_2;
 				double ksi;
 				//FloatMatrix shapeFunctions(2, 12);
 				bool calc = false;
@@ -434,15 +434,15 @@ namespace oofem {
 				StructuralCrossSection *SCSect = static_cast<StructuralCrossSection *>(Sect);
 				FloatMatrix MatStiffness;
 
-				double EJyy, EJzz, EA, GJ, GKyAy, GKzAz;
-				double psi_y, psi_z;
-				double ay, by, cy, dy, fy;
-				double anx, bnx, cnx;
-				double az, bz, cz, dz, fz;
-				double atx, btx, ctx;
+				double EJyy = 0, EJzz = 0, EA = 0, GJ = 0, GKyAy = 0, GKzAz = 0;
+				double psi_y = 0, psi_z = 0;
+				double ay = 0, by = 0, cy = 0, dy = 0, fy = 0;
+				double anx = 0, bnx = 0, cnx = 0;
+				double az = 0, bz = 0, cz = 0, dz = 0, fz = 0;
+				double atx = 0, btx = 0, ctx = 0;
 				bool hasWinklerY, hasWinklerZ;
 				hasWinklerY = hasWinklerZ = false;
-				double wy, wz;  // winkler stiffness
+				double wy = 0, wz = 0;  // winkler stiffness
 				double lambdaY=0.0, lambdaZ=0.0;
 				FloatArray W0(6), WL(6);
 
