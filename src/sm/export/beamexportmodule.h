@@ -51,7 +51,10 @@
 namespace oofem {
 /**
  * Represents beam (2D and 3D) export module. It gives the beam diagram values (N_x, T_z, T_y, M_x, M_y, M_z)
+ * internal diplacements and rotations as well as soil pressure (if subsoil material is specified)
  * for all beam elements in the model, in local coordinate system.
+ * Winkler formulation for timoshenko beam based upon:
+ * Russo Spena, Ramaglia, Lignola, Prota, "Closed-Form solution for the Timoshenko beam on elastic soil", 2015
  *
  * @author Vit Smilauer
  * @author Mikael Öhman

@@ -367,7 +367,7 @@ namespace oofem {
 			// beam on soil deflections and forces are calculated by directly solving the 4th order ODE for winkler formulation v(IV) + 4*lambda^4*v = q.
 			// Boundary conditions considered are those relative to displacements and rotation (relative to v and v(I)).
 			// Shears and moments are calculated using the closed form derivatives.
-			// For beam on soil formulation, Timoshenko contribution is negleted.
+			// For beam on soil formulation, v(IV) - alpha*v(II) + lambda*v = q.
 
 			for (auto beamPair : BeamForces)
 			{
@@ -445,6 +445,11 @@ namespace oofem {
 				double wy = 0, wz = 0;  // winkler stiffness
 				double lambdaY=0.0, lambdaZ=0.0;
 				FloatArray W0(6), WL(6);
+				// values for winkler+timoshenko
+				double deltaY = 0, deltaZ = 0;
+				double alphaY = 0, alphaZ = 0;
+				double lambdaY1 = 0, lambdaY2 = 0;
+				double lambdaZ1 = 0, lambdaZ2 = 0;
 
 				// saving winkler reaction for each gp
 				map< double, FloatArray > WinkDict;
@@ -535,26 +540,93 @@ namespace oofem {
 						WinkDict[0.0] = W0;
 
 						if (hasWinklerY) {
-							lambdaY = sqrt(sqrt(wy / 4 / EJzz));
-							FloatMatrix odeMtrx (4, 4);
+							FloatMatrix odeMtrx(4, 4);
 							FloatArray rhs(4);
-
 							FloatArray abcd(4);
 
-							odeMtrx.at(1, 1) = 1;
-							odeMtrx.at(1, 3) = 1;
-							odeMtrx.at(2, 1) = cos(l*lambdaY) * exp(l*lambdaY);
-							odeMtrx.at(2, 2) = sin(l*lambdaY) * exp(l*lambdaY);
-							odeMtrx.at(2, 3) = cos(l*lambdaY) / exp(l*lambdaY);
-							odeMtrx.at(2, 4) = sin(l*lambdaY) / exp(l*lambdaY);
-							odeMtrx.at(3, 1) = lambdaY;
-							odeMtrx.at(3, 2) = lambdaY;
-							odeMtrx.at(3, 3) = -lambdaY;
-							odeMtrx.at(3, 4) = lambdaY;
-							odeMtrx.at(4, 1) = lambdaY * (cos(l*lambdaY) - sin(l*lambdaY)) * exp(l*lambdaY);
-							odeMtrx.at(4, 2) = lambdaY * (cos(l*lambdaY) + sin(l*lambdaY)) * exp(l*lambdaY);
-							odeMtrx.at(4, 3) = -lambdaY * (cos(l*lambdaY) + sin(l*lambdaY)) / exp(l*lambdaY);
-							odeMtrx.at(4, 4) = lambdaY * (cos(l*lambdaY) - sin(l*lambdaY)) / exp(l*lambdaY);
+							if (psi_y == 0.0) { // Euler Bernoulli formulation
+								lambdaY = sqrt(sqrt(wy / 4 / EJzz));
+
+								odeMtrx.at(1, 1) = 1;
+								odeMtrx.at(1, 3) = 1;
+								odeMtrx.at(2, 1) = cos(l*lambdaY) * exp(l*lambdaY);
+								odeMtrx.at(2, 2) = sin(l*lambdaY) * exp(l*lambdaY);
+								odeMtrx.at(2, 3) = cos(l*lambdaY) / exp(l*lambdaY);
+								odeMtrx.at(2, 4) = sin(l*lambdaY) / exp(l*lambdaY);
+								odeMtrx.at(3, 1) = lambdaY;
+								odeMtrx.at(3, 2) = lambdaY;
+								odeMtrx.at(3, 3) = -lambdaY;
+								odeMtrx.at(3, 4) = lambdaY;
+								odeMtrx.at(4, 1) = lambdaY * (cos(l*lambdaY) - sin(l*lambdaY)) * exp(l*lambdaY);
+								odeMtrx.at(4, 2) = lambdaY * (cos(l*lambdaY) + sin(l*lambdaY)) * exp(l*lambdaY);
+								odeMtrx.at(4, 3) = -lambdaY * (cos(l*lambdaY) + sin(l*lambdaY)) / exp(l*lambdaY);
+								odeMtrx.at(4, 4) = lambdaY * (cos(l*lambdaY) - sin(l*lambdaY)) / exp(l*lambdaY);
+							}
+							else {  // Timoshenko formulation
+								alphaY = wy / GKyAy;
+								lambdaY = wy / EJzz;
+								deltaY = alphaY*alphaY - 4 * lambdaY;
+
+								if (deltaY > 0) {
+									lambdaY1 = sqrt(alphaY / 2 + 0.5*sqrt(deltaY));
+									lambdaY2 = sqrt(alphaY / 2 - 0.5*sqrt(deltaY));
+
+									odeMtrx.at(1, 1) = 1;
+									odeMtrx.at(1, 2) = 1;
+									odeMtrx.at(1, 3) = 1;
+									odeMtrx.at(1, 4) = 1;
+									odeMtrx.at(2, 1) = exp(l*lambdaY1);
+									odeMtrx.at(2, 2) = exp(-l*lambdaY1);
+									odeMtrx.at(2, 3) = exp(l*lambdaY2);
+									odeMtrx.at(2, 4) = exp(-l*lambdaY2);
+									odeMtrx.at(3, 1) = lambdaY1;
+									odeMtrx.at(3, 2) = -lambdaY1;
+									odeMtrx.at(3, 3) = lambdaY2;
+									odeMtrx.at(3, 4) = -lambdaY2;
+									odeMtrx.at(4, 1) = lambdaY1	 * exp(l*lambdaY1);
+									odeMtrx.at(4, 2) = -lambdaY1 / exp(l*lambdaY1);
+									odeMtrx.at(4, 3) = lambdaY2	 * exp(l*lambdaY2);
+									odeMtrx.at(4, 4) = -lambdaY2 / exp(l*lambdaY2);
+								}
+								else if (deltaY == 0) {
+									lambdaY1 = sqrt(alphaY / 2);
+									lambdaY2 = -sqrt(alphaY / 2);
+
+									odeMtrx.at(1, 1) = 1;
+									odeMtrx.at(1, 2) = 1;
+									odeMtrx.at(2, 1) = exp(l*lambdaY1);
+									odeMtrx.at(2, 2) = exp(-l*lambdaY1);
+									odeMtrx.at(2, 3) = l*exp(l*lambdaY1);
+									odeMtrx.at(2, 4) = l*exp(-l*lambdaY1);
+									odeMtrx.at(3, 1) = lambdaY1;
+									odeMtrx.at(3, 2) = -lambdaY1;
+									odeMtrx.at(3, 3) = 1;
+									odeMtrx.at(3, 4) = 1;
+									odeMtrx.at(4, 1) = lambdaY1 * exp(l*lambdaY1);
+									odeMtrx.at(4, 2) = -lambdaY1 / exp(l*lambdaY1);
+									odeMtrx.at(4, 3) = (l*lambdaY1 + 1) * exp(l*lambdaY1);
+									odeMtrx.at(4, 4) = -(l*lambdaY1 - 1) / exp(l*lambdaY1);
+								}
+								else {
+									lambdaY1 = sqrt(alphaY / 4 + 0.5*sqrt(deltaY));
+									lambdaY2 = sqrt(-alphaY / 4 + 0.5*sqrt(deltaY));
+
+									odeMtrx.at(1, 1) = 1;
+									odeMtrx.at(1, 2) = 1;
+									odeMtrx.at(2, 1) = cos(l*lambdaY2) * exp(l*lambdaY1);
+									odeMtrx.at(2, 2) = cos(l*lambdaY2) / exp(l*lambdaY1);
+									odeMtrx.at(2, 3) = sin(l*lambdaY2) * exp(l*lambdaY1);
+									odeMtrx.at(2, 4) = sin(l*lambdaY2) / exp(l*lambdaY1);
+									odeMtrx.at(3, 1) = lambdaY1;
+									odeMtrx.at(3, 2) = -lambdaY1;
+									odeMtrx.at(3, 3) = lambdaY2;
+									odeMtrx.at(3, 4) = lambdaY2;
+									odeMtrx.at(4, 1) = (lambdaY1*cos(l*lambdaY2) - lambdaY2*sin(l*lambdaY2)) * exp(l*lambdaY1);
+									odeMtrx.at(4, 2) = -(lambdaY1*cos(l*lambdaY2) + lambdaY2*sin(l*lambdaY2)) / exp(l*lambdaY1);
+									odeMtrx.at(4, 3) = (lambdaY2*cos(l*lambdaY2) + lambdaY1*sin(l*lambdaY2)) * exp(l*lambdaY1);
+									odeMtrx.at(4, 4) = (lambdaY2*cos(l*lambdaY2) - lambdaY1*sin(l*lambdaY2)) / exp(l*lambdaY1);
+								}
+							}
 
 							rhs.at(1) = dI.at(2) - bl.at(2) / wy;
 							rhs.at(2) = dE.at(2) - bl.at(2) / wy;
@@ -586,26 +658,93 @@ namespace oofem {
 						}
 
 						if (hasWinklerZ) {
-							lambdaZ = sqrt(sqrt(wz / 4 / EJyy));
 							FloatMatrix odeMtrx(4, 4);
 							FloatArray rhs(4);
-
 							FloatArray abcd(4);
 
-							odeMtrx.at(1, 1) = 1;
-							odeMtrx.at(1, 3) = 1;
-							odeMtrx.at(2, 1) = cos(l*lambdaZ) * exp(l*lambdaZ);
-							odeMtrx.at(2, 2) = sin(l*lambdaZ) * exp(l*lambdaZ);
-							odeMtrx.at(2, 3) = cos(l*lambdaZ) / exp(l*lambdaZ);
-							odeMtrx.at(2, 4) = sin(l*lambdaZ) / exp(l*lambdaZ);
-							odeMtrx.at(3, 1) = lambdaZ;
-							odeMtrx.at(3, 2) = lambdaZ;
-							odeMtrx.at(3, 3) = -lambdaZ;
-							odeMtrx.at(3, 4) = lambdaZ;
-							odeMtrx.at(4, 1) = lambdaZ * (cos(l*lambdaZ) - sin(l*lambdaZ)) * exp(l*lambdaZ);
-							odeMtrx.at(4, 2) = lambdaZ * (cos(l*lambdaZ) + sin(l*lambdaZ)) * exp(l*lambdaZ);
-							odeMtrx.at(4, 3) = -lambdaZ * (cos(l*lambdaZ) + sin(l*lambdaZ)) / exp(l*lambdaZ);
-							odeMtrx.at(4, 4) = lambdaZ * (cos(l*lambdaZ) - sin(l*lambdaZ)) / exp(l*lambdaZ);
+							if (psi_z == 0.0) { // Euler Bernoulli formulation
+								lambdaZ = sqrt(sqrt(wz / 4 / EJyy));
+
+								odeMtrx.at(1, 1) = 1;
+								odeMtrx.at(1, 3) = 1;
+								odeMtrx.at(2, 1) = cos(l*lambdaZ) * exp(l*lambdaZ);
+								odeMtrx.at(2, 2) = sin(l*lambdaZ) * exp(l*lambdaZ);
+								odeMtrx.at(2, 3) = cos(l*lambdaZ) / exp(l*lambdaZ);
+								odeMtrx.at(2, 4) = sin(l*lambdaZ) / exp(l*lambdaZ);
+								odeMtrx.at(3, 1) = lambdaZ;
+								odeMtrx.at(3, 2) = lambdaZ;
+								odeMtrx.at(3, 3) = -lambdaZ;
+								odeMtrx.at(3, 4) = lambdaZ;
+								odeMtrx.at(4, 1) = lambdaZ * (cos(l*lambdaZ) - sin(l*lambdaZ)) * exp(l*lambdaZ);
+								odeMtrx.at(4, 2) = lambdaZ * (cos(l*lambdaZ) + sin(l*lambdaZ)) * exp(l*lambdaZ);
+								odeMtrx.at(4, 3) = -lambdaZ * (cos(l*lambdaZ) + sin(l*lambdaZ)) / exp(l*lambdaZ);
+								odeMtrx.at(4, 4) = lambdaZ * (cos(l*lambdaZ) - sin(l*lambdaZ)) / exp(l*lambdaZ);
+							}
+							else {  // Timoshenko formulation
+								alphaZ = wz / GKzAz;
+								lambdaZ = wz / EJyy;
+								deltaZ = alphaZ*alphaZ - 4 * lambdaZ;
+
+								if (deltaZ > 0) {
+									lambdaZ1 = sqrt(alphaZ / 2 + 0.5*sqrt(deltaZ));
+									lambdaZ2 = sqrt(alphaZ / 2 - 0.5*sqrt(deltaZ));
+
+									odeMtrx.at(1, 1) = 1;
+									odeMtrx.at(1, 2) = 1;
+									odeMtrx.at(1, 3) = 1;
+									odeMtrx.at(1, 4) = 1;
+									odeMtrx.at(2, 1) = exp(l*lambdaZ1);
+									odeMtrx.at(2, 2) = exp(-l*lambdaZ1);
+									odeMtrx.at(2, 3) = exp(l*lambdaZ2);
+									odeMtrx.at(2, 4) = exp(-l*lambdaZ2);
+									odeMtrx.at(3, 1) = lambdaZ1;
+									odeMtrx.at(3, 2) = -lambdaZ1;
+									odeMtrx.at(3, 3) = lambdaZ2;
+									odeMtrx.at(3, 4) = -lambdaZ2;
+									odeMtrx.at(4, 1) = lambdaZ1	 * exp(l*lambdaZ1);
+									odeMtrx.at(4, 2) = -lambdaZ1 / exp(l*lambdaZ1);
+									odeMtrx.at(4, 3) = lambdaZ2	 * exp(l*lambdaZ2);
+									odeMtrx.at(4, 4) = -lambdaZ2 / exp(l*lambdaZ2);
+								}
+								else if (deltaZ == 0) {
+									lambdaZ1 = sqrt(alphaZ / 2);
+									lambdaZ2 = -sqrt(alphaZ / 2);
+
+									odeMtrx.at(1, 1) = 1;
+									odeMtrx.at(1, 2) = 1;
+									odeMtrx.at(2, 1) = exp(l*lambdaZ1);
+									odeMtrx.at(2, 2) = exp(-l*lambdaZ1);
+									odeMtrx.at(2, 3) = l*exp(l*lambdaZ1);
+									odeMtrx.at(2, 4) = l*exp(-l*lambdaZ1);
+									odeMtrx.at(3, 1) = lambdaZ1;
+									odeMtrx.at(3, 2) = -lambdaZ1;
+									odeMtrx.at(3, 3) = 1;
+									odeMtrx.at(3, 4) = 1;
+									odeMtrx.at(4, 1) = lambdaZ1 * exp(l*lambdaZ1);
+									odeMtrx.at(4, 2) = -lambdaZ1 / exp(l*lambdaZ1);
+									odeMtrx.at(4, 3) = (l*lambdaZ1 + 1) * exp(l*lambdaZ1);
+									odeMtrx.at(4, 4) = -(l*lambdaZ1 - 1) / exp(l*lambdaZ1);
+								}
+								else {
+									lambdaZ1 = sqrt(alphaZ / 4 + 0.5*sqrt(deltaZ));
+									lambdaZ2 = sqrt(-alphaZ / 4 + 0.5*sqrt(deltaZ));
+
+									odeMtrx.at(1, 1) = 1;
+									odeMtrx.at(1, 2) = 1;
+									odeMtrx.at(2, 1) = cos(l*lambdaZ2) * exp(l*lambdaZ1);
+									odeMtrx.at(2, 2) = cos(l*lambdaZ2) / exp(l*lambdaZ1);
+									odeMtrx.at(2, 3) = sin(l*lambdaZ2) * exp(l*lambdaZ1);
+									odeMtrx.at(2, 4) = sin(l*lambdaZ2) / exp(l*lambdaZ1);
+									odeMtrx.at(3, 1) = lambdaZ1;
+									odeMtrx.at(3, 2) = -lambdaZ1;
+									odeMtrx.at(3, 3) = lambdaZ2;
+									odeMtrx.at(3, 4) = lambdaZ2;
+									odeMtrx.at(4, 1) = (lambdaZ1*cos(l*lambdaZ2) - lambdaZ2*sin(l*lambdaZ2)) * exp(l*lambdaZ1);
+									odeMtrx.at(4, 2) = -(lambdaZ1*cos(l*lambdaZ2) + lambdaZ2*sin(l*lambdaZ2)) / exp(l*lambdaZ1);
+									odeMtrx.at(4, 3) = (lambdaZ2*cos(l*lambdaZ2) + lambdaZ1*sin(l*lambdaZ2)) * exp(l*lambdaZ1);
+									odeMtrx.at(4, 4) = (lambdaZ2*cos(l*lambdaZ2) - lambdaZ1*sin(l*lambdaZ2)) / exp(l*lambdaZ1);
+								}
+							}
 
 							rhs.at(1) = dI.at(3) - bl.at(3) / wz;
 							rhs.at(2) = dE.at(3) - bl.at(3) / wz;
@@ -658,12 +797,25 @@ namespace oofem {
 
 					if (hasWinklerY)
 					{
-						// displacement
-						disps.at(2) = exp(lamxY)*(ay*cos(lamxY) + by*sin(lamxY)) + (cy*cos(lamxY) + dy*sin(lamxY)) / exp(lamxY) + bl.at(2)/wy;
-						wink.at(2) = -disps.at(2)*wy;
-						// rotation
-						disps.at(6) = exp(lamxY)*(lambdaY*(ay + by)*cos(lamxY) + lambdaY*(by - ay)*sin(lamxY)) - (lambdaY*(cy - dy)*cos(lamxY) + lambdaY*(cy + dy)*sin(lamxY)) / (exp(lamxY));
+						if (psi_y == 0.0) {
+							// displacement
+							disps.at(2) = exp(lamxY)*(ay*cos(lamxY) + by*sin(lamxY)) + (cy*cos(lamxY) + dy*sin(lamxY)) / exp(lamxY) + bl.at(2) / wy;
+							// rotation
+							disps.at(6) = exp(lamxY)*(lambdaY*(ay + by)*cos(lamxY) + lambdaY*(by - ay)*sin(lamxY)) - (lambdaY*(cy - dy)*cos(lamxY) + lambdaY*(cy + dy)*sin(lamxY)) / (exp(lamxY));
+						}
+						else {
+							if (deltaY > 0) {
 
+							}
+							else if (deltaY == 0) {
+
+							}
+							else {
+
+							}
+						}
+
+						wink.at(2) = -disps.at(2)*wy;
 						// now we need to adjust the diagrams
 						BeamForces[elem->giveNumber()].at(pos).at(6) = 2 * lambdaY*lambdaY*EJzz* (exp(lamxY)*(by*cos(lamxY) - ay*sin(lamxY)) + (-dy*cos(lamxY) + cy*sin(lamxY)) / exp(lamxY));
 						BeamForces[elem->giveNumber()].at(pos).at(2) = -2 * lambdaY*lambdaY*lambdaY*EJzz* (-exp(lamxY)*((ay - by)*cos(lamxY) + (by + ay)*sin(lamxY)) + ((cy + dy)*cos(lamxY) + (-cy + dy)*sin(lamxY)) / (exp(lamxY)));
@@ -681,12 +833,24 @@ namespace oofem {
 					}
 
 					if (hasWinklerZ) {
-						// displacement
-						disps.at(3) = exp(lamxZ)*(az*cos(lamxZ) + bz*sin(lamxZ)) + (cz*cos(lamxZ) + dz*sin(lamxZ)) / exp(lamxZ) + bl.at(3)/wz;
-						wink.at(3) = -disps.at(3)*wz;
-						// rotation
-						disps.at(5) = -(exp(lamxZ)*(lambdaZ*(az + bz)*cos(lamxZ) + lambdaZ*(bz - az)*sin(lamxZ)) - (lambdaZ*(cz - dz)*cos(lamxZ) + lambdaZ*(cz + dz)*sin(lamxZ)) / (exp(lamxZ)));
+						if (psi_z == 0.0) {
+							// displacement
+							disps.at(3) = exp(lamxZ)*(az*cos(lamxZ) + bz*sin(lamxZ)) + (cz*cos(lamxZ) + dz*sin(lamxZ)) / exp(lamxZ) + bl.at(3) / wz;
+							// rotation
+							disps.at(5) = -(exp(lamxZ)*(lambdaZ*(az + bz)*cos(lamxZ) + lambdaZ*(bz - az)*sin(lamxZ)) - (lambdaZ*(cz - dz)*cos(lamxZ) + lambdaZ*(cz + dz)*sin(lamxZ)) / (exp(lamxZ)));
+						}
+						else {
+							if (deltaY > 0) {
 
+							}
+							else if (deltaY == 0) {
+
+							}
+							else {
+
+							}
+						}
+						wink.at(3) = -disps.at(3)*wz;
 						// now we need to adjust the diagrams
 						BeamForces[elem->giveNumber()].at(pos).at(5) = -2 * lambdaZ*lambdaZ*EJyy* (exp(lamxZ)*(bz*cos(lamxZ) - az*sin(lamxZ)) + (-dz*cos(lamxZ) + cz*sin(lamxZ)) / exp(lamxZ));
 						BeamForces[elem->giveNumber()].at(pos).at(3) = -2 * lambdaZ*lambdaZ*lambdaZ*EJyy* (-exp(lamxZ)*((az - bz)*cos(lamxZ) + (bz + az)*sin(lamxZ)) + ((cz + dz)*cos(lamxZ) + (-cz + dz)*sin(lamxZ)) / (exp(lamxZ)));
