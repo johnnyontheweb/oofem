@@ -633,8 +633,12 @@ namespace oofem {
 							rhs.at(3) = dI.at(6);
 							rhs.at(4) = dE.at(6);
 
-							'odeMtrx.computeReciprocalCondition('1');
+							//odeMtrx.computeReciprocalCondition('1');
 							odeMtrx.solveForRhs(rhs, abcd);
+
+#ifdef DEBUG
+							odeMtrx.writeCSV("ODE.csv");
+#endif
 
 							ay = abcd.at(1);
 							by = abcd.at(2);
@@ -821,7 +825,7 @@ namespace oofem {
 								BeamForces[elem->giveNumber()].at(pos).at(6) = -EJzz* (ay*lambdaY1*lambdaY1*exp(lamxY1) + by*lambdaY1*lambdaY1*exp(-lamxY1) + cy*lambdaY2*lambdaY2*exp(lamxY2) + dy*lambdaY2*lambdaY2*exp(-lamxY2)) - psi_y*bl.at(2) + alphaY*psi_y*(ay*exp(lamxY1) + by*exp(-lamxY1) + cy*exp(lamxY2) + dy*exp(-lamxY2) + bl.at(2) / wy);
 								BeamForces[elem->giveNumber()].at(pos).at(2) = -EJzz* (ay*lambdaY1*lambdaY1*lambdaY1*exp(lamxY1) - by*lambdaY1*lambdaY1*lambdaY1*exp(-lamxY1) + cy*lambdaY2*lambdaY2*lambdaY2*exp(lamxY2) - dy*lambdaY2*lambdaY2*lambdaY2*exp(-lamxY2)) - psi_y*bl.at(2) + alphaY*psi_y*(ay*lambdaY1*exp(lamxY1) - by*lambdaY1*exp(-lamxY1) + cy*lambdaY2*exp(lamxY2) - dy*lambdaY2*exp(-lamxY2));
 							}
-							else if (deltaY == 0) {
+							else if (deltaY == 0) { 
 								// displacement
 								disps.at(2) = ay*exp(lamxY1) + by / exp(lamxY1) + pos*(cy * exp(lamxY1) + dy / exp(lamxY1)) + bl.at(2) / wy;
 								// rotation
