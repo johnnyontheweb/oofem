@@ -1512,7 +1512,8 @@ void FloatMatrix :: writeCSV(const std :: string &name) const
     FILE *file = fopen(name.c_str(), "w");
     for ( int i = 1; i <= nRows; ++i ) {
         for ( int j = 1; j <= nColumns; ++j ) {
-            fprintf(file, "%10.3e, ", this->at(i, j) );
+			// fprintf(file, "%10.3e, ", this->at(i, j));
+			fprintf(file, "%10.3e; ", this->at(i, j));
         }
 
         fprintf(file, "\n");

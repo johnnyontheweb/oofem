@@ -635,6 +635,10 @@ namespace oofem {
 
 							odeMtrx.solveForRhs(rhs, abcd);
 
+#ifdef DEBUG
+							odeMtrx.writeCSV("ODE.csv");
+#endif
+
 							ay = abcd.at(1);
 							by = abcd.at(2);
 							cy = abcd.at(3);
