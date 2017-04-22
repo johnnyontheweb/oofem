@@ -579,14 +579,14 @@ namespace oofem {
 									odeMtrx.at(2, 2) = exp(-l*lambdaY1);
 									odeMtrx.at(2, 3) = exp(l*lambdaY2);
 									odeMtrx.at(2, 4) = exp(-l*lambdaY2);
-									odeMtrx.at(3, 1) = lambdaY1;
-									odeMtrx.at(3, 2) = -lambdaY1;
-									odeMtrx.at(3, 3) = lambdaY2;
-									odeMtrx.at(3, 4) = -lambdaY2;
-									odeMtrx.at(4, 1) = lambdaY1	 * exp(l*lambdaY1);
-									odeMtrx.at(4, 2) = -lambdaY1 / exp(l*lambdaY1);
-									odeMtrx.at(4, 3) = lambdaY2	 * exp(l*lambdaY2);
-									odeMtrx.at(4, 4) = -lambdaY2 / exp(l*lambdaY2);
+									odeMtrx.at(3, 1) = -lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(3, 2) =  lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(3, 3) = -lambdaY2*(lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(3, 4) =  lambdaY2*(lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(4, 1) = -lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1)*exp(l*lambdaY1);
+									odeMtrx.at(4, 2) =  lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1)/exp(l*lambdaY1);
+									odeMtrx.at(4, 3) = -lambdaY2*(lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*exp(l*lambdaY2);
+									odeMtrx.at(4, 4) =  lambdaY2*(lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)/exp(l*lambdaY2);
 								}
 								else if (deltaY == 0) {
 									lambdaY1 = sqrt(alphaY / 2);
@@ -598,14 +598,14 @@ namespace oofem {
 									odeMtrx.at(2, 2) = exp(-l*lambdaY1);
 									odeMtrx.at(2, 3) = l*exp(l*lambdaY1);
 									odeMtrx.at(2, 4) = l*exp(-l*lambdaY1);
-									odeMtrx.at(3, 1) = lambdaY1;
-									odeMtrx.at(3, 2) = -lambdaY1;
-									odeMtrx.at(3, 3) = 1;
-									odeMtrx.at(3, 4) = 1;
-									odeMtrx.at(4, 1) = lambdaY1 * exp(l*lambdaY1);
-									odeMtrx.at(4, 2) = -lambdaY1 / exp(l*lambdaY1);
-									odeMtrx.at(4, 3) = (l*lambdaY1 + 1) * exp(l*lambdaY1);
-									odeMtrx.at(4, 4) = -(l*lambdaY1 - 1) / exp(l*lambdaY1);
+									odeMtrx.at(3, 1) = -lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(3, 2) =  lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(3, 3) = -lambdaY1*(3*lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(3, 4) = -lambdaY1*(3*lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(4, 1) = -lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1)*exp(l*lambdaY1);
+									odeMtrx.at(4, 2) =  lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1)/exp(l*lambdaY1);
+									odeMtrx.at(4, 3) = -(l*lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1) + 3 * lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1)*exp(l*lambdaY1);
+									odeMtrx.at(4, 4) = -(-l*lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1) + 3 * lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1)/exp(l*lambdaY1);
 								}
 								else {
 									lambdaY1 = sqrt(alphaY / 4 + 0.5*sqrt(lambdaY));
@@ -617,14 +617,14 @@ namespace oofem {
 									odeMtrx.at(2, 2) = cos(l*lambdaY2) / exp(l*lambdaY1);
 									odeMtrx.at(2, 3) = sin(l*lambdaY2) * exp(l*lambdaY1);
 									odeMtrx.at(2, 4) = sin(l*lambdaY2) / exp(l*lambdaY1);
-									odeMtrx.at(3, 1) = lambdaY1;
-									odeMtrx.at(3, 2) = -lambdaY1;
-									odeMtrx.at(3, 3) = lambdaY2;
-									odeMtrx.at(3, 4) = lambdaY2;
-									odeMtrx.at(4, 1) = (lambdaY1*cos(l*lambdaY2) - lambdaY2*sin(l*lambdaY2)) * exp(l*lambdaY1);
-									odeMtrx.at(4, 2) = -(lambdaY1*cos(l*lambdaY2) + lambdaY2*sin(l*lambdaY2)) / exp(l*lambdaY1);
-									odeMtrx.at(4, 3) = (lambdaY2*cos(l*lambdaY2) + lambdaY1*sin(l*lambdaY2)) * exp(l*lambdaY1);
-									odeMtrx.at(4, 4) = (lambdaY2*cos(l*lambdaY2) - lambdaY1*sin(l*lambdaY2)) / exp(l*lambdaY1);
+									odeMtrx.at(3, 1) = -lambdaY1*(lambdaY1*lambdaY1*psi_y - 3 * lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(3, 2) =  lambdaY1*(lambdaY1*lambdaY1*psi_y - 3 * lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(3, 3) = -lambdaY2*(3 * lambdaY1*lambdaY1*psi_y - lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(3, 4) = -lambdaY2*(3 * lambdaY1*lambdaY1*psi_y - lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(4, 1) = -( lambdaY1*(lambdaY1*lambdaY1*psi_y - 3 * lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*cos(l*lambdaY2) - lambdaY2*(3 * lambdaY1*lambdaY1*psi_y - lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*sin(l*lambdaY2)) * exp(l*lambdaY1);
+									odeMtrx.at(4, 2) =  ( lambdaY1*(lambdaY1*lambdaY1*psi_y - 3 * lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*cos(l*lambdaY2) + lambdaY2*(3 * lambdaY1*lambdaY1*psi_y - lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*sin(l*lambdaY2)) / exp(l*lambdaY1);
+									odeMtrx.at(4, 3) = -( lambdaY2*(3 * lambdaY1*lambdaY1*psi_y - lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*cos(l*lambdaY2) + lambdaY1*(lambdaY1*lambdaY1*psi_y - 3 * lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*sin(l*lambdaY2)) * exp(l*lambdaY1);
+									odeMtrx.at(4, 4) =  (-lambdaY2*(3 * lambdaY1*lambdaY1*psi_y - lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*cos(l*lambdaY2) + lambdaY1*(lambdaY1*lambdaY1*psi_y - 3 * lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*sin(l*lambdaY2)) / exp(l*lambdaY1);
 								}
 							}
 
@@ -633,6 +633,7 @@ namespace oofem {
 							rhs.at(3) = dI.at(6);
 							rhs.at(4) = dE.at(6);
 
+							'odeMtrx.computeReciprocalCondition('1');
 							odeMtrx.solveForRhs(rhs, abcd);
 
 							ay = abcd.at(1);
@@ -697,14 +698,14 @@ namespace oofem {
 									odeMtrx.at(2, 2) = exp(-l*lambdaZ1);
 									odeMtrx.at(2, 3) = exp(l*lambdaZ2);
 									odeMtrx.at(2, 4) = exp(-l*lambdaZ2);
-									odeMtrx.at(3, 1) = lambdaZ1;
-									odeMtrx.at(3, 2) = -lambdaZ1;
-									odeMtrx.at(3, 3) = lambdaZ2;
-									odeMtrx.at(3, 4) = -lambdaZ2;
-									odeMtrx.at(4, 1) = lambdaZ1	 * exp(l*lambdaZ1);
-									odeMtrx.at(4, 2) = -lambdaZ1 / exp(l*lambdaZ1);
-									odeMtrx.at(4, 3) = lambdaZ2	 * exp(l*lambdaZ2);
-									odeMtrx.at(4, 4) = -lambdaZ2 / exp(l*lambdaZ2);
+									odeMtrx.at(3, 1) = -lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(3, 2) = lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(3, 3) = -lambdaZ2*(lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(3, 4) = lambdaZ2*(lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(4, 1) = -lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1)*exp(l*lambdaZ1);
+									odeMtrx.at(4, 2) = lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1) / exp(l*lambdaZ1);
+									odeMtrx.at(4, 3) = -lambdaZ2*(lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*exp(l*lambdaZ2);
+									odeMtrx.at(4, 4) = lambdaZ2*(lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1) / exp(l*lambdaZ2);
 								}
 								else if (deltaZ == 0) {
 									lambdaZ1 = sqrt(alphaZ / 2);
@@ -716,14 +717,14 @@ namespace oofem {
 									odeMtrx.at(2, 2) = exp(-l*lambdaZ1);
 									odeMtrx.at(2, 3) = l*exp(l*lambdaZ1);
 									odeMtrx.at(2, 4) = l*exp(-l*lambdaZ1);
-									odeMtrx.at(3, 1) = lambdaZ1;
-									odeMtrx.at(3, 2) = -lambdaZ1;
-									odeMtrx.at(3, 3) = 1;
-									odeMtrx.at(3, 4) = 1;
-									odeMtrx.at(4, 1) = lambdaZ1 * exp(l*lambdaZ1);
-									odeMtrx.at(4, 2) = -lambdaZ1 / exp(l*lambdaZ1);
-									odeMtrx.at(4, 3) = (l*lambdaZ1 + 1) * exp(l*lambdaZ1);
-									odeMtrx.at(4, 4) = -(l*lambdaZ1 - 1) / exp(l*lambdaZ1);
+									odeMtrx.at(3, 1) = -lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(3, 2) = lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(3, 3) = -lambdaZ1*(3 * lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(3, 4) = -lambdaZ1*(3 * lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(4, 1) = -lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1)*exp(l*lambdaZ1);
+									odeMtrx.at(4, 2) = lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1) / exp(l*lambdaZ1);
+									odeMtrx.at(4, 3) = -(l*lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1) + 3 * lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1)*exp(l*lambdaZ1);
+									odeMtrx.at(4, 4) = -(-l*lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1) + 3 * lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1) / exp(l*lambdaZ1);
 								}
 								else {
 									lambdaZ1 = sqrt(alphaZ / 4 + 0.5*sqrt(lambdaZ));
@@ -735,14 +736,14 @@ namespace oofem {
 									odeMtrx.at(2, 2) = cos(l*lambdaZ2) / exp(l*lambdaZ1);
 									odeMtrx.at(2, 3) = sin(l*lambdaZ2) * exp(l*lambdaZ1);
 									odeMtrx.at(2, 4) = sin(l*lambdaZ2) / exp(l*lambdaZ1);
-									odeMtrx.at(3, 1) = lambdaZ1;
-									odeMtrx.at(3, 2) = -lambdaZ1;
-									odeMtrx.at(3, 3) = lambdaZ2;
-									odeMtrx.at(3, 4) = lambdaZ2;
-									odeMtrx.at(4, 1) = (lambdaZ1*cos(l*lambdaZ2) - lambdaZ2*sin(l*lambdaZ2)) * exp(l*lambdaZ1);
-									odeMtrx.at(4, 2) = -(lambdaZ1*cos(l*lambdaZ2) + lambdaZ2*sin(l*lambdaZ2)) / exp(l*lambdaZ1);
-									odeMtrx.at(4, 3) = (lambdaZ2*cos(l*lambdaZ2) + lambdaZ1*sin(l*lambdaZ2)) * exp(l*lambdaZ1);
-									odeMtrx.at(4, 4) = (lambdaZ2*cos(l*lambdaZ2) - lambdaZ1*sin(l*lambdaZ2)) / exp(l*lambdaZ1);
+									odeMtrx.at(3, 1) = -lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - 3 * lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(3, 2) = lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - 3 * lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(3, 3) = -lambdaZ2*(3 * lambdaZ1*lambdaZ1*psi_z - lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(3, 4) = -lambdaZ2*(3 * lambdaZ1*lambdaZ1*psi_z - lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(4, 1) = -(lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - 3 * lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*cos(l*lambdaZ2) - lambdaZ2*(3 * lambdaZ1*lambdaZ1*psi_z - lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*sin(l*lambdaZ2)) * exp(l*lambdaZ1);
+									odeMtrx.at(4, 2) = (lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - 3 * lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*cos(l*lambdaZ2) + lambdaZ2*(3 * lambdaZ1*lambdaZ1*psi_z - lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*sin(l*lambdaZ2)) / exp(l*lambdaZ1);
+									odeMtrx.at(4, 3) = -(lambdaZ2*(3 * lambdaZ1*lambdaZ1*psi_z - lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*cos(l*lambdaZ2) + lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - 3 * lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*sin(l*lambdaZ2)) * exp(l*lambdaZ1);
+									odeMtrx.at(4, 4) = (-lambdaZ2*(3 * lambdaZ1*lambdaZ1*psi_z - lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*cos(l*lambdaZ2) + lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - 3 * lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*sin(l*lambdaZ2)) / exp(l*lambdaZ1);
 								}
 							}
 
@@ -815,10 +816,10 @@ namespace oofem {
 								// displacement
 								disps.at(2) = ay*exp(lamxY1) + by / exp(lamxY1) + cy * exp(lamxY2) + dy / exp(lamxY2) + bl.at(2) / wy;
 								// rotation
-								disps.at(6) = lambdaY1*(ay*exp(lamxY1) - by / exp(lamxY1)) + lambdaY2*(cy * exp(lamxY2) - dy / exp(lamxY2));
+								disps.at(6) = -psi_y*(ay*lambdaY1*lambdaY1*lambdaY1*exp(lamxY1)-by*lambdaY1*lambdaY1*lambdaY1*exp(-lamxY1) + cy*lambdaY2*lambdaY2*lambdaY2*exp(lamxY2)-dy*lambdaY2*lambdaY2*lambdaY2*exp(-lamxY2)) + (alphaY*psi_y - 1)*(ay*lambdaY1*exp(lamxY1)-by*lambdaY1*exp(-lamxY1) + cy*lambdaY2*exp(lamxY2)-dy*lambdaY2*exp(-lamxY2));
 								// adjust the diagrams
-								BeamForces[elem->giveNumber()].at(pos).at(6) = EJzz* (ay*lambdaY1 * lambdaY1*exp(lamxY1)+by*lambdaY1 * lambdaY1*exp(-lamxY1) + cy*lambdaY2 * lambdaY2*exp(lamxY2)+dy*lambdaY2 * lambdaY2*exp(-lamxY2));
-								BeamForces[elem->giveNumber()].at(pos).at(2) = -EJzz* (ay*lambdaY1 * lambdaY1 * lambdaY1*exp(lamxY1)-by*lambdaY1 * lambdaY1 * lambdaY1*exp(-lamxY1) + cy*lambdaY2 * lambdaY2 * lambdaY2*exp(lamxY2)-dy*lambdaY2 * lambdaY2 * lambdaY2*exp(-lamxY2));
+								BeamForces[elem->giveNumber()].at(pos).at(6) = -EJzz* (ay*lambdaY1*lambdaY1*exp(lamxY1) + by*lambdaY1*lambdaY1*exp(-lamxY1) + cy*lambdaY2*lambdaY2*exp(lamxY2) + dy*lambdaY2*lambdaY2*exp(-lamxY2)) - psi_y*bl.at(2) + alphaY*psi_y*(ay*exp(lamxY1) + by*exp(-lamxY1) + cy*exp(lamxY2) + dy*exp(-lamxY2) + bl.at(2) / wy);
+								BeamForces[elem->giveNumber()].at(pos).at(2) = -EJzz* (ay*lambdaY1*lambdaY1*lambdaY1*exp(lamxY1) - by*lambdaY1*lambdaY1*lambdaY1*exp(-lamxY1) + cy*lambdaY2*lambdaY2*lambdaY2*exp(lamxY2) - dy*lambdaY2*lambdaY2*lambdaY2*exp(-lamxY2)) - psi_y*bl.at(2) + alphaY*psi_y*(ay*lambdaY1*exp(lamxY1) - by*lambdaY1*exp(-lamxY1) + cy*lambdaY2*exp(lamxY2) - dy*lambdaY2*exp(-lamxY2));
 							}
 							else if (deltaY == 0) {
 								// displacement
