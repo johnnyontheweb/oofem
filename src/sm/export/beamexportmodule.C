@@ -579,14 +579,14 @@ namespace oofem {
 									odeMtrx.at(2, 2) = exp(-l*lambdaY1);
 									odeMtrx.at(2, 3) = exp(l*lambdaY2);
 									odeMtrx.at(2, 4) = exp(-l*lambdaY2);
-									odeMtrx.at(3, 1) = -lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1);
-									odeMtrx.at(3, 2) =  lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1);
-									odeMtrx.at(3, 3) = -lambdaY2*(lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1);
-									odeMtrx.at(3, 4) =  lambdaY2*(lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1);
-									odeMtrx.at(4, 1) = -lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1)*exp(l*lambdaY1);
-									odeMtrx.at(4, 2) =  lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1)/exp(l*lambdaY1);
-									odeMtrx.at(4, 3) = -lambdaY2*(lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*exp(l*lambdaY2);
-									odeMtrx.at(4, 4) =  lambdaY2*(lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)/exp(l*lambdaY2);
+									odeMtrx.at(3, 1) =  lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(3, 2) = -lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(3, 3) =  lambdaY2*(lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(3, 4) = -lambdaY2*(lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(4, 1) =  lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1)*exp(l*lambdaY1);
+									odeMtrx.at(4, 2) = -lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1)/exp(l*lambdaY1);
+									odeMtrx.at(4, 3) =  lambdaY2*(lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*exp(l*lambdaY2);
+									odeMtrx.at(4, 4) = -lambdaY2*(lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)/exp(l*lambdaY2);
 								}
 								else if (deltaY == 0) {
 									lambdaY1 = sqrt(alphaY / 2);
@@ -598,14 +598,14 @@ namespace oofem {
 									odeMtrx.at(2, 2) = exp(-l*lambdaY1);
 									odeMtrx.at(2, 3) = l*exp(l*lambdaY1);
 									odeMtrx.at(2, 4) = l*exp(-l*lambdaY1);
-									odeMtrx.at(3, 1) = -lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1);
-									odeMtrx.at(3, 2) =  lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1);
-									odeMtrx.at(3, 3) = -lambdaY1*(3*lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1);
-									odeMtrx.at(3, 4) = -lambdaY1*(3*lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1);
-									odeMtrx.at(4, 1) = -lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1)*exp(l*lambdaY1);
-									odeMtrx.at(4, 2) =  lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1)/exp(l*lambdaY1);
-									odeMtrx.at(4, 3) = -(l*lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1) + 3 * lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1)*exp(l*lambdaY1);
-									odeMtrx.at(4, 4) = -(-l*lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1) + 3 * lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1)/exp(l*lambdaY1);
+									odeMtrx.at(3, 1) =  lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(3, 2) = -lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(3, 3) =  lambdaY1*(3*lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(3, 4) =  lambdaY1*(3*lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(4, 1) =  lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1)*exp(l*lambdaY1);
+									odeMtrx.at(4, 2) = -lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1)/exp(l*lambdaY1);
+									odeMtrx.at(4, 3) =  (l*lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1) + 3 * lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1)*exp(l*lambdaY1);
+									odeMtrx.at(4, 4) =  (-l*lambdaY1*(lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1) + 3 * lambdaY1*lambdaY1*psi_y - alphaY*psi_y + 1)/exp(l*lambdaY1);
 								}
 								else {
 									lambdaY1 = sqrt(alphaY / 4 + 0.5*sqrt(lambdaY));
@@ -617,14 +617,14 @@ namespace oofem {
 									odeMtrx.at(2, 2) = cos(l*lambdaY2) / exp(l*lambdaY1);
 									odeMtrx.at(2, 3) = sin(l*lambdaY2) * exp(l*lambdaY1);
 									odeMtrx.at(2, 4) = sin(l*lambdaY2) / exp(l*lambdaY1);
-									odeMtrx.at(3, 1) = -lambdaY1*(lambdaY1*lambdaY1*psi_y - 3 * lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1);
-									odeMtrx.at(3, 2) =  lambdaY1*(lambdaY1*lambdaY1*psi_y - 3 * lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1);
-									odeMtrx.at(3, 3) = -lambdaY2*(3 * lambdaY1*lambdaY1*psi_y - lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1);
-									odeMtrx.at(3, 4) = -lambdaY2*(3 * lambdaY1*lambdaY1*psi_y - lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1);
-									odeMtrx.at(4, 1) = -( lambdaY1*(lambdaY1*lambdaY1*psi_y - 3 * lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*cos(l*lambdaY2) - lambdaY2*(3 * lambdaY1*lambdaY1*psi_y - lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*sin(l*lambdaY2)) * exp(l*lambdaY1);
-									odeMtrx.at(4, 2) =  ( lambdaY1*(lambdaY1*lambdaY1*psi_y - 3 * lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*cos(l*lambdaY2) + lambdaY2*(3 * lambdaY1*lambdaY1*psi_y - lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*sin(l*lambdaY2)) / exp(l*lambdaY1);
-									odeMtrx.at(4, 3) = -( lambdaY2*(3 * lambdaY1*lambdaY1*psi_y - lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*cos(l*lambdaY2) + lambdaY1*(lambdaY1*lambdaY1*psi_y - 3 * lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*sin(l*lambdaY2)) * exp(l*lambdaY1);
-									odeMtrx.at(4, 4) =  (-lambdaY2*(3 * lambdaY1*lambdaY1*psi_y - lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*cos(l*lambdaY2) + lambdaY1*(lambdaY1*lambdaY1*psi_y - 3 * lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*sin(l*lambdaY2)) / exp(l*lambdaY1);
+									odeMtrx.at(3, 1) =  lambdaY1*(lambdaY1*lambdaY1*psi_y - 3 * lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(3, 2) = -lambdaY1*(lambdaY1*lambdaY1*psi_y - 3 * lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(3, 3) =  lambdaY2*(3 * lambdaY1*lambdaY1*psi_y - lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(3, 4) =  lambdaY2*(3 * lambdaY1*lambdaY1*psi_y - lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1);
+									odeMtrx.at(4, 1) =  ( lambdaY1*(lambdaY1*lambdaY1*psi_y - 3 * lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*cos(l*lambdaY2) - lambdaY2*(3 * lambdaY1*lambdaY1*psi_y - lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*sin(l*lambdaY2)) * exp(l*lambdaY1);
+									odeMtrx.at(4, 2) = -( lambdaY1*(lambdaY1*lambdaY1*psi_y - 3 * lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*cos(l*lambdaY2) + lambdaY2*(3 * lambdaY1*lambdaY1*psi_y - lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*sin(l*lambdaY2)) / exp(l*lambdaY1);
+									odeMtrx.at(4, 3) =  ( lambdaY2*(3 * lambdaY1*lambdaY1*psi_y - lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*cos(l*lambdaY2) + lambdaY1*(lambdaY1*lambdaY1*psi_y - 3 * lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*sin(l*lambdaY2)) * exp(l*lambdaY1);
+									odeMtrx.at(4, 4) = -(-lambdaY2*(3 * lambdaY1*lambdaY1*psi_y - lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*cos(l*lambdaY2) + lambdaY1*(lambdaY1*lambdaY1*psi_y - 3 * lambdaY2*lambdaY2*psi_y - alphaY*psi_y + 1)*sin(l*lambdaY2)) / exp(l*lambdaY1);
 								}
 							}
 
@@ -702,14 +702,14 @@ namespace oofem {
 									odeMtrx.at(2, 2) = exp(-l*lambdaZ1);
 									odeMtrx.at(2, 3) = exp(l*lambdaZ2);
 									odeMtrx.at(2, 4) = exp(-l*lambdaZ2);
-									odeMtrx.at(3, 1) = -lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1);
-									odeMtrx.at(3, 2) = lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1);
-									odeMtrx.at(3, 3) = -lambdaZ2*(lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1);
-									odeMtrx.at(3, 4) = lambdaZ2*(lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1);
-									odeMtrx.at(4, 1) = -lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1)*exp(l*lambdaZ1);
-									odeMtrx.at(4, 2) = lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1) / exp(l*lambdaZ1);
-									odeMtrx.at(4, 3) = -lambdaZ2*(lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*exp(l*lambdaZ2);
-									odeMtrx.at(4, 4) = lambdaZ2*(lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1) / exp(l*lambdaZ2);
+									odeMtrx.at(3, 1) = lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(3, 2) = -lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(3, 3) = lambdaZ2*(lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(3, 4) = -lambdaZ2*(lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(4, 1) = lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1)*exp(l*lambdaZ1);
+									odeMtrx.at(4, 2) = -lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1) / exp(l*lambdaZ1);
+									odeMtrx.at(4, 3) = lambdaZ2*(lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*exp(l*lambdaZ2);
+									odeMtrx.at(4, 4) = -lambdaZ2*(lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1) / exp(l*lambdaZ2);
 								}
 								else if (deltaZ == 0) {
 									lambdaZ1 = sqrt(alphaZ / 2);
@@ -721,14 +721,14 @@ namespace oofem {
 									odeMtrx.at(2, 2) = exp(-l*lambdaZ1);
 									odeMtrx.at(2, 3) = l*exp(l*lambdaZ1);
 									odeMtrx.at(2, 4) = l*exp(-l*lambdaZ1);
-									odeMtrx.at(3, 1) = -lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1);
-									odeMtrx.at(3, 2) = lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1);
-									odeMtrx.at(3, 3) = -lambdaZ1*(3 * lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1);
-									odeMtrx.at(3, 4) = -lambdaZ1*(3 * lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1);
-									odeMtrx.at(4, 1) = -lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1)*exp(l*lambdaZ1);
-									odeMtrx.at(4, 2) = lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1) / exp(l*lambdaZ1);
-									odeMtrx.at(4, 3) = -(l*lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1) + 3 * lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1)*exp(l*lambdaZ1);
-									odeMtrx.at(4, 4) = -(-l*lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1) + 3 * lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1) / exp(l*lambdaZ1);
+									odeMtrx.at(3, 1) = lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(3, 2) = -lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(3, 3) = lambdaZ1*(3 * lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(3, 4) = lambdaZ1*(3 * lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(4, 1) = lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1)*exp(l*lambdaZ1);
+									odeMtrx.at(4, 2) = -lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1) / exp(l*lambdaZ1);
+									odeMtrx.at(4, 3) = (l*lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1) + 3 * lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1)*exp(l*lambdaZ1);
+									odeMtrx.at(4, 4) = (-l*lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1) + 3 * lambdaZ1*lambdaZ1*psi_z - alphaZ*psi_z + 1) / exp(l*lambdaZ1);
 								}
 								else {
 									lambdaZ1 = sqrt(alphaZ / 4 + 0.5*sqrt(lambdaZ));
@@ -740,14 +740,14 @@ namespace oofem {
 									odeMtrx.at(2, 2) = cos(l*lambdaZ2) / exp(l*lambdaZ1);
 									odeMtrx.at(2, 3) = sin(l*lambdaZ2) * exp(l*lambdaZ1);
 									odeMtrx.at(2, 4) = sin(l*lambdaZ2) / exp(l*lambdaZ1);
-									odeMtrx.at(3, 1) = -lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - 3 * lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1);
-									odeMtrx.at(3, 2) = lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - 3 * lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1);
-									odeMtrx.at(3, 3) = -lambdaZ2*(3 * lambdaZ1*lambdaZ1*psi_z - lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1);
-									odeMtrx.at(3, 4) = -lambdaZ2*(3 * lambdaZ1*lambdaZ1*psi_z - lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1);
-									odeMtrx.at(4, 1) = -(lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - 3 * lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*cos(l*lambdaZ2) - lambdaZ2*(3 * lambdaZ1*lambdaZ1*psi_z - lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*sin(l*lambdaZ2)) * exp(l*lambdaZ1);
-									odeMtrx.at(4, 2) = (lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - 3 * lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*cos(l*lambdaZ2) + lambdaZ2*(3 * lambdaZ1*lambdaZ1*psi_z - lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*sin(l*lambdaZ2)) / exp(l*lambdaZ1);
-									odeMtrx.at(4, 3) = -(lambdaZ2*(3 * lambdaZ1*lambdaZ1*psi_z - lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*cos(l*lambdaZ2) + lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - 3 * lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*sin(l*lambdaZ2)) * exp(l*lambdaZ1);
-									odeMtrx.at(4, 4) = (-lambdaZ2*(3 * lambdaZ1*lambdaZ1*psi_z - lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*cos(l*lambdaZ2) + lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - 3 * lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*sin(l*lambdaZ2)) / exp(l*lambdaZ1);
+									odeMtrx.at(3, 1) = lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - 3 * lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(3, 2) = -lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - 3 * lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(3, 3) = lambdaZ2*(3 * lambdaZ1*lambdaZ1*psi_z - lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(3, 4) = lambdaZ2*(3 * lambdaZ1*lambdaZ1*psi_z - lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1);
+									odeMtrx.at(4, 1) = (lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - 3 * lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*cos(l*lambdaZ2) - lambdaZ2*(3 * lambdaZ1*lambdaZ1*psi_z - lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*sin(l*lambdaZ2)) * exp(l*lambdaZ1);
+									odeMtrx.at(4, 2) = -(lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - 3 * lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*cos(l*lambdaZ2) + lambdaZ2*(3 * lambdaZ1*lambdaZ1*psi_z - lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*sin(l*lambdaZ2)) / exp(l*lambdaZ1);
+									odeMtrx.at(4, 3) = (lambdaZ2*(3 * lambdaZ1*lambdaZ1*psi_z - lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*cos(l*lambdaZ2) + lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - 3 * lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*sin(l*lambdaZ2)) * exp(l*lambdaZ1);
+									odeMtrx.at(4, 4) = -(-lambdaZ2*(3 * lambdaZ1*lambdaZ1*psi_z - lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*cos(l*lambdaZ2) + lambdaZ1*(lambdaZ1*lambdaZ1*psi_z - 3 * lambdaZ2*lambdaZ2*psi_z - alphaZ*psi_z + 1)*sin(l*lambdaZ2)) / exp(l*lambdaZ1);
 								}
 							}
 
@@ -820,28 +820,28 @@ namespace oofem {
 								// displacement
 								disps.at(2) = ay*exp(lamxY1) + by / exp(lamxY1) + cy * exp(lamxY2) + dy / exp(lamxY2) + bl.at(2) / wy;
 								// rotation
-								disps.at(6) = -psi_y*(ay*lambdaY1*lambdaY1*lambdaY1*exp(lamxY1)-by*lambdaY1*lambdaY1*lambdaY1*exp(-lamxY1) + cy*lambdaY2*lambdaY2*lambdaY2*exp(lamxY2)-dy*lambdaY2*lambdaY2*lambdaY2*exp(-lamxY2)) + (alphaY*psi_y - 1)*(ay*lambdaY1*exp(lamxY1)-by*lambdaY1*exp(-lamxY1) + cy*lambdaY2*exp(lamxY2)-dy*lambdaY2*exp(-lamxY2));
+								disps.at(6) = psi_y*(ay*lambdaY1*lambdaY1*lambdaY1*exp(lamxY1)-by*lambdaY1*lambdaY1*lambdaY1*exp(-lamxY1) + cy*lambdaY2*lambdaY2*lambdaY2*exp(lamxY2)-dy*lambdaY2*lambdaY2*lambdaY2*exp(-lamxY2)) - (alphaY*psi_y - 1)*(ay*lambdaY1*exp(lamxY1)-by*lambdaY1*exp(-lamxY1) + cy*lambdaY2*exp(lamxY2)-dy*lambdaY2*exp(-lamxY2));
 								// adjust the diagrams
-								BeamForces[elem->giveNumber()].at(pos).at(6) = -EJzz* (ay*lambdaY1*lambdaY1*exp(lamxY1) + by*lambdaY1*lambdaY1*exp(-lamxY1) + cy*lambdaY2*lambdaY2*exp(lamxY2) + dy*lambdaY2*lambdaY2*exp(-lamxY2)) - psi_y*bl.at(2) + alphaY*psi_y*(ay*exp(lamxY1) + by*exp(-lamxY1) + cy*exp(lamxY2) + dy*exp(-lamxY2) + bl.at(2) / wy);
-								BeamForces[elem->giveNumber()].at(pos).at(2) = -EJzz* (ay*lambdaY1*lambdaY1*lambdaY1*exp(lamxY1) - by*lambdaY1*lambdaY1*lambdaY1*exp(-lamxY1) + cy*lambdaY2*lambdaY2*lambdaY2*exp(lamxY2) - dy*lambdaY2*lambdaY2*lambdaY2*exp(-lamxY2)) - psi_y*bl.at(2) + alphaY*psi_y*(ay*lambdaY1*exp(lamxY1) - by*lambdaY1*exp(-lamxY1) + cy*lambdaY2*exp(lamxY2) - dy*lambdaY2*exp(-lamxY2));
+								BeamForces[elem->giveNumber()].at(pos).at(6) = EJzz* (ay*lambdaY1*lambdaY1*exp(lamxY1) + by*lambdaY1*lambdaY1*exp(-lamxY1) + cy*lambdaY2*lambdaY2*exp(lamxY2) + dy*lambdaY2*lambdaY2*exp(-lamxY2) - alphaY*(ay*exp(lamxY1) + by*exp(-lamxY1) + cy*exp(lamxY2) + dy*exp(-lamxY2)));
+								BeamForces[elem->giveNumber()].at(pos).at(2) = -EJzz* (ay*lambdaY1*lambdaY1*lambdaY1*exp(lamxY1) - by*lambdaY1*lambdaY1*lambdaY1*exp(-lamxY1) + cy*lambdaY2*lambdaY2*lambdaY2*exp(lamxY2) - dy*lambdaY2*lambdaY2*lambdaY2*exp(-lamxY2) + alphaY*(ay*lambdaY1*exp(lamxY1) - by*lambdaY1*exp(-lamxY1) + cy*lambdaY2*exp(lamxY2) - dy*lambdaY2*exp(-lamxY2)));
 							}
 							else if (deltaY == 0) { 
 								// displacement
 								disps.at(2) = ay*exp(lamxY1) + by / exp(lamxY1) + pos*(cy * exp(lamxY1) + dy / exp(lamxY1)) + bl.at(2) / wy;
 								// rotation
-								disps.at(6) = exp(lamxY1)*(cy*(lamxY1 + 1) + ay*lambdaY1) - (dy*(lamxY1 - 1) + by*lambdaY1) / exp(lamxY1);
+								disps.at(6) = psi_y*(lambdaY1*lambdaY1*exp(lamxY1)*(cy*lamxY1 + ay*lambdaY1 + 3*cy) - lambdaY1*lambdaY1*exp(-lamxY1)*(dy*lamxY1 + by*lambdaY1 - 3*dy)) - (alphaY*psi_y - 1)*(exp(lamxY1)*(cy*lamxY1 + ay*lambdaY1 + cy) - exp(-lamxY1)*(dy*lamxY1 + by*lambdaY1 - dy));
 								// adjust the diagrams
-								BeamForces[elem->giveNumber()].at(pos).at(6) = EJzz* (lambdaY1*exp(lamxY1)*(cy*lamxY1 + ay*lambdaY1 + 2 * cy) + lambdaY1*exp(-lamxY1)*(dy*lamxY1 + by*lambdaY1 - 2 * dy));
-								BeamForces[elem->giveNumber()].at(pos).at(2) = -EJzz* (lambdaY1*lambdaY1*exp(lamxY1)*(cy*lamxY1 + ay*lambdaY1 + 3 * cy) - lambdaY1*lambdaY1 * exp(-lamxY1)*(dy*lamxY1 + by*lambdaY1 - 3 * dy));
+								BeamForces[elem->giveNumber()].at(pos).at(6) = EJzz*(lambdaY1*exp(lamxY1)*(cy*lamxY1 + ay*lambdaY1 + 2 * cy) + lambdaY1*exp(-lamxY1)*(dy*lamxY1 + by*lambdaY1 - 2 * dy) - alphaY*(ay*exp(lamxY1) + by*exp(-lamxY1) + cy*pos*exp(lamxY1) + dy*pos*exp(-lamxY1)));
+								BeamForces[elem->giveNumber()].at(pos).at(2) = -EJzz*(lambdaY1*lambdaY1*exp(lamxY1)*(cy*lamxY1 + ay*lambdaY1 + 3 * cy) - lambdaY1*lambdaY1*exp(-lamxY1)*(dy*lamxY1 + by*lambdaY1 - 3 * dy) + alphaY*(exp(lamxY1)*(cy*lamxY1 + ay*lambdaY1 + cy) - exp(-lamxY1)*(dy*lamxY1 + by*lambdaY1 - dy)));
 							}
 							else {
 								// displacement
 								disps.at(2) = exp(lamxY1)*(ay*cos(lamxY2) + cy*sin(lamxY2)) + (by*cos(lamxY2) + dy*sin(lamxY2)) / exp(lamxY1) + bl.at(2) / wy;
 								// rotation
-								disps.at(6) = exp(lamxY1)*((lambdaY1*ay + lambdaY2*cy)*cos(lamxY2) + (lambdaY1*cy - lambdaY2*ay)*sin(lamxY2)) - ((lambdaY1*by - lambdaY2*dy)*cos(lamxY2) + (lambdaY2*by + lambdaY1*dy)*sin(lamxY2)) / (exp(lamxY1));
+								disps.at(6) = psi_y*(exp(lamxY1)*((ay*lambdaY1*(lambdaY1*lambdaY1 - 3*lambdaY2*lambdaY2) + cy*lambdaY2*(3*lambdaY1*lambdaY1 - lambdaY2*lambdaY2))*cos(lamxY2) - (ay*lambdaY2*(3*lambdaY1*lambdaY1 - lambdaY2*lambdaY2) + cy*lambdaY1*(3*lambdaY2*lambdaY2 - lambdaY1*lambdaY1))*sin(lamxY2)) - exp(-lamxY1)*((by*lambdaY1*(lambdaY1*lambdaY1 - 3*lambdaY2*lambdaY2) + dy*lambdaY2*(lambdaY2*lambdaY2 - 3*lambdaY1*lambdaY1))*cos(lamxY2) + (by*lambdaY2*(3*lambdaY1*lambdaY1 - lambdaY2*lambdaY2) + dy*lambdaY1*(lambdaY1*lambdaY1 - 3*lambdaY2*lambdaY2))*sin(lamxY2))) - (alphaY*psi_y - 1)*(exp(lamxY1)*((ay*lambdaY1 + cy*lambdaY2)*cos(lamxY2) + (cy*lambdaY1 - ay*lambdaY2)*sin(lamxY2)) - exp(-lamxY1)*((by*lambdaY1 - dy*lambdaY2)*cos(lamxY2) + (by*lambdaY2 + dy*lambdaY1)*sin(lamxY2)));
 								// adjust the diagrams
-								BeamForces[elem->giveNumber()].at(pos).at(6) = EJzz * (exp(lamxY1)*((ay*(lambdaY1 *lambdaY1 - lambdaY2 *lambdaY2) + 2 * cy*lambdaY1*lambdaY2)*cos(lamxY2) - (2 * ay*lambdaY1*lambdaY2 + cy*(lambdaY2 *lambdaY2 - lambdaY1*lambdaY1))*sin(lamxY2)) + exp(-lamxY1)*((by*(lambdaY1 *lambdaY1 - lambdaY2 *lambdaY2) - 2 * dy*lambdaY1*lambdaY2)*cos(lamxY2) + (2 * by*lambdaY1*lambdaY2 + dy*(lambdaY1 *lambdaY1 - lambdaY2 *lambdaY2))*sin(lamxY2)));
-								BeamForces[elem->giveNumber()].at(pos).at(2) = -EJzz * (exp(lamxY1)*((ay*lambdaY1*(lambdaY1 *lambdaY1 - 3 * lambdaY2 *lambdaY2) + cy*lambdaY2*(3 * lambdaY1 *lambdaY1 - lambdaY2 *lambdaY2))*cos(lamxY2) - (ay*lambdaY2*(3 * lambdaY1*lambdaY1 - lambdaY2 *lambdaY2) + cy*lambdaY1*(3 * lambdaY2 *lambdaY2 - lambdaY1 *lambdaY1))*sin(lamxY2)) - exp(-lamxY1)*((by*lambdaY1*(lambdaY1 *lambdaY1 - 3 * lambdaY2 *lambdaY2) + dy*lambdaY2*(lambdaY2 *lambdaY2 - 3 * lambdaY1 *lambdaY1))*cos(lamxY2) + (by*lambdaY2*(3 * lambdaY1 *lambdaY1 - lambdaY2 *lambdaY2) + dy*lambdaY1*(lambdaY1 *lambdaY1 - 3 * lambdaY2* lambdaY2))*sin(lamxY2)));
+								BeamForces[elem->giveNumber()].at(pos).at(6) = EJzz *(exp(lamxY1)*((ay*(lambdaY1*lambdaY1 - lambdaY2*lambdaY2) + 2 * cy*lambdaY1*lambdaY2)*cos(lamxY2) - (2 * ay*lambdaY1*lambdaY2 + cy*(lambdaY2*lambdaY2 - lambdaY1*lambdaY1))*sin(lamxY2)) + exp(-lamxY1)*((by*(lambdaY1*lambdaY1 - lambdaY2*lambdaY2) - 2 * dy*lambdaY1*lambdaY2)*cos(lamxY2) + (2 * by*lambdaY1*lambdaY2 + dy*(lambdaY1*lambdaY1 - lambdaY2*lambdaY2))*sin(lamxY2)) - alphaY*(ay*exp(lamxY1)*cos(lamxY2) + by*exp(-lamxY1)*cos(lamxY2) + cy*exp(lamxY1)*sin(lamxY2) + dy*exp(-lamxY1)*sin(lamxY2)));
+								BeamForces[elem->giveNumber()].at(pos).at(2) = -EJzz *(exp(lamxY1)*((ay*lambdaY1*(lambdaY1*lambdaY1 - 3 * lambdaY2*lambdaY2) + cy*lambdaY2*(3 * lambdaY1*lambdaY1 - lambdaY2*lambdaY2))*cos(lamxY2) - (ay*lambdaY2*(3 * lambdaY1*lambdaY1 - lambdaY2*lambdaY2) + cy*lambdaY1*(3 * lambdaY2*lambdaY2 - lambdaY1*lambdaY1))*sin(lamxY2)) - exp(-lamxY1)*((by*lambdaY1*(lambdaY1*lambdaY1 - 3 * lambdaY2*lambdaY2) + dy*lambdaY2*(lambdaY2*lambdaY2 - 3 * lambdaY1*lambdaY1))*cos(lamxY2) + (by*lambdaY2*(3 * lambdaY1*lambdaY1 - lambdaY2*lambdaY2) + dy*lambdaY1*(lambdaY1*lambdaY1 - 3 * lambdaY2*lambdaY2))*sin(lamxY2)) + alphaY*(exp(lamxY1)*((ay*lambdaY1 + cy*lambdaY2)*cos(lamxY2) + (cy*lambdaY1 - ay*lambdaY2)*sin(lamxY2)) - exp(-lamxY1)*((by*lambdaY1 - dy*lambdaY2)*cos(lamxY2) + (by*lambdaY2 + dy*lambdaY1)*sin(lamxY2))));
 							}
 						}
 
@@ -874,28 +874,28 @@ namespace oofem {
 								// displacement
 								disps.at(3) = az*exp(lamxZ1) + bz / exp(lamxZ1) + cz * exp(lamxZ2) + dz / exp(lamxZ2) + bl.at(3) / wz;
 								// rotation
-								disps.at(5) = -(lambdaZ1*(az*exp(lamxZ1) - bz / exp(lamxZ1)) + lambdaZ2*(cz * exp(lamxZ2) - dz / exp(lamxZ2)));
+								disps.at(5) = -psi_z*(az*lambdaZ1*lambdaZ1*lambdaZ1*exp(lamxZ1) - bz*lambdaZ1*lambdaZ1*lambdaZ1*exp(-lamxZ1) + cz*lambdaZ2*lambdaZ2*lambdaZ2*exp(lamxZ2) - dz*lambdaZ2*lambdaZ2*lambdaZ2*exp(-lamxZ2)) + (alphaZ*psi_z - 1)*(az*lambdaZ1*exp(lamxZ1) - bz*lambdaZ1*exp(-lamxZ1) + cz*lambdaZ2*exp(lamxZ2) - dz*lambdaZ2*exp(-lamxZ2));
 								// adjust the diagrams
-								BeamForces[elem->giveNumber()].at(pos).at(5) = -EJyy* (az*lambdaZ1 * lambdaZ1*exp(lamxZ1) + bz*lambdaZ1 * lambdaZ1*exp(-lamxZ1) + cz*lambdaZ2 * lambdaZ2*exp(lamxZ2) + dz*lambdaZ2 * lambdaZ2*exp(-lamxZ2));
-								BeamForces[elem->giveNumber()].at(pos).at(3) = -EJyy* (az*lambdaZ1 * lambdaZ1 * lambdaZ1*exp(lamxZ1) - bz*lambdaZ1 * lambdaZ1 * lambdaZ1*exp(-lamxZ1) + cz*lambdaZ2 * lambdaZ2 * lambdaZ2*exp(lamxZ2) - dz*lambdaZ2 * lambdaZ2 * lambdaZ2*exp(-lamxZ2));
+								BeamForces[elem->giveNumber()].at(pos).at(5) = -EJyy* (az*lambdaZ1*lambdaZ1*exp(lamxZ1) + bz*lambdaZ1*lambdaZ1*exp(-lamxZ1) + cz*lambdaZ2*lambdaZ2*exp(lamxZ2) + dz*lambdaZ2*lambdaZ2*exp(-lamxZ2) - alphaZ*(az*exp(lamxZ1) + bz*exp(-lamxZ1) + cz*exp(lamxZ2) + dz*exp(-lamxZ2)));
+								BeamForces[elem->giveNumber()].at(pos).at(3) = -EJyy* (az*lambdaZ1*lambdaZ1*lambdaZ1*exp(lamxZ1) - bz*lambdaZ1*lambdaZ1*lambdaZ1*exp(-lamxZ1) + cz*lambdaZ2*lambdaZ2*lambdaZ2*exp(lamxZ2) - dz*lambdaZ2*lambdaZ2*lambdaZ2*exp(-lamxZ2) + alphaZ*(az*lambdaZ1*exp(lamxZ1) - bz*lambdaZ1*exp(-lamxZ1) + cz*lambdaZ2*exp(lamxZ2) - dz*lambdaZ2*exp(-lamxZ2)));
 							}
 							else if (deltaZ == 0) {
 								// displacement
 								disps.at(3) = az*exp(lamxZ1) + bz / exp(lamxZ1) + pos*(cz * exp(lamxZ1) + dz / exp(lamxZ1)) + bl.at(3) / wz;
 								// rotation
-								disps.at(5) = -(exp(lamxZ1)*(cz*(lamxZ1 + 1) + az*lambdaZ1) - (dz*(lamxZ1 - 1) + bz*lambdaZ1) / exp(lamxZ1));
+								disps.at(5) = -psi_z*(lambdaZ1*lambdaZ1*exp(lamxZ1)*(cz*lamxZ1 + az*lambdaZ1 + 3 * cz) - lambdaZ1*lambdaZ1*exp(-lamxZ1)*(dz*lamxZ1 + bz*lambdaZ1 - 3 * dz)) + (alphaZ*psi_z - 1)*(exp(lamxZ1)*(cz*lamxZ1 + az*lambdaZ1 + cz) - exp(-lamxZ1)*(dz*lamxZ1 + bz*lambdaZ1 - dz));
 								// adjust the diagrams
-								BeamForces[elem->giveNumber()].at(pos).at(5) = -EJyy* (lambdaZ1*exp(lamxZ1)*(cz*lamxZ1 + az*lambdaZ1 + 2 * cz) + lambdaZ1*exp(-lamxZ1)*(dz*lamxZ1 + bz*lambdaZ1 - 2 * dz));
-								BeamForces[elem->giveNumber()].at(pos).at(3) = -EJyy* (lambdaZ1*lambdaZ1*exp(lamxZ1)*(cz*lamxZ1 + az*lambdaZ1 + 3 * cz) - lambdaZ1*lambdaZ1 * exp(-lamxZ1)*(dz*lamxZ1 + bz*lambdaZ1 - 3 * dz));
+								BeamForces[elem->giveNumber()].at(pos).at(5) = -EJyy*(lambdaZ1*exp(lamxZ1)*(cz*lamxZ1 + az*lambdaZ1 + 2 * cz) + lambdaZ1*exp(-lamxZ1)*(dz*lamxZ1 + bz*lambdaZ1 - 2 * dz) - alphaZ*(az*exp(lamxZ1) + bz*exp(-lamxZ1) + cz*pos*exp(lamxZ1) + dz*pos*exp(-lamxZ1)));
+								BeamForces[elem->giveNumber()].at(pos).at(3) = -EJyy*(lambdaZ1*lambdaZ1*exp(lamxZ1)*(cz*lamxZ1 + az*lambdaZ1 + 3 * cz) - lambdaZ1*lambdaZ1*exp(-lamxZ1)*(dz*lamxZ1 + bz*lambdaZ1 - 3 * dz) + alphaZ*(exp(lamxZ1)*(cz*lamxZ1 + az*lambdaZ1 + cz) - exp(-lamxZ1)*(dz*lamxZ1 + bz*lambdaZ1 - dz)));
 							}
 							else {
 								// displacement
 								disps.at(3) = exp(lamxZ1)*(az*cos(lamxZ2) + cz*sin(lamxZ2)) + (bz*cos(lamxZ2) + dz*sin(lamxZ2)) / exp(lamxZ1) + bl.at(3) / wz;
 								// rotation
-								disps.at(5) = -(exp(lamxZ1)*((lambdaZ1*az + lambdaZ2*cz)*cos(lamxZ2) + (lambdaZ1*cz - lambdaZ2*az)*sin(lamxZ2)) - ((lambdaZ1*bz - lambdaZ2*dz)*cos(lamxZ2) + (lambdaZ2*bz + lambdaZ1*dz)*sin(lamxZ2)) / (exp(lamxZ1)));
+								disps.at(5) = -psi_z*(exp(lamxZ1)*((az*lambdaZ1*(lambdaZ1*lambdaZ1 - 3 * lambdaZ2*lambdaZ2) + cz*lambdaZ2*(3 * lambdaZ1*lambdaZ1 - lambdaZ2*lambdaZ2))*cos(lamxZ2) - (az*lambdaZ2*(3 * lambdaZ1*lambdaZ1 - lambdaZ2*lambdaZ2) + cz*lambdaZ1*(3 * lambdaZ2*lambdaZ2 - lambdaZ1*lambdaZ1))*sin(lamxZ2)) - exp(-lamxZ1)*((bz*lambdaZ1*(lambdaZ1*lambdaZ1 - 3 * lambdaZ2*lambdaZ2) + dz*lambdaZ2*(lambdaZ2*lambdaZ2 - 3 * lambdaZ1*lambdaZ1))*cos(lamxZ2) + (bz*lambdaZ2*(3 * lambdaZ1*lambdaZ1 - lambdaZ2*lambdaZ2) + dz*lambdaZ1*(lambdaZ1*lambdaZ1 - 3 * lambdaZ2*lambdaZ2))*sin(lamxZ2))) + (alphaZ*psi_z - 1)*(exp(lamxZ1)*((az*lambdaZ1 + cz*lambdaZ2)*cos(lamxZ2) + (cz*lambdaZ1 - az*lambdaZ2)*sin(lamxZ2)) - exp(-lamxZ1)*((bz*lambdaZ1 - dz*lambdaZ2)*cos(lamxZ2) + (bz*lambdaZ2 + dz*lambdaZ1)*sin(lamxZ2)));
 								// adjust the diagrams
-								BeamForces[elem->giveNumber()].at(pos).at(5) = -EJyy * (exp(lamxZ1)*((az*(lambdaZ1 *lambdaZ1 - lambdaZ2 *lambdaZ2) + 2 * cz*lambdaZ1*lambdaZ2)*cos(lamxZ2) - (2 * az*lambdaZ1*lambdaZ2 + cz*(lambdaZ2 *lambdaZ2 - lambdaZ1*lambdaZ1))*sin(lamxZ2)) + exp(-lamxZ1)*((bz*(lambdaZ1 *lambdaZ1 - lambdaZ2 *lambdaZ2) - 2 * dz*lambdaZ1*lambdaZ2)*cos(lamxZ2) + (2 * bz*lambdaZ1*lambdaZ2 + dz*(lambdaZ1 *lambdaZ1 - lambdaZ2 *lambdaZ2))*sin(lamxZ2)));
-								BeamForces[elem->giveNumber()].at(pos).at(3) = -EJyy * (exp(lamxZ1)*((az*lambdaZ1*(lambdaZ1 *lambdaZ1 - 3 * lambdaZ2 *lambdaZ2) + cz*lambdaZ2*(3 * lambdaZ1 *lambdaZ1 - lambdaZ2 *lambdaZ2))*cos(lamxZ2) - (az*lambdaZ2*(3 * lambdaZ1*lambdaZ1 - lambdaZ2 *lambdaZ2) + cz*lambdaZ1*(3 * lambdaZ2 *lambdaZ2 - lambdaZ1 *lambdaZ1))*sin(lamxZ2)) - exp(-lamxZ1)*((bz*lambdaZ1*(lambdaZ1 *lambdaZ1 - 3 * lambdaZ2 *lambdaZ2) + dz*lambdaZ2*(lambdaZ2 *lambdaZ2 - 3 * lambdaZ1 *lambdaZ1))*cos(lamxZ2) + (bz*lambdaZ2*(3 * lambdaZ1 *lambdaZ1 - lambdaZ2 *lambdaZ2) + dz*lambdaZ1*(lambdaZ1 *lambdaZ1 - 3 * lambdaZ2* lambdaZ2))*sin(lamxZ2)));
+								BeamForces[elem->giveNumber()].at(pos).at(5) = -EJyy *(exp(lamxZ1)*((az*(lambdaZ1*lambdaZ1 - lambdaZ2*lambdaZ2) + 2 * cz*lambdaZ1*lambdaZ2)*cos(lamxZ2) - (2 * az*lambdaZ1*lambdaZ2 + cz*(lambdaZ2*lambdaZ2 - lambdaZ1*lambdaZ1))*sin(lamxZ2)) + exp(-lamxZ1)*((bz*(lambdaZ1*lambdaZ1 - lambdaZ2*lambdaZ2) - 2 * dz*lambdaZ1*lambdaZ2)*cos(lamxZ2) + (2 * bz*lambdaZ1*lambdaZ2 + dz*(lambdaZ1*lambdaZ1 - lambdaZ2*lambdaZ2))*sin(lamxZ2)) - alphaZ*(az*exp(lamxZ1)*cos(lamxZ2) + bz*exp(-lamxZ1)*cos(lamxZ2) + cz*exp(lamxZ1)*sin(lamxZ2) + dz*exp(-lamxZ1)*sin(lamxZ2)));
+								BeamForces[elem->giveNumber()].at(pos).at(3) = -EJyy *(exp(lamxZ1)*((az*lambdaZ1*(lambdaZ1*lambdaZ1 - 3 * lambdaZ2*lambdaZ2) + cz*lambdaZ2*(3 * lambdaZ1*lambdaZ1 - lambdaZ2*lambdaZ2))*cos(lamxZ2) - (az*lambdaZ2*(3 * lambdaZ1*lambdaZ1 - lambdaZ2*lambdaZ2) + cz*lambdaZ1*(3 * lambdaZ2*lambdaZ2 - lambdaZ1*lambdaZ1))*sin(lamxZ2)) - exp(-lamxZ1)*((bz*lambdaZ1*(lambdaZ1*lambdaZ1 - 3 * lambdaZ2*lambdaZ2) + dz*lambdaZ2*(lambdaZ2*lambdaZ2 - 3 * lambdaZ1*lambdaZ1))*cos(lamxZ2) + (bz*lambdaZ2*(3 * lambdaZ1*lambdaZ1 - lambdaZ2*lambdaZ2) + dz*lambdaZ1*(lambdaZ1*lambdaZ1 - 3 * lambdaZ2*lambdaZ2))*sin(lamxZ2)) + alphaZ*(exp(lamxZ1)*((az*lambdaZ1 + cz*lambdaZ2)*cos(lamxZ2) + (cz*lambdaZ1 - az*lambdaZ2)*sin(lamxZ2)) - exp(-lamxZ1)*((bz*lambdaZ1 - dz*lambdaZ2)*cos(lamxZ2) + (bz*lambdaZ2 + dz*lambdaZ1)*sin(lamxZ2))));
 							}
 						}
 						wink.at(3) = -disps.at(3)*wz;
