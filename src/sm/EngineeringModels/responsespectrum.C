@@ -285,7 +285,7 @@ namespace oofem {
 		tempCol->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
 		tempCol2->resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
 		periods.resize(numberOfRequiredEigenValues);
-		combReactions.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
+		combReactions.resize(this->giveNumberOfDomainEquations(1, EModelDefaultPrescribedEquationNumbering()));;
 		combDisps.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
 		rhos.resize(numberOfRequiredEigenValues, numberOfRequiredEigenValues);
 
