@@ -219,8 +219,10 @@ namespace oofem {
 					temp.at(6) = 6;
 
 					IntArray *loads = elem->giveBoundaryLoadArray();
-					for (auto &loadNum : *loads)
+					int nBoundaryLoads = loads->giveSize() / 2;
+					for (int i = 1; i <= nBoundaryLoads; i++)
 					{
+						int loadNum = loads->at(1 + (i - 1) * 2);
 						GeneralBoundaryCondition *bc = d->giveBc(loadNum);
 						if (strcmp(bc->giveClassName(), "ConstantEdgeLoad") == 0) {
 							ConstantEdgeLoad *CLoad = static_cast<ConstantEdgeLoad *>(bc);
