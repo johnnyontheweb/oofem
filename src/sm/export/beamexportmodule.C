@@ -639,7 +639,7 @@ namespace oofem {
 							odeMtrx.solveForRhs(rhs, abcd);
 
 #ifdef DEBUG
-							odeMtrx.writeCSV("ODE.csv");
+							// odeMtrx.writeCSV("ODE.csv");
 #endif
 
 							ay = abcd.at(1);
