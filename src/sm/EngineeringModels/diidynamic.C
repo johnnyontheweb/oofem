@@ -419,6 +419,7 @@ DIIDynamic :: printDofOutputAt(FILE *stream, Dof *iDof, TimeStep *tStep)
     };
 
     iDof->printMultipleOutputAt(stream, tStep, dofchar, dofmodes, 3);
+
 }
 
 
@@ -673,9 +674,10 @@ contextIOResultType DIIDynamic :: saveContext(DataStream *stream, ContextMode mo
 void
 DIIDynamic::terminate(TimeStep *tStep)
 {
-	StructuralEngngModel::terminate(tStep);
+	this->doStepOutput(tStep);
 	this->printReactionForces(tStep, 1);
 	fflush(this->giveOutputStream());
+	this->saveStepContext(tStep);
 }
 
 contextIOResultType DIIDynamic :: restoreContext(DataStream *stream, ContextMode mode, void *obj)
