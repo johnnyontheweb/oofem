@@ -666,3 +666,11 @@ tests/sm/t3d.bmf
 /MinSizeRel/testDynShell.in
 /MinSizeRel/testNFRig-st.outGR.bem
 /MinSizeRel/testNFRig-stGR.in
+/MinSizeRel/2bays.in
+/MinSizeRel/2bays0.in
+/src/oofemlib/heap.C.bak
+/src/oofemlib/heap.h.bak
+/src/oofemlib/internalstatetype.h.bak
+/src/oofemlib/vtkxmlexportmodule.C.bak
+/src/oofemlib/vtkxmlexportmodule.h.bak
+/src/sm/EngineeringModels/diidynamic - Copia.C

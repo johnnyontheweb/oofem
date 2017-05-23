@@ -119,7 +119,7 @@ InternalStateValueType giveInternalStateValueType(InternalStateType type)
     //case IST_MaterialOrientation:
         return ISVT_TENSOR_G;
 
-    case IST_BeamForceMomentumTensor:
+    case IST_BeamForceMomentTensor:
     case IST_BeamStrainCurvatureTensor:
     case IST_PrincipalStressTensor:
     case IST_PrincipalStressTempTensor:

@@ -395,7 +395,7 @@ namespace oofem {
 	int
 		Beam3d::giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep)
 	{
-		if (type == IST_BeamForceMomentumTensor) {
+		if (type == IST_BeamForceMomentTensor) {
 			answer = static_cast<StructuralMaterialStatus *>(gp->giveMaterialStatus())->giveStressVector();
 			return 1;
 		}
@@ -1363,7 +1363,7 @@ namespace oofem {
 		for (int i = 1; i <= n; i++) {
 			isttype = (InternalStateType)internalVarsToExport.at(i);
 			for (int nN = 1; nN <= nNodes; nN++) {
-				if (isttype == IST_BeamForceMomentumTensor) {
+				if (isttype == IST_BeamForceMomentTensor) {
 					FloatArray coords = vtkPieces[0].giveNodeCoords(nN);
 					FloatArray endForces;
 					this->giveInternalForcesVectorAtPoint(endForces, tStep, coords);
