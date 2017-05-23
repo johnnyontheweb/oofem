@@ -777,7 +777,7 @@ void CBS :: printOutputAt(FILE *File, TimeStep *tStep)
         return;                 // do not print even Solution step header
     }
 
-    fprintf( File, "\nOutput for time % 10.5e \n\n", tStep->giveTime() / this->giveVariableScale(VST_Time) );
+    fprintf( File, "\nOutput for time % .8e \n\n", tStep->giveTime() / this->giveVariableScale(VST_Time) );
     for ( auto &domain: this->domainList ) {
         fprintf( File, "\nOutput for domain %3d\n", domain->giveNumber() );
         domain->giveOutputManager()->doDofManOutput(File, tStep);

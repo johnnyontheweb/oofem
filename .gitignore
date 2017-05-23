@@ -674,3 +674,7 @@ tests/sm/t3d.bmf
 /src/oofemlib/vtkxmlexportmodule.C.bak
 /src/oofemlib/vtkxmlexportmodule.h.bak
 /src/sm/EngineeringModels/diidynamic - Copia.C
+/MinSizeRel/1wallDyn-dyn.in
+/MinSizeRel/launchOLD.bat
+/MinSizeRel/oofemOLD.exe
+/MinSizeRel/test_verificaT.in

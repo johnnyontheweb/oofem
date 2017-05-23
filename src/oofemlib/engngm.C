@@ -704,7 +704,7 @@ EngngModel :: printOutputAt(FILE *File, TimeStep *tStep)
     }
 
     fprintf(File, "\n==============================================================");
-    fprintf(File, "\nOutput for time %10.5e ", tStep->giveTargetTime() * this->giveVariableScale(VST_Time) );
+    fprintf(File, "\nOutput for time %.8e ", tStep->giveTargetTime() * this->giveVariableScale(VST_Time) );
     fprintf(File, "\n==============================================================\n");
     for ( auto &domain: domainList ) {
         fprintf( File, "Output for domain %3d\n", domain->giveNumber() );

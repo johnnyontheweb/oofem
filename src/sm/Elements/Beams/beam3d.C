@@ -758,22 +758,22 @@ Beam3d :: printOutputAt(FILE *File, TimeStep *tStep)
     FloatArray rl, Fl;
 
     fprintf(File, "beam element %d (%8d) :\n", this->giveLabel(), this->giveNumber() );
+#ifdef DEBUG
+	// ask for global element displacement vector
+	this->computeVectorOf(VM_Total, tStep, rl);
+	// ask for global element end forces vector
+	this->giveEndForcesVector(Fl, tStep);
 
-	//// ask for global element displacement vector
-	//this->computeVectorOf(VM_Total, tStep, rl);
-	//// ask for global element end forces vector
-	//this->giveEndForcesVector(Fl, tStep);
+	fprintf(File, "  local displacements ");
+	for (auto &val : rl) {
+		fprintf(File, " %.4e", val);
+	}
 
-	//fprintf(File, "  local displacements ");
-	//for (auto &val : rl) {
-	//	fprintf(File, " %.4e", val);
-	//}
-
-	//fprintf(File, "\n  local end forces    ");
-	//for (auto &val : Fl) {
-	//	fprintf(File, " %.4e", val);
-	//}
-
+	fprintf(File, "\n  local end forces    ");
+	for (auto &val : Fl) {
+		fprintf(File, " %.4e", val);
+	}
+#endif
     fprintf(File, "\n");
 
     for ( auto &iRule: integrationRulesArray ) {
