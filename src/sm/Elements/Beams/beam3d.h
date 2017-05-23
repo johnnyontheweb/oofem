@@ -55,155 +55,150 @@
 
 namespace oofem {
 
-	class FEI3dLineLin;
+class FEI3dLineLin;
 
-	/**
-	 * This class implements a 2-dimensional beam element
-	 * with cubic lateral displacement interpolation (rotations are quadratic)
-	 * and longitudial displacements are linear.
-	 * This is an exact displacement approximation for beam with no
-	 * nonnodal loading.
-	 *
-	 * This class is not derived from liBeam3d or truss element, because it does not support
-	 * any material nonlinearities (if should, stiffness must be integrated)
-	 *
-	 * @author Giovanni
-	 * @author Mikael Öhman
-	 * @author (several other authors)
-	 */
-	class Beam3d : public BeamBaseElement, public FiberedCrossSectionInterface, public Beam3dSubsoilMaterialInterface, public VTKXMLExportModuleElementInterface
-	{
-	protected:
-		/// Geometry interpolator only.
-		static FEI3dLineLin interp;
+/**
+ * This class implements a 2-dimensional beam element
+ * with cubic lateral displacement interpolation (rotations are quadratic)
+ * and longitudial displacements are linear.
+ * This is an exact displacement approximation for beam with no
+ * nonnodal loading.
+ *
+ * This class is not derived from liBeam3d or truss element, because it does not support
+ * any material nonlinearities (if should, stiffness must be integrated)
+ * 
+ * @author Giovanni
+ * @author Mikael Öhman
+ * @author (several other authors)
+ */
+ class Beam3d : public BeamBaseElement, public FiberedCrossSectionInterface, public Beam3dSubsoilMaterialInterface,  public VTKXMLExportModuleElementInterface
+{
+protected:
+    /// Geometry interpolator only.
+    static FEI3dLineLin interp;
 
-		double kappay, kappaz, length;
-		int referenceNode;
-		FloatArray zaxis;
-		double referenceAngle = 0;
-		//IntArray *dofsToCondense;
-		/*
-		 * Ghost nodes are used to introduce additional DOFs at element.
-		 * These are needed as we actually do not want to condense selected DOFs, but rather
-		 * allocate an extra equation to these. This allows to get cooresponding DOFs directly from
-		 * the global system, avoiding the need to postprocess local displacements at element.
-		 */
-		DofManager *ghostNodes[2];
-		/// number of condensed DOFs
-		int numberOfCondensedDofs;
+    double kappay, kappaz, length;
+    int referenceNode;
+    FloatArray zaxis;
+    double referenceAngle = 0;
+    //IntArray *dofsToCondense;
+    /*
+     * Ghost nodes are used to introduce additional DOFs at element.
+     * These are needed as we actually do not want to condense selected DOFs, but rather
+     * allocate an extra equation to these. This allows to get cooresponding DOFs directly from
+     * the global system, avoiding the need to postprocess local displacements at element.
+     */
+    DofManager *ghostNodes [ 2 ];
+    /// number of condensed DOFs
+    int numberOfCondensedDofs;
 
-		/// Subsoil material
-		int subsoilMat;
+    /// Subsoil material
+    int subsoilMat;
+    
+
+public:
+    Beam3d(int n, Domain *d);
+    virtual ~Beam3d();
+
+    virtual FEInterpolation *giveInterpolation() const;
+
+    virtual void computeConsistentMassMatrix(FloatMatrix &answer, TimeStep *tStep, double &mass, const double *ipDensity = NULL);
+    virtual void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep);
+    virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep);
+    virtual int giveLocalCoordinateSystem(FloatMatrix &answer);
+    virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *, int useUpdatedGpRecord = 0);
+	void giveEndForcesVector(FloatArray &answer, TimeStep *tStep, bool useWink = true);
+
+    virtual int computeGlobalCoordinates(FloatArray &answer, const FloatArray &lcoords);
 
 
-	public:
-		Beam3d(int n, Domain *d);
-		virtual ~Beam3d();
+    virtual int testElementExtension(ElementExtension ext) {
+        return ( ( ext == Element_EdgeLoadSupport ) ? 1 : 0 );
+    }
+    //int hasLayeredSupport () {return 1;}
 
-		virtual FEInterpolation *giveInterpolation() const;
+    virtual int computeNumberOfDofs() { return 12; }
+    virtual int computeNumberOfGlobalDofs() { return 12 + this->numberOfCondensedDofs; }
+    virtual void giveDofManDofIDMask(int inode, IntArray &) const;
+    virtual int giveNumberOfInternalDofManagers() const { return ( ghostNodes [ 0 ] != NULL ) + ( ghostNodes [ 1 ] != NULL ); }
+    virtual DofManager *giveInternalDofManager(int i) const {
+        if ( i == 1 ) {
+            if ( ghostNodes [ 0 ] ) { return ghostNodes [ 0 ]; } else { return ghostNodes [ 1 ]; }
+        } else if ( i == 2 ) { // i==2
+            return ghostNodes [ 1 ];
+        } else {
+            OOFEM_ERROR("No such DOF available on Element %d", number);
+            return NULL;
+        }
+    }
+    virtual void giveInternalDofManDofIDMask(int i, IntArray &answer) const {
+        if ( i == 1 ) {
+            if ( ghostNodes [ 0 ] ) {
+                ghostNodes [ 0 ]->giveCompleteMasterDofIDArray(answer);
+            } else {
+                ghostNodes [ 1 ]->giveCompleteMasterDofIDArray(answer);
+            }
+        } else if ( i == 2 ) { // i==2
+            ghostNodes [ 1 ]->giveCompleteMasterDofIDArray(answer);
+        } else {
+            OOFEM_ERROR("No such DOF available on Element %d", number);
+        }
+    }
+    virtual void giveBoundaryLocationArray(IntArray &locationArray, const IntArray &bNodes, const UnknownNumberingScheme &s, IntArray *dofIds = NULL) {
+      giveLocationArray (locationArray, s, dofIds);
+    }
+     
+    virtual void giveBoundaryLocationArray(IntArray &locationArray, const IntArray &bNodes, const IntArray &dofIDMask, const UnknownNumberingScheme &s, IntArray *dofIds = NULL) {
+      giveLocationArray (locationArray, dofIDMask, s, dofIds);
+    }
 
-		virtual void computeConsistentMassMatrix(FloatMatrix &answer, TimeStep *tStep, double &mass, const double *ipDensity = NULL);
-		virtual void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep);
-		virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep);
-		virtual int giveLocalCoordinateSystem(FloatMatrix &answer);
-		virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *, int useUpdatedGpRecord = 0);
-		void giveEndForcesVector(FloatArray &answer, TimeStep *tStep, bool useWink = true);
+    virtual double computeVolumeAround(GaussPoint *gp);
 
-		virtual int computeGlobalCoordinates(FloatArray &answer, const FloatArray &lcoords);
+    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
 
+    virtual void printOutputAt(FILE *file, TimeStep *tStep);
 
-		virtual int testElementExtension(ElementExtension ext) {
-			return ((ext == Element_EdgeLoadSupport) ? 1 : 0);
-		}
-		//int hasLayeredSupport () {return 1;}
+    //
+    // fibered cross section support functions
+    //
+    virtual void FiberedCrossSectionInterface_computeStrainVectorInFiber(FloatArray &answer, const FloatArray &masterGpStrain,
+                                                                         GaussPoint *slaveGp, TimeStep *tStep);
 
-		virtual int computeNumberOfDofs() { return 12; }
-		virtual int computeNumberOfGlobalDofs() { return 12 + this->numberOfCondensedDofs; }
-		virtual void giveDofManDofIDMask(int inode, IntArray &) const;
-		virtual int giveNumberOfInternalDofManagers() const { return (ghostNodes[0] != NULL) + (ghostNodes[1] != NULL); }
-		virtual DofManager *giveInternalDofManager(int i) const {
-			if (i == 1) {
-				if (ghostNodes[0]) { return ghostNodes[0]; }
-				else { return ghostNodes[1]; }
-			}
-			else if (i == 2) { // i==2
-				return ghostNodes[1];
-			}
-			else {
-				OOFEM_ERROR("No such DOF available on Element %d", number);
-				return NULL;
-			}
-		}
-		virtual void giveInternalDofManDofIDMask(int i, IntArray &answer) const {
-			if (i == 1) {
-				if (ghostNodes[0]) {
-					ghostNodes[0]->giveCompleteMasterDofIDArray(answer);
-				}
-				else {
-					ghostNodes[1]->giveCompleteMasterDofIDArray(answer);
-				}
-			}
-			else if (i == 2) { // i==2
-				ghostNodes[1]->giveCompleteMasterDofIDArray(answer);
-			}
-			else {
-				OOFEM_ERROR("No such DOF available on Element %d", number);
-			}
-		}
-		virtual void giveBoundaryLocationArray(IntArray &locationArray, const IntArray &bNodes, const UnknownNumberingScheme &s, IntArray *dofIds = NULL) {
-			giveLocationArray(locationArray, s, dofIds);
-		}
+    virtual Interface *giveInterface(InterfaceType it);
 
-		virtual void giveBoundaryLocationArray(IntArray &locationArray, const IntArray &bNodes, const IntArray &dofIDMask, const UnknownNumberingScheme &s, IntArray *dofIds = NULL) {
-			giveLocationArray(locationArray, dofIDMask, s, dofIds);
-		}
+    // definition & identification
+    virtual const char *giveClassName() const { return "Beam3d"; }
+    virtual const char *giveInputRecordName() const { return _IFT_Beam3d_Name; }
+	virtual void giveInputRecord(DynamicInputRecord &input);
+    virtual IRResultType initializeFrom(InputRecord *ir);
+    ///@todo Introduce interpolator and remove these two:
+    virtual integrationDomain giveIntegrationDomain() const { return _Line; }
+    //virtual Element_Geometry_Type giveGeometryType() const { return EGT_line_1; }
+    virtual Element_Geometry_Type giveGeometryType() const { return EGT_Composite; }
+    virtual void updateLocalNumbering(EntityRenumberingFunctor &f);
+	virtual Material* giveSubSoilMaterial();
 
-		virtual double computeVolumeAround(GaussPoint *gp);
+    /*
+    /// Subsoil support implemented directly enabling the postprocessing of end-forces
 
-		virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
+    virtual void B3SSI_getNMatrix (FloatMatrix &answer, GaussPoint *gp) {
+      this->computeNmatrixAt(gp->giveNaturalCoordinates(), answer);
+    }
+    virtual void B3SSI_getGtoLRotationMatrix (FloatMatrix &answer) {
+      this->computeGtoLRotationMatrix(answer);
+    }
+    virtual double B3SSI_computeVolumeAround (GaussPoint* gp) {
+      return this->computeVolumeAround(gp);
+    }
+    */
+    virtual void B3SSMI_getUnknownsGtoLRotationMatrix(FloatMatrix& answer);
 
-		virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    virtual void giveCompositeExportData(std::vector< VTKPiece > &vtkPieces, IntArray &primaryVarsToExport, IntArray &internalVarsToExport, IntArray cellVarsToExport, TimeStep *tStep );
 
-		//
-		// fibered cross section support functions
-		//
-		virtual void FiberedCrossSectionInterface_computeStrainVectorInFiber(FloatArray &answer, const FloatArray &masterGpStrain,
-			GaussPoint *slaveGp, TimeStep *tStep);
-
-		virtual Interface *giveInterface(InterfaceType it);
-
-		// definition & identification
-		virtual const char *giveClassName() const { return "Beam3d"; }
-		virtual const char *giveInputRecordName() const { return _IFT_Beam3d_Name; }
-		virtual void giveInputRecord(DynamicInputRecord &input);
-		virtual IRResultType initializeFrom(InputRecord *ir);
-		///@todo Introduce interpolator and remove these two:
-		virtual integrationDomain giveIntegrationDomain() const { return _Line; }
-		//virtual Element_Geometry_Type giveGeometryType() const { return EGT_line_1; }
-		virtual Element_Geometry_Type giveGeometryType() const { return EGT_Composite; }
-		virtual void updateLocalNumbering(EntityRenumberingFunctor &f);
-		virtual Material* giveSubSoilMaterial();
-
-		/*
-		/// Subsoil support implemented directly enabling the postprocessing of end-forces
-
-		virtual void B3SSI_getNMatrix (FloatMatrix &answer, GaussPoint *gp) {
-		this->computeNmatrixAt(gp->giveNaturalCoordinates(), answer);
-		}
-		virtual void B3SSI_getGtoLRotationMatrix (FloatMatrix &answer) {
-		this->computeGtoLRotationMatrix(answer);
-		}
-		virtual double B3SSI_computeVolumeAround (GaussPoint* gp) {
-		return this->computeVolumeAround(gp);
-		}
-		*/
-		virtual void B3SSMI_getUnknownsGtoLRotationMatrix(FloatMatrix& answer);
-
-		virtual void giveCompositeExportData(std::vector< VTKPiece > &vtkPieces, IntArray &primaryVarsToExport, IntArray &internalVarsToExport, IntArray cellVarsToExport, TimeStep *tStep);
-
+    
 #ifdef __OOFEG
-		virtual void drawRawGeometry(oofegGraphicContext &gc, TimeStep *tStep);
-		virtual void drawDeformedGeometry(oofegGraphicContext & gc, TimeStep * tStep, UnknownType);
+    virtual void drawRawGeometry(oofegGraphicContext &gc, TimeStep *tStep);
+    virtual void drawDeformedGeometry(oofegGraphicContext & gc, TimeStep * tStep, UnknownType);
 #endif
 
 protected:
@@ -214,34 +209,34 @@ protected:
     virtual bool computeGtoLRotationMatrix(FloatMatrix &answer);
     virtual void computeBodyLoadVectorAt(FloatArray &answer, Load *load, TimeStep *tStep, ValueModeType mode);
 
-		double giveKappayCoeff(TimeStep *tStep);
-		double giveKappazCoeff(TimeStep *tStep);
-		void computeKappaCoeffs(TimeStep *tStep);
-		virtual double computeLength();
-		virtual void computeClampedStiffnessMatrix(FloatMatrix &answer,
-			MatResponseMode rMode, TimeStep *tStep);
-		virtual void computeLocalStiffnessMatrix(FloatMatrix &answer,
-			MatResponseMode rMode, TimeStep *tStep);
-		virtual void computeGaussPoints();
-		virtual void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep);
-		virtual void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep);
+    double giveKappayCoeff(TimeStep *tStep);
+    double giveKappazCoeff(TimeStep *tStep);
+    void computeKappaCoeffs(TimeStep *tStep);
+    virtual double computeLength();
+    virtual void computeClampedStiffnessMatrix(FloatMatrix &answer,
+                                               MatResponseMode rMode, TimeStep *tStep);
+    virtual void computeLocalStiffnessMatrix(FloatMatrix &answer,
+                                             MatResponseMode rMode, TimeStep *tStep);
+    virtual void computeGaussPoints();
+    virtual void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep);
+    virtual void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep);
 
-		virtual MaterialMode giveMaterialMode() { return _3dBeam; }
-		virtual int giveNumberOfIPForMassMtrxIntegration() { return 4; }
+    virtual MaterialMode giveMaterialMode() { return _3dBeam; }
+    virtual int giveNumberOfIPForMassMtrxIntegration() { return 4; }
 
-		bool hasDofs2Condense() { return (ghostNodes[0] || ghostNodes[1]); }
+    bool hasDofs2Condense() { return ( ghostNodes [ 0 ] || ghostNodes [ 1 ] ); }
 
 
-		void computeSubSoilNMatrixAt(GaussPoint *gp, FloatMatrix &answer);
-		void computeSubSoilStiffnessMatrix(FloatMatrix &answer,
-			MatResponseMode rMode, TimeStep *tStep);
+    void computeSubSoilNMatrixAt(GaussPoint *gp, FloatMatrix &answer);
+    void computeSubSoilStiffnessMatrix(FloatMatrix &answer,
+				       MatResponseMode rMode, TimeStep *tStep);
 
-		void giveInternalForcesVectorAtPoint(FloatArray &answer, TimeStep *tStep, FloatArray &coords);
-		void computeInternalForcesFromBoundaryEdgeLoadVectorAtPoint(FloatArray &answer, BoundaryLoad *load, int edge, CharType type, ValueModeType mode,
-			TimeStep *tStep, FloatArray &pointCoords, double ds, bool global);
-		void computeInternalForcesFromBodyLoadVectorAtPoint(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode, FloatArray &pointCoords, double ds);
-		virtual int computeGlobalCoordinates(FloatArray &answer, const FloatArray &lcoords, const FloatArray &point);
+    void giveInternalForcesVectorAtPoint(FloatArray &answer, TimeStep *tStep, FloatArray &coords);
+    void computeInternalForcesFromBoundaryEdgeLoadVectorAtPoint(FloatArray &answer, BoundaryLoad *load, int edge, CharType type, ValueModeType mode,
+                                                                TimeStep *tStep, FloatArray &pointCoords, double ds, bool global);
+    void computeInternalForcesFromBodyLoadVectorAtPoint(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode, FloatArray &pointCoords, double ds);
+    virtual int computeGlobalCoordinates(FloatArray &answer, const FloatArray &lcoords, const FloatArray &point);
 
-	};
+};
 } // end namespace oofem
 #endif // beam3d_h
