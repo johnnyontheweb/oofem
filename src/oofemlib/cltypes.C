@@ -95,9 +95,9 @@ InternalStateValueType giveInternalStateValueType(InternalStateType type)
     case IST_DeviatoricStress:
     case IST_CauchyStressTensor:
     ///@todo Remove "Shell" from these. They are general;
-    case IST_ShellStrainTensor: ///@todo Are shell strains S3E as well?
-    case IST_ShellCurvatureTensor:
-    case IST_ForceTensorTemp:
+    // case IST_ShellStrainTensor: ///@todo Are shell strains S3E as well?
+    // case IST_ShellCurvatureTensor:
+    // case IST_ForceTensorTemp:
     case IST_ShellMomentTensor:
     case IST_ShellMomentTensorTemp:
 
