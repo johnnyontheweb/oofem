@@ -537,6 +537,12 @@ if (USE_SHARED_LIB)
             set_target_properties (tm PROPERTIES COMPILE_FLAGS ${LIBOOFEM_EXPORT_CFLAGS})
         endif ()
     endif()
+    if (USE_DSS)
+        set_target_properties (dss PROPERTIES COMPILE_DEFINITIONS "liboofem_EXPORTS")
+        if (NOT "${LIBOOFEM_EXPORT_CFLAGS}" STREQUAL "")
+            set_target_properties (dss PROPERTIES COMPILE_FLAGS ${LIBOOFEM_EXPORT_CFLAGS})
+        endif ()
+    endif()
 
     generate_export_header (liboofem
         BASE_NAME OOFEM

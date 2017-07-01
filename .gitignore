@@ -678,3 +678,4 @@ tests/sm/t3d.bmf
 /MinSizeRel/launchOLD.bat
 /MinSizeRel/oofemOLD.exe
 /MinSizeRel/test_verificaT.in
+/liboofem.dir/RelWithDebInfo/liboofem.vcxprojResolveAssemblyReference.cache
