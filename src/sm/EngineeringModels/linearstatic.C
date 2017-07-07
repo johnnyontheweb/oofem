@@ -377,7 +377,8 @@ void LinearStatic :: solveYourselfAt(TimeStep *tStep)
 			OOFEM_WARNING("Problem detected at equation %d of the stiffness matrix. Cannot pinpoint the associated node or element", badRow);
 		}
 
-        OOFEM_ERROR("No success in solving system.");
+		// OOFEM_ERROR("No success in solving system.");
+		OOFEM_WARNING("No success in solving system.");
     }
 
     tStep->incrementStateCounter();            // update solution state counter
