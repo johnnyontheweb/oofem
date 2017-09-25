@@ -816,3 +816,6 @@ tests/sm/t3d.bmf
 /MinSizeRel/oofem.exp
 /MinSizeRel/oofem.lib
 /beam01.dir/MinSizeRel/beam01.vcxprojResolveAssemblyReference.cache
+/MinSizeRel/3piani_0_1_gruppi_elasticheB.in
+/MinSizeRel/3piani_0_1_gruppi_elasticheLin.in
+/liboofem.vcxproj.user

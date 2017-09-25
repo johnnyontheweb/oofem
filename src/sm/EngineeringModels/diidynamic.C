@@ -112,15 +112,15 @@ DIIDynamic :: initializeFrom(InputRecord *ir)
     beta = 0.25;              // Default Newmark parameters.
     theta = 1.37; // Default Wilson parameter.
     if ( initialTimeDiscretization == TD_Newmark ) {
-        OOFEM_LOG_INFO("Selecting Newmark-beta metod\n");
+        OOFEM_LOG_INFO("Selecting Newmark-beta method\n");
         IR_GIVE_OPTIONAL_FIELD(ir, gamma, _IFT_DIIDynamic_gamma);
         IR_GIVE_OPTIONAL_FIELD(ir, beta, _IFT_DIIDynamic_beta);
     } else if ( initialTimeDiscretization == TD_TwoPointBackward ) {
         OOFEM_LOG_INFO("Selecting Two-point Backward Euler method\n");
     } else if ( initialTimeDiscretization == TD_ThreePointBackward ) {
-        OOFEM_LOG_INFO("Selecting Three-point Backward Euler metod\n");
+        OOFEM_LOG_INFO("Selecting Three-point Backward Euler method\n");
     } else if ( initialTimeDiscretization == TD_Wilson ) {
-        OOFEM_LOG_INFO("Selecting Wilson-theta metod\n");
+        OOFEM_LOG_INFO("Selecting Wilson-theta method\n");
         IR_GIVE_OPTIONAL_FIELD(ir, theta, _IFT_DIIDynamic_theta);
         if ( theta < 1.37 ) {
             OOFEM_WARNING("Found theta < 1.37. Performing correction, theta = 1.37");

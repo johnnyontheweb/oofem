@@ -448,6 +448,11 @@ NonLinearDynamic :: proceedStep(int di, TimeStep *tStep)
     }
 
     massMatrix->times(help, rhs);
+	//this->timesMtrx(help, rhs, MassMatrix, this->giveDomain(di), tStep);
+	//this->assembleVector(help, tStep, MatrixProductAssembler(MassMatrix(), rhs), VM_Total, 
+	//                    EModelDefaultEquationNumbering(), this->giveDomain(1));
+
+	help.zero();
 
     if ( delta != 0 ) {
         //help.beScaled(a4 * delta, previousVelocityVector);
@@ -619,6 +624,7 @@ void NonLinearDynamic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Do
                 help.beScaled(a0 + eta * a1, incrementOfDisplacement);
 
                 massMatrix->times(help, rhs2);
+				// this->timesMtrx(help, rhs2, MassMatrix, this->giveDomain(1), tStep);
 
                 forcesVector = internalForces;
                 forcesVector.add(rhs2);
