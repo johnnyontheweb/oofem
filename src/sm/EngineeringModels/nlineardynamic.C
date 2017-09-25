@@ -155,13 +155,13 @@ NonLinearDynamic :: initializeFrom(InputRecord *ir)
     gamma = 0.5;
     beta = 0.25;              // Default Newmark parameters.
     if ( initialTimeDiscretization == TD_Newmark ) {
-        OOFEM_LOG_INFO("Selecting Newmark-beta metod\n");
+        OOFEM_LOG_INFO("Selecting Newmark-beta method\n");
         IR_GIVE_OPTIONAL_FIELD(ir, gamma, _IFT_NonLinearDynamic_gamma);
         IR_GIVE_OPTIONAL_FIELD(ir, beta, _IFT_NonLinearDynamic_beta);
     } else if ( initialTimeDiscretization == TD_TwoPointBackward ) {
         OOFEM_LOG_INFO("Selecting Two-point Backward Euler method\n");
     } else if ( initialTimeDiscretization == TD_ThreePointBackward ) {
-        OOFEM_LOG_INFO("Selecting Three-point Backward Euler metod\n");
+        OOFEM_LOG_INFO("Selecting Three-point Backward Euler method\n");
     } else {
         OOFEM_WARNING("Time-stepping scheme not found!");
         return IRRT_BAD_FORMAT;
