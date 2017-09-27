@@ -110,7 +110,25 @@ SparseMtrx *DSSMatrix :: GiveCopy() const
 
 void DSSMatrix :: times(const FloatArray &x, FloatArray &answer) const
 {
-    OOFEM_ERROR("not implemented");
+	int i, j;
+
+#  ifdef DEBUG
+	
+	if (this->nColumns != x.giveSize()) {
+		OOFEM_ERROR("dimension of 'k' and 'loc' mismatch");
+	}
+
+#  endif
+
+	answer.resize(this->nRows);
+
+	for (i = 1; i <= this->nRows; i++) {
+		for (j = 1; j <= this->nColumns; j++) 
+		{
+			answer.at(i) = _dss->ElementAt(i - 1, j - 1) * x.at(j);   // -1?????
+		}
+	}
+
 }
 
 void DSSMatrix :: times(double x)
