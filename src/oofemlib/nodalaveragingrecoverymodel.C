@@ -142,7 +142,9 @@ NodalAveragingRecoveryModel :: recoverValues(Set elementSet, InternalStateType t
                 if ( regionDofMansConnectivity.at( regionNodalNumbers.at(inode) ) > 0 ) {
                     lhs.at(eq + i) /= regionDofMansConnectivity.at( regionNodalNumbers.at(inode) );
                 } else {
+#ifdef _DEBUG
 					OOFEM_WARNING("values of dofmanager %d undetermined", domain->giveDofManager(inode)->giveLabel());
+#endif
                     lhs.at(eq + i) = 0.0;
                 }
             }
