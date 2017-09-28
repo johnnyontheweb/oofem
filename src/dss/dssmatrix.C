@@ -110,20 +110,14 @@ SparseMtrx *DSSMatrix :: GiveCopy() const
 
 void DSSMatrix :: times(const FloatArray &x, FloatArray &answer) const
 {
-	int i, j;
+	int i, j, dim;
 
-#  ifdef DEBUG
-	
-	if (this->nColumns != x.giveSize()) {
-		OOFEM_ERROR("dimension of 'k' and 'loc' mismatch");
-	}
+	dim = this->_sm->neq;
 
-#  endif
+	answer.resize(dim);
 
-	answer.resize(this->nRows);
-
-	for (i = 1; i <= this->nRows; i++) {
-		for (j = 1; j <= this->nColumns; j++) 
+	for (i = 1; i <= dim; i++) {
+		for (j = 1; j <= dim; j++) 
 		{
 			answer.at(i) = _dss->ElementAt(i - 1, j - 1) * x.at(j);   // -1?????
 		}
