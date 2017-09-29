@@ -819,3 +819,7 @@ tests/sm/t3d.bmf
 /MinSizeRel/3piani_0_1_gruppi_elasticheB.in
 /MinSizeRel/3piani_0_1_gruppi_elasticheLin.in
 /liboofem.vcxproj.user
+/beam01.in
+/cppcheck.xml
+/src/tm/qwedge_ht.C
+/src/tm/qwedge_ht.h

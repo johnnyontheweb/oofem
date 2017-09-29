@@ -52,14 +52,15 @@ SpoolesSparseMtrx :: times(const FloatArray &x, FloatArray &answer) const
 {
     double alpha = 1.0, beta = 0.0;
     int result;
+	double* temp = const_cast<double *>(x.givePointer());
 
     answer.resize( this->giveNumberOfColumns() );
     answer.zero();
 
     if ( sflag == SPOOLES_SYMMETRIC ) {
-        result = InpMtx_sym_gmvm( this->mtrx, & beta, 1, answer.givePointer(), & alpha, 1, x.givePointer() );
+		result = InpMtx_sym_gmvm(this->mtrx, &beta, 1, answer.givePointer(), &alpha, 1, temp);
     } else if ( sflag == SPOOLES_NONSYMMETRIC ) {
-        result = InpMtx_nonsym_gmvm( this->mtrx, & beta, 1, answer.givePointer(), & alpha, 1, x.givePointer() );
+        result = InpMtx_nonsym_gmvm( this->mtrx, & beta, 1, answer.givePointer(), & alpha, 1, temp);
     } else {
         OOFEM_ERROR("unsupported symmetry flag");
         exit(1);
@@ -77,13 +78,15 @@ SpoolesSparseMtrx :: timesT(const FloatArray &x, FloatArray &answer) const
 {
     double alpha = 1.0, beta = 0.0;
     int result;
+	double* temp = const_cast<double *>(x.givePointer());
+
     answer.resize( this->giveNumberOfRows() );
     answer.zero();
 
     if ( sflag == SPOOLES_SYMMETRIC ) {
-        result = InpMtx_sym_gmvm( this->mtrx, & beta, 1, answer.givePointer(), & alpha, 1, x.givePointer() );
+        result = InpMtx_sym_gmvm( this->mtrx, & beta, 1, answer.givePointer(), & alpha, 1, temp);
     } else if ( sflag == SPOOLES_NONSYMMETRIC ) {
-        result = InpMtx_nonsym_gmvm_T( this->mtrx, & beta, 1, answer.givePointer(), & alpha, 1, x.givePointer() );
+        result = InpMtx_nonsym_gmvm_T( this->mtrx, & beta, 1, answer.givePointer(), & alpha, 1, temp);
     } else {
         OOFEM_ERROR("unsupported symmetry flag");
     }
@@ -97,7 +100,7 @@ int
 SpoolesSparseMtrx :: buildInternalStructure(EngngModel *eModel, int di, const UnknownNumberingScheme &s)
 {
     // Determine number of equations and estimate number of nonzero entries
-    int neq = eModel->giveNumberOfDomainEquations(di, ut);
+    int neq = eModel->giveNumberOfDomainEquations(di, s);
     int nent = neq * 5;
 
 

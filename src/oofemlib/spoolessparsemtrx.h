@@ -75,6 +75,8 @@ public:
         }
     }
 
+
+	virtual const char *giveClassName() const { return "SpoolesSparseMtrx"; }
     // Overloaded methods
     virtual SparseMtrx *GiveCopy() const;
     virtual void times(const FloatArray &x, FloatArray &answer) const;
