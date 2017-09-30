@@ -333,28 +333,30 @@ void LinearStatic :: solveYourselfAt(TimeStep *tStep)
 	// look for zero filled rows and invalid fp numbers
 	int badRow = 0; // equation number
 	bool saneMatrix;
-	badRow = stiffnessMatrix->sanityCheck(&saneMatrix);
-	if (!saneMatrix){
-		int nodeNum = 0, elemNum = 0;
-		DofIDItem dofID;
-		bool isZero = (badRow >= 0); // determine if it is because of zero or NaNs and INFs
-		badRow = abs(badRow);
+	if (solverType == 0) {
+		badRow = stiffnessMatrix->sanityCheck(&saneMatrix);
+		if (!saneMatrix){
+			int nodeNum = 0, elemNum = 0;
+			DofIDItem dofID;
+			bool isZero = (badRow >= 0); // determine if it is because of zero or NaNs and INFs
+			badRow = abs(badRow);
 
-		// search for dof id...
-		bool found = findDofGivenEquation(badRow, this->giveDomain(1), &nodeNum, &elemNum, &dofID);
+			// search for dof id...
+			bool found = findDofGivenEquation(badRow, this->giveDomain(1), &nodeNum, &elemNum, &dofID);
 
-		if (found){
-			if (isZero) {
-				OOFEM_WARNING("Likely lability detected at %s %d - dof %s", nodeNum ? "node" : "element", nodeNum ? nodeNum : elemNum, __DofIDItemToString(dofID).c_str());
+			if (found){
+				if (isZero) {
+					OOFEM_WARNING("Likely lability detected at %s %d - dof %s", nodeNum ? "node" : "element", nodeNum ? nodeNum : elemNum, __DofIDItemToString(dofID).c_str());
+				}
+				else {
+					OOFEM_WARNING("Invalid floating point number detected for %s %d - dof %s", nodeNum ? "node" : "element", nodeNum ? nodeNum : elemNum, __DofIDItemToString(dofID).c_str());
+				}
 			}
 			else {
-				OOFEM_WARNING("Invalid floating point number detected for %s %d - dof %s", nodeNum ? "node" : "element", nodeNum ? nodeNum : elemNum, __DofIDItemToString(dofID).c_str());
+				OOFEM_WARNING("Problem detected at equation %d of the stiffness matrix. Cannot pinpoint the associated node or element", badRow);
 			}
 		}
-		else {
-			OOFEM_WARNING("Problem detected at equation %d of the stiffness matrix. Cannot pinpoint the associated node or element", badRow);
-		}
-	}
+	} // solvertype 0
 
     //
     // call numerical model to solve arose problem
@@ -368,17 +370,19 @@ void LinearStatic :: solveYourselfAt(TimeStep *tStep)
 		int nodeNum = 0, elemNum = 0;
 		DofIDItem dofID;
 
+		if (solverType == 0) {
 		// search for dof id...
-		bool found = findDofGivenEquation(badRow, this->giveDomain(1), &nodeNum, &elemNum, &dofID);
-		if (found){
-				OOFEM_WARNING("Likely lability detected at %s %d - dof %s", nodeNum ? "node" : "element", nodeNum ? nodeNum : elemNum, __DofIDItemToString(dofID).c_str());
-		}
-		else {
-			OOFEM_WARNING("Problem detected at equation %d of the stiffness matrix. Cannot pinpoint the associated node or element", badRow);
-		}
+			bool found = findDofGivenEquation(badRow, this->giveDomain(1), &nodeNum, &elemNum, &dofID);
+			if (found){
+					OOFEM_WARNING("Likely lability detected at %s %d - dof %s", nodeNum ? "node" : "element", nodeNum ? nodeNum : elemNum, __DofIDItemToString(dofID).c_str());
+			}
+			else {
+				OOFEM_WARNING("Problem detected at equation %d of the stiffness matrix. Cannot pinpoint the associated node or element", badRow);
+			}
 
-		// OOFEM_ERROR("No success in solving system.");
-		OOFEM_WARNING("No success in solving system.");
+			// OOFEM_ERROR("No success in solving system.");
+			OOFEM_WARNING("No success in solving system.");
+		} // solvertype 0
     }
 
     tStep->incrementStateCounter();            // update solution state counter
