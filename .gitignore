@@ -823,3 +823,4 @@ tests/sm/t3d.bmf
 /cppcheck.xml
 /src/tm/qwedge_ht.C
 /src/tm/qwedge_ht.h
+/MinSizeRel/mollaK.in
