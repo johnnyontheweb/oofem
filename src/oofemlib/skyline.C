@@ -49,7 +49,6 @@
 #include "unknownnumberingscheme.h"
 
 #include <math.h>
-#include <float.h>
 #include <climits>
 #include <cstdlib>
 

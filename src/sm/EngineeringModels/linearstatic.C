@@ -175,7 +175,7 @@ bool findDofGivenEquation(int badRow, Domain* d, int* nodeNum, int* elementNum, 
 	*nodeNum = 0;
 	*elementNum = 0;
 	int curNode = 0;
-	bool breakFlag = false; // find the first
+	// bool breakFlag = false; // find the first
 	for (std::unique_ptr<DofManager> &node : d->giveDofManagers()) {
 		if (!node->giveNumberOfDofs()) continue;
 
