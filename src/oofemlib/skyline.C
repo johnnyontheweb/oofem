@@ -49,6 +49,7 @@
 #include "unknownnumberingscheme.h"
 
 #include <math.h>
+#include <float.h>
 #include <climits>
 #include <cstdlib>
 
@@ -1057,6 +1058,7 @@ void Skyline :: ldl_feti_sky(FloatArray &x, FloatArray &y,
 
 int Skyline :: sanityCheck(bool* verdict)
 {
+	// printf("%f;%f;\n", this->at(1, 1),tol);
 	for (int i = 1; i <= nRows; i++) {
 		bool rowAllZero = true;
 		for (int j = 1; j <= nColumns; j++) {
@@ -1085,8 +1087,10 @@ int Skyline :: sanityCheck(bool* verdict)
 			*verdict = false;
 			return i;
 		}
-
 	}
+	// exit without errors
+	*verdict = true;
+	return -1;
 }
 
 } // end namespace oofem

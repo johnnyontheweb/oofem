@@ -824,3 +824,6 @@ tests/sm/t3d.bmf
 /src/tm/qwedge_ht.C
 /src/tm/qwedge_ht.h
 /MinSizeRel/mollaK.in
+/MinSizeRel/haggar.treef
+/MinSizeRel/pthreadVC2.dll
+/MinSizeRel/testCirc-sw.in

@@ -333,6 +333,7 @@ void LinearStatic :: solveYourselfAt(TimeStep *tStep)
 	// look for zero filled rows and invalid fp numbers
 	int badRow = 0; // equation number
 	bool saneMatrix;
+	// printf("%d;", solverType);
 	if (solverType == 0) {
 		badRow = stiffnessMatrix->sanityCheck(&saneMatrix);
 		if (!saneMatrix){
@@ -343,7 +344,8 @@ void LinearStatic :: solveYourselfAt(TimeStep *tStep)
 
 			// search for dof id...
 			bool found = findDofGivenEquation(badRow, this->giveDomain(1), &nodeNum, &elemNum, &dofID);
-
+			// printf("%d;%d;%d;\n", badRow, isZero, found);
+			
 			if (found){
 				if (isZero) {
 					OOFEM_WARNING("Likely lability detected at %s %d - dof %s", nodeNum ? "node" : "element", nodeNum ? nodeNum : elemNum, __DofIDItemToString(dofID).c_str());
