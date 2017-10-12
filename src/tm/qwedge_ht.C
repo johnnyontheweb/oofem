@@ -72,7 +72,7 @@ QWedge_mt :: QWedge_mt(int n, Domain *aDomain) : QWedge_ht(n, aDomain)
 IRResultType
 QWedge_ht :: initializeFrom(InputRecord *ir)
 {
-    numberOfGaussPoints = 6;
+    numberOfGaussPoints = 9;
     return TransportElement :: initializeFrom(ir);
 
 }
@@ -139,8 +139,8 @@ QWedge_ht :: giveInterface(InterfaceType interface)
 void
 QWedge_ht :: SPRNodalRecoveryMI_giveSPRAssemblyPoints(IntArray &pap)
 {
-    pap.resize(6);
-    for ( int i = 1; i <= 6; i++ ) {
+	pap.resize(numberOfGaussPoints);
+    for ( int i = 1; i <= numberOfGaussPoints; i++ ) {
         pap.at(i) = this->giveNode(i)->giveNumber();
     }
 }
@@ -151,7 +151,7 @@ QWedge_ht :: SPRNodalRecoveryMI_giveDofMansDeterminedByPatch(IntArray &answer, i
     int found = 0;
     answer.resize(1);
 
-    for ( int i = 1; i <= 6; i++ ) {
+	for (int i = 1; i <= numberOfGaussPoints; i++) {
         if ( this->giveNode(i)->giveNumber() == pap ) {
             found = 1;
         }

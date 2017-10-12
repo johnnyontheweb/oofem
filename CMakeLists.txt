@@ -57,6 +57,7 @@ set (MPI_DIR CACHE PATH "Manual MPI directory")
 set (VTK_DIR CACHE PATH "Manual VTK directory (For binary VTU export)")
 set (LAPACK_DIR CACHE PATH "Manual LAPACK directory")
 set (SPOOLES_DIR CACHE PATH "Manual SPOOLES directory")
+set (PTHREAD_DIR CACHE PATH "Manual PTHREAD include directory")
 set (ELIXIR_DIR CACHE PATH "Manual Elixir directory (OOFEG only)")
 set (CKIT_DIR CACHE PATH "Manual CKit directory (OOFEG only)")
 set (METIS_DIR CACHE PATH "Manual Metis directory (Load balancing)")
@@ -79,9 +80,9 @@ option (USE_METIS "Enable metis support" OFF)
 option (USE_PARMETIS "Enable Parmetis support" OFF)
 option (USE_OPENMP "Compile with OpenMP support (for parallel assembly)" OFF)
 # Solvers and such
-option (USE_DSS "Enable DSS module" OFF) # No reason to use this
-option (USE_IML "Enable iml++ solvers" OFF) # or this
-option (USE_SPOOLES "Enable SPOOLES-solver" OFF) # or this
+option (USE_DSS "Enable DSS module" ON) # No reason to use this
+option (USE_IML "Enable iml++ solvers" ON) # or this
+option (USE_SPOOLES "Enable SPOOLES-solver" ON) # or this
 option (USE_MKLPARDISO "Enable MKLPARDISO solver support" OFF)
 option (USE_PETSC "Enable PETSc support (required for parallel)" OFF)
 option (USE_SLEPC "Enable SLEPc support" OFF)
@@ -417,7 +418,7 @@ endif ()
 if (USE_SPOOLES)
     if (SPOOLES_DIR)
         find_library (SPOOLES_LIB spooles DOC "SPOOLES library" PATH "${SPOOLES_DIR}/lib")
-        include_directories ("${SPOOLES_DIR}/include")
+        include_directories ("${SPOOLES_DIR}")
     else ()
         find_library (SPOOLES_LIB spooles DOC "SPOOLES library")
     endif ()
@@ -426,6 +427,18 @@ if (USE_SPOOLES)
     endif ()
     list (APPEND EXT_LIBS ${SPOOLES_LIB})
     list (APPEND MODULE_LIST "SPOOLES")
+    # pthreads is necessary for SPOOLES under Windows
+    if (PTHREAD_DIR)
+        find_library (PTHREAD_LIB pthreads DOC "PTHREAD library")
+        include_directories ("${PTHREAD_DIR}")
+#    else ()
+#        find_library (PTHREAD_LIB pthreads DOC "PTHREAD library")
+    endif ()
+    if (${PTHREAD_LIB} STREQUAL "PTHREAD_LIB-NOTFOUND")
+        message (FATAL_ERROR "PTHREAD not found")
+    endif ()
+    list (APPEND EXT_LIBS ${PTHREAD_LIB})
+    list (APPEND MODULE_LIST "PTHREAD")
 endif ()
 
 # We need the interpreter for the test suite.
@@ -582,31 +595,31 @@ add_executable(beam01 ${oofem_SOURCE_DIR}/bindings/oofemlib/beam01.C)
 set_target_properties(beam01 PROPERTIES EXCLUDE_FROM_ALL TRUE)
 target_link_libraries (beam01 liboofem)
 
-add_executable(hexgrid ${oofem_SOURCE_DIR}/bindings/oofemlib/hexgrid.C)
-set_target_properties(hexgrid PROPERTIES EXCLUDE_FROM_ALL TRUE)
-target_link_libraries (hexgrid liboofem)
+#add_executable(hexgrid ${oofem_SOURCE_DIR}/bindings/oofemlib/hexgrid.C)
+#set_target_properties(hexgrid PROPERTIES EXCLUDE_FROM_ALL TRUE)
+#target_link_libraries (hexgrid liboofem)
 
 
 # CppCheck target (not built by default)
-add_custom_target(cppcheck)
-set_target_properties(cppcheck PROPERTIES EXCLUDE_FROM_ALL TRUE)
-add_custom_command(TARGET cppcheck 
-    COMMAND cppcheck "--xml" "--template=gcc" "--enable=all" 
-    "-I${oofem_BINARY_DIR}/"
-    "-I${oofem_SOURCE_DIR}/src/oofemlib/"
-    "-I${oofem_SOURCE_DIR}/src/sm/"
-    "-I${oofem_SOURCE_DIR}/src/fm/"
-    "-I${oofem_SOURCE_DIR}/src/tm/"
-    "-DDEBUG"
-    ${oofem_SOURCE_DIR}/src/oofemlib/
-    ${oofem_SOURCE_DIR}/src/sm/
-    ${oofem_SOURCE_DIR}/src/fm/
-    ${oofem_SOURCE_DIR}/src/tm/
-    ${oofem_SOURCE_DIR}/src/main/
-    "2>"
-    "cppcheck.xml"
-    COMMENT "Running cppcheck on entire source"
-    )
+#add_custom_target(cppcheck)
+#set_target_properties(cppcheck PROPERTIES EXCLUDE_FROM_ALL TRUE)
+#add_custom_command(TARGET cppcheck 
+#    COMMAND cppcheck "--xml" "--template=gcc" "--enable=all" 
+#    "-I${oofem_BINARY_DIR}/"
+#    "-I${oofem_SOURCE_DIR}/src/oofemlib/"
+#    "-I${oofem_SOURCE_DIR}/src/sm/"
+#    "-I${oofem_SOURCE_DIR}/src/fm/"
+#    "-I${oofem_SOURCE_DIR}/src/tm/"
+#    "-DDEBUG"
+#    ${oofem_SOURCE_DIR}/src/oofemlib/
+#    ${oofem_SOURCE_DIR}/src/sm/
+#    ${oofem_SOURCE_DIR}/src/fm/
+#    ${oofem_SOURCE_DIR}/src/tm/
+#    ${oofem_SOURCE_DIR}/src/main/
+#    "2>"
+#    "cppcheck.xml"
+#    COMMENT "Running cppcheck on entire source"
+#    )
 
 
 #######################################################################
@@ -639,13 +652,13 @@ configure_file (
     "${oofem_BINARY_DIR}")
 
 # TODO: Manuals not done yet
-add_custom_target (
-    elementlibmanual
-    COMMAND pdflatex elementlibmanual --output=${oofem_BINARY_DIR}/doc/
-    COMMAND pdflatex elementlibmanual --output=${oofem_BINARY_DIR}/doc/
-    #COMMAND tex4ht elementlibmanual --output=${oofem_BINARY_DIR}/doc/
-    WORKING_DIRECTORY ${oofem_SOURCE_DIR}/doc/elementlibmanual/
-    )
+#add_custom_target (
+#    elementlibmanual
+#    COMMAND pdflatex elementlibmanual --output=${oofem_BINARY_DIR}/doc/
+#    COMMAND pdflatex elementlibmanual --output=${oofem_BINARY_DIR}/doc/
+#    #COMMAND tex4ht elementlibmanual --output=${oofem_BINARY_DIR}/doc/
+#    WORKING_DIRECTORY ${oofem_SOURCE_DIR}/doc/elementlibmanual/
+#    )
 
 #######################################################################
 ######################## Tests ########################################
@@ -767,8 +780,8 @@ if (N EQUAL 0)
 endif ()
 
 if (MSVC)
-    add_custom_target (tests      COMMAND ${CMAKE_CTEST_COMMAND} "-j${N}" "-R" "^test" "-C" "Debug")
-    add_custom_target (partests   COMMAND ${CMAKE_CTEST_COMMAND} "-R" "^partest" "-C" "Debug")
+    #add_custom_target (tests      COMMAND ${CMAKE_CTEST_COMMAND} "-j${N}" "-R" "^test" "-C" "Debug")
+    #add_custom_target (partests   COMMAND ${CMAKE_CTEST_COMMAND} "-R" "^partest" "-C" "Debug")
     add_custom_target (benchmarks COMMAND ${CMAKE_CTEST_COMMAND} "-j${N}" "-R" "^benchmark" "-C" "Debug")
 else ()
     add_custom_target (tests      COMMAND ${CMAKE_CTEST_COMMAND} "-j${N}" "-R" "^test")
