@@ -108,21 +108,21 @@ SparseMtrx *DSSMatrix :: GiveCopy() const
     return NULL;
 }
 
-void DSSMatrix :: times(const FloatArray &x, FloatArray &answer) const
+void DSSMatrix::times(const FloatArray &x, FloatArray &answer) const
 {
 	int i, j, dim;
 
 	dim = this->_sm->neq;
 
 	answer.resize(dim);
+	answer.zero();
 
 	for (i = 1; i <= dim; i++) {
-		for (j = 1; j <= dim; j++) 
+		for (j = 1; j <= dim; j++)
 		{
-			answer.at(i) = _dss->ElementAt(i - 1, j - 1) * x.at(j);   // -1?????
+			answer.at(i) += _dss->ElementAt(i - 1, j - 1) * x.at(j);
 		}
 	}
-
 }
 
 void DSSMatrix :: times(double x)
