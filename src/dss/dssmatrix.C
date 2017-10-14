@@ -108,21 +108,27 @@ SparseMtrx *DSSMatrix :: GiveCopy() const
     return NULL;
 }
 
-void DSSMatrix::times(const FloatArray &x, FloatArray &answer) const
+void DSSMatrix :: times(const FloatArray &x, FloatArray &answer) const
 {
-	int i, j, dim;
+  // Note: not really eficient. The sparse matrix is assembled directly into its block structure,
+  // which is efficient for factorization, but unfortunately not efficient for implementing the multiplication,
+  // as the blocks have to be identified (see implementation of ElementAt method) when traversing rows
+  // Also note, that this method will yield correct results only before factorization, after that the blocks
+  // contain factorized matrix.
 
-	dim = this->_sm->neq;
+  int i, j, dim;
 
-	answer.resize(dim);
-	answer.zero();
+  dim = this->_sm->neq;
 
-	for (i = 1; i <= dim; i++) {
-		for (j = 1; j <= dim; j++)
-		{
-			answer.at(i) += _dss->ElementAt(i - 1, j - 1) * x.at(j);
-		}
-	}
+  answer.resize(dim);
+  answer.zero();
+	
+  for (i = 1; i <= dim; i++) {
+    for (j = 1; j <= dim; j++) 
+      {
+	answer.at(i) += _dss->ElementAt(i - 1, j - 1) * x.at(j);  
+      }
+  }
 }
 
 void DSSMatrix :: times(double x)
