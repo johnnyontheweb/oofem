@@ -469,7 +469,7 @@ CCTPlate3d :: printOutputAt(FILE *file, TimeStep *tStep)
 // Performs end-of-step operations.
 {
     FloatArray v;
-
+#ifdef DEBUG
     fprintf( file, "element %d (%8d) :\n", this->giveLabel(), this->giveNumber() );
 
     for ( int i = 0; i < (int)integrationRulesArray.size(); i++ ) {
@@ -497,5 +497,6 @@ CCTPlate3d :: printOutputAt(FILE *file, TimeStep *tStep)
             fprintf(file, "\n");
         }
     }
+#endif
 }
 } // end namespace oofem

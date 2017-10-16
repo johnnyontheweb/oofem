@@ -98,6 +98,9 @@ protected:
                                   int lowerIndx = 1, int upperIndx = ALL_STRAINS)
     { answer.clear(); }
     virtual void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer) { answer.clear(); }
+
+private:
+	virtual void printOutputAt(FILE *file, TimeStep *tStep);
 };
 } // end namespace oofem
 #endif // lumpedmasselement_h

@@ -948,9 +948,9 @@ MITC4Shell :: printOutputAt(FILE *file, TimeStep *tStep)
     FloatArray v;
     GaussPoint *gp;
 
-    fprintf(file, "element %d (%8d):\n", this->giveLabel(), number);
-
 #ifdef DEBUG
+	fprintf(file, "element %d (%8d):\n", this->giveLabel(), number);
+
     for ( int i = 0; i < nPointsXY; i++ ) {
         fprintf(file, "  GP %d :", i + 1);
 

@@ -175,8 +175,10 @@ SpringElement :: initializeFrom(InputRecord *ir)
 
 void SpringElement :: printOutputAt(FILE *File, TimeStep *tStep)
 {
+#ifdef DEBUG
     fprintf(File, "spring element %d (%8d) :\n", this->giveLabel(), this->giveNumber() );
     fprintf(File, "  spring force or moment %.4e", this->computeSpringInternalForce(tStep) );
     fprintf(File, "\n");
+#endif
 }
 } // end namespace oofem

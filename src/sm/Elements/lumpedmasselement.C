@@ -113,6 +113,14 @@ LumpedMassElement :: computeNumberOfDofs()
     return answer;
 }
 
+void
+LumpedMassElement :: printOutputAt(FILE *file, TimeStep *tStep)
+// Performs end-of-step operations.
+{
+#ifdef DEBUG
+	fprintf(file, "element %d (%8d):\n", this->giveLabel(), number);
+#endif
+}
 
 void
 LumpedMassElement :: giveDofManDofIDMask(int inode, IntArray &answer) const
