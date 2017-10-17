@@ -554,6 +554,64 @@ EngngModel :: solveYourself()
     }
 }
 
+void
+EngngModel::solveYourselfNoWritings()
+{
+	int smstep = 1, sjstep = 1;
+	FILE *out = this->giveOutputStream();
+
+	this->timer.startTimer(EngngModelTimer::EMTT_AnalysisTimer);
+
+	if (this->currentStep) {
+		smstep = this->currentStep->giveMetaStepNumber();
+		sjstep = this->giveMetaStep(smstep)->giveStepRelativeNumber(this->currentStep->giveNumber()) + 1;
+	}
+
+	for (int imstep = smstep; imstep <= nMetaSteps; imstep++, sjstep = 1) { //loop over meta steps
+		MetaStep *activeMStep = this->giveMetaStep(imstep);
+		// update state according to new meta step
+		this->initMetaStepAttributes(activeMStep);
+
+		int nTimeSteps = activeMStep->giveNumberOfSteps();
+		for (int jstep = sjstep; jstep <= nTimeSteps; jstep++) { //loop over time steps
+			this->timer.startTimer(EngngModelTimer::EMTT_SolutionStepTimer);
+			this->timer.initTimer(EngngModelTimer::EMTT_NetComputationalStepTimer);
+
+			this->preInitializeNextStep();
+			this->giveNextStep();
+
+			// renumber equations if necessary. Ensure to call forceEquationNumbering() for staggered problems
+			if (this->requiresEquationRenumbering(this->giveCurrentStep())) {
+				this->forceEquationNumbering();
+			}
+
+			OOFEM_LOG_DEBUG("Number of equations %d\n", this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
+
+			this->initializeYourself(this->giveCurrentStep());
+			this->solveYourselfAt(this->giveCurrentStep());
+			this->updateYourself(this->giveCurrentStep());
+
+			this->timer.stopTimer(EngngModelTimer::EMTT_SolutionStepTimer);
+
+			// this->terminate(this->giveCurrentStep());
+
+			//double _steptime = this->giveSolutionStepTime();
+			//OOFEM_LOG_INFO("EngngModel info: user time consumed by solution step %d: %.2fs\n",
+			//	this->giveCurrentStep()->giveNumber(), _steptime);
+
+			//fprintf(out, "\nUser time consumed by solution step %d: %.3f [s]\n\n",
+			//	this->giveCurrentStep()->giveNumber(), _steptime);
+
+#ifdef __PARALLEL_MODE
+			if (loadBalancingFlag) {
+				this->balanceLoad(this->giveCurrentStep());
+			}
+
+#endif
+		}
+	}
+}
+
 TimeStep* EngngModel :: generateNextStep(/* arguments */) {
   /* code */
   int smstep = 1, sjstep = 1;

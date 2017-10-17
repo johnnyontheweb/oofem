@@ -851,3 +851,4 @@ tests/sm/t3d.bmf
 /src/sm/sm.dir/RelWithDebInfo/vc120.pdb
 /src/tm/tm.dir/RelWithDebInfo/tm.lib
 /src/tm/tm.dir/RelWithDebInfo/vc120.pdb
+/MinSizeRel/beam01.exe

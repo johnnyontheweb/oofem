@@ -20,6 +20,7 @@
 #include "outputmanager.h"
 #include "boundarycondition.h"
 #include "set.h"
+#include "dof.h"
 
 using namespace oofem;
 
@@ -133,6 +134,7 @@ int main(int argc, char *argv[])
     myInput->setField(1, _IFT_GeneralBoundaryCondition_timeFunct);
     myInput->setField(FloatArray{0.}, _IFT_BoundaryCondition_values);
     myInput->setField(IntArray{R_v}, _IFT_GeneralBoundaryCondition_dofs);
+	myInput->setField(3, _IFT_GeneralBoundaryCondition_set);
     myData.insertInputRecord(DataReader::IR_bcRec, myInput);
 
     myInput = new DynamicInputRecord(_IFT_BoundaryCondition_Name, 6);
@@ -198,7 +200,33 @@ int main(int argc, char *argv[])
     // Writing to file (to verify, and for backups)
     myData.writeToFile("beam01.in");
 
+	// OOFEMTXTDataReader dr( inputFileName.str ( ).c_str() );
+
     EngngModel *em = InstanciateProblem(&myData, _processor, 0);
-    em->solveYourself();
+    em->solveYourselfNoWritings();
+
+	// extract data
+	// nodal data
+	Domain *domain = em->giveDomain(1);
+	std::vector< int >DofIDList;
+	std::vector< int > ::iterator it;
+	std::vector< std::vector< double > >valuesList;
+
+	for (auto &dman : domain->giveDofManagers()) {
+		for (Dof *thisDof : *dman) {
+			it = std::find(DofIDList.begin(), DofIDList.end(), thisDof->giveDofID());
+
+			double value = thisDof->giveUnknown(VM_Total, em->giveCurrentStep());
+			if (it == DofIDList.end()) {
+				DofIDList.push_back(thisDof->giveDofID());
+				valuesList.push_back({ value });
+			}
+			else {
+				std::size_t pos = it - DofIDList.begin();
+				valuesList[pos].push_back(value);
+			}
+		}
+	}
+	// clean input
     myData.finish();
 }

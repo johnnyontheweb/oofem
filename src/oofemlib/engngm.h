@@ -430,7 +430,9 @@ public:
      * using giveNextStep function (this will set current time step to newly created,
      * and updates previous step).
      */
-    virtual void solveYourself();
+	virtual void solveYourself();
+	// Starts solution process without calling terminate(), i.e. without writings
+	virtual void solveYourselfNoWritings();
     /**
      * Solves problem for given time step. Should assemble characteristic matrices and vectors
      * if necessary and solve problem using appropriate numerical method. After finishing solution,
