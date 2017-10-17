@@ -336,7 +336,7 @@ AbaqusUserElement::printOutputAt(FILE *File, TimeStep *tStep)
 {
 	FloatArray rl, Fl;
 
-	fprintf(File, "abaqususerelement %d (%8d) macroElem %d :\n", this->giveLabel(), this->giveNumber(), this->macroElem);
+	fprintf(File, "abaqususerelement %d (%8d) macroelem %d :\n", this->giveLabel(), this->giveNumber(), this->macroElem);
 
 	// ask for global element displacement vector
 	this->computeVectorOf(VM_Total, tStep, rl);

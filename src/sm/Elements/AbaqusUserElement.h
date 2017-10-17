@@ -51,7 +51,7 @@
 #define _IFT_AbaqusUserElement_properties "properties"
 #define _IFT_AbaqusUserElement_type "type"
 #define _IFT_AbaqusUserElement_name "name"
-#define _IFT_AbaqusUserElement_macroElem "macroElem"
+#define _IFT_AbaqusUserElement_macroElem "macroelem"
 //@}
 
 namespace oofem {
