@@ -92,6 +92,10 @@ IRResultType AbaqusUserElement :: initializeFrom(InputRecord *ir)
     if ( this->jtype < 0 ) {
         OOFEM_ERROR("'type' has an invalid value");
     }
+
+	this->macroElem = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_AbaqusUserElement_macroElem);
+
     IR_GIVE_FIELD(ir, this->filename, _IFT_AbaqusUserElement_userElement);
 
 #if 0
@@ -332,7 +336,7 @@ AbaqusUserElement::printOutputAt(FILE *File, TimeStep *tStep)
 {
 	FloatArray rl, Fl;
 
-	fprintf(File, "abaqususerelement %d (%8d) :\n", this->giveLabel(), this->giveNumber());
+	fprintf(File, "abaqususerelement %d (%8d) macroElem %d :\n", this->giveLabel(), this->giveNumber(), this->macroElem);
 
 	// ask for global element displacement vector
 	this->computeVectorOf(VM_Total, tStep, rl);

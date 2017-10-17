@@ -51,6 +51,7 @@
 #define _IFT_AbaqusUserElement_properties "properties"
 #define _IFT_AbaqusUserElement_type "type"
 #define _IFT_AbaqusUserElement_name "name"
+#define _IFT_AbaqusUserElement_macroElem "macroElem"
 //@}
 
 namespace oofem {
@@ -160,6 +161,9 @@ private:
 
 	/// Pointer to the dynamically loaded uelInit function (translated to C)
 	void(*uelInit)();
+
+	// macro element number
+	int macroElem;
 
 public:
     /// Constructor

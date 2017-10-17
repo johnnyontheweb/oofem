@@ -852,3 +852,4 @@ tests/sm/t3d.bmf
 /src/tm/tm.dir/RelWithDebInfo/tm.lib
 /src/tm/tm.dir/RelWithDebInfo/vc120.pdb
 /MinSizeRel/beam01.exe
+/MinSizeRel/run-Kobe.in

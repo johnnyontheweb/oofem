@@ -170,6 +170,10 @@ SpringElement :: initializeFrom(InputRecord *ir)
         IR_GIVE_OPTIONAL_FIELD(ir, this->dir, _IFT_SpringElement_orientation);
         this->dir.normalize();
     }
+
+	this->macroElem = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_SpringElement_macroElem);
+
     return StructuralElement :: initializeFrom(ir);
 }
 
@@ -178,15 +182,15 @@ void SpringElement :: printOutputAt(FILE *File, TimeStep *tStep)
 	int direction = 0;
 	if (this->mode == SE_3D_SPRING) {
 
-	if (dir.at(1) == 1 && dir.at(2) == 0 && dir.at(3) == 0) { 
-		direction = 1;
-	}
-	else if (dir.at(1) == 0 && dir.at(2) == 1 && dir.at(3) == 0) {
-		direction = 2;
-	}
-	else if (dir.at(1) == 0 && dir.at(2) == 0 && dir.at(3) == 1) {
-		direction = 3;
-	};
+		if (dir.at(1) == 1 && dir.at(2) == 0 && dir.at(3) == 0) { 
+			direction = 1;
+		}
+		else if (dir.at(1) == 0 && dir.at(2) == 1 && dir.at(3) == 0) {
+			direction = 2;
+		}
+		else if (dir.at(1) == 0 && dir.at(2) == 0 && dir.at(3) == 1) {
+			direction = 3;
+		};
 
 	} 	else if (this->mode == SE_3D_TORSIONALSPRING) {
 
@@ -201,7 +205,11 @@ void SpringElement :: printOutputAt(FILE *File, TimeStep *tStep)
 		};
 	}
 // #ifdef DEBUG
-	fprintf(File, "springElement %d dir %d : %.4e\n", this->giveLabel(), direction, this->computeSpringInternalForce(tStep));
+	if (this->macroElem != 0) {
+		fprintf(File, "springElement %d dir %d macroElem %d : %.4e\n", this->giveLabel(), direction, this->macroElem, this->computeSpringInternalForce(tStep));
+	} else {
+		fprintf(File, "springElement %d dir %d : %.4e\n", this->giveLabel(), direction, this->computeSpringInternalForce(tStep));
+	}
 	// fprintf(File, "springElement %d (%8d) :\n", this->giveLabel(), this->giveNumber());
     // fprintf(File, "  spring force or moment %.4e", this->computeSpringInternalForce(tStep) );
     // fprintf(File, "\n");

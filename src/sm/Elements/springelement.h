@@ -44,6 +44,7 @@
 #define _IFT_SpringElement_orientation "orientation"
 #define _IFT_SpringElement_springConstant "k"
 #define _IFT_SpringElement_mass "m"
+#define _IFT_SpringElement_macroElem "macroElem"
 
 //@}
 
@@ -78,6 +79,8 @@ protected:
     FloatArray dir;
     /// Mode.
     SpringElementType mode;
+	// macro element number
+	int macroElem;
 
 public:
     SpringElement(int n, Domain * d);
