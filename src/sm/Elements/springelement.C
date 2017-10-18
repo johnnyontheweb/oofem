@@ -208,7 +208,7 @@ void SpringElement :: printOutputAt(FILE *File, TimeStep *tStep)
 
 // #ifdef DEBUG
 	if (this->macroElem != 0) {
-		fprintf(File, "springElement %d type %d dir %.4e %.4e %.4e macroelem %d : %.4e\n", this->giveLabel(), this->mode, this->dir.at(1), this->dir.at(2), this->dir.at(3), this->macroElem, this->computeSpringInternalForce(tStep));
+		fprintf(File, "springElement %d type %d dir 3 %.4e %.4e %.4e macroelem %d : %.4e\n", this->giveLabel(), this->mode, this->dir.at(1), this->dir.at(2), this->dir.at(3), this->macroElem, this->computeSpringInternalForce(tStep));
 	} else {
 		fprintf(File, "springElement %d type %d : %.4e\n", this->giveLabel(), this->mode, this->computeSpringInternalForce(tStep));
 	}

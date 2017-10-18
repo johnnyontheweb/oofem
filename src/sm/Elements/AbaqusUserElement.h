@@ -49,9 +49,11 @@
 #define _IFT_AbaqusUserElement_dofs "dofs"
 #define _IFT_AbaqusUserElement_numsvars "numsvars"
 #define _IFT_AbaqusUserElement_properties "properties"
+#define _IFT_AbaqusUserElement_iproperties "iproperties"
 #define _IFT_AbaqusUserElement_type "type"
 #define _IFT_AbaqusUserElement_name "name"
 #define _IFT_AbaqusUserElement_macroElem "macroelem"
+#define _IFT_AbaqusUserElement_orientation "dir"
 //@}
 
 namespace oofem {
@@ -239,6 +241,12 @@ protected:
         OOFEM_ERROR("function not defined for abaqusUserElement and should never be called. This is a bug.");
         return 0;
     }
+	virtual bool computeGtoLRotationMatrix(FloatMatrix &answer);
+	/**
+	* Orientation vector. Defines orientation of spring element- for spring it defines the direction of spring,
+	* for torsional spring it defines the axis of rotation.
+	*/
+	FloatArray dir;
 };
 
 }// namespace oofem

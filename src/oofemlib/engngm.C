@@ -558,7 +558,7 @@ void
 EngngModel::solveYourselfNoWritings()
 {
 	int smstep = 1, sjstep = 1;
-	FILE *out = this->giveOutputStream();
+	// FILE *out = this->giveOutputStream();
 
 	this->timer.startTimer(EngngModelTimer::EMTT_AnalysisTimer);
 

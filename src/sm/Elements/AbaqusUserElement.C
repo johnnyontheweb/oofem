@@ -83,11 +83,20 @@ IRResultType AbaqusUserElement :: initializeFrom(InputRecord *ir)
     IR_GIVE_FIELD(ir, nCoords, _IFT_AbaqusUserElement_numcoords);
 
     IR_GIVE_OPTIONAL_FIELD(ir, this->dofs, _IFT_AbaqusUserElement_dofs);
+
+	if (this->dofs.giveSize() != 1) {
+		IR_GIVE_OPTIONAL_FIELD(ir, this->dir, _IFT_AbaqusUserElement_orientation);
+		this->dir.normalize();
+	}
+	
     IR_GIVE_FIELD(ir, this->numSvars, _IFT_AbaqusUserElement_numsvars);
     if ( this->numSvars < 0 ) {
         OOFEM_ERROR("'numsvars' field has an invalid value");
     }
-    IR_GIVE_FIELD(ir, this->props, _IFT_AbaqusUserElement_properties);
+	IR_GIVE_FIELD(ir, this->props, _IFT_AbaqusUserElement_properties);
+
+	IR_GIVE_OPTIONAL_FIELD(ir, this->jprops, _IFT_AbaqusUserElement_iproperties);
+
     IR_GIVE_FIELD(ir, this->jtype, _IFT_AbaqusUserElement_type);
     if ( this->jtype < 0 ) {
         OOFEM_ERROR("'type' has an invalid value");
@@ -201,6 +210,47 @@ void AbaqusUserElement :: giveDofManDofIDMask(int inode, IntArray &answer) const
 {
     answer = this->dofs;
 }
+
+bool
+AbaqusUserElement::computeGtoLRotationMatrix(FloatMatrix &answer)
+{
+	///*
+	//* Spring is defined as 1D element along orientation axis (or around orientation axis for torsional springs)
+	//* The transformation from local (1d) to global system typically expand dimensions
+	//*/
+	//if (this->dofs.giveSize() == 1) {
+	//	answer.resize(2, 2);
+	//	answer.at(1, 1) = answer.at(2, 2) = 1.0;
+	//}
+	//else if (this->dofs.giveSize() == 2 && ((dofs.at(1) == 1 && dofs.at(2) == 2) || (dofs.at(1) == 2 && dofs.at(2) == 1))) { // XY plane
+	//	answer.resize(2, 4);
+	//	answer.at(1, 1) = this->dir.at(1);
+	//	answer.at(1, 2) = this->dir.at(2);
+	//	answer.at(2, 3) = this->dir.at(1);
+	//	answer.at(2, 4) = this->dir.at(2);
+	//}
+	//else if (this->dofs.giveSize() == 2 && ((dofs.at(1) == 1 && dofs.at(2) == 3) || (dofs.at(1) == 3 && dofs.at(2) == 1))) { // XZ plane
+	//	answer.resize(2, 4);
+	//	answer.at(1, 1) = this->dir.at(1);
+	//	answer.at(1, 2) = this->dir.at(3);
+	//	answer.at(2, 3) = this->dir.at(1);
+	//	answer.at(2, 4) = this->dir.at(3);
+	//}
+	//else if (this->dofs.giveSize() == 3) {
+	//	answer.resize(2, 6);
+	//	answer.at(1, 1) = this->dir.at(1);
+	//	answer.at(1, 2) = this->dir.at(2);
+	//	answer.at(1, 3) = this->dir.at(3);
+	//	answer.at(2, 4) = this->dir.at(1);
+	//	answer.at(2, 5) = this->dir.at(2);
+	//	answer.at(2, 6) = this->dir.at(3);
+	//}
+	// return 1;
+
+	answer.clear();
+	return false;
+}
+
 
 void AbaqusUserElement :: computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep)
 {

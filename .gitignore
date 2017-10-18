@@ -854,3 +854,9 @@ tests/sm/t3d.bmf
 /MinSizeRel/beam01.exe
 /MinSizeRel/run-Kobe.in
 /MinSizeRel/3piani.in
+/MinSizeRel/NFnlLib.dll
+/MinSizeRel/NFnlW.dll
+/MinSizeRel/OoModel.dll
+/MinSizeRel/nflib.dll
+/MinSizeRel/spring102.in
+/MinSizeRel/spring5.in
