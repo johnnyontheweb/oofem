@@ -860,3 +860,5 @@ tests/sm/t3d.bmf
 /MinSizeRel/nflib.dll
 /MinSizeRel/spring102.in
 /MinSizeRel/spring5.in
+/beam01.dir/RelWithDebInfo/beam01.vcxprojResolveAssemblyReference.cache
+/oofem.dir/RelWithDebInfo/oofem.vcxprojResolveAssemblyReference.cache

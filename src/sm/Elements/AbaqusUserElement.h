@@ -182,7 +182,7 @@ public:
     virtual int computeNumberOfDofs() { return this->ndofel; }
     virtual void giveDofManDofIDMask(int inode, IntArray &answer) const;
     virtual void computeField(ValueModeType mode, TimeStep *tStep, const FloatArray &lcoords, FloatArray &answer)
-    { OOFEM_ERROR("Abaqus user element cannot support computing local unknown vector\n"); }
+    { OOFEM_ERROR("Abaqus user element cannot support computation of local unknown vector\n"); }
     virtual void updateYourself(TimeStep *tStep);
     virtual void updateInternalState(TimeStep *tStep);
 
@@ -230,15 +230,15 @@ public:
 
 protected:
     virtual void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep) {
-        OOFEM_ERROR("function not defined for abaqusUserElement and should never be called. This is a bug.");
+        OOFEM_ERROR("function not defined for abaqusUserElement and should never be called.");
     }
 
     virtual void computeBmatrixAt(GaussPoint *, FloatMatrix &, int = 1, int = ALL_STRAINS) {
-        OOFEM_ERROR("function not defined for abaqusUserElement and should never be called. This is a bug.");
+        OOFEM_ERROR("function not defined for abaqusUserElement and should never be called.");
     }
 
     virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) {
-        OOFEM_ERROR("function not defined for abaqusUserElement and should never be called. This is a bug.");
+        OOFEM_ERROR("function not defined for abaqusUserElement and should never be called.");
         return 0;
     }
 	virtual bool computeGtoLRotationMatrix(FloatMatrix &answer);

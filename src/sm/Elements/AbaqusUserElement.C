@@ -85,6 +85,9 @@ IRResultType AbaqusUserElement :: initializeFrom(InputRecord *ir)
     IR_GIVE_OPTIONAL_FIELD(ir, this->dofs, _IFT_AbaqusUserElement_dofs);
 
 	if (this->dofs.giveSize() != 1) {
+		this->dir.resize(3);
+		// default orientation X global axis
+		this->dir.at(1) = 1; this->dir.at(2) = 0; this->dir.at(3) = 0;
 		IR_GIVE_OPTIONAL_FIELD(ir, this->dir, _IFT_AbaqusUserElement_orientation);
 		this->dir.normalize();
 	}
@@ -316,6 +319,7 @@ void AbaqusUserElement :: giveInternalForcesVector(FloatArray &answer, TimeStep 
         double dtime = tStep->giveTimeIncrement();
 		double ttime = tStep->giveTargetTime();
 		double time[] = { ttime, ttime };
+
 		// see description at http://abaqus.software.polimi.it/v6.12/books/sub/default.htm
         this->uel(
             loc_rhs.givePointer(),
