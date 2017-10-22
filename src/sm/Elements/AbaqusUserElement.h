@@ -186,6 +186,8 @@ public:
     virtual void updateYourself(TimeStep *tStep);
     virtual void updateInternalState(TimeStep *tStep);
 
+	virtual int computeNumberOfGlobalDofs();
+
     bool hasTangent() const {
         return hasTangentFlag;
     }

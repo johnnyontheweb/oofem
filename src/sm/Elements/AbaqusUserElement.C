@@ -218,43 +218,57 @@ void AbaqusUserElement :: giveDofManDofIDMask(int inode, IntArray &answer) const
 bool
 AbaqusUserElement::computeGtoLRotationMatrix(FloatMatrix &answer)
 {
-	///*
-	//* Spring is defined as 1D element along orientation axis (or around orientation axis for torsional springs)
-	//* The transformation from local (1d) to global system typically expand dimensions
-	//*/
-	//if (this->dofs.giveSize() == 1) {
-	//	answer.resize(2, 2);
-	//	answer.at(1, 1) = answer.at(2, 2) = 1.0;
-	//}
-	//else if (this->dofs.giveSize() == 2 && ((dofs.at(1) == 1 && dofs.at(2) == 2) || (dofs.at(1) == 2 && dofs.at(2) == 1))) { // XY plane
-	//	answer.resize(2, 4);
-	//	answer.at(1, 1) = this->dir.at(1);
-	//	answer.at(1, 2) = this->dir.at(2);
-	//	answer.at(2, 3) = this->dir.at(1);
-	//	answer.at(2, 4) = this->dir.at(2);
-	//}
-	//else if (this->dofs.giveSize() == 2 && ((dofs.at(1) == 1 && dofs.at(2) == 3) || (dofs.at(1) == 3 && dofs.at(2) == 1))) { // XZ plane
-	//	answer.resize(2, 4);
-	//	answer.at(1, 1) = this->dir.at(1);
-	//	answer.at(1, 2) = this->dir.at(3);
-	//	answer.at(2, 3) = this->dir.at(1);
-	//	answer.at(2, 4) = this->dir.at(3);
-	//}
-	//else if (this->dofs.giveSize() == 3) {
-	//	answer.resize(2, 6);
-	//	answer.at(1, 1) = this->dir.at(1);
-	//	answer.at(1, 2) = this->dir.at(2);
-	//	answer.at(1, 3) = this->dir.at(3);
-	//	answer.at(2, 4) = this->dir.at(1);
-	//	answer.at(2, 5) = this->dir.at(2);
-	//	answer.at(2, 6) = this->dir.at(3);
-	//}
-	// return true;
+	/*
+	* Spring is defined as 1D element along orientation axis (or around orientation axis for torsional springs)
+	* The transformation from local (1d) to global system typically expand dimensions
+	*/
+	if (this->dofs.giveSize() == 1) {
+		answer.resize(2, 2);
+		answer.at(1, 1) = answer.at(2, 2) = 1.0;
+	}
+	else if (this->dofs.giveSize() == 2 && ((dofs.at(1) == 1 && dofs.at(2) == 2) || (dofs.at(1) == 2 && dofs.at(2) == 1))) { // XY plane
+		answer.resize(2, 4);
+		answer.at(1, 1) = this->dir.at(1);
+		answer.at(1, 2) = this->dir.at(2);
+		answer.at(2, 3) = this->dir.at(1);
+		answer.at(2, 4) = this->dir.at(2);
+	}
+	else if (this->dofs.giveSize() == 2 && ((dofs.at(1) == 1 && dofs.at(2) == 3) || (dofs.at(1) == 3 && dofs.at(2) == 1))) { // XZ plane
+		answer.resize(2, 4);
+		answer.at(1, 1) = this->dir.at(1);
+		answer.at(1, 2) = this->dir.at(3);
+		answer.at(2, 3) = this->dir.at(1);
+		answer.at(2, 4) = this->dir.at(3);
+	}
+	else if (this->dofs.giveSize() == 3) {
+		answer.resize(2, 6);
+		answer.at(1, 1) = this->dir.at(1);
+		answer.at(1, 2) = this->dir.at(2);
+		answer.at(1, 3) = this->dir.at(3);
+		answer.at(2, 4) = this->dir.at(1);
+		answer.at(2, 5) = this->dir.at(2);
+		answer.at(2, 6) = this->dir.at(3);
+	}
+	 return true;
 
-	answer.clear();
-	return false;
+	//answer.clear();
+	//return false;
 }
 
+int
+AbaqusUserElement::computeNumberOfGlobalDofs()
+{
+	if (this->dofs.giveSize() == 1) {
+		return 2;
+	}
+	else if (this->dofs.giveSize() == 2) {
+		return 4;
+	}
+	else if (this->dofs.giveSize() == 3) {
+		return 6;
+	}
+	return 0;
+}
 
 void AbaqusUserElement :: computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep)
 {
@@ -286,10 +300,12 @@ void AbaqusUserElement :: updateInternalState(TimeStep *tStep)
 void AbaqusUserElement :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord)
 {
     // init U vector
-    this->computeVectorOf(this->dofs, VM_Total, tStep, U);
+    // this->computeVectorOf(this->dofs, VM_Total, tStep, U);
+	this->computeVectorOf(VM_Total, tStep, U);
     FloatArray tempIntVect;
     // init DU vector
-    this->computeVectorOf(this->dofs, VM_Incremental, tStep, tempIntVect);
+    //this->computeVectorOf(this->dofs, VM_Incremental, tStep, tempIntVect);
+	this->computeVectorOf(VM_Incremental, tStep, tempIntVect);
     //this->giveDomain()->giveClassName();
     DU.zero();
     DU.setColumn(tempIntVect, 1);
