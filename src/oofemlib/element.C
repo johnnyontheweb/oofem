@@ -265,7 +265,7 @@ Element :: giveRotationMatrix(FloatMatrix &answer)
 
     is_GtoL = this->computeGtoLRotationMatrix(GtoL);
     is_NtoG = this->computeDofTransformationMatrix(NtoG, nodes, true);
-
+	
 #ifdef DEBUG
     if ( is_GtoL ) {
         if ( GtoL.giveNumberOfColumns() != this->computeNumberOfGlobalDofs() ) {

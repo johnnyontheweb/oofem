@@ -85,13 +85,15 @@ IRResultType AbaqusUserElement :: initializeFrom(InputRecord *ir)
 
 	IR_GIVE_FIELD(ir, this->dofs, _IFT_AbaqusUserElement_dofs);
 
-	this->dir.resize(3);
-	// default orientation X global axis
-	this->dir.at(1) = 1; this->dir.at(2) = 0; this->dir.at(3) = 0;
-	if (this->dofs.giveSize() != 1) {
+	//if (this->dofs.giveSize() != 1) {
+		//this->dir.resize(3);
+		//// default orientation X global axis
+		//this->dir.at(1) = 1; this->dir.at(2) = 0; this->dir.at(3) = 0;
 		IR_GIVE_OPTIONAL_FIELD(ir, this->dir, _IFT_AbaqusUserElement_orientation);
-		this->dir.normalize();
-	}
+		if ( this->dir.giveSize() ) {
+			this->dir.normalize();
+		}
+	//}
 	
     IR_GIVE_FIELD(ir, this->numSvars, _IFT_AbaqusUserElement_numsvars);
     if ( this->numSvars < 0 ) {
@@ -222,37 +224,47 @@ AbaqusUserElement::computeGtoLRotationMatrix(FloatMatrix &answer)
 	* Spring is defined as 1D element along orientation axis (or around orientation axis for torsional springs)
 	* The transformation from local (1d) to global system typically expand dimensions
 	*/
-	if (this->dofs.giveSize() == 1) {
-		answer.resize(2, 2);
-		answer.at(1, 1) = answer.at(2, 2) = 1.0;
+	//if (this->dir.giveSize() == 0) {
+		answer.clear();
+		return false;
+	//}
+	//else{
+	//	if (this->dofs.giveSize() == 1) {
+	//		answer.resize(2, 2);
+	//		answer.at(1, 1) = answer.at(2, 2) = 1.0;
+	//	}
+	//	else if (this->dofs.giveSize() == 2 && ((dofs.at(1) == 1 && dofs.at(2) == 2) || (dofs.at(1) == 2 && dofs.at(2) == 1))) { // XY plane
+	//		answer.resize(2, 4);
+	//		answer.at(1, 1) = this->dir.at(1);
+	//		answer.at(1, 2) = this->dir.at(2);
+	//		answer.at(2, 3) = this->dir.at(1);
+	//		answer.at(2, 4) = this->dir.at(2);
+	//	}
+	//	else if (this->dofs.giveSize() == 2 && ((dofs.at(1) == 1 && dofs.at(2) == 3) || (dofs.at(1) == 3 && dofs.at(2) == 1))) { // XZ plane
+	//		answer.resize(2, 4);
+	//		answer.at(1, 1) = this->dir.at(1);
+	//		answer.at(1, 2) = this->dir.at(3);
+	//		answer.at(2, 3) = this->dir.at(1);
+	//		answer.at(2, 4) = this->dir.at(3);
+	//	}
+	//	else if (this->dofs.giveSize() == 2 && ((dofs.at(1) == 2 && dofs.at(2) == 3) || (dofs.at(1) == 3 && dofs.at(2) == 2))) { // YZ plane
+	//		answer.resize(2, 4);
+	//		answer.at(1, 1) = this->dir.at(2);
+	//		answer.at(1, 2) = this->dir.at(3);
+	//		answer.at(2, 3) = this->dir.at(2);
+	//		answer.at(2, 4) = this->dir.at(3);
+	//	}
+	//	else if (this->dofs.giveSize() == 3) {
+	//		answer.resize(2, 6);
+	//		answer.at(1, 1) = this->dir.at(1);
+	//		answer.at(1, 2) = this->dir.at(2);
+	//		answer.at(1, 3) = this->dir.at(3);
+	//		answer.at(2, 4) = this->dir.at(1);
+	//		answer.at(2, 5) = this->dir.at(2);
+	//		answer.at(2, 6) = this->dir.at(3);
+	//	}
+	//	 return true;
 	}
-	else if (this->dofs.giveSize() == 2 && ((dofs.at(1) == 1 && dofs.at(2) == 2) || (dofs.at(1) == 2 && dofs.at(2) == 1))) { // XY plane
-		answer.resize(2, 4);
-		answer.at(1, 1) = this->dir.at(1);
-		answer.at(1, 2) = this->dir.at(2);
-		answer.at(2, 3) = this->dir.at(1);
-		answer.at(2, 4) = this->dir.at(2);
-	}
-	else if (this->dofs.giveSize() == 2 && ((dofs.at(1) == 1 && dofs.at(2) == 3) || (dofs.at(1) == 3 && dofs.at(2) == 1))) { // XZ plane
-		answer.resize(2, 4);
-		answer.at(1, 1) = this->dir.at(1);
-		answer.at(1, 2) = this->dir.at(3);
-		answer.at(2, 3) = this->dir.at(1);
-		answer.at(2, 4) = this->dir.at(3);
-	}
-	else if (this->dofs.giveSize() == 3) {
-		answer.resize(2, 6);
-		answer.at(1, 1) = this->dir.at(1);
-		answer.at(1, 2) = this->dir.at(2);
-		answer.at(1, 3) = this->dir.at(3);
-		answer.at(2, 4) = this->dir.at(1);
-		answer.at(2, 5) = this->dir.at(2);
-		answer.at(2, 6) = this->dir.at(3);
-	}
-	 return true;
-
-	//answer.clear();
-	//return false;
 }
 
 int
@@ -268,6 +280,12 @@ AbaqusUserElement::computeNumberOfGlobalDofs()
 		return 6;
 	}
 	return 0;
+}
+
+int
+AbaqusUserElement::computeNumberOfDofs()
+{
+	return this->ndofel;
 }
 
 void AbaqusUserElement :: computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep)

@@ -179,7 +179,7 @@ public:
     virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep);
     virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord = 0);
     virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, FloatArray &U, FloatMatrix &DU, int useUpdatedGpRecord);
-    virtual int computeNumberOfDofs() { return this->ndofel; }
+    // virtual int computeNumberOfDofs() { return this->ndofel; }
     virtual void giveDofManDofIDMask(int inode, IntArray &answer) const;
     virtual void computeField(ValueModeType mode, TimeStep *tStep, const FloatArray &lcoords, FloatArray &answer)
     { OOFEM_ERROR("Abaqus user element cannot support computation of local unknown vector\n"); }
@@ -187,6 +187,7 @@ public:
     virtual void updateInternalState(TimeStep *tStep);
 
 	virtual int computeNumberOfGlobalDofs();
+	virtual int computeNumberOfDofs();
 
     bool hasTangent() const {
         return hasTangentFlag;
