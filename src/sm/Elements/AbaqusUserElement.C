@@ -80,14 +80,15 @@ IRResultType AbaqusUserElement :: initializeFrom(InputRecord *ir)
     this->numberOfDofMans = dofManArray.giveSize();
 
     // necessary to prevent an array dimension error in Init
-    IR_GIVE_FIELD(ir, nCoords, _IFT_AbaqusUserElement_numcoords);
+	this->nCoords = 1;
+	IR_GIVE_OPTIONAL_FIELD(ir, nCoords, _IFT_AbaqusUserElement_numcoords);
 
-    IR_GIVE_OPTIONAL_FIELD(ir, this->dofs, _IFT_AbaqusUserElement_dofs);
+	IR_GIVE_FIELD(ir, this->dofs, _IFT_AbaqusUserElement_dofs);
 
+	this->dir.resize(3);
+	// default orientation X global axis
+	this->dir.at(1) = 1; this->dir.at(2) = 0; this->dir.at(3) = 0;
 	if (this->dofs.giveSize() != 1) {
-		this->dir.resize(3);
-		// default orientation X global axis
-		this->dir.at(1) = 1; this->dir.at(2) = 0; this->dir.at(3) = 0;
 		IR_GIVE_OPTIONAL_FIELD(ir, this->dir, _IFT_AbaqusUserElement_orientation);
 		this->dir.normalize();
 	}
@@ -151,7 +152,7 @@ void AbaqusUserElement :: postInitialize()
 {
     NLStructuralElement :: postInitialize();
 
-    this->ndofel = this->numberOfDofMans * this->nCoords; // dofs.giveSize();
+    this->ndofel = this->numberOfDofMans * dofs.giveSize(); // this->nCoords;
     this->mlvarx = this->ndofel;
     this->nrhs = 2;
     this->rhs.resize(this->ndofel, this->nrhs);
@@ -248,7 +249,7 @@ AbaqusUserElement::computeGtoLRotationMatrix(FloatMatrix &answer)
 	//	answer.at(2, 5) = this->dir.at(2);
 	//	answer.at(2, 6) = this->dir.at(3);
 	//}
-	// return 1;
+	// return true;
 
 	answer.clear();
 	return false;
