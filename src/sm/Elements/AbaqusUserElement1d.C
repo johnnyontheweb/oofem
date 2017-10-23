@@ -32,7 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "AbaqusUserElement.h"
+#include "AbaqusUserElement1d.h"
 #include "gausspoint.h"
 #include "classfactory.h"
 #include "dynamicinputrecord.h"
@@ -47,14 +47,13 @@
 #include <cstring>
 
 namespace oofem {
-REGISTER_Element(AbaqusUserElement);
+REGISTER_Element(AbaqusUserElement1d);
 
-
-AbaqusUserElement :: AbaqusUserElement(int n, Domain *d) :
+AbaqusUserElement1d :: AbaqusUserElement1d(int n, Domain *d) :
     NLStructuralElement(n, d), uelobj(NULL), hasTangentFlag(false), uel(NULL)
 {}
 
-AbaqusUserElement :: ~AbaqusUserElement()
+AbaqusUserElement1d :: ~AbaqusUserElement1d()
 {
 #ifdef _WIN32
     if ( this->uelobj ) {
@@ -68,7 +67,7 @@ AbaqusUserElement :: ~AbaqusUserElement()
 }
 
 
-IRResultType AbaqusUserElement :: initializeFrom(InputRecord *ir)
+IRResultType AbaqusUserElement1d :: initializeFrom(InputRecord *ir)
 {
     IRResultType result;                                        // Required by IR_GIVE_FIELD macro
 
@@ -81,31 +80,41 @@ IRResultType AbaqusUserElement :: initializeFrom(InputRecord *ir)
 
     // necessary to prevent an array dimension error in Init
 	this->nCoords = 1;
-	IR_GIVE_FIELD(ir, nCoords, _IFT_AbaqusUserElement_numcoords);
+	// IR_GIVE_OPTIONAL_FIELD(ir, nCoords, _IFT_AbaqusUserElement1d_numcoords);
 
-	IR_GIVE_FIELD(ir, this->dofs, _IFT_AbaqusUserElement_dofs);
+	//IR_GIVE_FIELD(ir, this->dofs, _IFT_AbaqusUserElement1d_dofs);
+	this->dofs.resize(1); this->dofs.at(1) = 1;
 
-    IR_GIVE_FIELD(ir, this->numSvars, _IFT_AbaqusUserElement_numsvars);
+	IR_GIVE_FIELD(ir, this->dir, _IFT_AbaqusUserElement1d_orientation);
+	if ( this->dir.giveSize() ) {
+		this->dir.normalize();
+	}
+	
+	// mode
+	this->mode = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, mode, _IFT_AbaqusUserElement1d_mode);
+
+    IR_GIVE_FIELD(ir, this->numSvars, _IFT_AbaqusUserElement1d_numsvars);
     if ( this->numSvars < 0 ) {
         OOFEM_ERROR("'numsvars' field has an invalid value");
     }
-	IR_GIVE_FIELD(ir, this->props, _IFT_AbaqusUserElement_properties);
+	IR_GIVE_FIELD(ir, this->props, _IFT_AbaqusUserElement1d_properties);
 
-	IR_GIVE_OPTIONAL_FIELD(ir, this->jprops, _IFT_AbaqusUserElement_iproperties);
+	IR_GIVE_OPTIONAL_FIELD(ir, this->jprops, _IFT_AbaqusUserElement1d_iproperties);
 
-    IR_GIVE_FIELD(ir, this->jtype, _IFT_AbaqusUserElement_type);
+    IR_GIVE_FIELD(ir, this->jtype, _IFT_AbaqusUserElement1d_type);
     if ( this->jtype < 0 ) {
         OOFEM_ERROR("'type' has an invalid value");
     }
 
 	this->macroElem = 0;
-	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_AbaqusUserElement_macroElem);
+	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_AbaqusUserElement1d_macroElem);
 
-    IR_GIVE_FIELD(ir, this->filename, _IFT_AbaqusUserElement_userElement);
+    IR_GIVE_FIELD(ir, this->filename, _IFT_AbaqusUserElement1d_userElement);
 
 #if 0
     uelname = "uel";
-    IR_GIVE_OPTIONAL_FIELD(ir, uelname, _IFT_AbaqusUserElement_name);
+    IR_GIVE_OPTIONAL_FIELD(ir, uelname, _IFT_AbaqusUserElement1d_name);
 #endif
 
 #ifdef _WIN32
@@ -140,11 +149,11 @@ IRResultType AbaqusUserElement :: initializeFrom(InputRecord *ir)
 }
 
 
-void AbaqusUserElement :: postInitialize()
+void AbaqusUserElement1d :: postInitialize()
 {
     NLStructuralElement :: postInitialize();
 
-    this->ndofel = this->numberOfDofMans * dofs.giveSize(); // this->nCoords;
+    this->ndofel = 2; // 1d spring
     this->mlvarx = this->ndofel;
     this->nrhs = 2;
     this->rhs.resize(this->ndofel, this->nrhs);
@@ -160,18 +169,18 @@ void AbaqusUserElement :: postInitialize()
 
 	if (!this->coords.isNotEmpty()) {
 		this->mcrd = 1;
-		for (auto j : this->dofs)
-		{
-			switch ((DofIDItem)j)
-			{
-			case D_u:
-			case D_v:
-			case D_w:
-				this->mcrd = (std::max)(this->mcrd, j);
-			}
-		}
+		//for (auto j : this->dofs)
+		//{
+		//	switch ((DofIDItem)j)
+		//	{
+		//	case D_u:
+		//	case D_v:
+		//	case D_w:
+		//		this->mcrd = (std::max)(this->mcrd, j);
+		//	}
+		//}
 
-		this->mcrd = (std::max)(this->mcrd, this->nCoords);
+		//this->mcrd = (std::max)(this->mcrd, this->nCoords);
 
 		this->coords.resize(this->mcrd, this->numberOfDofMans);
 		// this->coords.resize(this->numberOfDofMans, this->mcrd);
@@ -185,29 +194,53 @@ void AbaqusUserElement :: postInitialize()
 }
 
 
-void AbaqusUserElement :: giveInputRecord(DynamicInputRecord &input)
+void AbaqusUserElement1d :: giveInputRecord(DynamicInputRecord &input)
 {
     StructuralElement :: giveInputRecord(input);
 
-    input.setField(this->coords, _IFT_AbaqusUserElement_numcoords);
-    input.setField(this->dofs, _IFT_AbaqusUserElement_dofs);
-    input.setField(this->numSvars, _IFT_AbaqusUserElement_numsvars);
-    input.setField(this->props, _IFT_AbaqusUserElement_properties);
-    input.setField(this->jtype, _IFT_AbaqusUserElement_type);
-    input.setField(this->filename, _IFT_AbaqusUserElement_userElement);
+    // input.setField(this->coords, _IFT_AbaqusUserElement1d_numcoords);
+    //input.setField(this->dofs, _IFT_AbaqusUserElement1d_dofs);
+    input.setField(this->numSvars, _IFT_AbaqusUserElement1d_numsvars);
+    input.setField(this->props, _IFT_AbaqusUserElement1d_properties);
+    input.setField(this->jtype, _IFT_AbaqusUserElement1d_type);
+    input.setField(this->filename, _IFT_AbaqusUserElement1d_userElement);
 }
 
-Interface *AbaqusUserElement :: giveInterface(InterfaceType it)
+Interface *AbaqusUserElement1d :: giveInterface(InterfaceType it)
 {
     return NULL;
 }
 
-void AbaqusUserElement :: giveDofManDofIDMask(int inode, IntArray &answer) const
+void AbaqusUserElement1d :: giveDofManDofIDMask(int inode, IntArray &answer) const
 {
-    answer = this->dofs;
+	if (this->mode == 0) {
+		answer = { D_u, D_v, D_w };
+	}
+	else if (this->mode == 1) {
+		answer = { R_u, R_v, R_w };
+	}
 }
 
-void AbaqusUserElement :: computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep)
+bool
+AbaqusUserElement1d::computeGtoLRotationMatrix(FloatMatrix &answer)
+{
+	/*
+	* Spring is defined as 1D element along orientation axis (or around orientation axis for torsional springs)
+	* The transformation from local (1d) to global system typically expand dimensions
+	*/
+	
+	answer.resize(2, 6);
+	answer.at(1, 1) = this->dir.at(1);
+	answer.at(1, 2) = this->dir.at(2);
+	answer.at(1, 3) = this->dir.at(3);
+	answer.at(2, 4) = this->dir.at(1);
+	answer.at(2, 5) = this->dir.at(2);
+	answer.at(2, 6) = this->dir.at(3);
+	return true;
+	
+}
+
+void AbaqusUserElement1d :: computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep)
 {
     if ( !hasTangent() ) {
         // use uel to calculate the tangent
@@ -219,7 +252,7 @@ void AbaqusUserElement :: computeStiffnessMatrix(FloatMatrix &answer, MatRespons
     // add stuff to behave differently if mUseNumericalTangent is set?
 }
 
-void AbaqusUserElement :: updateYourself(TimeStep *tStep)
+void AbaqusUserElement1d :: updateYourself(TimeStep *tStep)
 {
     StructuralElement :: updateYourself(tStep);
     svars = tempSvars;
@@ -228,13 +261,13 @@ void AbaqusUserElement :: updateYourself(TimeStep *tStep)
     hasTangentFlag = false;
 }
 
-void AbaqusUserElement :: updateInternalState(TimeStep *tStep)
+void AbaqusUserElement1d :: updateInternalState(TimeStep *tStep)
 {
     FloatArray tmp;
     this->giveInternalForcesVector(tmp, tStep, 0);
 }
 
-void AbaqusUserElement :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord)
+void AbaqusUserElement1d :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord)
 {
     // init U vector
     // this->computeVectorOf(this->dofs, VM_Total, tStep, U);
@@ -250,7 +283,7 @@ void AbaqusUserElement :: giveInternalForcesVector(FloatArray &answer, TimeStep 
     this->giveInternalForcesVector(answer, tStep, U, DU, useUpdatedGpRecord);
 }
 
-void AbaqusUserElement :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, 
+void AbaqusUserElement1d :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, 
                                             FloatArray &U, FloatMatrix &DU, int useUpdatedGpRecord)
 {
 	answer.clear();
@@ -312,16 +345,7 @@ void AbaqusUserElement :: giveInternalForcesVector(FloatArray &answer, TimeStep 
             jprops.givePointer(),
             & njprops,
             & period);
-        //FloatArray vout;
-        //vout.resize(12);
-        //for (int i = 1; i <= 3; i++)
-        //{
-        //	vout.at(i) = rhs.at(i, 1);
-        //	vout.at(i+6) = rhs.at(i+3, 1);
-        //}
-        //answer = vout;
-        //this->rhs.copyColumn(answer, 1);
-        //answer.negated();
+
         loc_rhs.negated();                      //really needed???
         loc_rhs.copyColumn(answer, 1);
         letTempRhsBe(loc_rhs);
@@ -332,7 +356,7 @@ void AbaqusUserElement :: giveInternalForcesVector(FloatArray &answer, TimeStep 
 
 
 void
-AbaqusUserElement :: computeConsistentMassMatrix(FloatMatrix &answer, TimeStep *tStep, double &mass, const double *ipDensity)
+AbaqusUserElement1d :: computeConsistentMassMatrix(FloatMatrix &answer, TimeStep *tStep, double &mass, const double *ipDensity)
 {
     answer.resize(ndofel, ndofel);
     answer.zero();
@@ -340,11 +364,11 @@ AbaqusUserElement :: computeConsistentMassMatrix(FloatMatrix &answer, TimeStep *
 
 
 void
-AbaqusUserElement::printOutputAt(FILE *File, TimeStep *tStep)
+AbaqusUserElement1d::printOutputAt(FILE *File, TimeStep *tStep)
 {
 	FloatArray rl, Fl;
 
-	fprintf(File, "abaqususerelement %d (%8d) macroelem %d :\n", this->giveLabel(), this->giveNumber(), this->macroElem);
+	fprintf(File, "AbaqusUserElement1d %d (%8d) macroelem %d :\n", this->giveLabel(), this->giveNumber(), this->macroElem);
 
 	// ask for global element displacement vector
 	this->computeVectorOf(VM_Total, tStep, rl);
@@ -355,7 +379,7 @@ AbaqusUserElement::printOutputAt(FILE *File, TimeStep *tStep)
 	for (auto &val : rl) {
 		fprintf(File, " %.4e", val);
 	}
-
+	
 	fprintf(File, "\n  internal forces %d ", Fl.giveSize());
 	for (auto &val : Fl) {
 		fprintf(File, " %.4e", val);

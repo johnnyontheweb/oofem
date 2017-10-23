@@ -75,6 +75,7 @@ set (sm_element
     Elements/PlaneStress/trplanestressrotallman3d.C
     Elements/PlaneStress/linquad3d_planestress.C
     Elements/AbaqusUserElement.C
+    Elements/AbaqusUserElement1d.C
     Elements/htselement.C
     Elements/latticestructuralelement.C
     Elements/graddpelement.C 

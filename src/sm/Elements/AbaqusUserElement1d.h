@@ -32,8 +32,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef abaqususerelement_h
-#define abaqususerelement_h
+#ifndef AbaqusUserElement1d_h
+#define AbaqusUserElement1d_h
 
 #include "structuralelement.h"
 #include "nlstructuralelement.h"
@@ -41,19 +41,20 @@
 #include "floatmatrix.h"
 #include "timestep.h"
 
-///@name Input fields for AbaqusUserElement
+///@name Input fields for AbaqusUserElement1d
 //@{
-#define _IFT_AbaqusUserElement_Name "abaqususerelement"
-#define _IFT_AbaqusUserElement_userElement "uel"
-#define _IFT_AbaqusUserElement_numcoords "coords"
-#define _IFT_AbaqusUserElement_dofs "dofs"
-#define _IFT_AbaqusUserElement_numsvars "numsvars"
-#define _IFT_AbaqusUserElement_properties "properties"
-#define _IFT_AbaqusUserElement_iproperties "iproperties"
-#define _IFT_AbaqusUserElement_type "type"
-#define _IFT_AbaqusUserElement_name "name"
-#define _IFT_AbaqusUserElement_macroElem "macroelem"
-#define _IFT_AbaqusUserElement_orientation "dir"
+#define _IFT_AbaqusUserElement1d_Name "AbaqusUserElement1d"
+#define _IFT_AbaqusUserElement1d_userElement "uel"
+// #define _IFT_AbaqusUserElement1d_numcoords "coords"
+//#define _IFT_AbaqusUserElement1d_dofs "dofs"
+#define _IFT_AbaqusUserElement1d_numsvars "numsvars"
+#define _IFT_AbaqusUserElement1d_properties "properties"
+#define _IFT_AbaqusUserElement1d_iproperties "iproperties"
+#define _IFT_AbaqusUserElement1d_type "type"
+#define _IFT_AbaqusUserElement1d_name "name"
+#define _IFT_AbaqusUserElement1d_macroElem "macroelem"
+#define _IFT_AbaqusUserElement1d_orientation "dir"
+#define _IFT_AbaqusUserElement1d_mode "mode"
 //@}
 
 namespace oofem {
@@ -77,7 +78,7 @@ namespace oofem {
  *
  * @author Giovanni
  */
-class AbaqusUserElement : public NLStructuralElement
+class AbaqusUserElement1d : public NLStructuralElement
 {
 private:
     /// Dynamically loaded uel
@@ -169,22 +170,24 @@ private:
 
 public:
     /// Constructor
-    AbaqusUserElement(int n, Domain *d);
+    AbaqusUserElement1d(int n, Domain *d);
 
     /// Destructor
-    virtual ~AbaqusUserElement();
+    virtual ~AbaqusUserElement1d();
 
     virtual void computeConsistentMassMatrix(FloatMatrix &answer, TimeStep *tStep, double &mass, const double *ipDensity = NULL);
     //virtual void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep);
     virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep);
     virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord = 0);
     virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, FloatArray &U, FloatMatrix &DU, int useUpdatedGpRecord);
-    virtual int computeNumberOfDofs() { return this->ndofel; }
+    virtual int computeNumberOfDofs() { return 2; }
     virtual void giveDofManDofIDMask(int inode, IntArray &answer) const;
     virtual void computeField(ValueModeType mode, TimeStep *tStep, const FloatArray &lcoords, FloatArray &answer)
     { OOFEM_ERROR("Abaqus user element cannot support computation of local unknown vector\n"); }
     virtual void updateYourself(TimeStep *tStep);
     virtual void updateInternalState(TimeStep *tStep);
+
+	virtual int computeNumberOfGlobalDofs() { return 6; }
 
     bool hasTangent() const {
         return hasTangentFlag;
@@ -218,8 +221,8 @@ public:
 	virtual void printOutputAt(FILE *file, TimeStep *tStep);
 
     // definition & identification
-    virtual const char *giveClassName() const { return "AbaqusUserElement"; }
-    virtual const char *giveInputRecordName() const { return _IFT_AbaqusUserElement_Name; }
+    virtual const char *giveClassName() const { return "AbaqusUserElement1d"; }
+    virtual const char *giveInputRecordName() const { return _IFT_AbaqusUserElement1d_Name; }
     virtual integrationDomain giveIntegrationDomain() const {
         // return _Unknown_integrationDomain;
 		return _UnknownIntegrationDomain;
@@ -230,19 +233,27 @@ public:
 
 protected:
     virtual void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep) {
-        OOFEM_ERROR("function not defined for abaqusUserElement and should never be called.");
+        OOFEM_ERROR("function not defined for AbaqusUserElement1d and should never be called.");
     }
 
     virtual void computeBmatrixAt(GaussPoint *, FloatMatrix &, int = 1, int = ALL_STRAINS) {
-        OOFEM_ERROR("function not defined for abaqusUserElement and should never be called.");
+        OOFEM_ERROR("function not defined for AbaqusUserElement1d and should never be called.");
     }
 
     virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) {
-        OOFEM_ERROR("function not defined for abaqusUserElement and should never be called.");
+        OOFEM_ERROR("function not defined for AbaqusUserElement1d and should never be called.");
         return 0;
     }
+	virtual bool computeGtoLRotationMatrix(FloatMatrix &answer);
+	/**
+	* Orientation vector. Defines orientation of spring element- for spring it defines the direction of spring,
+	* for torsional spring it defines the axis of rotation.
+	*/
+	FloatArray dir;
+
+	int mode;
 };
 
 }// namespace oofem
 
-#endif  // abaqususerelement_h
+#endif  // AbaqusUserElement1d_h
