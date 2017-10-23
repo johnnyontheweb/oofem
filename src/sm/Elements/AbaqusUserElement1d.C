@@ -367,14 +367,13 @@ void
 AbaqusUserElement1d::printOutputAt(FILE *File, TimeStep *tStep)
 {
 	FloatArray rl, Fl;
-
-	fprintf(File, "AbaqusUserElement1d %d (%8d) macroelem %d :\n", this->giveLabel(), this->giveNumber(), this->macroElem);
-
 	// ask for global element displacement vector
 	this->computeVectorOf(VM_Total, tStep, rl);
 	// ask for global element end forces vector
 	this->giveInternalForcesVector(Fl, tStep, 1);
 
+	fprintf(File, "AbaqusUserElement1d %d (%8d) macroelem %d mode %d type %d dir 3 %.4e %.4e %.4e : %.4e\n", this->giveLabel(), this->giveNumber(), this->macroElem, this->mode + 1, this->jtype, this->dir.at(1), this->dir.at(2), this->dir.at(3), Fl.at(Fl.giveSize()));
+	
 	fprintf(File, "  local_displacements %d ", rl.giveSize());
 	for (auto &val : rl) {
 		fprintf(File, " %.4e", val);
