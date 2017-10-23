@@ -375,17 +375,17 @@ AbaqusUserElement1d::printOutputAt(FILE *File, TimeStep *tStep)
 	// ask for global element end forces vector
 	this->giveInternalForcesVector(Fl, tStep, 1);
 
-	fprintf(File, "  local displacements %d ", rl.giveSize());
+	fprintf(File, "  local_displacements %d ", rl.giveSize());
 	for (auto &val : rl) {
 		fprintf(File, " %.4e", val);
 	}
 	
-	fprintf(File, "\n  internal forces %d ", Fl.giveSize());
+	fprintf(File, "\n  internal_forces %d ", Fl.giveSize());
 	for (auto &val : Fl) {
 		fprintf(File, " %.4e", val);
 	}
 
-	fprintf(File, "\n  element svars %d ", this->numSvars);
+	fprintf(File, "\n  element_svars %d ", this->numSvars);
 	for (int i = 1; i <= this->numSvars; i++)
 	{
 		fprintf(File, " %.4e", this->svars.at(i));
