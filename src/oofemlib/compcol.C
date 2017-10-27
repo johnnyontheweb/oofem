@@ -474,7 +474,9 @@ int CompCol::sanityCheck(bool* verdict)
 			*verdict = false;
 			return i;
 		}
-
 	}
+	// exit without errors
+	*verdict = true;
+	return -1;
 }
 } // end namespace oofem

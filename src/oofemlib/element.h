@@ -372,7 +372,7 @@ public:
      * @param tStep  Time step, when vector of unknowns is requested.
      * @param answer Local vector of unknowns.
      */
-    void computeVectorOf(ValueModeType u, TimeStep *tStep, FloatArray &answer);
+	void computeVectorOf(ValueModeType u, TimeStep *tStep, FloatArray &answer, bool padding = true);
     void computeVectorOf(const IntArray &dofIDMask, ValueModeType u, TimeStep *tStep, FloatArray &answer, bool padding = false);
     /**
      * Boundary version of computeVectorOf.

@@ -1091,5 +1091,4 @@ int Skyline :: sanityCheck(bool* verdict)
 	*verdict = true;
 	return -1;
 }
-
 } // end namespace oofem

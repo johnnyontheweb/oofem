@@ -83,7 +83,7 @@ Element :: ~Element()
 
 
 void
-Element :: computeVectorOf(ValueModeType u, TimeStep *tStep, FloatArray &answer)
+Element::computeVectorOf(ValueModeType u, TimeStep *tStep, FloatArray &answer, bool padding)
 {
     IntArray dofIDMask;
     FloatMatrix G2L;
@@ -93,13 +93,13 @@ Element :: computeVectorOf(ValueModeType u, TimeStep *tStep, FloatArray &answer)
 
     for ( int i = 1; i <= this->giveNumberOfDofManagers(); i++ ) {
         this->giveDofManDofIDMask(i, dofIDMask);
-        this->giveDofManager(i)->giveUnknownVector(vec, dofIDMask, u, tStep, true);
+		this->giveDofManager(i)->giveUnknownVector(vec, dofIDMask, u, tStep, padding);
         answer.append(vec);
     }
 
     for ( int i = 1; i <= giveNumberOfInternalDofManagers(); i++ ) {
         this->giveInternalDofManDofIDMask(i, dofIDMask);
-        this->giveInternalDofManager(i)->giveUnknownVector(vec, dofIDMask, u, tStep, true);
+        this->giveInternalDofManager(i)->giveUnknownVector(vec, dofIDMask, u, tStep, padding);
         answer.append(vec);
     }
 

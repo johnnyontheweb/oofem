@@ -270,12 +270,12 @@ void AbaqusUserElement1d :: updateInternalState(TimeStep *tStep)
 void AbaqusUserElement1d :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord)
 {
     // init U vector
-    // this->computeVectorOf(this->dofs, VM_Total, tStep, U);
-	this->computeVectorOf(VM_Total, tStep, U);
+    //this->computeVectorOf(this->dofs, VM_Total, tStep, U);
+	this->computeVectorOf(VM_Total, tStep, U, false);
     FloatArray tempIntVect;
     // init DU vector
     //this->computeVectorOf(this->dofs, VM_Incremental, tStep, tempIntVect);
-	this->computeVectorOf(VM_Incremental, tStep, tempIntVect);
+	this->computeVectorOf(VM_Incremental, tStep, tempIntVect, false);
     //this->giveDomain()->giveClassName();
     DU.zero();
     DU.setColumn(tempIntVect, 1);

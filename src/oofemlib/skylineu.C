@@ -833,7 +833,14 @@ int SkylineUnsym :: sanityCheck(bool* verdict)
 				continue;
 			}  // automatically takes care of lower half of the matrix
 			else {
-				if (fabs(this->at(i, j)) < tol) {
+				//if (fabs(this->at(i, j)) < tol) {
+				//	continue;
+				double n = fabs(this->at(i, j));
+				if (isnan(n) || isinf(n)){  // bad!
+					*verdict = false;
+					return -i;
+				}
+				else if ((n) < tol) {
 					continue;
 
 					// if above, we've found a non zero entry, set the flag and skip the rest of the row.
@@ -849,7 +856,9 @@ int SkylineUnsym :: sanityCheck(bool* verdict)
 			*verdict = false;
 			return i;
 		}
-
 	}
+	// exit without errors
+	*verdict = true;
+	return -1;
 }
 } // end namespace oofem
