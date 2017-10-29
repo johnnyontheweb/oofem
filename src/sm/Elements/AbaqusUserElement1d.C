@@ -368,7 +368,7 @@ AbaqusUserElement1d::printOutputAt(FILE *File, TimeStep *tStep)
 {
 	FloatArray rl, Fl;
 	// ask for global element displacement vector
-	this->computeVectorOf(VM_Total, tStep, rl);
+	this->computeVectorOf(VM_Total, tStep, rl, false);
 	// ask for global element end forces vector
 	this->giveInternalForcesVector(Fl, tStep, 1);
 

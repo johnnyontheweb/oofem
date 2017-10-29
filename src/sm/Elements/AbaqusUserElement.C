@@ -347,7 +347,7 @@ AbaqusUserElement::printOutputAt(FILE *File, TimeStep *tStep)
 	fprintf(File, "abaqususerelement %d (%8d) macroelem %d :\n", this->giveLabel(), this->giveNumber(), this->macroElem);
 
 	// ask for global element displacement vector
-	this->computeVectorOf(VM_Total, tStep, rl);
+	this->computeVectorOf(VM_Total, tStep, rl, false);
 	// ask for global element end forces vector
 	this->giveInternalForcesVector(Fl, tStep, 1);
 

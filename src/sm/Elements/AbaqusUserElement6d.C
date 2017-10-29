@@ -104,7 +104,8 @@ IRResultType AbaqusUserElement6d :: initializeFrom(InputRecord *ir)
 
 	IR_GIVE_OPTIONAL_FIELD(ir, this->jprops, _IFT_AbaqusUserElement6d_iproperties);
 
-    IR_GIVE_FIELD(ir, this->jtype, _IFT_AbaqusUserElement6d_type);
+	this->jtype = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, this->jtype, _IFT_AbaqusUserElement6d_type);
     if ( this->jtype < 0 ) {
         OOFEM_ERROR("'type' has an invalid value");
     }
@@ -155,7 +156,7 @@ void AbaqusUserElement6d :: postInitialize()
 {
     NLStructuralElement :: postInitialize();
 
-    this->ndofel = 6; // 6d spring
+    this->ndofel = 12; // 6d spring
     this->mlvarx = this->ndofel;
     this->nrhs = 2;
     this->rhs.resize(this->ndofel, this->nrhs);
@@ -227,16 +228,76 @@ AbaqusUserElement6d::computeGtoLRotationMatrix(FloatMatrix &answer)
 	*/
 	
 	answer.resize(6, 6);
-	answer.at(1, 1) = this->dir.at(1);
-	answer.at(1, 2) = this->dir.at(2);
-	answer.at(1, 3) = this->dir.at(3);
-	answer.at(1, 4) = this->dir.at(1);
-	answer.at(1, 5) = this->dir.at(2);
-	answer.at(1, 6) = this->dir.at(3);
+	FloatArray lx, ly, lz, help(3);
 
-	answer.at(2, 4) = this->dir.at(1);
-	answer.at(2, 5) = this->dir.at(2);
-	answer.at(2, 6) = this->dir.at(3);
+	lx.resize(3);
+	lx.at(1) = dir.at(1); lx.at(2) = dir.at(2); lx.at(3) = dir.at(3);
+
+	FloatMatrix rot(3, 3);
+	double theta = 0;
+
+	rot.at(1, 1) = cos(theta) + pow(lx.at(1), 2) * (1 - cos(theta));
+	rot.at(1, 2) = lx.at(1) * lx.at(2) * (1 - cos(theta)) - lx.at(3) * sin(theta);
+	rot.at(1, 3) = lx.at(1) * lx.at(3) * (1 - cos(theta)) + lx.at(2) * sin(theta);
+
+	rot.at(2, 1) = lx.at(2) * lx.at(1) * (1 - cos(theta)) + lx.at(3) * sin(theta);
+	rot.at(2, 2) = cos(theta) + pow(lx.at(2), 2) * (1 - cos(theta));
+	rot.at(2, 3) = lx.at(2) * lx.at(3) * (1 - cos(theta)) - lx.at(1) * sin(theta);
+
+	rot.at(3, 1) = lx.at(3) * lx.at(1) * (1 - cos(theta)) - lx.at(2) * sin(theta);
+	rot.at(3, 2) = lx.at(3) * lx.at(2) * (1 - cos(theta)) + lx.at(1) * sin(theta);
+	rot.at(3, 3) = cos(theta) + pow(lx.at(3), 2) * (1 - cos(theta));
+
+	help.at(3) = 1.0;         // up-vector
+	// here is ly is used as a temp var
+	// double prvect = acos(lx.dotProduct(help));
+	// if (prvect < 0.001 || prvect > M_PI - 0.001) { // Check if it is vertical
+	if (fabs(lx.dotProduct(help)) > 0.999) { // Check if it is vertical
+		ly = { 0., 1., 0. };
+	}
+	else {
+		ly.beVectorProductOf(lx, help);
+	}
+	lz.beProductOf(rot, ly);
+	lz.normalize();
+
+	ly.beVectorProductOf(lz, lx);
+	ly.normalize();
+
+	FloatMatrix lcs;
+	lcs.resize(3, 3);
+	lcs.zero();
+	for (int i = 1; i <= 3; i++) {
+		lcs.at(1, i) = lx.at(i);
+		lcs.at(2, i) = ly.at(i);
+		lcs.at(3, i) = lz.at(i);
+	}
+
+	answer.resize(computeNumberOfGlobalDofs(), computeNumberOfGlobalDofs()); // 12 x 12
+	answer.zero();
+
+	for (int i = 1; i <= 3; i++) {
+		for (int j = 1; j <= 3; j++) {
+			answer.at(i, j) = lcs.at(i, j);
+			answer.at(i + 3, j + 3) = lcs.at(i, j);
+			answer.at(i + 6, j + 6) = lcs.at(i, j);
+			answer.at(i + 9, j + 9) = lcs.at(i, j);
+		}
+	}
+	
+	//answer.at(1, 1) = this->dir.at(1);
+	//answer.at(2, 2) = this->dir.at(2);
+	//answer.at(3, 3) = this->dir.at(3);
+	//answer.at(4, 4) = this->dir.at(1);
+	//answer.at(5, 5) = this->dir.at(2);
+	//answer.at(6, 6) = this->dir.at(3);
+
+	//answer.at(7, 7) = this->dir.at(1);
+	//answer.at(8, 8) = this->dir.at(2);
+	//answer.at(9, 9) = this->dir.at(3);
+	//answer.at(10, 10) = this->dir.at(1);
+	//answer.at(11, 11) = this->dir.at(2);
+	//answer.at(12, 12) = this->dir.at(3);
 	return true;
 	
 }
@@ -369,11 +430,11 @@ AbaqusUserElement6d::printOutputAt(FILE *File, TimeStep *tStep)
 {
 	FloatArray rl, Fl;
 	// ask for global element displacement vector
-	this->computeVectorOf(VM_Total, tStep, rl);
+	this->computeVectorOf(VM_Total, tStep, rl, false);
 	// ask for global element end forces vector
 	this->giveInternalForcesVector(Fl, tStep, 1);
 
-	fprintf(File, "AbaqusUserElement6d %d (%8d) macroelem %d type %d dir 3 %.4e %.4e %.4e : %.4e %.4e %.4e %.4e %.4e %.4e \n", this->giveLabel(), this->giveNumber(), this->macroElem, this->jtype, this->dir.at(1), this->dir.at(2), this->dir.at(3), Fl.at(1), Fl.at(2), Fl.at(3), Fl.at(4), Fl.at(5), Fl.at(6));
+	fprintf(File, "AbaqusUserElement6d %d (%8d) macroelem %d type %d dir 3 %.4e %.4e %.4e : %.4e %.4e %.4e %.4e %.4e %.4e \n", this->giveLabel(), this->giveNumber(), this->macroElem, this->jtype, this->dir.at(1), this->dir.at(2), this->dir.at(3), Fl.at(6 + 1), Fl.at(6 + 2), Fl.at(6 + 3), Fl.at(6 + 4), Fl.at(6 + 5), Fl.at(6 + 6));
 	
 	fprintf(File, "  local_displacements %d ", rl.giveSize());
 	for (auto &val : rl) {
