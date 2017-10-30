@@ -46,6 +46,7 @@
 #define _IFT_MITC4Shell_Name "mitc4shell"
 #define _IFT_MITC4Shell_nipZ "nipz"
 #define _IFT_MITC4Shell_FirstLocalAxis "lcs1"
+#define _IFT_MITC4Shell_macroElem "macroelem"
 
 namespace oofem {
 	class FEI2dQuadLin;
@@ -85,6 +86,8 @@ namespace oofem {
 		*/
 		FloatMatrix GtoLRotationMatrix;
     int nPointsXY, nPointsZ;
+	// macro element number
+	int macroElem;
 
 	public:
 

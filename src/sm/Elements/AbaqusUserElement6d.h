@@ -47,6 +47,7 @@
 #define _IFT_AbaqusUserElement6d_userElement "uel"
 // #define _IFT_AbaqusUserElement6d_numcoords "coords"
 //#define _IFT_AbaqusUserElement6d_dofs "dofs"
+#define _IFT_AbaqusUserElement6d_refangle "refangle"
 #define _IFT_AbaqusUserElement6d_numsvars "numsvars"
 #define _IFT_AbaqusUserElement6d_properties "properties"
 #define _IFT_AbaqusUserElement6d_iproperties "iproperties"
@@ -250,7 +251,7 @@ protected:
 	* for torsional spring it defines the axis of rotation.
 	*/
 	FloatArray dir;
-
+	double referenceAngle = 0;
 	// int mode;
 };
 

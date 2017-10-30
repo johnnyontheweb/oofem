@@ -49,6 +49,7 @@
 #define _IFT_Beam3d_refangle "refangle"
 #define _IFT_Beam3d_zaxis "zaxis"
 #define _IFT_Beam3d_subsoilmat "subsoilmat"
+#define _IFT_Beam3d_macroElem "macroelem"
 //@}
 
 #define Beam3d_nSubBeams 10
@@ -95,6 +96,8 @@ protected:
     /// Subsoil material
     int subsoilMat;
     
+	// macro element number
+	int macroElem;
 
 public:
     Beam3d(int n, Domain *d);

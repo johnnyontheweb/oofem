@@ -608,6 +608,9 @@ Beam3d :: initializeFrom(InputRecord *ir)
     this->subsoilMat = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, this->subsoilMat, _IFT_Beam3d_subsoilmat);
     
+	this->macroElem = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_Beam3d_macroElem);
+
     return BeamBaseElement :: initializeFrom(ir);
 }
 
@@ -755,10 +758,9 @@ void
 void
 Beam3d :: printOutputAt(FILE *File, TimeStep *tStep)
 {
-    FloatArray rl, Fl;
-
-    fprintf(File, "beam element %d (%8d) :\n", this->giveLabel(), this->giveNumber() );
+    fprintf(File, "beam element %d (%8d) %d :\n", this->giveLabel(), this->giveNumber(), this->macroElem);
 #ifdef DEBUG
+	FloatArray rl, Fl;
 	// ask for global element displacement vector
 	this->computeVectorOf(VM_Total, tStep, rl);
 	// ask for global element end forces vector
@@ -773,9 +775,8 @@ Beam3d :: printOutputAt(FILE *File, TimeStep *tStep)
 	for (auto &val : Fl) {
 		fprintf(File, " %.4e", val);
 	}
+	fprintf(File, "\n");
 #endif
-    fprintf(File, "\n");
-
     for ( auto &iRule: integrationRulesArray ) {
         iRule->printOutputAt(File, tStep);
     }

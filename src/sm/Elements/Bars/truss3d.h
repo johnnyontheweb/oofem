@@ -41,6 +41,7 @@
 #include "nodalaveragingrecoverymodel.h"
 
 #define _IFT_Truss3d_Name "truss3d"
+#define _IFT_Truss3d_macroElem "macroelem"
 
 namespace oofem {
 class FEI3dLineLin;
@@ -55,6 +56,11 @@ public NodalAveragingRecoveryModelInterface
 {
 protected:
     static FEI3dLineLin interp;
+	// macro element number
+	int macroElem;
+
+private:
+	virtual void printOutputAt(FILE *file, TimeStep *tStep);
 
 public:
     Truss3d(int n, Domain * d);

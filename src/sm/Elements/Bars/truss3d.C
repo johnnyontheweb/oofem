@@ -206,6 +206,11 @@ Truss3d :: giveLocalCoordinateSystem(FloatMatrix &answer)
 IRResultType
 Truss3d :: initializeFrom(InputRecord *ir)
 {
+	IRResultType result;                    // Required by IR_GIVE_FIELD macro
+
+	this->macroElem = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_Truss3d_macroElem);
+
     return NLStructuralElement :: initializeFrom(ir);
 }
 
@@ -280,6 +285,18 @@ Truss3d :: computeLoadLEToLRotationMatrix(FloatMatrix &answer, int iEdge, GaussP
     return 1;
 }
 
+void
+Truss3d::printOutputAt(FILE *file, TimeStep *tStep)
+// Performs end-of-step operations.
+{
+	FloatArray Fl, strain;
+	//FloatMatrix dir;
+	//this->giveLocalCoordinateSystem(dir);
+	this->computeStrainVector(strain, this->integrationRulesArray[0]->getIntegrationPoint(0), tStep);
+	this->giveStructuralCrossSection()->giveRealStress_1d(Fl, this->integrationRulesArray[0]->getIntegrationPoint(0), strain, tStep);
+	// fprintf(file, "truss3D %d (%8d) dir 3 %.4e %.4e %.4e macroelem %d : %.4e\n", this->giveLabel(), number, dir.at(1,1), dir.at(1,2), dir.at(1,3), this->macroElem, Fl.at(1)); // 1st component only
+	fprintf(file, "truss3D %d (%8d) macroelem %d : %.4e\n", this->giveLabel(), number, this->macroElem, Fl.at(1)); // 1st component only
+}
 
 #ifdef __OOFEG
 void Truss3d :: drawRawGeometry(oofegGraphicContext &gc, TimeStep *tStep)

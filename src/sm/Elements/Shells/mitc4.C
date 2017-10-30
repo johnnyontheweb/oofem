@@ -366,6 +366,9 @@ MITC4Shell :: initializeFrom(InputRecord *ir)
 	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
 	IR_GIVE_OPTIONAL_FIELD(ir, la1, _IFT_MITC4Shell_FirstLocalAxis);
 
+	this->macroElem = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_MITC4Shell_macroElem);
+
     return this->NLStructuralElement :: initializeFrom(ir);
 }
 
@@ -945,11 +948,12 @@ void
 MITC4Shell :: printOutputAt(FILE *file, TimeStep *tStep)
 // Performs end-of-step operations.
 {
-    FloatArray v;
-    GaussPoint *gp;
+
+	fprintf(file, "element %d (%8d) macroelem %d :\n", this->giveLabel(), number,this->macroElem);
 
 #ifdef DEBUG
-	fprintf(file, "element %d (%8d):\n", this->giveLabel(), number);
+	FloatArray v;
+	GaussPoint *gp;
 
     for ( int i = 0; i < nPointsXY; i++ ) {
         fprintf(file, "  GP %d :", i + 1);

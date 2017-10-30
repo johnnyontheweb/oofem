@@ -110,6 +110,10 @@ IRResultType AbaqusUserElement6d :: initializeFrom(InputRecord *ir)
         OOFEM_ERROR("'type' has an invalid value");
     }
 
+	if (ir->hasField(_IFT_AbaqusUserElement6d_refangle)) {
+		IR_GIVE_FIELD(ir, referenceAngle, _IFT_AbaqusUserElement6d_refangle);
+	}
+
 	this->macroElem = 0;
 	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_AbaqusUserElement6d_macroElem);
 
@@ -234,7 +238,7 @@ AbaqusUserElement6d::computeGtoLRotationMatrix(FloatMatrix &answer)
 	lx.at(1) = dir.at(1); lx.at(2) = dir.at(2); lx.at(3) = dir.at(3);
 
 	FloatMatrix rot(3, 3);
-	double theta = 0;
+	double theta = referenceAngle * M_PI / 180.0;;
 
 	rot.at(1, 1) = cos(theta) + pow(lx.at(1), 2) * (1 - cos(theta));
 	rot.at(1, 2) = lx.at(1) * lx.at(2) * (1 - cos(theta)) - lx.at(3) * sin(theta);
