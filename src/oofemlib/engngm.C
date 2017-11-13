@@ -70,6 +70,11 @@
 #include "unknownnumberingscheme.h"
 #include "contact/contactmanager.h"
 
+#ifdef MEMSTR
+	#include <io.h>
+	#include <fcntl.h>
+#endif
+
 #ifdef __PARALLEL_MODE
  #include "problemcomm.h"
  #include "processcomm.h"
@@ -157,7 +162,9 @@ EngngModel :: ~EngngModel()
 
     //fclose (inputStream) ;
     if ( outputStream ) {
+#ifndef MEMSTR
         fclose(outputStream);
+#endif
     }
 
     delete defaultErrEstimator;
@@ -202,27 +209,39 @@ EngngModel :: Instanciate_init()
 }
 
 
-int EngngModel :: instanciateYourself(DataReader *dr, InputRecord *ir, const char *dataOutputFileName, const char *desc)
+int EngngModel::instanciateYourself(DataReader *dr, InputRecord *ir, const char *dataOutputFileName, const char *desc)
 // simple input - only number of steps variable is read
 {
-    OOFEMTXTDataReader *txtReader = dynamic_cast< OOFEMTXTDataReader* > (dr);
-    if ( txtReader != NULL ) {
-        referenceFileName = std :: string(txtReader->giveDataSourceName());
-    }
+	OOFEMTXTDataReader *txtReader = dynamic_cast<OOFEMTXTDataReader*> (dr);
+	if (txtReader != NULL) {
+		referenceFileName = std::string(txtReader->giveDataSourceName());
+	}
 
-    bool inputReaderFinish = true;
+	bool inputReaderFinish = true;
 
-    this->coreOutputFileName = std :: string(dataOutputFileName);
-    this->dataOutputFileName = std :: string(dataOutputFileName);
+	this->coreOutputFileName = std::string(dataOutputFileName);
+	this->dataOutputFileName = std::string(dataOutputFileName);
 
-    if ( this->giveProblemMode() == _postProcessor ) {
-        // modify output file name to prevent output to be lost
-        this->dataOutputFileName.append(".oofeg");
-    }
+	if (this->giveProblemMode() == _postProcessor) {
+		// modify output file name to prevent output to be lost
+		this->dataOutputFileName.append(".oofeg");
+	}
 
-    if ( ( outputStream = fopen(this->dataOutputFileName.c_str(), "w") ) == NULL ) {
-        OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str());
-    }
+#ifdef MEMSTR
+	outputStream = nullptr;
+	FILE *source = classFactory.giveMemoryStream("out");
+	int sourceFD = _open_osfhandle((intptr_t)source, _O_APPEND);
+	if (sourceFD != -1) {
+		outputStream = _fdopen(sourceFD, "a");
+	}
+	if (!(outputStream)) {  // if not, write to file
+#endif
+		if ((outputStream = fopen(this->dataOutputFileName.c_str(), "w")) == NULL) {
+			OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str());
+		}
+#ifdef MEMSTR
+	}
+#endif
 
     this->Instanciate_init(); // Must be done after initializeFrom
 

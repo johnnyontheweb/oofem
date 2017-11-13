@@ -516,6 +516,10 @@ public:
     bool registerLoadBalancerMonitor( const char *name, LoadBalancerMonitor * ( *creator )( EngngModel * ) );
     LoadBalancer *createLoadBalancer(const char *name, Domain *d);
     bool registerLoadBalancer( const char *name, LoadBalancer * ( *creator )( Domain * ) );
+
+#ifdef MEMSTR
+	FILE* giveMemoryStream ( const char* name ) const;
+#endif
 };
 
 extern ClassFactory &classFactory;

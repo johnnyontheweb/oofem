@@ -50,6 +50,11 @@
 #include <math.h>
 #include <vector>
 
+#ifdef MEMSTR
+#include <io.h>
+#include <fcntl.h>
+#endif
+
 using namespace std;
 
 namespace oofem {
@@ -488,10 +493,22 @@ namespace oofem {
 			valueTypesStr.push_back(__InternalStateTypeToString(type));
 		}
 
-		string fileName = emodel->giveOutputBaseFileName() + ".nrm";
-		if ((this->stream = fopen(fileName.c_str(), "w")) == NULL) {
-			OOFEM_ERROR("failed to open file %s", fileName.c_str());
+#ifdef MEMSTR
+		this->stream = nullptr;
+		FILE *source = classFactory.giveMemoryStream("nrm");
+		int sourceFD = _open_osfhandle((intptr_t)source, _O_APPEND);
+		if (sourceFD != -1) {
+			this->stream = _fdopen(sourceFD, "a");
 		}
+		if (!(this->stream)) {  // if not, write to file
+#endif
+			string fileName = emodel->giveOutputBaseFileName() + ".nrm";
+			if ((this->stream = fopen(fileName.c_str(), "w")) == NULL) {
+				OOFEM_ERROR("failed to open file %s", fileName.c_str());
+			}
+#ifdef MEMSTR
+		}
+#endif
 		// ";" as separator
 		fprintf(this->stream, "#Time;ISType;NodeNo;vars;");
 		//for ( int var: this->ists ) {
@@ -504,6 +521,8 @@ namespace oofem {
 	void
 		NodalRecoveryModule::terminate()
 	{
+#ifndef MEMSTR
 		fclose(this->stream);
+#endif
 	}
 } // end namespace oofem

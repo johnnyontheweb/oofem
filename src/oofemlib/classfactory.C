@@ -485,4 +485,13 @@ bool ClassFactory :: registerLoadBalancer( const char *name, LoadBalancer * ( *c
     CF_STORE(loadBalancerList)
 }
 
+#ifdef MEMSTR
+#include "memwrapper\memwrapper.h"
+
+FILE* ClassFactory :: giveMemoryStream( const char *name ) const
+{
+	return oofem::MemWrapper::getInstance(name);
+}
+#endif
+
 } // End namespace oofem

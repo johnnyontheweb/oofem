@@ -50,6 +50,11 @@
 #include "../sm/EngineeringModels/responsespectrum.h"
 #include <math.h>
 
+#ifdef MEMSTR
+#include <io.h>
+#include <fcntl.h>
+#endif
+
 using namespace std;
 
 namespace oofem {
@@ -1188,10 +1193,22 @@ namespace oofem {
 	void
 		BeamExportModule::initialize()
 	{
-		string fileName = emodel->giveOutputBaseFileName() + ".bem";
-		if ((this->stream = fopen(fileName.c_str(), "w")) == NULL) {
-			OOFEM_ERROR("failed to open file %s", fileName.c_str());
+#ifdef MEMSTR
+		this->stream = nullptr;
+		FILE *source = classFactory.giveMemoryStream("bem");
+		int sourceFD = _open_osfhandle((intptr_t)source, _O_APPEND);
+		if (sourceFD != -1) {
+			this->stream = _fdopen(sourceFD, "a");
 		}
+		if (!(this->stream)) {  // if not, write to file
+#endif
+			string fileName = emodel->giveOutputBaseFileName() + ".bem";
+			if ((this->stream = fopen(fileName.c_str(), "w")) == NULL) {
+				OOFEM_ERROR("failed to open file %s", fileName.c_str());
+			}
+#ifdef MEMSTR
+		}
+#endif
 		// ";" as separator
 		fprintf(this->stream, "#Time;BeamNo;DistanceFromI;N_x;T_y;T_z;M_x;M_y;M_z;dx;dy;dz;rx;ry;rz;q_winky;q_winkz;");
 		//for ( int var: this->ists ) {
@@ -1204,6 +1221,8 @@ namespace oofem {
 	void
 		BeamExportModule::terminate()
 	{
+#ifndef MEMSTR
 		fclose(this->stream);
+#endif
 	}
 } // end namespace oofem
