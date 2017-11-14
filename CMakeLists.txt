@@ -63,6 +63,7 @@ set (CKIT_DIR CACHE PATH "Manual CKit directory (OOFEG only)")
 set (METIS_DIR CACHE PATH "Manual Metis directory (Load balancing)")
 set (PARMETIS_DIR CACHE PATH "Manual ParMetis directory (Load balancing)")
 #set (BOOST_DIR CACHE PATH "Manual Boost directory")
+#set (MEMSTR_DIR CACHE PATH "Manual MemStr directory")
 
 #######################################################################
 ######################## Options ######################################
@@ -100,6 +101,8 @@ option (USE_CEMHYD "Enable CemHyd support" OFF)
 #option (USE_BOOST "Enable Boost" OFF)
 option (USE_PYTHON_BINDINGS "Enable Python bidings (OOFEM usable from Python). Implies USE_PYTHON." OFF)
 option (USE_PYTHON "Enable Python to be used inside OOFEM (e.g. userdef Dirichlet BCs)" OFF)
+# memory stream
+option (USE_MEMSTR "Enable memory stream support" ON)
 
 if (USE_PARALLEL)
     add_definitions (-D__PARALLEL_MODE)
@@ -439,6 +442,14 @@ if (USE_SPOOLES)
     endif ()
     list (APPEND EXT_LIBS ${PTHREAD_LIB})
     list (APPEND MODULE_LIST "PTHREAD")
+endif ()
+
+if (USE_MEMSTR)
+    add_definitions (-DMEMSTR)
+    find_library (MEMSTR_LIB pthreads DOC "MEMSTR library")
+    #include_directories ("${MEMSTR_DIR}")
+    list (APPEND EXT_LIBS ${MEMSTR_LIB})
+    list (APPEND MODULE_LIST "MEMSTR")
 endif ()
 
 # We need the interpreter for the test suite.
