@@ -522,7 +522,7 @@ public:
 #endif
 };
 
-extern ClassFactory &classFactory;
+extern OOFEM_EXPORT ClassFactory &classFactory;
 
 /**
  * This function must be used by all code that run at link time to ensure that the classFactory is constructed first.
