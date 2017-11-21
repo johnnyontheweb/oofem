@@ -61,6 +61,7 @@ protected:
 public:
     /// Constructor.
     OOFEMTXTDataReader(std :: string inputfilename);
+	OOFEMTXTDataReader(std :: stringstream *inputStream);
     OOFEMTXTDataReader(const OOFEMTXTDataReader & x);
     virtual ~OOFEMTXTDataReader();
 
@@ -70,8 +71,8 @@ public:
     virtual const char *giveDataSourceName() const { return dataSourceName.c_str(); }
 
 protected:
-    bool giveLineFromInput(std :: ifstream &stream, int &lineNum, std :: string &line);
-    bool giveRawLineFromInput(std :: ifstream &stream, int &lineNum, std :: string &line);
+    bool giveLineFromInput(std :: istream &stream, int &lineNum, std :: string &line);
+    bool giveRawLineFromInput(std :: istream &stream, int &lineNum, std :: string &line);
 };
 } // end namespace oofem
 #endif // oofemtxtdatareader_h

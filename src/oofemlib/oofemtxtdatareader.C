@@ -36,6 +36,7 @@
 #include "error.h"
 
 #include <string>
+#include <sstream>
 
 namespace oofem {
 OOFEMTXTDataReader :: OOFEMTXTDataReader(std :: string inputfilename) : DataReader(),
@@ -88,6 +89,56 @@ OOFEMTXTDataReader :: OOFEMTXTDataReader(std :: string inputfilename) : DataRead
     this->it = this->recordList.begin();
 }
 
+OOFEMTXTDataReader::OOFEMTXTDataReader(std::stringstream * inputStream) : DataReader(),
+dataSourceName(), recordList()
+{
+	std::list< std::pair< int, std::string > >lines;
+	// Read all the lines in the main input file:
+	{
+		//std::ifstream inputStream(dataSourceName);
+		//if (!inputStream.is_open()) {
+		//	OOFEM_ERROR("Can't open input stream (%s)", dataSourceName.c_str());
+		//}
+
+		int lineNumber = 0;
+		std::string line;
+
+		this->giveRawLineFromInput(*inputStream, lineNumber, outputFileName);
+		this->giveRawLineFromInput(*inputStream, lineNumber, description);
+
+		while (this->giveLineFromInput(*inputStream, lineNumber, line)) {
+			lines.emplace_back(make_pair(lineNumber, line));
+		}
+	}
+	// Check for included files: @include "somefile"
+	for (auto it = lines.begin(); it != lines.end(); ++it) {
+		if (it->second.compare(0, 8, "@include") == 0) {
+			std::string fname = it->second.substr(10, it->second.length() - 11);
+			OOFEM_LOG_INFO("Reading included file: %s\n", fname.c_str());
+
+			// Remove the include line
+			lines.erase(it++);
+			// Add all the included lines:
+			int includedLine = 0;
+			std::string line;
+			std::ifstream includedStream(fname);
+			if (!includedStream.is_open()) {
+				OOFEM_ERROR("Can't open input stream (%s)", fname.c_str());
+			}
+			while (this->giveLineFromInput(includedStream, includedLine, line)) {
+				lines.emplace(it, make_pair(includedLine, line));
+			}
+		}
+	}
+	///@todo This could be parallelized, but I'm not sure it is worth it 
+	/// (might make debugging faulty input files harder for users as well)
+	for (auto &line : lines) {
+		//printf("line: %s\n", line.second.c_str());
+		this->recordList.emplace_back(line.first, line.second);
+	}
+	this->it = this->recordList.begin();
+}
+
 OOFEMTXTDataReader :: OOFEMTXTDataReader(const OOFEMTXTDataReader &x) : OOFEMTXTDataReader(x.dataSourceName) {}
 
 OOFEMTXTDataReader :: ~OOFEMTXTDataReader()
@@ -122,7 +173,7 @@ OOFEMTXTDataReader :: finish()
 }
 
 bool
-OOFEMTXTDataReader :: giveLineFromInput(std :: ifstream &stream, int &lineNum, std :: string &line)
+OOFEMTXTDataReader :: giveLineFromInput(std :: istream &stream, int &lineNum, std :: string &line)
 {
     // reads one line from inputStream
     // if " detected, start/stop changing to lower case characters
@@ -146,7 +197,7 @@ OOFEMTXTDataReader :: giveLineFromInput(std :: ifstream &stream, int &lineNum, s
 }
 
 bool
-OOFEMTXTDataReader :: giveRawLineFromInput(std :: ifstream &stream, int &lineNum, std :: string &line)
+OOFEMTXTDataReader :: giveRawLineFromInput(std :: istream &stream, int &lineNum, std :: string &line)
 {
     //
     // reads one line from inputStream - for private use only.
