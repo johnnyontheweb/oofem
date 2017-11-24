@@ -179,34 +179,6 @@ SpringElement :: initializeFrom(InputRecord *ir)
 
 void SpringElement :: printOutputAt(FILE *File, TimeStep *tStep)
 {
-	//int directionOff = 0;
-	//if (this->mode == SE_3D_SPRING) {
-
-	//	//if (dir.at(1) == 1 && dir.at(2) == 0 && dir.at(3) == 0) { 
-	//	//	direction = 1;
-	//	//}
-	//	//else if (dir.at(1) == 0 && dir.at(2) == 1 && dir.at(3) == 0) {
-	//	//	direction = 2;
-	//	//}
-	//	//else if (dir.at(1) == 0 && dir.at(2) == 0 && dir.at(3) == 1) {
-	//	//	direction = 3;
-	//	//};
-	//	directionOff = 0;
-	//} 	else if (this->mode == SE_3D_TORSIONALSPRING) {
-
-	//	//if (dir.at(1) == 1 && dir.at(2) == 0 && dir.at(3) == 0) {
-	//	//	direction = 4;
-	//	//}
-	//	//else if (dir.at(1) == 0 && dir.at(2) == 1 && dir.at(3) == 0) {
-	//	//	direction = 5;
-	//	//}
-	//	//else if (dir.at(1) == 0 && dir.at(2) == 0 && dir.at(3) == 1) {
-	//	//	direction = 6;
-	//	//};
-	//	directionOff = 3;
-	//}
-
-// #ifdef DEBUG
 	if (this->macroElem != 0) {
 		FloatArray u,f;
 		double disp;
@@ -221,6 +193,5 @@ void SpringElement :: printOutputAt(FILE *File, TimeStep *tStep)
 	// fprintf(File, "springElement %d (%8d) :\n", this->giveLabel(), this->giveNumber());
     // fprintf(File, "  spring force or moment %.4e", this->computeSpringInternalForce(tStep) );
     // fprintf(File, "\n");
-// #endif
 }
 } // end namespace oofem
