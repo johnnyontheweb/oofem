@@ -70,7 +70,7 @@ SubspaceIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Floa
 
     FloatArray temp, w, d, tt, f, rtolv, eigv;
     FloatMatrix r;
-    int nn, nc1, ij = 0, is, i;
+    int nn, nc1, ij = 0, is;
     double rt, art, brt, eigvt;
     FloatMatrix ar, br, vec;
 	// SparseLinearSystemNM *solver = GiveClassFactory().createSparseLinSolver(ST_Direct, domain, engngModel);

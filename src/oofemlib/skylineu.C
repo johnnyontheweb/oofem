@@ -45,6 +45,7 @@
 #include "sparsemtrxtype.h"
 #include "activebc.h"
 #include "classfactory.h"
+#include "math.h"
 
 #ifdef TIME_REPORT
  #include "timer.h"
