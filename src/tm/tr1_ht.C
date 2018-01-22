@@ -140,11 +140,9 @@ void
 Tr1_ht::printOutputAt(FILE *file, TimeStep *tStep)
 // Performs end-of-step operations.
 {
-	FloatArray v;
-	GaussPoint *gp;
-
-	fprintf(file, "element %d (%8d):\n", this->giveLabel(), number);
-
+	//FloatArray v;
+	//GaussPoint *gp;
+	//fprintf(file, "element %d (%8d):\n", this->giveLabel(), number);
 }
 
 } // end namespace oofem
