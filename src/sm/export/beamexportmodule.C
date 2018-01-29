@@ -49,6 +49,7 @@
 #include "inputrecord.h"
 #include "../sm/EngineeringModels/responsespectrum.h"
 #include <math.h>
+#include <functional>
 
 #ifdef MEMSTR
 #include <io.h>
@@ -253,6 +254,10 @@ namespace oofem {
 					//wE.at(1) = qEy; wE.at(2) = qEz;
 					//winkDict[0.0] = wI;
 
+					std::list<double> midPoints;
+					double tempmidpoint = 0;
+					int count = 0;
+
 					for (GaussPoint *gp : *elem->giveDefaultIntegrationRulePtr()) {
 						//double dV = elem->computeVolumeAround(gp);
 						FloatArray ipState;
@@ -261,6 +266,10 @@ namespace oofem {
 
 						ksi = 0.5 + 0.5 * gp->giveNaturalCoordinate(1);
 						pos = ksi*l;
+						if (count) {
+							tempmidpoint += ksi / 2;
+							midPoints.push_back(tempmidpoint);
+						}
 
 						// can't use this until beam is fixed?
 						// elem->giveGlobalIPValue(ipState, gp, (InternalStateType)1, tStep); // IST_StressTensor
@@ -276,6 +285,26 @@ namespace oofem {
 						//winkState.at(1) = qIy * (l - pos) / l + qEy * pos / l;
 						//winkState.at(2) = qIz * (l - pos) / l + qEz * pos / l;
 						//winkDict[pos] = winkState;
+						tempmidpoint = ksi / 2;
+						count += 1;
+					}
+
+					for (double midP : midPoints) {
+						FloatArray ipState;
+						FloatArray winkState;
+						double pos;
+
+						pos = midP*l;
+
+						// can't use this until beam is fixed?
+						// elem->giveGlobalIPValue(ipState, gp, (InternalStateType)1, tStep); // IST_StressTensor
+						ipState.zero();
+						ipState.beScaled(midP, Diff);
+						ipState.add(I);
+
+						addComponents(ipState, FinalLoads, pos, l, true);
+
+						ForceDict[pos] = ipState;
 					}
 
 					addComponents(E, FinalLoads, l, l, true);
@@ -464,12 +493,16 @@ namespace oofem {
 				FloatArray &bl = BeamLoads[elNum];
 				FloatArray *disps = &dI;
 
-				for (GaussPoint *gp : *elem->giveDefaultIntegrationRulePtr()) {
-					FloatArray ipState;
-					double pos, pos_2, pos_3, pos_4;
+				std::map< double, FloatArray > &Forces = BeamForces[elem->giveNumber()];
 
-					ksi = 0.5 + 0.5 * gp->giveNaturalCoordinate(1);
-					pos = ksi*l;
+				for (auto &force : Forces) {
+				//for (GaussPoint *gp : *elem->giveDefaultIntegrationRulePtr()) {
+					//FloatArray ipState;
+					double pos = force.first;
+					double pos_2, pos_3, pos_4;
+
+					//ksi = 0.5 + 0.5 * gp->giveNaturalCoordinate(1);
+					//pos = ksi*l;
 
 					pos_2 = pos*pos;
 					pos_3 = pos_2*pos;
@@ -477,6 +510,7 @@ namespace oofem {
 
 					// calculate this stuff on the first pass. Constant section along the length
 					if (!calc){
+						GaussPoint *gp = *(elem->giveDefaultIntegrationRulePtr()->begin());
 						SCSect->give3dBeamStiffMtrx(MatStiffness, ElasticStiffness, gp, tStep);
 
 						EA = MatStiffness.at(1, 1);
