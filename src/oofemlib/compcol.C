@@ -454,7 +454,7 @@ int CompCol::sanityCheck(bool* verdict)
 			}  // automatically takes care of lower half of the matrix
 			else {
 				double n = fabs(this->at(i, j));
-				if (isnan(n) || isinf(n)){  // bad!
+				if (std::isnan(n) || std::isinf(n)){  // bad!
 					*verdict = false;
 					return -i;
 				}

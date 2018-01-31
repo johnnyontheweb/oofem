@@ -837,7 +837,7 @@ int SkylineUnsym :: sanityCheck(bool* verdict)
 				//if (fabs(this->at(i, j)) < tol) {
 				//	continue;
 				double n = fabs(this->at(i, j));
-				if (isnan(n) || isinf(n)){  // bad!
+				if (isnan(n) || std::isinf(n)){  // bad!
 					*verdict = false;
 					return -i;
 				}
