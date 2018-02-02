@@ -255,8 +255,10 @@ namespace oofem {
 					//winkDict[0.0] = wI;
 
 					std::list<double> midPoints;
-					double tempmidpoint = 0;
-					int count = 0;
+					midPoints.push_back(0.25);
+					midPoints.push_back(0.75);
+					//double tempmidpoint = 0;
+					//int count = 0;
 
 					for (GaussPoint *gp : *elem->giveDefaultIntegrationRulePtr()) {
 						//double dV = elem->computeVolumeAround(gp);
@@ -266,10 +268,10 @@ namespace oofem {
 
 						ksi = 0.5 + 0.5 * gp->giveNaturalCoordinate(1);
 						pos = ksi*l;
-						if (count) {
-							tempmidpoint += ksi / 2;
-							midPoints.push_back(tempmidpoint);
-						}
+						//if (count) {
+						//	tempmidpoint += ksi / 2;
+						//	midPoints.push_back(tempmidpoint);
+						//}
 
 						// can't use this until beam is fixed?
 						// elem->giveGlobalIPValue(ipState, gp, (InternalStateType)1, tStep); // IST_StressTensor
@@ -285,8 +287,8 @@ namespace oofem {
 						//winkState.at(1) = qIy * (l - pos) / l + qEy * pos / l;
 						//winkState.at(2) = qIz * (l - pos) / l + qEz * pos / l;
 						//winkDict[pos] = winkState;
-						tempmidpoint = ksi / 2;
-						count += 1;
+						//tempmidpoint = ksi / 2;
+						//count += 1;
 					}
 
 					for (double midP : midPoints) {

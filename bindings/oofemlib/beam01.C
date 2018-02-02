@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
 	// OOFEMTXTDataReader dr( inputFileName.str ( ).c_str() );
 
     EngngModel *em = InstanciateProblem(&myData, _processor, 0);
-    em->solveYourselfNoWritings();
+    em->solveYourself();
 
 	// extract data
 	// nodal data
