@@ -256,40 +256,41 @@ namespace oofem {
 
 					std::list<double> midPoints;
 					midPoints.push_back(0.25);
+					midPoints.push_back(0.5);
 					midPoints.push_back(0.75);
 					//double tempmidpoint = 0;
 					//int count = 0;
 
-					for (GaussPoint *gp : *elem->giveDefaultIntegrationRulePtr()) {
-						//double dV = elem->computeVolumeAround(gp);
-						FloatArray ipState;
-						FloatArray winkState;
-						double pos;
+					//for (GaussPoint *gp : *elem->giveDefaultIntegrationRulePtr()) {
+					//	//double dV = elem->computeVolumeAround(gp);
+					//	FloatArray ipState;
+					//	FloatArray winkState;
+					//	double pos;
 
-						ksi = 0.5 + 0.5 * gp->giveNaturalCoordinate(1);
-						pos = ksi*l;
-						//if (count) {
-						//	tempmidpoint += ksi / 2;
-						//	midPoints.push_back(tempmidpoint);
-						//}
+					//	ksi = 0.5 + 0.5 * gp->giveNaturalCoordinate(1);
+					//	pos = ksi*l;
+					//	//if (count) {
+					//	//	tempmidpoint += ksi / 2;
+					//	//	midPoints.push_back(tempmidpoint);
+					//	//}
 
-						// can't use this until beam is fixed?
-						// elem->giveGlobalIPValue(ipState, gp, (InternalStateType)1, tStep); // IST_StressTensor
-						ipState.zero();
-						ipState.beScaled(ksi, Diff);
-						ipState.add(I);
+					//	// can't use this until beam is fixed?
+					//	// elem->giveGlobalIPValue(ipState, gp, (InternalStateType)1, tStep); // IST_StressTensor
+					//	ipState.zero();
+					//	ipState.beScaled(ksi, Diff);
+					//	ipState.add(I);
 
-						addComponents(ipState, FinalLoads, pos, l, true);
+					//	addComponents(ipState, FinalLoads, pos, l, true);
 
-						ForceDict[pos] = ipState;
+					//	ForceDict[pos] = ipState;
 
-						//winkState.resize(2);
-						//winkState.at(1) = qIy * (l - pos) / l + qEy * pos / l;
-						//winkState.at(2) = qIz * (l - pos) / l + qEz * pos / l;
-						//winkDict[pos] = winkState;
-						//tempmidpoint = ksi / 2;
-						//count += 1;
-					}
+					//	//winkState.resize(2);
+					//	//winkState.at(1) = qIy * (l - pos) / l + qEy * pos / l;
+					//	//winkState.at(2) = qIz * (l - pos) / l + qEz * pos / l;
+					//	//winkDict[pos] = winkState;
+					//	//tempmidpoint = ksi / 2;
+					//	//count += 1;
+					//}
 
 					for (double midP : midPoints) {
 						FloatArray ipState;

@@ -48,6 +48,10 @@ EngngModel *InstanciateProblem(DataReader *dr, problemMode mode, int contextFlag
     EngngModel *problem;
     std :: string problemName, dataOutputFileName, desc;
 
+#ifdef MEMSTR
+	oofem_logger.setLogName();
+#endif
+
     dataOutputFileName = dr->giveOutputFileName();
     desc = dr->giveDescription();
 

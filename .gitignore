@@ -869,3 +869,5 @@ tests/sm/t3d.bmf
 /MinSizeRel/U1126F.dll
 /MinSizeRel/truss-st.in
 /MinSizeRel/spring3d.in
+/MinSizeRel/oofem.5punti.dll
+/MinSizeRel/oofem.5punti.exe

@@ -82,8 +82,11 @@ public:
     void appendLogTo(FILE* stream);
     /// Redirects error output to given stream.
     void appendErrorTo(FILE* stream);
-
-
+#ifdef MEMSTR
+	/// Give filename of the stream // std::string &logName
+	void setLogName();
+#endif
+	
     /// Writes the normal log message.
     void writeLogMsg(logLevelType level, const char *format, ...);
     /// Writes extended log message with file and line info.

@@ -36,6 +36,12 @@
 #include "error.h"
 
 #include <cstdarg>
+#include "classfactory.h"
+#ifdef MEMSTR
+#include <io.h>
+#include <fcntl.h>
+#endif
+
 #ifdef __PARALLEL_MODE
  #include <mpi.h>
 #endif
@@ -155,6 +161,19 @@ Logger :: ~Logger()
         fclose(this->errStream);
     }
 }
+
+#ifdef MEMSTR
+void
+Logger::setLogName() // std::string &logName
+{
+	FILE *source = classFactory.giveMemoryStream("log");
+	int sourceFD = _open_osfhandle((intptr_t)source, _O_APPEND);
+	if (sourceFD != -1) {
+		this->logStream = _fdopen(sourceFD, "a");
+		this->errStream = this->logStream;
+	}
+}
+#endif
 
 void
 Logger :: appendLogTo(const std :: string &fname)
