@@ -871,3 +871,5 @@ tests/sm/t3d.bmf
 /MinSizeRel/spring3d.in
 /MinSizeRel/oofem.5punti.dll
 /MinSizeRel/oofem.5punti.exe
+/RelWithDebInfo/*.pdb
+/RelWithDebInfo/memwrapper.dll
