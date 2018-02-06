@@ -523,7 +523,9 @@ public:
 };
 
 extern OOFEM_EXPORT ClassFactory &classFactory;
-
+#ifdef MEMSTR
+	extern OOFEM_EXPORT std::string pid;
+#endif
 /**
  * This function must be used by all code that run at link time to ensure that the classFactory is constructed first.
  * See "static initialization order fiasco" for explanation.

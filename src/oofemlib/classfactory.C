@@ -87,6 +87,10 @@ ClassFactory &GiveClassFactory()
 
 ClassFactory &classFactory = GiveClassFactory();
 
+#ifdef MEMSTR
+std::string pid{ "" };
+#endif
+
 std :: string conv2lower(std :: string input)
 {
     for ( std :: size_t i = 0; i < input.size(); i++ ) {
@@ -490,7 +494,7 @@ bool ClassFactory :: registerLoadBalancer( const char *name, LoadBalancer * ( *c
 
 FILE* ClassFactory :: giveMemoryStream( const char *name ) const
 {
-	return oofem::MemWrapper::getInstance(name);
+	return oofem::MemWrapper::getInstance(name, oofem::pid);
 }
 #endif
 

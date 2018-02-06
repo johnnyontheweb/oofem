@@ -1,5 +1,6 @@
 // memwrapper.h
 #include <memory>
+#include <string>
 
 #pragma once
 #pragma unmanaged
@@ -20,12 +21,13 @@ namespace oofem {
 	{
 
 		static std::unique_ptr<MemStrPrivate> s_instance;
+		static std::string oofemPID;
 
 	public:
 		// MemWrapper();
-		static MemStrPrivate* instance();
+		static MemStrPrivate* instance();// const std::auto_ptr<char*> &pid);
 
-		static FILE* getInstance(const char * key);
+		static FILE* getInstance(const char * key, const std::string &pid);
 		//~MemWrapper();
 	};
 #ifndef MEMSTR
