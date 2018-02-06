@@ -494,7 +494,7 @@ bool ClassFactory :: registerLoadBalancer( const char *name, LoadBalancer * ( *c
 
 FILE* ClassFactory :: giveMemoryStream( const char *name ) const
 {
-	return oofem::MemWrapper::getInstance(name, oofem::pid);
+	return oofem::MemWrapper::getInstance(name, &(oofem::pid));
 }
 #endif
 
