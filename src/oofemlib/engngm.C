@@ -73,6 +73,8 @@
 #ifdef MEMSTR
 	#include <io.h>
 	#include <fcntl.h>
+	#include <thread>
+	#include <chrono>
 #endif
 
 #ifdef __PARALLEL_MODE
@@ -571,6 +573,12 @@ EngngModel :: solveYourself()
 #endif
         }
     }
+#ifdef MEMSTR
+	fprintf(outputStream, "strTerm\n");
+	fprintf(out, "strTerm\n");
+	fflush(out); fflush(outputStream);
+	// std::this_thread::sleep_for(std::chrono::seconds(3));
+#endif
 }
 
 void
@@ -1881,7 +1889,11 @@ void
 EngngModel::letOutputBaseFileNameBe(const std :: string &src) {
   this->dataOutputFileName = src;
 
-  if ( outputStream) fclose(outputStream);
+  if (outputStream) {
+#ifndef MEMSTR
+	  fclose(outputStream);
+#endif
+  }
   if ( ( outputStream = fopen(this->dataOutputFileName.c_str(), "w") ) == NULL ) {
     OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str());
   }
