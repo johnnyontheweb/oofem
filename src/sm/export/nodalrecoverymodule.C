@@ -521,6 +521,10 @@ namespace oofem {
 	void
 		NodalRecoveryModule::terminate()
 	{
+#ifdef MEMSTR
+		fprintf(this->stream, "strTerm\n");
+#endif
+		fflush(this->stream);
 #ifndef MEMSTR
 		fclose(this->stream);
 #endif

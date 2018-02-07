@@ -573,12 +573,6 @@ EngngModel :: solveYourself()
 #endif
         }
     }
-#ifdef MEMSTR
-	fprintf(outputStream, "strTerm\n");
-	fprintf(out, "strTerm\n");
-	fflush(out); fflush(outputStream);
-	// std::this_thread::sleep_for(std::chrono::seconds(3));
-#endif
 }
 
 void
@@ -1946,6 +1940,13 @@ EngngModel :: terminateAnalysis()
     fprintf(out, "User time consumed: %03dh:%02dm:%02ds\n\n\n", uhrs, umin, usec);
     OOFEM_LOG_FORCED("User time consumed: %03dh:%02dm:%02ds\n", uhrs, umin, usec);
     exportModuleManager->terminate();
+#ifdef MEMSTR
+	fprintf(out, "strTerm\n");
+	fflush(out);
+	OOFEM_LOG_FORCED("strTerm\n");
+	oofem_logger.flush();
+	// std::this_thread::sleep_for(std::chrono::seconds(3));
+#endif
 }
 
 int
