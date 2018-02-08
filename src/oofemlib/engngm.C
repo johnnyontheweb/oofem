@@ -73,8 +73,6 @@
 #ifdef MEMSTR
 	#include <io.h>
 	#include <fcntl.h>
-	#include <thread>
-	#include <chrono>
 #endif
 
 #ifdef __PARALLEL_MODE
@@ -1945,7 +1943,6 @@ EngngModel :: terminateAnalysis()
 	fflush(out);
 	OOFEM_LOG_FORCED("strTerm\n");
 	oofem_logger.flush();
-	// std::this_thread::sleep_for(std::chrono::seconds(3));
 #endif
 }
 
