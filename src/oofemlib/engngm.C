@@ -162,9 +162,9 @@ EngngModel :: ~EngngModel()
 
     //fclose (inputStream) ;
     if ( outputStream ) {
-#ifndef MEMSTR
+// #ifndef MEMSTR
         fclose(outputStream);
-#endif
+// #endif
     }
 
     delete defaultErrEstimator;
@@ -1882,9 +1882,9 @@ EngngModel::letOutputBaseFileNameBe(const std :: string &src) {
   this->dataOutputFileName = src;
 
   if (outputStream) {
-#ifndef MEMSTR
+// #ifndef MEMSTR
 	  fclose(outputStream);
-#endif
+// #endif
   }
   if ( ( outputStream = fopen(this->dataOutputFileName.c_str(), "w") ) == NULL ) {
     OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str());
@@ -1943,6 +1943,7 @@ EngngModel :: terminateAnalysis()
 	fflush(out);
 	OOFEM_LOG_FORCED("strTerm\n");
 	oofem_logger.flush();
+	if (out) fclose(out);
 #endif
 }
 

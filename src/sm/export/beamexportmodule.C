@@ -1262,8 +1262,8 @@ namespace oofem {
 		fprintf(this->stream, "strTerm\n");
 #endif
 		fflush(this->stream);
-#ifndef MEMSTR
+// #ifndef MEMSTR
 		fclose(this->stream);
-#endif
+// #endif
 	}
 } // end namespace oofem
