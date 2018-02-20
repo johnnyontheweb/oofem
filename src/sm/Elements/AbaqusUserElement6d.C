@@ -439,23 +439,23 @@ AbaqusUserElement6d::printOutputAt(FILE *File, TimeStep *tStep)
 	// ask for global element end forces vector
 	this->giveInternalForcesVector(Fl, tStep, 1);
 
-	fprintf(File, "AbaqusUserElement6d %d (%8d) macroelem %d type %d dir 3 %.4e %.4e %.4e : %.4e %.4e %.4e %.4e %.4e %.4e \n", this->giveLabel(), this->giveNumber(), this->macroElem, this->jtype, this->dir.at(1), this->dir.at(2), this->dir.at(3), Fl.at(6 + 1), Fl.at(6 + 2), Fl.at(6 + 3), Fl.at(6 + 4), Fl.at(6 + 5), Fl.at(6 + 6));
+	fprintf(File, "AbaqusUserElement6d %d (%8d) macroelem %d type %d dir 3 %.4e %.4e %.4e dy %.4e : %.4e %.4e %.4e %.4e %.4e %.4e \n", this->giveLabel(), this->giveNumber(), this->macroElem, this->jtype, this->dir.at(1), this->dir.at(2), this->dir.at(3), props.at(2)/props.at(1), Fl.at(6 + 1), Fl.at(6 + 2), Fl.at(6 + 3), Fl.at(6 + 4), Fl.at(6 + 5), Fl.at(6 + 6));
 	
 	fprintf(File, "  local_displacements %d ", rl.giveSize());
 	for (auto &val : rl) {
 		fprintf(File, " %.4e", val);
 	}
 	
-	fprintf(File, "\n  internal_forces %d ", Fl.giveSize());
-	for (auto &val : Fl) {
-		fprintf(File, " %.4e", val);
-	}
+	//fprintf(File, "\n  internal_forces %d ", Fl.giveSize());
+	//for (auto &val : Fl) {
+	//	fprintf(File, " %.4e", val);
+	//}
 
-	fprintf(File, "\n  element_svars %d ", this->numSvars);
-	for (int i = 1; i <= this->numSvars; i++)
-	{
-		fprintf(File, " %.4e", this->svars.at(i));
-	}
+	//fprintf(File, "\n  element_svars %d ", this->numSvars);
+	//for (int i = 1; i <= this->numSvars; i++)
+	//{
+	//	fprintf(File, " %.4e", this->svars.at(i));
+	//}
 	fprintf(File, "\n");
 }
 

@@ -379,16 +379,16 @@ AbaqusUserElement1d::printOutputAt(FILE *File, TimeStep *tStep)
 		fprintf(File, " %.4e", val);
 	}
 	
-	fprintf(File, "\n  internal_forces %d ", Fl.giveSize());
-	for (auto &val : Fl) {
-		fprintf(File, " %.4e", val);
-	}
+	//fprintf(File, "\n  internal_forces %d ", Fl.giveSize());
+	//for (auto &val : Fl) {
+	//	fprintf(File, " %.4e", val);
+	//}
 
-	fprintf(File, "\n  element_svars %d ", this->numSvars);
-	for (int i = 1; i <= this->numSvars; i++)
-	{
-		fprintf(File, " %.4e", this->svars.at(i));
-	}
+	//fprintf(File, "\n  element_svars %d ", this->numSvars);
+	//for (int i = 1; i <= this->numSvars; i++)
+	//{
+	//	fprintf(File, " %.4e", this->svars.at(i));
+	//}
 	fprintf(File, "\n");
 }
 
