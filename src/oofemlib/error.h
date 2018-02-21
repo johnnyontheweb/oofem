@@ -44,13 +44,26 @@
 #include <string>
 #include <cstdio>
 #include <cstdlib>
+#include <stdexcept>
 
 namespace oofem {
 /** Cause oofem program termination by calling exit. */
+#ifdef MEMSTR
+#define OOFEM_EXIT(code) \
+    oofem_logger.printStatistics(); \
+    fprintf(stderr, "oofem exit code %d\n", code); \
+	if (oofem::pid.empty()) { \
+		exit(code); \
+	} \
+	else { \
+		throw std::runtime_error(""); \
+	}
+#else
 #define OOFEM_EXIT(code) \
     oofem_logger.printStatistics(); \
     fprintf(stderr, "oofem exit code %d\n", code); \
     exit(code);
+#endif
 
 /**
  * Macros for printing errors.
