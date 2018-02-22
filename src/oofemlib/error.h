@@ -49,6 +49,8 @@
 namespace oofem {
 /** Cause oofem program termination by calling exit. */
 #ifdef MEMSTR
+	extern OOFEM_EXPORT std::string pid;
+
 #define OOFEM_EXIT(code) \
     oofem_logger.printStatistics(); \
     fprintf(stderr, "oofem exit code %d\n", code); \
