@@ -240,6 +240,7 @@ int EngngModel::instanciateYourself(DataReader *dr, InputRecord *ir, const char 
 			OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str());
 		}
 #ifdef MEMSTR
+		usestream = false;
 	}
 #endif
 
@@ -562,6 +563,10 @@ EngngModel :: solveYourself()
 
             fprintf(out, "\nUser time consumed by solution step %d: %.3f [s]\n\n",
                     this->giveCurrentStep()->giveNumber(), _steptime);
+#ifdef MEMSTR
+			if (usestream) fprintf(out, "endStep\n");
+			if (oofem_logger.usestream) OOFEM_LOG_FORCED("endStep\n");
+#endif
 
 #ifdef __PARALLEL_MODE
             if ( loadBalancingFlag ) {
@@ -1939,9 +1944,9 @@ EngngModel :: terminateAnalysis()
     OOFEM_LOG_FORCED("User time consumed: %03dh:%02dm:%02ds\n", uhrs, umin, usec);
     exportModuleManager->terminate();
 #ifdef MEMSTR
-	fprintf(out, "strTerm\n");
+	if (usestream) fprintf(out, "strTerm\n");
 	fflush(out);
-	OOFEM_LOG_FORCED("strTerm\n");
+	if (oofem_logger.usestream) OOFEM_LOG_FORCED("strTerm\n");
 	oofem_logger.flush();
 	if (out) fclose(out);
 #endif

@@ -199,6 +199,10 @@ public:
     };
 
 protected:
+#ifdef MEMSTR
+	bool usestream = true;
+#endif
+
     /// Number of receiver domains.
     int ndomains;
     /// List of problem domains.

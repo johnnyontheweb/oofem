@@ -80,6 +80,10 @@ protected:
 	/// Map from Voigt to full tensor.
 	static IntArray redToFull;
 
+#ifdef MEMSTR
+	bool usestream = true;
+#endif
+
 public:
     /// Constructor. Creates empty Output Manager.
     NodalRecoveryModule(int n, EngngModel *e);
