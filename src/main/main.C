@@ -103,7 +103,7 @@ void SignalHandler(int signal)
 {
 	// fprintf(stderr, "\nSignal received\n");
 	if (signal > 0) {
-		fprintf(stderr, "\nStopped by a signal\n");
+		//fprintf(stderr, "\nStopped by a signal\n");
 		classFactory.terminateStreams();
 		// exit process
 		exit(signal);
