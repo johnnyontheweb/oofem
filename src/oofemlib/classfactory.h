@@ -519,6 +519,7 @@ public:
 
 #ifdef MEMSTR
 	FILE* giveMemoryStream ( const char* name ) const;
+	void terminateStreams () const;
 #endif
 };
 

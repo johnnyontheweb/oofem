@@ -496,6 +496,11 @@ FILE* ClassFactory :: giveMemoryStream( const char *name ) const
 {
 	return oofem::MemWrapper::getInstance(name, &(oofem::pid));
 }
+
+void ClassFactory :: terminateStreams() const
+{
+	oofem::MemWrapper::terminateStreams();
+}
 #endif
 
 } // End namespace oofem

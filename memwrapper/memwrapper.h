@@ -28,6 +28,7 @@ namespace oofem {
 		static MemStrPrivate* instance();// const std::auto_ptr<char*> &pid);
 
 		static FILE* getInstance(const char * key, const std::string *pid);
+		static void terminateStreams();
 		//~MemWrapper();
 	};
 #ifndef MEMSTR
