@@ -76,6 +76,10 @@
 
 #include "classfactory.h"
 
+#ifdef MEMSTR
+#include <signal.h> 
+#endif
+
 using namespace oofem;
 
 void freeStoreError()
@@ -94,10 +98,33 @@ void oofem_print_epilog();
 // Finalize PETSc, SLEPc and MPI
 void oofem_finalize_modules();
 
+#ifdef MEMSTR
+void SignalHandler(int signal)
+{
+	// fprintf(stderr, "\nSignal received\n");
+	if (signal > 0) {
+		// exit process
+		fprintf(stderr, "\nStopped by a signal\n");
+		exit(signal);
+	}  
+}
+#endif
+
 int main(int argc, char *argv[])
 {
 #ifndef _MSC_VER
     std :: set_new_handler(freeStoreError);   // prevents memory overflow
+#endif
+
+#ifdef MEMSTR
+	typedef void(*SignalHandlerPointer)(int);
+
+	SignalHandlerPointer han1; han1 = signal(SIGABRT, SignalHandler);
+	SignalHandlerPointer han2; han2 = signal(SIGFPE, SignalHandler);
+	SignalHandlerPointer han3; han3 = signal(SIGILL, SignalHandler);
+	SignalHandlerPointer han4; han4 = signal(SIGINT, SignalHandler);
+	SignalHandlerPointer han5; han5 = signal(SIGSEGV, SignalHandler);
+	SignalHandlerPointer han6; han6 = signal(SIGTERM, SignalHandler);
 #endif
 
     int adaptiveRestartFlag = 0, restartStepInfo [ 2 ];
