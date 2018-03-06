@@ -1051,7 +1051,8 @@ namespace oofem {
 				}
 
 #ifdef MEMSTR
-				if (usestream) fprintf(this->stream, "endStep\n");
+				fprintf(this->stream, "endStep\n");
+				//if (usestream) fprintf(this->stream, "endStep\n");
 #endif
 
 			}
@@ -1264,7 +1265,8 @@ namespace oofem {
 		BeamExportModule::terminate()
 	{
 #ifdef MEMSTR
-		if (usestream) fprintf(this->stream, "strTerm\n");
+		fprintf(this->stream, "strTerm\n");
+		//if (usestream) fprintf(this->stream, "strTerm\n");
 #endif
 		fflush(this->stream);
 // #ifndef MEMSTR
