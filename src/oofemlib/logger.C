@@ -279,6 +279,7 @@ Logger :: writeLogMsg(logLevelType level, const char *format, ...)
             va_end(args);
         }
     }
+	this->flush();
 }
 
 void
