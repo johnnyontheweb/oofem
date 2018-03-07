@@ -74,6 +74,10 @@ protected:
 	double csi;
 	ResponseSpectrum *rs;
 
+#ifdef MEMSTR
+	bool usestream = true;
+#endif
+
 public:
     /// Constructor. Creates empty Output Manager.
     BeamExportModule(int n, EngngModel *e);

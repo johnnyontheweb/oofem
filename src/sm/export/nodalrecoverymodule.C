@@ -365,6 +365,10 @@ namespace oofem {
 
 			// clean up
 			nodalValues.clear();
+#ifdef MEMSTR
+			fprintf(this->stream, "endStep\n");
+			//if (usestream) fprintf(this->stream, "endStep\n");
+#endif
 			fflush(this->stream);
 		}
 	}
@@ -507,6 +511,7 @@ namespace oofem {
 				OOFEM_ERROR("failed to open file %s", fileName.c_str());
 			}
 #ifdef MEMSTR
+			usestream = false;
 		}
 #endif
 		// ";" as separator
@@ -523,6 +528,7 @@ namespace oofem {
 	{
 #ifdef MEMSTR
 		fprintf(this->stream, "strTerm\n");
+		//if (usestream) fprintf(this->stream, "strTerm\n");
 #endif
 		fflush(this->stream);
 // #ifndef MEMSTR

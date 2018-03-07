@@ -172,6 +172,9 @@ Logger::setLogName() // std::string &logName
 		this->logStream = _fdopen(sourceFD, "a");
 		this->errStream = this->logStream;
 	}
+	else {
+		usestream = false;
+	}
 }
 #endif
 

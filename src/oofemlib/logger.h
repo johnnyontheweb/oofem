@@ -71,7 +71,11 @@ protected:
     logLevelType logLevel;
     /// Counter of all warning and error messages.
     int numberOfWrn, numberOfErr;
+
 public:
+#ifdef MEMSTR
+	bool usestream = true;
+#endif
     Logger(logLevelType level);
     ~Logger();
     /// Redirects log output to given file name (with path).
