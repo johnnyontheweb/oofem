@@ -568,6 +568,8 @@ EngngModel :: solveYourself()
 			OOFEM_LOG_FORCED("endStep\n");
 			//if (usestream) fprintf(out, "endStep\n");
 			//if (oofem_logger.usestream) OOFEM_LOG_FORCED("endStep\n");
+			fflush(out);
+			oofem_logger.flush();
 #endif
 
 #ifdef __PARALLEL_MODE
