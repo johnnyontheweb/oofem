@@ -1050,13 +1050,12 @@ namespace oofem {
 					fprintf(this->stream, "\n");
 				}
 
-#ifdef MEMSTR
-				fprintf(this->stream, "endStep\n");
-				//if (usestream) fprintf(this->stream, "endStep\n");
-#endif
-
 			}
 
+#ifdef MEMSTR
+			fprintf(this->stream, "endStep\n");
+			//if (usestream) fprintf(this->stream, "endStep\n");
+#endif
 			//for (auto &bForces : BeamForces) {
 			//	map< double, FloatArray >pForces = bForces.second;
 			//	int ID = bForces.first;
