@@ -72,11 +72,20 @@ namespace oofem {
  * This macro can be used only within classes that implement errorInfo function.
  */
 //@{
+#ifdef MEMSTR
+#define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
+#define OOFEM_FATAL(...) { oofem_logger.writeELogMsg(Logger :: LOG_LEVEL_FATAL, errorInfo(__func__).c_str(), __FILENAME__, __LINE__, __VA_ARGS__); OOFEM_EXIT(1); }
+#define OOFEM_ERROR(...) { oofem_logger.writeELogMsg(Logger :: LOG_LEVEL_ERROR, errorInfo(__func__).c_str(), __FILENAME__, __LINE__, __VA_ARGS__); OOFEM_EXIT(1); }
+#define OOFEM_WARNING(...) oofem_logger.writeELogMsg(Logger :: LOG_LEVEL_WARNING, errorInfo(__func__).c_str(), __FILENAME__, __LINE__, __VA_ARGS__)
+#define OOFEM_SERROR(...) { oofem_logger.writeELogMsg(Logger :: LOG_LEVEL_ERROR, __func__, __FILENAME__, __LINE__, __VA_ARGS__); OOFEM_EXIT(1); }
+#define OOFEM_SWARNING(...) oofem_logger.writeELogMsg(Logger :: LOG_LEVEL_WARNING, __func__, __FILENAME__, __LINE__, __VA_ARGS__)
+#else
 #define OOFEM_FATAL(...) { oofem_logger.writeELogMsg(Logger :: LOG_LEVEL_FATAL, errorInfo(__func__).c_str(), __FILE__, __LINE__, __VA_ARGS__); OOFEM_EXIT(1); }
 #define OOFEM_ERROR(...) { oofem_logger.writeELogMsg(Logger :: LOG_LEVEL_ERROR, errorInfo(__func__).c_str(), __FILE__, __LINE__, __VA_ARGS__); OOFEM_EXIT(1); }
 #define OOFEM_WARNING(...) oofem_logger.writeELogMsg(Logger :: LOG_LEVEL_WARNING, errorInfo(__func__).c_str(), __FILE__, __LINE__, __VA_ARGS__)
 #define OOFEM_SERROR(...) { oofem_logger.writeELogMsg(Logger :: LOG_LEVEL_ERROR, __func__, __FILE__, __LINE__, __VA_ARGS__); OOFEM_EXIT(1); }
 #define OOFEM_SWARNING(...) oofem_logger.writeELogMsg(Logger :: LOG_LEVEL_WARNING, __func__, __FILE__, __LINE__, __VA_ARGS__)
+#endif
 //@}
 
 OOFEM_EXPORT std::string errorInfo(const char *func);
