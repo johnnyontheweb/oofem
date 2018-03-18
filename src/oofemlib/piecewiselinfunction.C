@@ -65,8 +65,8 @@ double PiecewiseLinFunction :: evaluateAtTime(double time)
             return this->values.at(i);
         } else if ( this->dates.at(i) > time ) {
             if ( i == 1 ) {
-                OOFEM_WARNING("computational time %f is out of given time %f, using closest value", time, dates.at(i) );
-                return this->dates.at(i);
+                // OOFEM_WARNING("computational time %f is out of given time %f, using closest value", time, dates.at(i) );
+				return this->values.at(i); // return values, not time! - first value used
             }
 
             xa = this->dates.at(i - 1);
@@ -77,9 +77,9 @@ double PiecewiseLinFunction :: evaluateAtTime(double time)
             return ya + ( time - xa ) * ( yb - ya ) / ( xb - xa );
         }
     }
-
-    OOFEM_WARNING("computational time %f is out of given time, using closest value", time );
-    return this->values.at(this->values.giveSize());
+	// last value used
+    // OOFEM_WARNING("computational time %f is out of given time, using closest value", time );
+    return this->values.at(this->values.giveSize()); // final value returned
 }
 
 double PiecewiseLinFunction :: evaluateVelocityAtTime(double time)

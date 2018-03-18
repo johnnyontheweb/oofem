@@ -876,3 +876,4 @@ tests/sm/t3d.bmf
 /RelWithDebInfo/lanciaOOFEM.bat
 /RelWithDebInfo/oofem.zip
 /RelWithDebInfo/Six-modal.in
+/RelWithDebInfo/oofemRelDebInfo con pdb.zip
