@@ -611,6 +611,8 @@ Beam3d :: initializeFrom(InputRecord *ir)
 	this->macroElem = 0;
 	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_Beam3d_macroElem);
 
+	IR_GIVE_OPTIONAL_FIELD(ir, this->printGPs, _IFT_Beam3d_printGPs);
+
     return BeamBaseElement :: initializeFrom(ir);
 }
 
@@ -777,9 +779,12 @@ Beam3d :: printOutputAt(FILE *File, TimeStep *tStep)
 	}
 	fprintf(File, "\n");
 #endif
-    for ( auto &iRule: integrationRulesArray ) {
-        iRule->printOutputAt(File, tStep);
-    }
+	// GPs output
+	if (printGPs == 1) {
+		for ( auto &iRule: integrationRulesArray ) {
+			iRule->printOutputAt(File, tStep);
+		}
+	}
 }
 
 

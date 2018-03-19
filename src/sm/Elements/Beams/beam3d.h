@@ -50,6 +50,7 @@
 #define _IFT_Beam3d_zaxis "zaxis"
 #define _IFT_Beam3d_subsoilmat "subsoilmat"
 #define _IFT_Beam3d_macroElem "macroelem"
+#define _IFT_Beam3d_printGPs "printgps"
 //@}
 
 #define Beam3d_nSubBeams 10
@@ -81,7 +82,8 @@ protected:
     double kappay, kappaz, length;
     int referenceNode;
     FloatArray zaxis;
-    double referenceAngle = 0;
+	double referenceAngle = 0;
+	int printGPs = 1;
     //IntArray *dofsToCondense;
     /*
      * Ghost nodes are used to introduce additional DOFs at element.
