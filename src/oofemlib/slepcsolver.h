@@ -50,8 +50,8 @@ class PetscSparseMtrx;
 class OOFEM_EXPORT SLEPcSolver : public SparseGeneralEigenValueSystemNM
 {
 private:
-    PetscSparseMtrx *A;
-    PetscSparseMtrx *B;
+    //PetscSparseMtrx *A;
+    //PetscSparseMtrx *B;
     /// Eigenvalue solver context.
     EPS eps;
     /// Flag if context initialized.
