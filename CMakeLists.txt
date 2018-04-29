@@ -317,20 +317,20 @@ if (USE_PETSC)
     #find_package (PETSc 3.3 HINTS "${MY_PETSC_DIR}/${MY_PETSC_ARCH}")
 
     # Have to use pkgconfig information
-    find_package (PkgConfig REQUIRED)
+    #~ find_package (PkgConfig REQUIRED)
     
-    set (ENV{PKG_CONFIG_PATH} "${MY_PETSC_DIR}/${MY_PETSC_ARCH}/lib64/pkgconfig:${MY_PETSC_DIR}/${MY_PETSC_ARCH}/lib/pkgconfig")
-    pkg_check_modules (PC_PETSC REQUIRED PETSc)
-    include_directories (${PC_PETSC_INCLUDE_DIRS})
+    #~ set (ENV{PKG_CONFIG_PATH} ${MY_PETSC_DIR}/${MY_PETSC_ARCH}/lib/pkgconfig)
+    #~ pkg_check_modules (PC_PETSC REQUIRED PETSc)
+    #~ include_directories (${PC_PETSC_INCLUDE_DIRS})
 
-    # Find the actual libraries:
-    foreach (f ${PC_PETSC_LIBRARIES})
-        find_library (${f}_LIBRARY NAMES ${f} lib${f}
-            HINTS
-            ${PC_PETSC_LIBRARY_DIRS}
-        )
-        list (APPEND EXT_LIBS ${${f}_LIBRARY})
-    endforeach ()
+    #~ # Find the actual libraries:
+    #~ foreach (f ${PC_PETSC_LIBRARIES})
+        #~ find_library (${f}_LIBRARY NAMES ${f} lib${f}
+            #~ HINTS
+            #~ ${PC_PETSC_LIBRARY_DIRS}
+        #~ )
+        #~ list (APPEND EXT_LIBS ${${f}_LIBRARY})
+    #~ endforeach ()
     # Currently unused flags:
     #   PC_PETSC_LDFLAGS        ... all required linker flags
     #   PC_PETSC_LDFLAGS_OTHER  ... all other linker flags
@@ -338,25 +338,24 @@ if (USE_PETSC)
     #   PC_PETSC_CFLAGS_OTHER   ... the other compiler flags
 
     #find_package (PETSc REQUIRED HINTS "${MY_PETSC_DIR}/${MY_PETSC_ARCH}/conf")
-    #include_directories ("${MY_PETSC_DIR}/include" "${MY_PETSC_DIR}/${MY_PETSC_ARCH}/include" ${PETSC_INCLUDE_PATH})
-    #find_library (PETSC_LIB petsc PATH "${MY_PETSC_DIR}/${MY_PETSC_ARCH}/lib/") 
-    #if (${PETSC_LIB} STREQUAL "PETSC_LIB-NOTFOUND")
-    #    message (FATAL_ERROR "PETSc library not found")
-    #endif ()
-    #list (APPEND EXT_LIBS ${PETSC_LIB} ${PETSC_PACKAGE_LIBS})
+    include_directories ("${MY_PETSC_DIR}/include" "${MY_PETSC_DIR}/${MY_PETSC_ARCH}/include" ${PETSC_INCLUDE_PATH})
+    find_library (PETSC_LIB petsc PATH "${MY_PETSC_DIR}/${MY_PETSC_ARCH}/lib/") 
+    if (${PETSC_LIB} STREQUAL "PETSC_LIB-NOTFOUND")
+        message (FATAL_ERROR "PETSc library not found")
+    endif ()
+    list (APPEND EXT_LIBS ${PETSC_LIB} ${PETSC_PACKAGE_LIBS})
     list (APPEND MODULE_LIST "PETSc")
-    set (USE_MPI ON)
+    #set (USE_MPI ON) # use sequential slepc
     add_definitions (-D__PETSC_MODULE)
 endif ()
 
 if (USE_SLEPC)
-  if (SLEPC_DIR)
-        find_library (SLEPC_LIBS slepc PATH "${SLEPC_DIR}/${PETSC_ARCH}/lib")
-        include_directories ("${SLEPC_DIR}/include")
-        include_directories ("${SLEPC_DIR}/${PETSC_ARCH}/include")
-    else ()
-        find_library (SLEPC_LIBS slepc)
-    endif ()
+  #if (SLEPC_DIR)
+        #find_library (SLEPC_LIBS slepc PATH "${SLEPC_DIR}/${PETSC_ARCH}/lib")
+        include_directories ("${SLEPC_DIR}/include" "${SLEPC_DIR}/${PETSC_ARCH}/include")
+    #else ()
+        #find_library (SLEPC_LIBS slepc)
+    #endif ()
     if (${SLEPC_LIBS} STREQUAL "SLEPC_LIBS-NOTFOUND")
         message (FATAL_ERROR "SLEPc library not found")
     endif ()
