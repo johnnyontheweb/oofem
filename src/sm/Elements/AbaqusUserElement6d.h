@@ -55,7 +55,7 @@
 #define _IFT_AbaqusUserElement6d_name "name"
 #define _IFT_AbaqusUserElement6d_macroElem "macroelem"
 #define _IFT_AbaqusUserElement6d_orientation "dir"
-#define _IFT_AbaqusUserElement6d_mode "mode"
+#define _IFT_AbaqusUserElement6d_pos "pos"
 //@}
 
 namespace oofem {
@@ -252,7 +252,7 @@ protected:
 	*/
 	FloatArray dir;
 	double referenceAngle = 0;
-	// int mode;
+	double pos;
 };
 
 }// namespace oofem

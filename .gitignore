@@ -877,3 +877,5 @@ tests/sm/t3d.bmf
 /RelWithDebInfo/oofem.zip
 /RelWithDebInfo/Six-modal.in
 /RelWithDebInfo/oofemRelDebInfo con pdb.zip
+/MinSizeRel/3piani_new.in
+/MinSizeRel/3piani_slepc.in

@@ -93,9 +93,9 @@ IRResultType AbaqusUserElement6d :: initializeFrom(InputRecord *ir)
 		this->dir.normalize();
 	}
 	
-	// mode
-	// this->mode = 0;
-	// IR_GIVE_OPTIONAL_FIELD(ir, mode, _IFT_AbaqusUserElement6d_mode);
+	// pos
+	this->pos = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, pos, _IFT_AbaqusUserElement6d_pos);
 
     IR_GIVE_FIELD(ir, this->numSvars, _IFT_AbaqusUserElement6d_numsvars);
     if ( this->numSvars < 0 ) {
@@ -439,7 +439,7 @@ AbaqusUserElement6d::printOutputAt(FILE *File, TimeStep *tStep)
 	// ask for global element end forces vector
 	this->giveInternalForcesVector(Fl, tStep, 1);
 
-	fprintf(File, "AbaqusUserElement6d %d (%8d) macroelem %d type %d dir 3 %.4e %.4e %.4e dy %.4e : %.4e %.4e %.4e %.4e %.4e %.4e \n", this->giveLabel(), this->giveNumber(), this->macroElem, this->jtype, this->dir.at(1), this->dir.at(2), this->dir.at(3), props.at(2)/props.at(1), Fl.at(6 + 1), Fl.at(6 + 2), Fl.at(6 + 3), Fl.at(6 + 4), Fl.at(6 + 5), Fl.at(6 + 6));
+	fprintf(File, "AbaqusUserElement6d %d (%8d) macroelem %d type %d pos %.4e dir 3 %.4e %.4e %.4e dy %.4e : %.4e %.4e %.4e %.4e %.4e %.4e \n", this->giveLabel(), this->giveNumber(), this->macroElem, this->jtype, this->pos, this->dir.at(1), this->dir.at(2), this->dir.at(3), props.at(2) / props.at(1), Fl.at(6 + 1), Fl.at(6 + 2), Fl.at(6 + 3), Fl.at(6 + 4), Fl.at(6 + 5), Fl.at(6 + 6));
 	
 	fprintf(File, "  local_displacements %d ", rl.giveSize());
 	for (auto &val : rl) {
