@@ -439,7 +439,7 @@ AbaqusUserElement6d::printOutputAt(FILE *File, TimeStep *tStep)
 	// ask for global element end forces vector
 	this->giveInternalForcesVector(Fl, tStep, 1);
 
-	fprintf(File, "AbaqusUserElement6d %d (%8d) macroelem %d type %d pos %.4e dir 3 %.4e %.4e %.4e dy %.4e : %.4e %.4e %.4e %.4e %.4e %.4e \n", this->giveLabel(), this->giveNumber(), this->macroElem, this->jtype, this->pos, this->dir.at(1), this->dir.at(2), this->dir.at(3), props.at(2) / props.at(1), Fl.at(6 + 1), Fl.at(6 + 2), Fl.at(6 + 3), Fl.at(6 + 4), Fl.at(6 + 5), Fl.at(6 + 6));
+	fprintf(File, "AbaqusUserElement6d %d (%8d) macroelem %d type %d pos %.4e dir 3 %.4e %.4e %.4e : %.4e %.4e %.4e %.4e %.4e %.4e \n", this->giveLabel(), this->giveNumber(), this->macroElem, this->jtype, this->pos, this->dir.at(1), this->dir.at(2), this->dir.at(3), Fl.at(6 + 1), Fl.at(6 + 2), Fl.at(6 + 3), Fl.at(6 + 4), Fl.at(6 + 5), Fl.at(6 + 6));
 	
 	fprintf(File, "  local_displacements %d ", rl.giveSize());
 	for (auto &val : rl) {
