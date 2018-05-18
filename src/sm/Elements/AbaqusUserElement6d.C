@@ -451,11 +451,13 @@ AbaqusUserElement6d::printOutputAt(FILE *File, TimeStep *tStep)
 	//	fprintf(File, " %.4e", val);
 	//}
 
-	//fprintf(File, "\n  element_svars %d ", this->numSvars);
-	//for (int i = 1; i <= this->numSvars; i++)
-	//{
-	//	fprintf(File, " %.4e", this->svars.at(i));
-	//}
+#ifdef DEBUG
+	fprintf(File, "\n  element_svars %d ", this->numSvars);
+	for (int i = 1; i <= this->numSvars; i++)
+	{
+		fprintf(File, " %.4e", this->svars.at(i));
+	}
+#endif
 	fprintf(File, "\n");
 }
 
