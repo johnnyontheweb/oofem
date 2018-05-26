@@ -167,6 +167,7 @@ public:
     { OOFEM_ERROR("calling of this function is not allowed"); }
     virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord)
     { OOFEM_ERROR("calling of this function is not allowed"); }
+	virtual void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep);
 
 private:
 	void giveNodeCoordinates(double &x1, double &x2, double &x3,

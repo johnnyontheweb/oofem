@@ -209,6 +209,26 @@ TR_SHELL01 :: giveCharacteristicMatrix(FloatMatrix &answer, CharType mtrx, TimeS
     if ( aux.isNotEmpty() ) answer.assemble(aux, loc_membrane);
 }
 
+void
+TR_SHELL01::computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
+{
+	// computes initial stress matrix of receiver (or geometric stiffness matrix)
+	FloatMatrix aux, aux2;
+	// get stiffness matrix
+	this->giveCharacteristicMatrix(aux, TangentStiffnessMatrix, tStep);
+	aux2.beTranspositionOf(aux);
+
+	// stress vector
+	FloatArray str,str2;
+	this->giveCharacteristicVector(str, ExternalForcesVector, VM_Total, tStep);
+
+	answer.resize(18, 18);
+	answer.zero();
+
+	// N' * str * N
+	// answer.beProductOf(aux2, str.beProductOf();
+}
+
 void TR_SHELL01 :: computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode)
 {
   FloatArray aux;
@@ -221,11 +241,8 @@ void TR_SHELL01 :: computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, Ti
   
   membrane->computeBodyLoadVectorAt(aux, forLoad, tStep, mode);
   if ( !aux.isEmpty() ) answer.assemble(aux, loc_membrane);
- 
-
 
 }
-
 
 bool
 TR_SHELL01 :: giveRotationMatrix(FloatMatrix &answer)
