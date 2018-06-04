@@ -879,3 +879,5 @@ tests/sm/t3d.bmf
 /RelWithDebInfo/oofemRelDebInfo con pdb.zip
 /MinSizeRel/3piani_new.in
 /MinSizeRel/3piani_slepc.in
+/MinSizeRel/asta-buck.in
+/MinSizeRel/test_verifica_buck.in

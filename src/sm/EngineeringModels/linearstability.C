@@ -201,7 +201,6 @@ void LinearStability :: solveYourselfAt(TimeStep *tStep)
                    EModelDefaultEquationNumbering(), this->giveDomain(1) );
 #endif
 
-
 #ifdef VERBOSE
     OOFEM_LOG_INFO("Assembling load\n");
 #endif
@@ -240,12 +239,12 @@ void LinearStability :: solveYourselfAt(TimeStep *tStep)
     }
 
 #ifdef VERBOSE
-    OOFEM_LOG_INFO("Assembling stiffness  matrix\n");
+    OOFEM_LOG_INFO("Assembling stiffness matrix\n");
 #endif
     this->assemble( *stiffnessMatrix, tStep, TangentAssembler(TangentStiffness),
                    EModelDefaultEquationNumbering(), this->giveDomain(1) );
 #ifdef VERBOSE
-    OOFEM_LOG_INFO("Assembling  initial stress matrix\n");
+    OOFEM_LOG_INFO("Assembling initial stress matrix\n");
 #endif
     this->assemble( *initialStressMatrix, tStep, InitialStressMatrixAssembler(),
                    EModelDefaultEquationNumbering(), this->giveDomain(1) );
@@ -270,9 +269,6 @@ void LinearStability :: solveYourselfAt(TimeStep *tStep)
 #endif
 
     nMethod->solve(*stiffnessMatrix, *initialStressMatrix, eigVal, eigVec, rtolv, numberOfRequiredEigenValues);
-    // compute eigen frequencies
-    //for (i = 1; i<= numberOfRequiredEigenValues; i++)
-    // eigVal.at(i) = sqrt(eigVal.at(i));
 }
 
 void LinearStability :: updateYourself(TimeStep *tStep)
@@ -364,8 +360,7 @@ void LinearStability :: terminate(TimeStep *tStep)
                 this->updateDofUnknownsDictionary(dman.get(), tStep);
             }
         }
-
-
+		
         for ( auto &dman : domain->giveDofManagers() ) {
             dman->updateYourself(tStep);
             dman->printOutputAt(outputStream, tStep);
