@@ -216,9 +216,7 @@ TR_SHELL01::computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
 	answer.zero();
 
 	// matrix assembly vectors
-	IntArray asm1{ 1, 7, 13 };  // local x
-	IntArray asm2{ 2, 8, 14 };  // local y
-	IntArray asm3{ 6, 12, 18 }; // local rotation/shear z/xy
+	IntArray asmz{ 3, 9, 15 };  // local z
 
 	// stress vector
 	FloatArray str,str2;
@@ -282,10 +280,8 @@ TR_SHELL01::computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
 	Kgx.times(sx);
 	Kgx.add(sy,Kgy);
 	Kgx.add(sxy, Kgxy);
-	// once for local x
-	answer.assemble(Kgx, asm1);
-	// once for local y
-	answer.assemble(Kgx, asm2);
+	// once for local z
+	answer.assemble(Kgx, asmz);
 	// done
 }
 
