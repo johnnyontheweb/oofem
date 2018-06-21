@@ -146,6 +146,50 @@ TR_SHELL02 :: giveCharacteristicMatrix(FloatMatrix &answer, CharType mtrx, TimeS
     if ( aux.isNotEmpty() ) answer.assemble(aux, loc_membrane);
 }
 
+void
+TR_SHELL02::giveNodeCoordinates(double &x1, double &x2, double &x3,
+double &y1, double &y2, double &y3,
+double &z1, double &z2, double &z3)
+{
+	FloatArray nc1(3), nc2(3), nc3(3);
+
+	this->giveLocalCoordinates(nc1, *(this->giveNode(1)->giveCoordinates()));
+	this->giveLocalCoordinates(nc2, *(this->giveNode(2)->giveCoordinates()));
+	this->giveLocalCoordinates(nc3, *(this->giveNode(3)->giveCoordinates()));
+
+	x1 = nc1.at(1);
+	x2 = nc2.at(1);
+	x3 = nc3.at(1);
+
+	y1 = nc1.at(2);
+	y2 = nc2.at(2);
+	y3 = nc3.at(2);
+
+	z1 = nc1.at(3);
+	z2 = nc2.at(3);
+	z3 = nc3.at(3);
+}
+
+void
+TR_SHELL02::giveLocalCoordinates(FloatArray &answer, FloatArray &global)
+// Returns global coordinates given in global vector
+// transformed into local coordinate system of the
+// receiver
+{
+	FloatArray offset;
+	// test the parametr
+	if (global.giveSize() != 3) {
+		OOFEM_ERROR("cannot transform coordinates - size mismatch");
+		exit(1);
+	}
+
+	//this->computeGtoLRotationMatrix();
+
+	offset = global;
+	offset.subtract(*this->giveNode(1)->giveCoordinates());
+	answer.beProductOf(*this->plate->computeGtoLRotationMatrix(), offset);
+}
+
 bool
 TR_SHELL02 :: giveRotationMatrix(FloatMatrix &answer)
 {
@@ -177,6 +221,82 @@ TR_SHELL02 :: giveRotationMatrix(FloatMatrix &answer)
     }
 
     return t1;
+}
+
+void
+TR_SHELL02::computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
+{
+	answer.resize(18, 18);
+	answer.zero();
+
+	// matrix assembly vectors
+	IntArray asmz{ 3, 9, 15 };  // local z
+
+	// stress vector
+	FloatArray str, str2;
+	//this->giveCharacteristicVector(str, InternalForcesVector, VM_Total, tStep);
+	for (GaussPoint *gp : *this->giveDefaultIntegrationRulePtr()) {
+		this->giveIPValue(str2, gp, IST_ShellForceTensor, tStep);
+		str.add(str2);
+	}
+	// this needs to be transformed to local
+	str.times(1 / this->numberOfGaussPoints);
+	FloatMatrix strmat{ 3, 3 };
+	strmat.at(1, 1) = str.at(1); strmat.at(2, 2) = str.at(2); strmat.at(3, 3) = str.at(3);
+	strmat.at(1, 2) = str.at(6); strmat.at(1, 3) = str.at(5); strmat.at(2, 3) = str.at(4);
+	strmat.symmetrized();
+	strmat.rotatedWith(*this->plate->computeGtoLRotationMatrix(), 't'); // back to local
+
+	// if above are local and Forces by unit length
+	// first average them
+	double sx = 0, sy = 0, sxy = 0;
+	//for (auto it : asm1) sx += str.at(it);
+	//for (auto it : asm2) sy += str.at(it);
+	//for (auto it : asm3) sxy += str.at(it);
+	//sx = str.at(1);
+	//sy = str.at(2);
+	//sxy = str.at(6);
+	sx = strmat.at(1, 1);
+	sy = strmat.at(2, 2);
+	sxy = strmat.at(1, 2);
+	// then divide by 4*A
+	double area = plate->computeArea();
+	sx /= (4 * area);
+	sy /= (4 * area);
+	sxy /= (4 * area);
+
+	// partial matrices
+	FloatMatrix Kgx{ 3, 3 }, Kgy{ 3, 3 }, Kgxy{ 3, 3 };
+
+	// calculate the matrices - hp constant thickness
+	double x1, x2, x3, y1, y2, y3, z1, z2, z3;
+	this->giveNodeCoordinates(x1, x2, x3, y1, y2, y3, z1, z2, z3);
+	FloatArray n1{ x1, y1, z1 }, n2{ x2, y2, z2 }, n3{ x3, y3, z3 };
+
+	double x12, x23, x13, y12, y23, y13;
+	x12 = n1.at(1) - n2.at(1);
+	y12 = n1.at(2) - n2.at(2);
+	x13 = n1.at(1) - n3.at(1);
+	y13 = n1.at(2) - n3.at(2);
+	x23 = n2.at(1) - n3.at(1);
+	y23 = n2.at(2) - n3.at(2);
+
+	Kgx.at(1, 1) = y23*y23; Kgx.at(2, 2) = y13*y13; Kgx.at(3, 3) = y12*y12;
+	Kgx.at(1, 2) = -y23*y13; Kgx.at(1, 3) = y23*y12; Kgx.at(2, 3) = -y13*y12;
+	Kgy.at(1, 1) = x23*x23; Kgy.at(2, 2) = x13*x13; Kgy.at(3, 3) = x12*x12;
+	Kgy.at(1, 2) = -y23*y13; Kgy.at(1, 3) = y23*y12; Kgy.at(2, 3) = -y13*y12;
+	Kgxy.at(1, 1) = -2 * y23*x23; Kgxy.at(2, 2) = -2 * y13*x13; Kgxy.at(3, 3) = -2 * y12*x12;
+	Kgxy.at(1, 2) = y23*x13 + x23*y13; Kgxy.at(1, 3) = -y23*x12 - x23*y12; Kgxy.at(2, 3) = y13*x12 + x13*y12;
+
+	Kgx.symmetrized(); Kgy.symmetrized(); Kgxy.symmetrized();
+
+	// assemble them
+	Kgx.times(sx);
+	Kgx.add(sy, Kgy);
+	Kgx.add(sxy, Kgxy);
+	// once for local z
+	answer.assemble(Kgx, asmz);
+	// done
 }
 
 void

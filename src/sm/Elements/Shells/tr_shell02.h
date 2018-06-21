@@ -156,6 +156,10 @@ protected:
     { OOFEM_ERROR("calling of this funciton is not allowed"); }
 	virtual void computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode);
     // { OOFEM_ERROR("calling of this function is not allowed"); }
+	void giveNodeCoordinates(double &x1, double &x2, double &x3,
+		double &y1, double &y2, double &y3,
+		double &z1, double &z2, double &z3);
+	void giveLocalCoordinates(FloatArray &answer, FloatArray &global);
 
 public:
     virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep)
@@ -164,6 +168,7 @@ public:
     { OOFEM_ERROR("calling of this function is not allowed"); }
     virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord)
     { OOFEM_ERROR("calling of this function is not allowed"); }
+	virtual void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep);
 };
 } // end namespace oofem
 #endif
