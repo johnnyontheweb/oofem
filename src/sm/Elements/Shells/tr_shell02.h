@@ -46,6 +46,7 @@
 
 #define _IFT_TR_SHELL02_Name "tr_shell02"
 #define _IFT_TR_SHELL02_FirstLocalAxis "lcs1"
+#define _IFT_TR_SHELL02_macroElem "macroelem"
 
 namespace oofem {
 /**
@@ -79,6 +80,8 @@ public:
 
 	// 1st local axis
 	FloatArray la1;
+	// macro element number
+	int macroElem;
 
     virtual FEInterpolation *giveInterpolation() const { return plate->giveInterpolation(); }
 

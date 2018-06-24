@@ -70,15 +70,25 @@ TR_SHELL02 :: initializeFrom(InputRecord *ir)
         return result;
     }
 
+	// optional record for 1st local axes
+	la1.resize(3);
+	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_TR_SHELL02_FirstLocalAxis);
+
+	this->macroElem = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_TR_SHELL02_macroElem);
+
     result = plate->initializeFrom(ir);
     if ( result != IRRT_OK ) {
         return result;
     }
+	plate->la1 = la1;
 
     result = membrane->initializeFrom(ir);
     if ( result != IRRT_OK ) {
         return result;
     }
+	membrane->la1 = la1;
 
     return IRRT_OK;
 }
@@ -373,10 +383,9 @@ void
 TR_SHELL02 :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,
                                                          InternalStateType type, TimeStep *tStep)
 {
-    this->giveIPValue(answer, NULL, type, tStep);
+	// temporary workaround
+	this->giveIPValue(answer, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint(0), type, tStep);
 }
-
-
 
 
 void
@@ -385,6 +394,8 @@ TR_SHELL02 :: printOutputAt(FILE *file, TimeStep *tStep)
 {
     FloatArray v, aux;
     IntegrationRule *iRule = this->giveDefaultIntegrationRulePtr();
+
+#ifdef DEBUG
     fprintf( file, "element %d (%8d) :\n", this->giveLabel(), this->giveNumber() );
 
     for ( GaussPoint *gp: *iRule ) {
@@ -422,6 +433,7 @@ TR_SHELL02 :: printOutputAt(FILE *file, TimeStep *tStep)
 
         fprintf(file, "\n");
     }
+#endif
 }
 
 

@@ -90,7 +90,8 @@ public:
 
     virtual MaterialMode giveMaterialMode()  { return _2dPlate; }
     virtual int testElementExtension(ElementExtension ext) { return ( ( ( ext == Element_EdgeLoadSupport ) || ( ext == Element_SurfaceLoadSupport ) ) ? 1 : 0 ); }
-
+	// overloaded to take into account possible element local cs (in derived cct3d)
+	virtual double computeArea();
 
     virtual void computeEdgeNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray& lcoords);
     

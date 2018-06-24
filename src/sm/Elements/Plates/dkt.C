@@ -90,6 +90,19 @@ DKTPlate :: computeGaussPoints()
     }
 }
 
+double
+DKTPlate::computeArea()
+// returns the area occupied by the receiver
+{
+	// get node coordinates
+	double x1, x2, x3, y1, y2, y3, z1, z2, z3;
+	this->giveNodeCoordinates(x1, x2, x3, y1, y2, y3, z1, z2, z3);
+
+	if (area > 0) return area;  // check if previously computed
+
+	return (area = 0.5*(x2*y3 + x1*y2 + y1*x3 - x2*y1 - x3*y2 - x1*y3));
+
+}
 
 void
 DKTPlate :: computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode)

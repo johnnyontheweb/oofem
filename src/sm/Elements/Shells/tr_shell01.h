@@ -49,6 +49,7 @@
 ///@name Additional Input fields for TR_SHELL01
 //@{
 #define _IFT_TR_SHELL01_FirstLocalAxis "lcs1"
+#define _IFT_TR_SHELL01_macroElem "macroelem"
 //@}
 
 namespace oofem {
@@ -78,6 +79,8 @@ protected:
 
 	// 1st local axis
 	FloatArray la1;
+	// macro element number
+	int macroElem;
 
 public:
     /// Constructor

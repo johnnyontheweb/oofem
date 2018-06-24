@@ -88,6 +88,9 @@ TR_SHELL01 :: initializeFrom(InputRecord *ir)
 	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
 	IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_TR_SHELL01_FirstLocalAxis);
 
+	this->macroElem = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_TR_SHELL01_macroElem);
+
     result = plate->initializeFrom(ir);
     if ( result != IRRT_OK ) {
         return result;
