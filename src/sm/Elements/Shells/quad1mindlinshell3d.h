@@ -144,10 +144,18 @@ protected:
     virtual double computeEdgeVolumeAround(GaussPoint *gp, int iEdge);
     virtual int computeLoadLEToLRotationMatrix(FloatMatrix &answer, int iEdge, GaussPoint *gp);
     void computeVectorOfUnknowns(ValueModeType mode, TimeStep* tStep, FloatArray &shellUnknowns, FloatArray &drillUnknowns);
+	virtual void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep);
+
     //virtual void computeSurfaceNMatrixAt(FloatMatrix &answer, GaussPoint *gp) { answer.clear(); }
     //virtual void giveSurfaceDofMapping(IntArray &answer, int iSurf) const { answer.clear(); }
     //virtual IntegrationRule *GetSurfaceIntegrationRule(int i) { return NULL; }
     //virtual double computeSurfaceVolumeAround(GaussPoint *gp, int iSurf) { return 0.; }
+
+private:
+	void giveNodeCoordinates(double &x1, double &x2, double &x3, double &x4,
+		double &y1, double &y2, double &y3, double &y4,
+		double &z1, double &z2, double &z3, double &z4);
+	void giveLocalCoordinates(FloatArray &answer, FloatArray &global);
 };
 } // end namespace oofem
 #endif // quad1mindlinshell3d_h

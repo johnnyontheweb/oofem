@@ -117,7 +117,7 @@ namespace oofem {
 		virtual int computeLoadLEToLRotationMatrix(FloatMatrix &answer, int iEdge, GaussPoint *gp);
 
 		//virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord = 0);
-
+		virtual double computeArea();
 
 	protected:
 
@@ -126,6 +126,7 @@ namespace oofem {
 		virtual void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer);
 		virtual void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep);
 		virtual void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep);
+		virtual void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep);
 
 
 	private:

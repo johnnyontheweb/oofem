@@ -222,6 +222,93 @@ MITC4Shell ::  giveLocalDirectorVectors(FloatArray &V1, FloatArray &V2, FloatArr
     V4.beProductOf(GtoLRotationMatrix, V4g);
 }
 
+void
+MITC4Shell::computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
+{
+	answer.resize(24, 24);
+	answer.zero();
+
+	// matrix assembly vectors
+	IntArray asmz{ 3, 9, 15, 21 };  // local z
+
+	// stress vector
+	FloatArray str, str2;
+	//this->giveCharacteristicVector(str, InternalForcesVector, VM_Total, tStep);
+	for (GaussPoint *gp : *this->giveDefaultIntegrationRulePtr()) {
+		this->giveIPValue(str2, gp, IST_ShellForceTensor, tStep);
+		str2.times(gp->giveWeight());
+		str.add(str2);
+	}
+	// str.times(2.0); // the weights add up to 0.5 for a tria
+	// this needs to be transformed to local
+	FloatMatrix strmat{ 3, 3 };
+	strmat.at(1, 1) = str.at(1); strmat.at(2, 2) = str.at(2); strmat.at(3, 3) = str.at(3);
+	strmat.at(1, 2) = str.at(6); strmat.at(1, 3) = str.at(5); strmat.at(2, 3) = str.at(4);
+	strmat.symmetrized();
+	strmat.rotatedWith(*this->computeGtoLRotationMatrix(), 't'); // back to local
+
+	// if above are local and Forces by unit length
+	// first average them
+	double sx = 0, sy = 0, sxy = 0;
+	//for (auto it : asm1) sx += str.at(it);
+	//for (auto it : asm2) sy += str.at(it);
+	//for (auto it : asm3) sxy += str.at(it);
+	//sx = str.at(1);
+	//sy = str.at(2);
+	//sxy = str.at(6);
+	sx = strmat.at(1, 1);
+	sy = strmat.at(2, 2);
+	sxy = strmat.at(1, 2);
+
+	// partial matrices
+	FloatMatrix Kgx{ 4, 4 }, Kgy{ 4, 4 }, Kgxy{ 4, 4 };
+
+	// calculate the matrices - hp constant thickness
+	double x1, x2, x3, x4, y1, y2, y3, y4, z1, z2, z3, z4;
+	this->giveNodeCoordinates(x1, x2, x3, x4, y1, y2, y3, y4, z1, z2, z3, z4);
+	FloatArray n1{ x1, y1, z1 }, n2{ x2, y2, z2 }, n3{ x3, y3, z3 }, n4{ x4, y4, z4 };
+	// then divide
+	double a1 = n1.distance(n2); double a2 = n4.distance(n3);
+	double a = 0.25*(a1 + a2);
+	double b1 = n2.distance(n3); double b2 = n1.distance(n4);
+	double b = 0.25*(b1 + b2);
+	sx /= (6 * a/b);
+	sy /= (6 * b/a);
+	sxy /= (2);
+
+	Kgx.at(1, 1) = 2; Kgx.at(2, 2) = 2; Kgx.at(3, 3) = 2; Kgx.at(4, 4) = 2;
+	Kgx.at(1, 2) = -2; Kgx.at(1, 3) = -1; Kgx.at(1, 4) = 1;
+	Kgx.at(2, 3) = 1; Kgx.at(2, 4) = -1; Kgx.at(3, 4) = -2;
+
+	Kgy.at(1, 1) = 2; Kgy.at(2, 2) = 2; Kgy.at(3, 3) = 2; Kgy.at(4, 4) = 2;
+	Kgy.at(1, 2) = 1; Kgy.at(1, 3) = -1; Kgy.at(1, 4) = -2;
+	Kgy.at(2, 3) = -2; Kgy.at(2, 4) = -1; Kgy.at(3, 4) = 1;
+
+	Kgxy.at(1, 1) = 1; Kgxy.at(2, 2) = -1; Kgxy.at(3, 3) = 1; Kgxy.at(4, 4) = -1;
+	Kgxy.at(1, 2) = 0; Kgxy.at(1, 3) = -1; Kgxy.at(1, 4) = 0;
+	Kgxy.at(2, 3) = 0; Kgxy.at(2, 4) = 1; Kgxy.at(3, 4) = 0;
+
+	Kgx.symmetrized(); Kgy.symmetrized(); Kgxy.symmetrized();
+
+	// assemble them
+	Kgx.times(sx);
+	Kgx.add(sy, Kgy);
+	Kgx.add(sxy, Kgxy);
+	// once for local z
+	answer.assemble(Kgx, asmz);
+	// done
+}
+
+double
+MITC4Shell::computeArea()
+// returns the area occupied by the receiver
+{
+	// get node coordinates
+	double x1, x2, x3, x4, y1, y2, y3, y4, z1, z2, z3, z4;
+	this->giveNodeCoordinates(x1, x2, x3, x4, y1, y2, y3, y4, z1, z2, z3, z4);
+
+	return 0.5*(x2*y3 + x1*y2 + y1*x3 - x2*y1 - x3*y2 - x1*y3) + 0.5*(x3*y4 + x1*y3 + y1*x4 - x3*y1 - x4*y3 - x1*y4);
+}
 
 void
 MITC4Shell :: computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer)
