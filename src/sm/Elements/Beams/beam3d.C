@@ -896,6 +896,9 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
     double denomy = ( 1. + 2. * kappay ) * ( 1. + 2. * kappay ), denomz = ( 1. + 2. * kappaz ) * ( 1. + 2. * kappaz );
     double N;
 
+	FloatMatrix d;
+	this->computeConstitutiveMatrixAt(d, ElasticStiffness, integrationRulesArray[0]->getIntegrationPoint(0), tStep);
+
     answer.resize(12, 12);
     answer.zero();
 
@@ -926,17 +929,39 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
     answer.at(11, 11) = l * l * ( kappay2 / 3. + kappay / 3. + 2. / 15. ) / denomy;
     answer.at(12, 12) = l * l * ( kappaz2 / 3. + kappaz / 3. + 2. / 15. ) / denomz;
 
-    minVal = min( fabs( answer.at(2, 2) ), fabs( answer.at(3, 3) ) );
-    minVal = min( minVal, fabs( answer.at(5, 5) ) );
-    minVal = min( minVal, fabs( answer.at(6, 6) ) );
+	//minVal = min(fabs(answer.at(2, 2)), fabs(answer.at(3, 3)));
+	//minVal = min(minVal, fabs(answer.at(5, 5)));
+	//minVal = min(minVal, fabs(answer.at(6, 6)));
 
-    answer.at(1, 1) = minVal / 1000.;
-    answer.at(1, 7) = -answer.at(1, 1);
-    answer.at(7, 7) = answer.at(1, 1);
+	//answer.at(1, 1) = minVal / 1000.;
+	//answer.at(1, 7) = -answer.at(1, 1);
+	//answer.at(7, 7) = answer.at(1, 1);
 
-    answer.at(4, 4)   = minVal / 1000.;
-    answer.at(4, 10)  = -answer.at(4, 4);
-    answer.at(10, 10) = answer.at(4, 4);
+	//answer.at(4, 4) = minVal / 1000.;
+	//answer.at(4, 10) = -answer.at(4, 4);
+	//answer.at(10, 10) = answer.at(4, 4);
+
+	StructuralMaterial *mat = dynamic_cast<StructuralMaterial *>(this->giveMaterial());
+
+	FloatMatrix mat3d;
+	double area, G;
+
+	GaussPoint* gp = integrationRulesArray[0]->getIntegrationPoint(0);
+	mat->give1dStressStiffMtrx(mat3d, ElasticStiffness, gp, tStep);
+	G = mat->give('G', gp);
+	area = this->giveStructuralCrossSection()->give(CS_Area, gp);
+
+    //minVal = min( fabs( answer.at(2, 2) ), fabs( answer.at(3, 3) ) );
+    //minVal = min( minVal, fabs( answer.at(5, 5) ) );
+    //minVal = min( minVal, fabs( answer.at(6, 6) ) );
+
+    answer.at(1, 1) = 0.;
+    answer.at(1, 7) = 0.;
+    answer.at(7, 7) = 0.;
+
+	answer.at(4, 4) = d.at(4, 4) / G / area;
+	answer.at(4, 10) = -d.at(4, 4) / G / area;
+	answer.at(10, 10) = d.at(4, 4) / G / area;;
 
 
 
