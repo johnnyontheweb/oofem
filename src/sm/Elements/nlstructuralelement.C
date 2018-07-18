@@ -517,6 +517,7 @@ NLStructuralElement :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep 
         this->giveIPValue(stress, gp, IST_StressTensor, tStep);
         if ( stress.giveSize() ) {
             // Construct the stress_ident matrix
+			stress_identFull.resize(6,6);
             // The complicated part, the not-so-pretty product here: s_il delta_jk
             {
                 stress_identFull.at(1, 1) = stress.at(1);

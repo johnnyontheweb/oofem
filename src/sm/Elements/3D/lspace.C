@@ -153,6 +153,8 @@ LSpace :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int nod
 
     for ( GaussPoint *gp: *integrationRulesArray [ 0 ] ) {
         giveIPValue(val, gp, type, tStep);
+		if (val.giveSize() == 0) return; // exit if not supported
+
         if ( size == 0 ) {
             size = val.giveSize();
             b.resize(4, size);
