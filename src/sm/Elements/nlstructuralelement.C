@@ -507,7 +507,7 @@ NLStructuralElement :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep 
 {
     FloatArray stress;
     FloatMatrix B, stress_ident, stress_identFull;
-    IntArray indx;
+	IntArray indx = { 1, 2, 3, 4, 5, 6 };
 
     answer.clear();
 
@@ -517,7 +517,7 @@ NLStructuralElement :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep 
         this->giveIPValue(stress, gp, IST_StressTensor, tStep);
         if ( stress.giveSize() ) {
             // Construct the stress_ident matrix
-			stress_identFull.resize(6,6);
+			stress_identFull.resize(6, 6);
             // The complicated part, the not-so-pretty product here: s_il delta_jk
             {
                 stress_identFull.at(1, 1) = stress.at(1);
@@ -542,7 +542,7 @@ NLStructuralElement :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep 
             }
             stress_ident.beSubMatrixOf(stress_identFull, indx, indx);
             stress_ident.symmetrized();
-            OOFEM_WARNING("Implementation not tested yet!");
+            // OOFEM_WARNING("Implementation not tested yet!");
 
             this->computeBmatrixAt(gp, B);
             answer.plusProductSymmUpper( B, stress_ident, this->computeVolumeAround(gp) );
