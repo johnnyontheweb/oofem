@@ -506,7 +506,7 @@ void
 NLStructuralElement :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
 {
     FloatArray stress;
-    FloatMatrix B, stress_ident, stress_identFull;
+    FloatMatrix B, stress_identFull; // stress_ident,
 	// IntArray indx = { 1, 2, 3, 4, 5, 6 };
 
     answer.clear();
@@ -541,7 +541,7 @@ NLStructuralElement :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep 
                 stress_identFull.at(5, 6) = stress.at(4);
             }
             // stress_ident.beSubMatrixOf(stress_identFull, indx, indx);
-            // stress_ident.symmetrized();
+            stress_identFull.symmetrized();
             // OOFEM_WARNING("Implementation not tested yet!");
 
             this->computeBmatrixAt(gp, B);
