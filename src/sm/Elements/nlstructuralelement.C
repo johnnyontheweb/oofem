@@ -507,7 +507,7 @@ NLStructuralElement :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep 
 {
     FloatArray stress;
     FloatMatrix B, stress_ident, stress_identFull;
-	IntArray indx = { 1, 2, 3, 4, 5, 6 };
+	// IntArray indx = { 1, 2, 3, 4, 5, 6 };
 
     answer.clear();
 
@@ -540,12 +540,13 @@ NLStructuralElement :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep 
                 stress_identFull.at(4, 6) = stress.at(5);
                 stress_identFull.at(5, 6) = stress.at(4);
             }
-            stress_ident.beSubMatrixOf(stress_identFull, indx, indx);
-            stress_ident.symmetrized();
+            // stress_ident.beSubMatrixOf(stress_identFull, indx, indx);
+            // stress_ident.symmetrized();
             // OOFEM_WARNING("Implementation not tested yet!");
 
             this->computeBmatrixAt(gp, B);
-            answer.plusProductSymmUpper( B, stress_ident, this->computeVolumeAround(gp) );
+			FloatMatrix sB; sB.beProductOf(stress_identFull,B);
+			answer.plusProductSymmUpper(B, sB, this->computeVolumeAround(gp));
         }
     }
 
