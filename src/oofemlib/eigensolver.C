@@ -1,0 +1,96 @@
+/*
+ *
+ *                 #####    #####   ######  ######  ###   ###
+ *               ##   ##  ##   ##  ##      ##      ## ### ##
+ *              ##   ##  ##   ##  ####    ####    ##  #  ##
+ *             ##   ##  ##   ##  ##      ##      ##     ##
+ *            ##   ##  ##   ##  ##      ##      ##     ##
+ *            #####    #####   ##      ######  ##     ##
+ *
+ *
+ *             OOFEM : Object Oriented Finite Element Code
+ *
+ *               Copyright (C) 1993 - 2013   Borek Patzak
+ *
+ *
+ *
+ *       Czech Technical University, Faculty of Civil Engineering,
+ *   Department of Structural Mechanics, 166 29 Prague, Czech Republic
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2.1 of the License, or (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+
+#include <../unsupported/Eigen/ArpackSupport>
+#include <../Eigen/SparseCore>
+#include <../Eigen/SparseCholesky>
+#include "eigensolver.h"
+#include "floatmatrix.h"
+#include "floatarray.h"
+#include "sparsemtrx.h"
+#include "mathfem.h"
+#include "sparselinsystemnm.h"
+#include "classfactory.h"
+#include "domain.h"
+#include "engngm.h"
+#include <memory>
+
+namespace oofem {
+
+EigenSolver :: EigenSolver(Domain *d, EngngModel *m) :
+    SparseGeneralEigenValueSystemNM(d, m)
+{
+    nitem = 100; // max number of iterations
+}
+
+
+EigenSolver :: ~EigenSolver() { }
+
+NM_Status
+EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatrix &_r, double rtol, int nroot)
+{
+	FILE *outStream;
+	int size;
+
+	outStream = domain->giveEngngModel()->giveOutputStream();
+
+	// first check whether Lhs is defined
+
+	if (a.giveNumberOfRows() != a.giveNumberOfColumns() ||
+		b.giveNumberOfRows() != b.giveNumberOfRows() ||
+		a.giveNumberOfColumns() != b.giveNumberOfColumns()) {
+		OOFEM_ERROR("matrices size mismatch");
+	}
+
+	typedef Eigen::SparseMatrix<double,0,int> SparseMat;
+	typedef Eigen::SimplicialLDLT<SparseMat> SparseChol;
+	typedef Eigen::ArpackGeneralizedSelfAdjointEigenSolver <SparseMat, SparseChol> Arpack;
+	Arpack arpack;
+	// define sparse matrix A
+	SparseMat* A = dynamic_cast<SparseMat*>(&a);
+	SparseMat* B = dynamic_cast<SparseMat*>(&b);
+	if (!A || !B)
+		OOFEM_ERROR("Error casting matrices");
+	//...
+	// calculate the two smallest eigenvalues
+	arpack.compute(*A, *B, nroot, "SM");
+
+#ifdef TIME_REPORT
+	timer.stopTimer();
+	OOFEM_LOG_INFO("SLEPcSolver info: user time consumed by solution: %.2fs\n", timer.getUtime());
+#endif
+
+	return NM_Success;
+}
+} // end namespace oofem

@@ -50,7 +50,8 @@ enum SparseMtrxType {
     SMT_PetscMtrx,     ///< PETSc library mtrx representation.
     SMT_DSS_sym_LDL,   ///< Richard Vondracek's sparse direct solver.
     SMT_DSS_sym_LL,    ///< Richard Vondracek's sparse direct solver.
-    SMT_DSS_unsym_LU   ///< Richard Vondracek's sparse direct solver.
+    SMT_DSS_unsym_LU,  ///< Richard Vondracek's sparse direct solver.
+	SMT_EigenSparse    ///< Eigen Library SparseMatrix<double>
 };
 } // end namespace oofem
 #endif // sparsematrixtype_h

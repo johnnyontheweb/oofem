@@ -115,6 +115,7 @@ endif ()
 # I believe the subdirs should be used when including instead.
 include_directories ("${oofem_SOURCE_DIR}/src/oofemlib")
 include_directories ("${oofem_BINARY_DIR}")
+include_directories ("${oofem_SOURCE_DIR}/src")
 
 # Is there really any reason not to compile all of them? Some has cross dependencies.
 if (${CMAKE_VERSION} VERSION_LESS "2.8.8")

@@ -42,7 +42,8 @@ namespace oofem {
 enum GenEigvalSolverType {
     GES_SubspaceIt,
     GES_InverseIt,
-    GES_SLEPc
+    GES_SLEPc,
+	GES_Eigen
 };
 } // end namespace oofem
 #endif // geneigvalsolvertype_h

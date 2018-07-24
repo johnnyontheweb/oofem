@@ -250,6 +250,10 @@ void LinearStability :: solveYourselfAt(TimeStep *tStep)
                    EModelDefaultEquationNumbering(), this->giveDomain(1) );
     initialStressMatrix->times(-1.0);
 
+	//FloatMatrix stiff, initstr;
+	//stiffnessMatrix->writeToFile("stiff.txt");
+	//initialStressMatrix->writeToFile("istr.txt");
+
     //  stiffnessMatrix->printYourself();
     //  initialStressMatrix->printYourself();
 

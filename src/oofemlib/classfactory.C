@@ -52,6 +52,7 @@
 #ifdef __SLEPC_MODULE
  #include "slepcsolver.h"
 #endif
+#include "eigensolver.h"
 
 #include "nodalaveragingrecoverymodel.h"
 #include "zznodalrecoverymodel.h"
@@ -427,6 +428,9 @@ SparseGeneralEigenValueSystemNM *ClassFactory :: createGeneralizedEigenValueSolv
         return new SLEPcSolver(domain, emodel);
     }
 #endif
+	else if (st == GES_Eigen) {
+		return new EigenSolver(domain, emodel);
+	}
     return NULL;
 }
 

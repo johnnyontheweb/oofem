@@ -35,9 +35,11 @@ set (core_unsorted
     rowcol.C skyline.C skylineu.C
     ldltfact.C
     inverseit.C subspaceit.C gjacobi.C
+	eigensolver.C
     #
     symcompcol.C compcol.C
     unstructuredgridfield.C
+	eigensolvermatrix.C
     )
 
 #oofegutils
