@@ -40,7 +40,7 @@ template<typename T, T... nn>
 struct numeric_list { constexpr static std::size_t count = sizeof...(nn); };
 
 template<typename T, T n, T... nn>
-struct numeric_list<T, n, nn...> { static const std::size_t count = sizeof...(nn) + 1; const static T first_value = n; };
+struct numeric_list<T, n, nn...> { constexpr static std::size_t count = sizeof...(nn) + 1; constexpr static T first_value = n; };
 
 /* numeric list constructors
  *
@@ -122,10 +122,6 @@ template<typename a, typename... as>                      struct get<0, type_lis
 
 template<typename T, int n, T a, T... as>                        struct get<n, numeric_list<T, a, as...>>   : get<n-1, numeric_list<T, as...>> {};
 template<typename T, T a, T... as>                               struct get<0, numeric_list<T, a, as...>>   { constexpr static T value = a; };
-
-template<std::size_t n, typename T, T a, T... as> constexpr T       array_get(const numeric_list<T, a, as...>&) {
-   return get<(int)n, numeric_list<T, a, as...>>::value;
-}
 
 /* always get type, regardless of dummy; good for parameter pack expansion */
 
@@ -268,7 +264,7 @@ template<
   typename Reducer
 > struct reduce<Reducer>
 {
-  EIGEN_DEVICE_FUNC constexpr static inline int run() { return Reducer::Identity; }
+  constexpr static inline int run() { return Reducer::Identity; }
 };
 
 template<
@@ -276,7 +272,7 @@ template<
   typename A
 > struct reduce<Reducer, A>
 {
-  EIGEN_DEVICE_FUNC constexpr static inline A run(A a) { return a; }
+  constexpr static inline A run(A a) { return a; }
 };
 
 template<
@@ -285,7 +281,7 @@ template<
   typename... Ts
 > struct reduce<Reducer, A, Ts...>
 {
-  EIGEN_DEVICE_FUNC constexpr static inline auto run(A a, Ts... ts) -> decltype(Reducer::run(a, reduce<Reducer, Ts...>::run(ts...))) {
+  constexpr static inline auto run(A a, Ts... ts) -> decltype(Reducer::run(a, reduce<Reducer, Ts...>::run(ts...))) {
     return Reducer::run(a, reduce<Reducer, Ts...>::run(ts...));
   }
 };
@@ -324,7 +320,7 @@ struct greater_equal_zero_op { template<typename A> constexpr static inline auto
 // together in front... (13.0 doesn't work with array_prod/array_reduce/... anyway, but 13.1
 // does...
 template<typename... Ts>
-EIGEN_DEVICE_FUNC constexpr inline decltype(reduce<product_op, Ts...>::run((*((Ts*)0))...)) arg_prod(Ts... ts)
+constexpr inline decltype(reduce<product_op, Ts...>::run((*((Ts*)0))...)) arg_prod(Ts... ts)
 {
   return reduce<product_op, Ts...>::run(ts...);
 }

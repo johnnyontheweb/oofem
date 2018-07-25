@@ -20,7 +20,7 @@ namespace Eigen {
   * \brief The tensor base class.
   *
   * This class is the common parent of the Tensor and TensorMap class, thus
-  * making it possible to use either class interchangeably in expressions.
+  * making it possible to use either class interchangably in expressions.
   */
 
 template<typename Derived>
@@ -133,37 +133,11 @@ class TensorBase<Derived, ReadOnlyAccessors>
       return unaryExpr(internal::scalar_digamma_op<Scalar>());
     }
 
-    EIGEN_DEVICE_FUNC
-    EIGEN_STRONG_INLINE const TensorCwiseUnaryOp<internal::scalar_i0e_op<Scalar>, const Derived>
-    i0e() const {
-      return unaryExpr(internal::scalar_i0e_op<Scalar>());
-    }
-
-    EIGEN_DEVICE_FUNC
-    EIGEN_STRONG_INLINE const TensorCwiseUnaryOp<internal::scalar_i1e_op<Scalar>, const Derived>
-    i1e() const {
-      return unaryExpr(internal::scalar_i1e_op<Scalar>());
-    }
-
     // igamma(a = this, x = other)
     template<typename OtherDerived> EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
     const TensorCwiseBinaryOp<internal::scalar_igamma_op<Scalar>, const Derived, const OtherDerived>
     igamma(const OtherDerived& other) const {
       return binaryExpr(other.derived(), internal::scalar_igamma_op<Scalar>());
-    }
-
-    // igamma_der_a(a = this, x = other)
-    template<typename OtherDerived> EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
-    const TensorCwiseBinaryOp<internal::scalar_igamma_der_a_op<Scalar>, const Derived, const OtherDerived>
-    igamma_der_a(const OtherDerived& other) const {
-      return binaryExpr(other.derived(), internal::scalar_igamma_der_a_op<Scalar>());
-    }
-
-    // gamma_sample_der_alpha(alpha = this, sample = other)
-    template<typename OtherDerived> EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
-    const TensorCwiseBinaryOp<internal::scalar_gamma_sample_der_alpha_op<Scalar>, const Derived, const OtherDerived>
-    gamma_sample_der_alpha(const OtherDerived& other) const {
-      return binaryExpr(other.derived(), internal::scalar_gamma_sample_der_alpha_op<Scalar>());
     }
 
     // igammac(a = this, x = other)
@@ -212,12 +186,6 @@ class TensorBase<Derived, ReadOnlyAccessors>
     }
 
     EIGEN_DEVICE_FUNC
-    EIGEN_STRONG_INLINE const TensorCwiseUnaryOp<internal::scalar_expm1_op<Scalar>, const Derived>
-    expm1() const {
-      return unaryExpr(internal::scalar_expm1_op<Scalar>());
-    }
-
-    EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE const TensorCwiseUnaryOp<internal::scalar_log_op<Scalar>, const Derived>
     log() const {
       return unaryExpr(internal::scalar_log_op<Scalar>());
@@ -233,12 +201,6 @@ class TensorBase<Derived, ReadOnlyAccessors>
     EIGEN_STRONG_INLINE const TensorCwiseUnaryOp<internal::scalar_abs_op<Scalar>, const Derived>
     abs() const {
       return unaryExpr(internal::scalar_abs_op<Scalar>());
-    }
-
-    EIGEN_DEVICE_FUNC
-    EIGEN_STRONG_INLINE const TensorCwiseUnaryOp<internal::scalar_clamp_op<Scalar>, const Derived>
-    clip(Scalar min, Scalar max) const {
-      return unaryExpr(internal::scalar_clamp_op<Scalar>(min, max));
     }
 
     EIGEN_DEVICE_FUNC
@@ -651,7 +613,7 @@ class TensorBase<Derived, ReadOnlyAccessors>
       const array<Index, NumDimensions>, const Derived>
     argmax() const {
       array<Index, NumDimensions> in_dims;
-      for (Index d = 0; d < NumDimensions; ++d) in_dims[d] = d;
+      for (int d = 0; d < NumDimensions; ++d) in_dims[d] = d;
       return TensorTupleReducerOp<
         internal::ArgMaxTupleReducer<Tuple<Index, CoeffReturnType> >,
         const array<Index, NumDimensions>,
@@ -664,7 +626,7 @@ class TensorBase<Derived, ReadOnlyAccessors>
       const array<Index, NumDimensions>, const Derived>
     argmin() const {
       array<Index, NumDimensions> in_dims;
-      for (Index d = 0; d < NumDimensions; ++d) in_dims[d] = d;
+      for (int d = 0; d < NumDimensions; ++d) in_dims[d] = d;
       return TensorTupleReducerOp<
         internal::ArgMinTupleReducer<Tuple<Index, CoeffReturnType> >,
         const array<Index, NumDimensions>,
@@ -675,7 +637,7 @@ class TensorBase<Derived, ReadOnlyAccessors>
     const TensorTupleReducerOp<
       internal::ArgMaxTupleReducer<Tuple<Index, CoeffReturnType> >,
       const array<Index, 1>, const Derived>
-    argmax(const Index return_dim) const {
+    argmax(const int return_dim) const {
       array<Index, 1> in_dims;
       in_dims[0] = return_dim;
       return TensorTupleReducerOp<
@@ -688,7 +650,7 @@ class TensorBase<Derived, ReadOnlyAccessors>
     const TensorTupleReducerOp<
       internal::ArgMinTupleReducer<Tuple<Index, CoeffReturnType> >,
       const array<Index, 1>, const Derived>
-    argmin(const Index return_dim) const {
+    argmin(const int return_dim) const {
       array<Index, 1> in_dims;
       in_dims[0] = return_dim;
       return TensorTupleReducerOp<
@@ -701,18 +663,6 @@ class TensorBase<Derived, ReadOnlyAccessors>
     const TensorReductionOp<Reducer, const Dims, const Derived>
     reduce(const Dims& dims, const Reducer& reducer) const {
       return TensorReductionOp<Reducer, const Dims, const Derived>(derived(), dims, reducer);
-    }
-
-    template <typename Dims> EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
-    const TensorTraceOp<const Dims, const Derived>
-    trace(const Dims& dims) const {
-      return TensorTraceOp<const Dims, const Derived>(derived(), dims);
-    }
-
-    const TensorTraceOp<const DimensionList<Index, NumDimensions>, const Derived>
-    trace() const {
-      DimensionList<Index, NumDimensions> in_dims;
-      return TensorTraceOp<const DimensionList<Index, NumDimensions>, const Derived>(derived(), in_dims);
     }
 
     template <typename Broadcast> EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
@@ -868,8 +818,7 @@ class TensorBase<Derived, ReadOnlyAccessors>
   protected:
     template <typename Scalar, int NumIndices, int Options, typename IndexType> friend class Tensor;
     template <typename Scalar, typename Dimensions, int Option, typename IndexTypes> friend class TensorFixedSize;
-    // the Eigen:: prefix is required to workaround a compilation issue with nvcc 9.0
-    template <typename OtherDerived, int AccessLevel> friend class Eigen::TensorBase;
+    template <typename OtherDerived, int AccessLevel> friend class TensorBase;
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE const Derived& derived() const { return *static_cast<const Derived*>(this); }
 };
@@ -885,8 +834,7 @@ class TensorBase : public TensorBase<Derived, ReadOnlyAccessors> {
 
     template <typename Scalar, int NumIndices, int Options, typename IndexType> friend class Tensor;
     template <typename Scalar, typename Dimensions, int Option, typename IndexTypes> friend class TensorFixedSize;
-    // the Eigen:: prefix is required to workaround a compilation issue with nvcc 9.0
-    template <typename OtherDerived, int OtherAccessLevel> friend class Eigen::TensorBase;
+    template <typename OtherDerived, int OtherAccessLevel> friend class TensorBase;
 
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Derived& setZero() {

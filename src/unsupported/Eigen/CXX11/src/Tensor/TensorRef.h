@@ -31,7 +31,7 @@ class TensorLazyBaseEvaluator {
   int refCount() const { return m_refcount; }
 
  private:
-  // No copy, no assignment;
+  // No copy, no assigment;
   TensorLazyBaseEvaluator(const TensorLazyBaseEvaluator& other);
   TensorLazyBaseEvaluator& operator = (const TensorLazyBaseEvaluator& other);
 

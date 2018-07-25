@@ -193,7 +193,7 @@ class SparseLU : public SparseSolverBase<SparseLU<_MatrixType,_OrderingType> >, 
     
     /** \brief Reports whether previous computation was successful.
       *
-      * \returns \c Success if computation was successful,
+      * \returns \c Success if computation was succesful,
       *          \c NumericalIssue if the LU factorization reports a problem, zero diagonal for instance
       *          \c InvalidInput if the input matrix is invalid
       *
@@ -706,8 +706,8 @@ struct SparseLUMatrixLReturnType : internal::no_assignment_operator
   typedef typename MappedSupernodalType::Scalar Scalar;
   explicit SparseLUMatrixLReturnType(const MappedSupernodalType& mapL) : m_mapL(mapL)
   { }
-  Index rows() const { return m_mapL.rows(); }
-  Index cols() const { return m_mapL.cols(); }
+  Index rows() { return m_mapL.rows(); }
+  Index cols() { return m_mapL.cols(); }
   template<typename Dest>
   void solveInPlace( MatrixBase<Dest> &X) const
   {
@@ -723,8 +723,8 @@ struct SparseLUMatrixUReturnType : internal::no_assignment_operator
   SparseLUMatrixUReturnType(const MatrixLType& mapL, const MatrixUType& mapU)
   : m_mapL(mapL),m_mapU(mapU)
   { }
-  Index rows() const { return m_mapL.rows(); }
-  Index cols() const { return m_mapL.cols(); }
+  Index rows() { return m_mapL.rows(); }
+  Index cols() { return m_mapL.cols(); }
 
   template<typename Dest>   void solveInPlace(MatrixBase<Dest> &X) const
   {
@@ -747,9 +747,8 @@ struct SparseLUMatrixUReturnType : internal::no_assignment_operator
       }
       else
       {
-        // FIXME: the following lines should use Block expressions and not Map!
         Map<const Matrix<Scalar,Dynamic,Dynamic, ColMajor>, 0, OuterStride<> > A( &(m_mapL.valuePtr()[luptr]), nsupc, nsupc, OuterStride<>(lda) );
-        Map< Matrix<Scalar,Dynamic,Dest::ColsAtCompileTime, ColMajor>, 0, OuterStride<> > U (&(X.coeffRef(fsupc,0)), nsupc, nrhs, OuterStride<>(n) );
+        Map< Matrix<Scalar,Dynamic,Dest::ColsAtCompileTime, ColMajor>, 0, OuterStride<> > U (&(X(fsupc,0)), nsupc, nrhs, OuterStride<>(n) );
         U = A.template triangularView<Upper>().solve(U);
       }
 
