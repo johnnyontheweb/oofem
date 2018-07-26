@@ -95,6 +95,8 @@ public:
 	double &operator() (int i, int j);
 };
 
+#define SparseMat Eigen::SparseMatrix<double, 0, int>
+
 } // end namespace oofem
 
 #endif // eigensolvermatrix_h

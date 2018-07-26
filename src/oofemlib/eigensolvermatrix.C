@@ -50,8 +50,6 @@ namespace oofem {
 
 REGISTER_SparseMtrx( EigenSolverMatrix, SMT_EigenSparse);
 
-#define SparseMat Eigen::SparseMatrix<double, 0, int>
-
 EigenSolverMatrix::EigenSolverMatrix(int n) : SparseMtrx(n, n), SparseMat(n,n)
 {
 }

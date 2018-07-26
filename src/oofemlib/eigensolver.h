@@ -33,7 +33,7 @@
  */
 
 //   **************************************************
-//   *** CLASS GENERALIZED INVERSE ITERATION SOLVER ***
+//   ***         CLASS SPECTRA EIGEN SOLVER         ***
 //   **************************************************
 
 

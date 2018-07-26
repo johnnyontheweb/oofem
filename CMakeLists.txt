@@ -116,6 +116,7 @@ endif ()
 include_directories ("${oofem_SOURCE_DIR}/src/oofemlib")
 include_directories ("${oofem_BINARY_DIR}")
 include_directories ("${oofem_SOURCE_DIR}/src")
+include_directories ("${oofem_SOURCE_DIR}/src/spectra")
 
 # Is there really any reason not to compile all of them? Some has cross dependencies.
 if (${CMAKE_VERSION} VERSION_LESS "2.8.8")

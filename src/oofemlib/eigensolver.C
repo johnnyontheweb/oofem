@@ -35,6 +35,9 @@
 #include <../unsupported/Eigen/ArpackSupport>
 #include <../Eigen/SparseCore>
 #include <../Eigen/SparseCholesky>
+#include <SymGEigsSolver.h>
+#include <MatOp/SparseGenMatProd.h>
+#include "eigensolvermatrix.h"
 #include "eigensolver.h"
 #include "floatmatrix.h"
 #include "floatarray.h"
@@ -45,6 +48,8 @@
 #include "domain.h"
 #include "engngm.h"
 #include <memory>
+
+using namespace Spectra;
 
 namespace oofem {
 
@@ -73,18 +78,41 @@ EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatri
 		OOFEM_ERROR("matrices size mismatch");
 	}
 
-	typedef Eigen::SparseMatrix<double,0,int> SparseMat;
-	typedef Eigen::SimplicialLDLT<SparseMat> SparseChol;
-	typedef Eigen::ArpackGeneralizedSelfAdjointEigenSolver <SparseMat, SparseChol> Arpack;
-	Arpack arpack;
-	// define sparse matrix A
+	//typedef Eigen::SparseMatrix<double,0,int> SparseMat;
+	//typedef Eigen::SimplicialLDLT<SparseMat> SparseChol;
+	//typedef Eigen::ArpackGeneralizedSelfAdjointEigenSolver <SparseMat, SparseChol> Arpack;
+	//Arpack arpack;
+	//// define sparse matrix A
 	SparseMat* A = dynamic_cast<SparseMat*>(&a);
 	SparseMat* B = dynamic_cast<SparseMat*>(&b);
 	if (!A || !B)
 		OOFEM_ERROR("Error casting matrices");
-	//...
-	// calculate the two smallest eigenvalues
-	arpack.compute(*A, *B, nroot, "SM");
+	////...
+	//// calculate the two smallest eigenvalues
+	//arpack.compute(*A, *B, nroot, "SM");
+
+	SparseGenMatProd<double,0,int> op(*A);
+	SparseGenMatProd<double,0,int> opB(*B);
+	// Construct eigen solver object, requesting the largest three eigenvalues
+	SymGEigsSolver< double, SMALLEST_REAL, SparseGenMatProd<double, 0, int>, SparseGenMatProd<double, 0, int>, GEIGS_REGULAR_INVERSE  > eigs(&op, &opB, nroot, min(2 * nroot, a.giveNumberOfColumns()));
+	// Initialize and compute
+	eigs.init();
+	int nconv = eigs.compute();
+	// Retrieve results
+	Eigen::VectorXcd evalues;
+	if (eigs.info() == SUCCESSFUL)
+		evalues = eigs.eigenvalues();
+	_eigv.resize(evalues.size());
+	for (int i=0;i<evalues.size();++i)
+		_eigv.at(i+1)=evalues.coeff(i).real();
+
+	Eigen::MatrixXcd evectors = eigs.eigenvectors();
+	_r.resize(evectors.rows(), evectors.cols());
+	for (int i = 0; i < evectors.rows(); ++i)
+		for (int j = 0; j < evectors.cols(); ++j){
+			_r.at(i + 1, j + 1) = evectors.coeff(i, j).real();
+		}
+		
 
 #ifdef TIME_REPORT
 	timer.stopTimer();
