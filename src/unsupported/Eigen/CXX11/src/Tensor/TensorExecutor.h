@@ -201,7 +201,7 @@ class TensorExecutor<Expression, GpuDevice, Vectorizable> {
 };
 
 
-#if defined(EIGEN_GPUCC)
+#if defined(__CUDACC__)
 template <typename Evaluator, typename Index, bool Vectorizable>
 struct EigenMetaKernelEval {
   static __device__ EIGEN_ALWAYS_INLINE
@@ -250,22 +250,21 @@ inline void TensorExecutor<Expression, GpuDevice, Vectorizable>::run(
   TensorEvaluator<Expression, GpuDevice> evaluator(expr, device);
   const bool needs_assign = evaluator.evalSubExprsIfNeeded(NULL);
   if (needs_assign) {
-
-    const int block_size = device.maxGpuThreadsPerBlock();
-    const int max_blocks = device.getNumGpuMultiProcessors() *
-                           device.maxGpuThreadsPerMultiProcessor() / block_size;
+    const int block_size = device.maxCudaThreadsPerBlock();
+    const int max_blocks = device.getNumCudaMultiProcessors() *
+                           device.maxCudaThreadsPerMultiProcessor() / block_size;
     const Index size = array_prod(evaluator.dimensions());
     // Create a least one block to ensure we won't crash when tensorflow calls with tensors of size 0.
     const int num_blocks = numext::maxi<int>(numext::mini<int>(max_blocks, divup<int>(size, block_size)), 1);
 
-    LAUNCH_GPU_KERNEL(
+    LAUNCH_CUDA_KERNEL(
         (EigenMetaKernel<TensorEvaluator<Expression, GpuDevice>, Index>),
         num_blocks, block_size, 0, device, evaluator, size);
   }
   evaluator.cleanup();
 }
 
-#endif  // EIGEN_GPUCC
+#endif  // __CUDACC__
 #endif  // EIGEN_USE_GPU
 
 // SYCL Executor policy

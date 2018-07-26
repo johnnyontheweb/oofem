@@ -33,7 +33,7 @@ struct functor_traits<scalar_mod_op<Scalar> >
  */
 template <typename Scalar>
 struct scalar_mod2_op {
-  EIGEN_EMPTY_STRUCT_CTOR(scalar_mod2_op)
+  EIGEN_EMPTY_STRUCT_CTOR(scalar_mod2_op);
   EIGEN_DEVICE_FUNC inline Scalar operator() (const Scalar& a, const Scalar& b) const { return a % b; }
 };
 template <typename Scalar>
@@ -42,7 +42,7 @@ struct functor_traits<scalar_mod2_op<Scalar> >
 
 template <typename Scalar>
 struct scalar_fmod_op {
-  EIGEN_EMPTY_STRUCT_CTOR(scalar_fmod_op)
+  EIGEN_EMPTY_STRUCT_CTOR(scalar_fmod_op);
   EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE Scalar
   operator()(const Scalar& a, const Scalar& b) const {
     return numext::fmod(a, b);
@@ -166,8 +166,7 @@ template <typename T> struct MeanReducer
     return pset1<Packet>(initialize());
   }
   EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE T finalize(const T accum) const {
-    internal::scalar_quotient_op<T> quotient_op;
-    return quotient_op(accum, T(scalarCount_));
+    return accum / scalarCount_;
   }
   template <typename Packet>
   EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE Packet finalizePacket(const Packet& vaccum) const {
@@ -176,10 +175,7 @@ template <typename T> struct MeanReducer
   template <typename Packet>
   EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE T finalizeBoth(const T saccum, const Packet& vaccum) const {
     internal::scalar_sum_op<T> sum_op;
-    internal::scalar_quotient_op<T> quotient_op;
-    return quotient_op(
-        sum_op(saccum, predux(vaccum)),
-        T(scalarCount_ + packetCount_ * unpacket_traits<Packet>::size));
+    return sum_op(saccum, predux(vaccum)) / (scalarCount_ + packetCount_ * unpacket_traits<Packet>::size);
   }
 
   protected:
@@ -486,25 +482,6 @@ struct functor_traits<GaussianGenerator<T, Index, NumDims> > {
     PacketAccess = GaussianGenerator<T, Index, NumDims>::PacketAccess
   };
 };
-
-template <typename Scalar>
-struct scalar_clamp_op {
-  EIGEN_DEVICE_FUNC inline scalar_clamp_op(const Scalar& _min, const Scalar& _max) : m_min(_min), m_max(_max) {}
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE const Scalar
-  operator()(const Scalar& x) const {
-    return numext::mini(numext::maxi(x, m_min), m_max);
-  }
-  template <typename Packet>
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE const Packet
-  packetOp(const Packet& x) const {
-    return internal::pmin(internal::pmax(x, pset1<Packet>(m_min)), pset1<Packet>(m_max));
-  }
-  const Scalar m_min;
-  const Scalar m_max;
-};
-template<typename Scalar>
-struct functor_traits<scalar_clamp_op<Scalar> >
-{ enum { Cost = 2 * NumTraits<Scalar>::AddCost, PacketAccess = (packet_traits<Scalar>::HasMin && packet_traits<Scalar>::HasMax)}; };
 
 } // end namespace internal
 } // end namespace Eigen

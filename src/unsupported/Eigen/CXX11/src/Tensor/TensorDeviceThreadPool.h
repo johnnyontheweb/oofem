@@ -12,6 +12,17 @@
 
 namespace Eigen {
 
+// Use the SimpleThreadPool by default. We'll switch to the new non blocking
+// thread pool later.
+#ifndef EIGEN_USE_SIMPLE_THREAD_POOL
+template <typename Env> using ThreadPoolTempl = NonBlockingThreadPoolTempl<Env>;
+typedef NonBlockingThreadPool ThreadPool;
+#else
+template <typename Env> using ThreadPoolTempl = SimpleThreadPoolTempl<Env>;
+typedef SimpleThreadPool ThreadPool;
+#endif
+
+
 // Barrier is an object that allows one or more threads to wait until
 // Notify has been called a specified number of times.
 class Barrier {
@@ -154,11 +165,7 @@ struct ThreadPoolDevice {
 
   template <class Function, class... Args>
   EIGEN_STRONG_INLINE void enqueueNoNotification(Function&& f, Args&&... args) const {
-    if (sizeof...(args) > 0) {
-      pool_->Schedule(std::bind(f, args...));
-    } else {
-      pool_->Schedule(f);
-    }
+    pool_->Schedule(std::bind(f, args...));
   }
 
   // Returns a logical thread index between 0 and pool_->NumThreads() - 1 if
@@ -169,7 +176,7 @@ struct ThreadPoolDevice {
 
   // parallelFor executes f with [0, n) arguments in parallel and waits for
   // completion. F accepts a half-open interval [first, last).
-  // Block size is chosen based on the iteration cost and resulting parallel
+  // Block size is choosen based on the iteration cost and resulting parallel
   // efficiency. If block_align is not nullptr, it is called to round up the
   // block size.
   void parallelFor(Index n, const TensorOpCost& cost,
@@ -252,7 +259,7 @@ struct ThreadPoolDevice {
       // Split into halves and submit to the pool.
       Index mid = first + divup((last - first) / 2, block_size) * block_size;
       pool_->Schedule([=, &handleRange]() { handleRange(mid, last); });
-      handleRange(first, mid);
+      pool_->Schedule([=, &handleRange]() { handleRange(first, mid); });
     };
     handleRange(0, n);
     barrier.Wait();
@@ -263,9 +270,6 @@ struct ThreadPoolDevice {
                    std::function<void(Index, Index)> f) const {
     parallelFor(n, cost, nullptr, std::move(f));
   }
-
-  // Thread pool accessor.
-  ThreadPoolInterface* getPool() const { return pool_; }
 
  private:
   ThreadPoolInterface* pool_;

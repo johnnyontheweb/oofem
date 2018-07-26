@@ -177,13 +177,6 @@ class RunQueue {
   // Can be called by any thread at any time.
   bool Empty() const { return Size() == 0; }
 
-  // Delete all the elements from the queue.
-  void Flush() {
-    while (!Empty()) {
-      PopFront();
-    }
-  }
-
  private:
   static const unsigned kMask = kSize - 1;
   static const unsigned kMask2 = (kSize << 1) - 1;
@@ -198,7 +191,7 @@ class RunQueue {
   };
   std::mutex mutex_;
   // Low log(kSize) + 1 bits in front_ and back_ contain rolling index of
-  // front/back, respectively. The remaining bits contain modification counters
+  // front/back, repsectively. The remaining bits contain modification counters
   // that are incremented on Push operations. This allows us to (1) distinguish
   // between empty and full conditions (if we would use log(kSize) bits for
   // position, these conditions would be indistinguishable); (2) obtain

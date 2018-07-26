@@ -31,7 +31,6 @@ struct traits<TensorBroadcastingOp<Broadcast, XprType> > : public traits<XprType
   typedef typename remove_reference<Nested>::type _Nested;
   static const int NumDimensions = XprTraits::NumDimensions;
   static const int Layout = XprTraits::Layout;
-  typedef typename XprTraits::PointerType PointerType;
 };
 
 template<typename Broadcast, typename XprType>
@@ -55,7 +54,7 @@ struct is_input_scalar<Sizes<> > {
   static const bool value = true;
 };
 #ifndef EIGEN_EMULATE_CXX11_META_H
-template <typename std::ptrdiff_t... Indices>
+template <typename std::size_t... Indices>
 struct is_input_scalar<Sizes<Indices...> > {
   static const bool value = (Sizes<Indices...>::total_size == 1);
 };
@@ -105,7 +104,6 @@ struct TensorEvaluator<const TensorBroadcastingOp<Broadcast, ArgType>, Device>
   typedef typename XprType::CoeffReturnType CoeffReturnType;
   typedef typename PacketType<CoeffReturnType, Device>::type PacketReturnType;
   static const int PacketSize = internal::unpacket_traits<PacketReturnType>::size;
-  bool isCopy= false, nByOne = false, oneByN = false;
 
   enum {
     IsAligned = true,
@@ -122,13 +120,10 @@ struct TensorEvaluator<const TensorBroadcastingOp<Broadcast, ArgType>, Device>
     // tensor with N >= 1 of 1 element first and then broadcast.
     EIGEN_STATIC_ASSERT((NumDims > 0), YOU_MADE_A_PROGRAMMING_MISTAKE);
     const InputDimensions& input_dims = m_impl.dimensions();
-    isCopy = true;
+    const Broadcast& broadcast = op.broadcast();
     for (int i = 0; i < NumDims; ++i) {
       eigen_assert(input_dims[i] > 0);
-      m_dimensions[i] = input_dims[i] * m_broadcast[i];
-      if (m_broadcast[i] != 1) {
-        isCopy = false;
-      }
+      m_dimensions[i] = input_dims[i] * broadcast[i];
     }
 
     if (static_cast<int>(Layout) == static_cast<int>(ColMajor)) {
@@ -144,40 +139,6 @@ struct TensorEvaluator<const TensorBroadcastingOp<Broadcast, ArgType>, Device>
       for (int i = NumDims-2; i >= 0; --i) {
         m_inputStrides[i] = m_inputStrides[i+1] * input_dims[i+1];
         m_outputStrides[i] = m_outputStrides[i+1] * m_dimensions[i+1];
-      }
-    }
-
-    if (input_dims[0] == 1) {
-      oneByN = true;
-      for (int i = 1; i < NumDims; ++i) {
-        if (m_broadcast[i] != 1) {
-          oneByN = false;
-          break;
-        }
-      }
-    } else if (input_dims[NumDims-1] == 1) {
-      nByOne = true;
-      for (int i = 0; i < NumDims-1; ++i) {
-        if (m_broadcast[i] != 1) {
-          nByOne = false;
-          break;
-        }
-      }
-    }
-
-    // Handle special format like NCHW, its input shape is '[1, N..., 1]' and
-    // broadcast shape is '[N, 1..., N]'
-    if (!oneByN && !nByOne) {
-      if (input_dims[0] == 1 && input_dims[NumDims-1] == 1 && NumDims > 2) {
-        nByOne = true;
-        oneByN = true;
-        for (int i = 1; i < NumDims-1; ++i) {
-          if (m_broadcast[i] != 1) {
-            nByOne = false;
-            oneByN = false;
-            break;
-          }
-        }
       }
     }
   }
@@ -200,17 +161,9 @@ struct TensorEvaluator<const TensorBroadcastingOp<Broadcast, ArgType>, Device>
     }
 
     if (static_cast<int>(Layout) == static_cast<int>(ColMajor)) {
-      if (isCopy) {
-        return m_impl.coeff(index);
-      } else {
-        return coeffColMajor(index);
-      }
+      return coeffColMajor(index);
     } else {
-      if (isCopy) {
-        return m_impl.coeff(index);
-      } else {
-        return coeffRowMajor(index);
-      }
+      return coeffRowMajor(index);
     }
   }
 
@@ -283,134 +236,9 @@ struct TensorEvaluator<const TensorBroadcastingOp<Broadcast, ArgType>, Device>
     }
 
     if (static_cast<int>(Layout) == static_cast<int>(ColMajor)) {
-      if (isCopy) {
-        return m_impl.template packet<LoadMode>(index);
-      } else if (oneByN && !nByOne) {
-        return packetNByOne<LoadMode>(index);
-      } else if (!oneByN && nByOne) {
-        return packetOneByN<LoadMode>(index);
-      } else if (oneByN && nByOne) {
-        return packetOneByNByOne<LoadMode>(index);
-      } else {
-        return packetColMajor<LoadMode>(index);
-      }
+      return packetColMajor<LoadMode>(index);
     } else {
-      if (isCopy) {
-        return m_impl.template packet<LoadMode>(index);
-      } else if (oneByN && !nByOne) {
-        return packetOneByN<LoadMode>(index);
-      } else if (!oneByN && nByOne) {
-        return packetNByOne<LoadMode>(index);
-      } else if (oneByN && nByOne) {
-        return packetOneByNByOne<LoadMode>(index);
-      } else {
-        return packetRowMajor<LoadMode>(index);
-      }
-    }
-  }
-
-  template<int LoadMode>
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE PacketReturnType packetOneByNByOne
-  (Index index) const
-  {
-    EIGEN_STATIC_ASSERT((PacketSize > 1), YOU_MADE_A_PROGRAMMING_MISTAKE)
-    eigen_assert(index+PacketSize-1 < dimensions().TotalSize());
-
-    EIGEN_ALIGN_MAX typename internal::remove_const<CoeffReturnType>::type values[PacketSize];
-    Index startDim, endDim;
-    Index inputIndex, outputOffset, batchedIndex;
-
-    if (static_cast<int>(Layout) == static_cast<int>(ColMajor)) {
-      startDim = NumDims - 1;
-      endDim = 1;
-    } else {
-      startDim = 0;
-      endDim = NumDims - 2;
-    }
-
-    batchedIndex = index % m_outputStrides[startDim];
-    inputIndex   = batchedIndex / m_outputStrides[endDim];
-    outputOffset = batchedIndex % m_outputStrides[endDim];
-
-    if (outputOffset + PacketSize <= m_outputStrides[endDim]) {
-      values[0] = m_impl.coeff(inputIndex);
-      return internal::pload1<PacketReturnType>(values);
-    } else {
-      for (int i = 0, cur = 0; i < PacketSize; ++i, ++cur) {
-        if (outputOffset + cur < m_outputStrides[endDim]) {
-          values[i] = m_impl.coeff(inputIndex);
-        } else {
-          ++inputIndex;
-          inputIndex = (inputIndex == m_inputStrides[startDim] ? 0 : inputIndex);
-          values[i] = m_impl.coeff(inputIndex);
-          outputOffset = 0;
-          cur = 0;
-        }
-      }
-      return internal::pload<PacketReturnType>(values);
-    }
-  }
-
-  template<int LoadMode>
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE PacketReturnType packetOneByN(Index index) const
-  {
-    EIGEN_STATIC_ASSERT((PacketSize > 1), YOU_MADE_A_PROGRAMMING_MISTAKE)
-    eigen_assert(index+PacketSize-1 < dimensions().TotalSize());
-
-    Index dim, inputIndex;
-
-    if (static_cast<int>(Layout) == static_cast<int>(ColMajor)) {
-      dim = NumDims - 1;
-    } else {
-      dim = 0;
-    }
-
-    inputIndex = index % m_inputStrides[dim];
-    if (inputIndex + PacketSize <= m_inputStrides[dim]) {
-      return m_impl.template packet<Unaligned>(inputIndex);
-    } else {
-      EIGEN_ALIGN_MAX typename internal::remove_const<CoeffReturnType>::type values[PacketSize];
-      for (int i = 0; i < PacketSize; ++i) {
-        if (inputIndex > m_inputStrides[dim]-1) {
-          inputIndex = 0;
-        }
-        values[i] = m_impl.coeff(inputIndex++);
-      }
-      return internal::pload<PacketReturnType>(values);
-    }
-  }
-
-  template<int LoadMode>
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE PacketReturnType packetNByOne(Index index) const
-  {
-    EIGEN_STATIC_ASSERT((PacketSize > 1), YOU_MADE_A_PROGRAMMING_MISTAKE)
-    eigen_assert(index+PacketSize-1 < dimensions().TotalSize());
-
-    EIGEN_ALIGN_MAX typename internal::remove_const<CoeffReturnType>::type values[PacketSize];
-    Index dim, inputIndex, outputOffset;
-
-    if (static_cast<int>(Layout) == static_cast<int>(ColMajor)) {
-      dim = 1;
-    } else {
-      dim = NumDims - 2;
-    }
-
-    inputIndex   = index / m_outputStrides[dim];
-    outputOffset = index % m_outputStrides[dim];
-    if (outputOffset + PacketSize <= m_outputStrides[dim]) {
-      values[0] = m_impl.coeff(inputIndex);
-      return internal::pload1<PacketReturnType>(values);
-    } else {
-      for (int i = 0, cur = 0; i < PacketSize; ++i, ++cur) {
-        if (outputOffset + cur < m_outputStrides[dim]) {
-          values[i] = m_impl.coeff(inputIndex);
-        } else {
-          values[i] = m_impl.coeff(++inputIndex);
-          outputOffset = 0;
-          cur = 0;
-        }
-      }
-      return internal::pload<PacketReturnType>(values);
+      return packetRowMajor<LoadMode>(index);
     }
   }
 
@@ -461,11 +289,7 @@ struct TensorEvaluator<const TensorBroadcastingOp<Broadcast, ArgType>, Device>
       EIGEN_ALIGN_MAX typename internal::remove_const<CoeffReturnType>::type values[PacketSize];
       values[0] = m_impl.coeff(inputIndex);
       for (int i = 1; i < PacketSize; ++i) {
-        if (innermostLoc + i < m_impl.dimensions()[0]) {
-          values[i] = m_impl.coeff(inputIndex+i);
-        } else {
-          values[i] = coeffColMajor(originalIndex+i);
-        }
+        values[i] = coeffColMajor(originalIndex+i);
       }
       PacketReturnType rslt = internal::pload<PacketReturnType>(values);
       return rslt;
@@ -517,11 +341,7 @@ struct TensorEvaluator<const TensorBroadcastingOp<Broadcast, ArgType>, Device>
       EIGEN_ALIGN_MAX typename internal::remove_const<CoeffReturnType>::type values[PacketSize];
       values[0] = m_impl.coeff(inputIndex);
       for (int i = 1; i < PacketSize; ++i) {
-        if (innermostLoc + i < m_impl.dimensions()[NumDims-1]) {
-          values[i] = m_impl.coeff(inputIndex+i);
-        } else {
-          values[i] = coeffRowMajor(originalIndex+i);
-        }
+        values[i] = coeffRowMajor(originalIndex+i);
       }
       PacketReturnType rslt = internal::pload<PacketReturnType>(values);
       return rslt;
@@ -531,7 +351,7 @@ struct TensorEvaluator<const TensorBroadcastingOp<Broadcast, ArgType>, Device>
   EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE TensorOpCost
   costPerCoeff(bool vectorized) const {
     double compute_cost = TensorOpCost::AddCost<Index>();
-    if (!isCopy && NumDims > 0) {
+    if (NumDims > 0) {
       for (int i = NumDims - 1; i > 0; --i) {
         compute_cost += TensorOpCost::DivCost<Index>();
         if (internal::index_statically_eq<Broadcast>(i, 1)) {
@@ -552,7 +372,7 @@ struct TensorEvaluator<const TensorBroadcastingOp<Broadcast, ArgType>, Device>
            TensorOpCost(0, 0, compute_cost, vectorized, PacketSize);
   }
 
-  EIGEN_DEVICE_FUNC typename Eigen::internal::traits<XprType>::PointerType data() const { return NULL; }
+  EIGEN_DEVICE_FUNC Scalar* data() const { return NULL; }
 
   const TensorEvaluator<ArgType, Device>& impl() const { return m_impl; }
 

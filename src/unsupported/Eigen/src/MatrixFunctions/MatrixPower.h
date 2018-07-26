@@ -81,7 +81,7 @@ class MatrixPowerParenthesesReturnValue : public ReturnByValue< MatrixPowerParen
  *
  * \note Currently this class is only used by MatrixPower. One may
  * insist that this be nested into MatrixPower. This class is here to
- * facilitate future development of triangular matrix functions.
+ * faciliate future development of triangular matrix functions.
  */
 template<typename MatrixType>
 class MatrixPowerAtomic : internal::noncopyable
