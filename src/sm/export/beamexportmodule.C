@@ -475,9 +475,9 @@ namespace oofem {
 
 				double EJyy = 0, EJzz = 0, EA = 0, GJ = 0, GKyAy = 0, GKzAz = 0;
 				double psi_y = 0, psi_z = 0;
-				double ay = 0, by = 0, cy = 0, dy = 0, fy = 0;
+				double ay = 0, by = 0, cy = 0, dy = 0, fy = 0; // ey=0;
 				double anx = 0, bnx = 0, cnx = 0;
-				double az = 0, bz = 0, cz = 0, dz = 0, fz = 0;
+				double az = 0, bz = 0, cz = 0, dz = 0, fz = 0; // ez=0;
 				double atx = 0, btx = 0, ctx = 0;
 				bool hasWinklerY, hasWinklerZ;
 				hasWinklerY = hasWinklerZ = false;
@@ -696,6 +696,7 @@ namespace oofem {
 								fy = vy_0;
 								by = (2 * (vy_0 - vy_l) + l*(phiz_l + phiz_0)) / (l_3)-2 * ay*l;
 								cy = -(3 * (vy_0 - vy_l) + l*(2 * phiz_0 + phiz_l)) / l_2 + ay*l_2;
+								// ey=
 							}
 							else { // timoshenko formulation for transversal displacements
 								ay = bl.at(2) / 24 / EJzz;
@@ -703,6 +704,7 @@ namespace oofem {
 								fy = vy_0;
 								by = (2 / l*(vy_0 - vy_l) + (phiz_l + phiz_0)) / (l_2 + 12 * psi_y) - 2 * ay*l;
 								cy = -(72 * EJzz*GKyAy*l* (vy_0 - vy_l) + GKyAy*l_2*(24 * EJzz*(2 * phiz_0 + phiz_l) - l_3*bl.at(2)) + 12 * EJzz*(12 * EJzz*(phiz_0 - phiz_l) - l_3*bl.at(2))) / (24 * EJzz*l* (GKyAy*l_2 + 12 * EJzz));
+								// ey=
 							}
 						}
 

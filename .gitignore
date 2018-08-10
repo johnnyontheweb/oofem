@@ -883,3 +883,9 @@ tests/sm/t3d.bmf
 /MinSizeRel/test_verifica_buck.in
 /MinSizeRel/cilindro-tria.in
 /MinSizeRel/traveShellTria2-buck.in
+/MinSizeRel/beam1.in
+/MinSizeRel/beam2.in
+/MinSizeRel/beamtest3d.in
+/MinSizeRel/hex.grid
+/MinSizeRel/mises2_heza-buck.in
+/MinSizeRel/mises2_heza2.in
