@@ -83,20 +83,39 @@ namespace oofem {
 	}
 
 	void
-		addComponents(FloatArray &dst, FloatArray &src, double pos, double len, bool momentOnly = false)
+		addComponents(FloatArray &dst, std::pair<FloatArray,FloatArray> &src, double pos, double len, bool momentOnly = false)
 	{
-		if (!momentOnly) {
-			// axial force. linear interpolation
-			dst.at(1) += src.at(1) * (len / 2 - pos);
+		FloatArray &qi = src.first, &qf = src.second;
+		double tot1, tot2, tot3;
+		tot1 = (qi.at(1) + qf.at(1))*len / 2;
+		tot2 = (qi.at(2) + qf.at(2))*len / 2;
+		tot3 = (qi.at(3) + qf.at(3))*len / 2;
+		double center1 = len / 2, center2 = len / 2, center3 = len / 2;
+		if (tot1 != 0.0) center1 = (qi.at(1) + 2 * qf.at(1))*len / 3 / (qi.at(1) + qf.at(1));
+		if (tot2 != 0.0) center2 = (qi.at(2) + 2 * qf.at(2))*len / 3 / (qi.at(2) + qf.at(2));
+		if (tot3 != 0.0) center3 = (qi.at(3) + 2 * qf.at(3))*len / 3 / (qi.at(3) + qf.at(3));
+		double V1I, V2I, V3I;
+		V1I = tot1*center1 / len;
+		V2I = tot2*center2 / len;
+		V3I = tot3*center3 / len;
+		double V1E, V2E, V3E;
+		V1E = V1I-tot1;
+		V2E = V2I-tot2;
+		V3E = V3I-tot3;
+		double pos2 = pos*pos, pos3 = pos2*pos;
 
-			// shear forces. linear interpolation
-			dst.at(3) += src.at(3) * (len / 2 - pos);
-			dst.at(2) += src.at(2) * (len / 2 - pos);
+		if (!momentOnly) {
+			// axial force.
+			dst.at(1) += V1E - (qi.at(1)*pos + (qf.at(1) - qi.at(1)) / 2 / len*pos*pos);
+
+			// shear forces.
+			dst.at(2) += V1E - (qi.at(2)*pos + (qf.at(2) - qi.at(2)) / 2 / len*pos*pos);
+			dst.at(3) += V1E - (qi.at(3)*pos + (qf.at(3) - qi.at(3)) / 2 / len*pos*pos);
 		}
 
-		// only these two parabolic. linear interpolation should be enough for the other directions
-		dst.at(5) += src.at(3) * (pos) / 2 * (len - pos);
-		dst.at(6) -= src.at(2) * (pos) / 2 * (len - pos);
+		// moments.
+		dst.at(5) += (V3E + V3I) / len / len*pos3 - (2 * V3I + V3E) / len*pos2 + V3I*pos;
+		dst.at(6) -= (V2E + V2I) / len / len*pos3 - (2 * V2I + V2E) / len*pos2 + V2I*pos;
 	}
 
 	//int checkValidType(const char* name)
@@ -112,8 +131,7 @@ namespace oofem {
 		}
 
 		vector< int >beamIDs;
-		map<int, FloatArray >BeamLoadsE;
-		map<int, FloatArray >BeamLoadsL;
+		map<int, std::pair<FloatArray,FloatArray> >BeamLoads;
 		IntArray temp;
 		// loop through the beam elements
 		Domain *d = emodel->giveDomain(1);
@@ -170,13 +188,19 @@ namespace oofem {
 
 					Diff.beDifferenceOf(E, I);
 
-					FloatArray FinalLoads;
-					FinalLoads.resize(6);
-					FinalLoads.zero();
+					std::pair<FloatArray, FloatArray> FinalLoads;
+					FinalLoads.first.resize(6);
+					FinalLoads.first.zero();
+					FinalLoads.second.resize(6);
+					FinalLoads.second.zero();
 
-					FloatArray FinalLoadsL;
-					FinalLoadsL.resize(12); // 6 by 2 position (start & end)
-					FinalLoadsL.zero();
+					//FloatArray FinalLoads;
+					//FinalLoads.resize(6);
+					//FinalLoads.zero();
+
+					//FloatArray FinalLoadsL;
+					//FinalLoadsL.resize(12); // 6 by 2 position (start & end)
+					//FinalLoadsL.zero();
 
 					// temporary stuff for winker
 					//double wy, wz;
@@ -239,26 +263,44 @@ namespace oofem {
 						if (strcmp(bc->giveClassName(), "ConstantEdgeLoad") == 0) {
 							ConstantEdgeLoad *CLoad = static_cast<ConstantEdgeLoad *>(bc);
 							FloatArray compArr;
-							const FloatArray coords;
+							FloatArray coords;
 
 							// CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
 							CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
 
 							// transform to local coordinates
 							if (CLoad->giveCoordSystMode() == Load::CoordSystType::CST_Global)	compArr.rotatedWith(T, 'n');
-							FinalLoads.add(compArr);
+							FinalLoads.first.add(compArr);
+
+
+							coords.at(1) = l;
+							// CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
+							CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
+
+							// transform to local coordinates
+							if (CLoad->giveCoordSystMode() == Load::CoordSystType::CST_Global)	compArr.rotatedWith(T, 'n');
+							FinalLoads.second.add(compArr);
 						}
 						else if (strcmp(bc->giveClassName(), "LinearEdgeLoad") == 0) {
 							LinearEdgeLoad *CLoad = static_cast<LinearEdgeLoad *>(bc);
 							FloatArray compArr;
-							const FloatArray coords;
+							FloatArray coords;
 
 							// CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
 							CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
 
 							// transform to local coordinates
 							if (CLoad->giveCoordSystMode() == Load::CoordSystType::CST_Global)	compArr.rotatedWith(T, 'n');
-							FinalLoadsL.add(compArr);
+							FinalLoads.first.add(compArr);
+							
+							coords.at(1) = l;
+
+							// CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
+							CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
+
+							// transform to local coordinates
+							if (CLoad->giveCoordSystMode() == Load::CoordSystType::CST_Global)	compArr.rotatedWith(T, 'n');
+							FinalLoads.second.add(compArr);
 						}
 					}
 
@@ -341,8 +383,7 @@ namespace oofem {
 					//loadPair.second = FinalLoads.at(3);
 
 					// save loads
-					BeamLoadsE[elem->giveNumber()] = FinalLoads;
-					BeamLoadsL[elem->giveNumber()] = FinalLoadsL;
+					BeamLoads[elem->giveNumber()] = FinalLoads;
 
 					//elem->giveBodyLoadArray
 				}
@@ -384,7 +425,7 @@ namespace oofem {
 								Element* ele = d->giveElement(elNum);
 								if (!this->checkValidType(ele->giveClassName())) continue;
 
-								const FloatArray coords;
+								FloatArray coords;
 
 								// CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
 								CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
@@ -396,9 +437,21 @@ namespace oofem {
 								if (CLoad->giveCoordSystMode() == Load::CoordSystType::CST_Global)	compArr.rotatedWith(T, 'n');
 
 								// add loads to our map
-								BeamLoadsE[elNum] += compArr;
-								//BeamLoads[elNum].first += compArr.at(2);
-								//BeamLoads[elNum].second += compArr.at(3);
+								BeamLoads[elNum].first += compArr;
+
+								std::pair<FloatArray, FloatArray> localpair;
+								localpair.first = compArr;
+
+								coords.at(1) = ele->computeLength();
+								CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
+								// transform to local coordinates
+								d->giveElement(elNum)->computeGtoLRotationMatrix(T);
+								T.resizeWithData(6, 6);
+								if (CLoad->giveCoordSystMode() == Load::CoordSystType::CST_Global)	compArr.rotatedWith(T, 'n');
+
+								// add loads to our map
+								BeamLoads[elNum].second += compArr;
+								localpair.second = compArr;
 
 								// compute contribution to internal forces
 								map< double, FloatArray >Dst = BeamForces[elNum];
@@ -407,7 +460,7 @@ namespace oofem {
 									FloatArray Vals = PointVals.second;
 
 									// tamper with values?
-									addComponents(Vals, compArr, pos, d->giveElement(elNum)->computeLength());
+									addComponents(Vals, localpair, pos, d->giveElement(elNum)->computeLength());
 
 									// update in point-forces map
 									PointVals.second = Vals;
@@ -437,7 +490,7 @@ namespace oofem {
 								Element* ele = d->giveElement(elNum);
 								if (!this->checkValidType(ele->giveClassName())) continue;
 
-								const FloatArray coords;
+								FloatArray coords;
 
 								// CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
 								CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
@@ -449,9 +502,21 @@ namespace oofem {
 								if (CLoad->giveCoordSystMode() == Load::CoordSystType::CST_Global)	compArr.rotatedWith(T, 'n');
 
 								// add loads to our map
-								BeamLoadsL[elNum] += compArr;
-								//BeamLoads[elNum].first += compArr.at(2);
-								//BeamLoads[elNum].second += compArr.at(3);
+								BeamLoads[elNum].first += compArr;
+
+								std::pair<FloatArray, FloatArray> localpair;
+								localpair.first = compArr;
+
+								coords.at(1) = ele->computeLength();
+								CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
+								// transform to local coordinates
+								d->giveElement(elNum)->computeGtoLRotationMatrix(T);
+								T.resizeWithData(6, 6);
+								if (CLoad->giveCoordSystMode() == Load::CoordSystType::CST_Global)	compArr.rotatedWith(T, 'n');
+
+								// add loads to our map
+								BeamLoads[elNum].second += compArr;
+								localpair.second = compArr;
 
 								// compute contribution to internal forces
 								map< double, FloatArray >Dst = BeamForces[elNum];
@@ -460,12 +525,12 @@ namespace oofem {
 									FloatArray Vals = PointVals.second;
 
 									// tamper with values?
-									addComponents(Vals, compArr, pos, d->giveElement(elNum)->computeLength());
+									addComponents(Vals, localpair, pos, d->giveElement(elNum)->computeLength());
 
 									// update in point-forces map
 									PointVals.second = Vals;
 								}
-								// update in beam-forces map - duplicate? <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+								// update in beam-forces map
 								BeamForces[elNum] = Dst;
 							}
 						}
@@ -565,8 +630,8 @@ namespace oofem {
 				// saving winkler reaction for each gp
 				map< double, FloatArray > WinkDict;
 
-				FloatArray &blE = BeamLoadsE[elNum];
-				FloatArray &blL = BeamLoadsL[elNum];
+				FloatArray &blI = BeamLoads[elNum].first;
+				FloatArray &blE = BeamLoads[elNum].second;
 				FloatArray *disps = &dI;
 
 				// logic to assign distributed loads - sum all the contributes into trapezoidal load
