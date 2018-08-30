@@ -270,21 +270,14 @@ namespace oofem {
 
 							// transform to local coordinates
 							if (CLoad->giveCoordSystMode() == Load::CoordSystType::CST_Global)	compArr.rotatedWith(T, 'n');
+							// they're the same
 							FinalLoads.first.add(compArr);
-
-
-							coords.at(1) = l;
-							// CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
-							CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
-
-							// transform to local coordinates
-							if (CLoad->giveCoordSystMode() == Load::CoordSystType::CST_Global)	compArr.rotatedWith(T, 'n');
 							FinalLoads.second.add(compArr);
 						}
 						else if (strcmp(bc->giveClassName(), "LinearEdgeLoad") == 0) {
 							LinearEdgeLoad *CLoad = static_cast<LinearEdgeLoad *>(bc);
 							FloatArray compArr;
-							FloatArray coords;
+							FloatArray coords(3);
 
 							// CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
 							CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
