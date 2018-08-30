@@ -623,13 +623,10 @@ namespace oofem {
 				// saving winkler reaction for each gp
 				map< double, FloatArray > WinkDict;
 
-				FloatArray &blI = BeamLoads[elNum].first;
-				FloatArray &blE = BeamLoads[elNum].second;
 				FloatArray *disps = &dI;
 
-				// logic to assign distributed loads - sum all the contributes into trapezoidal load
-				FloatArray qi, qf; qi.resize(6); qf.resize(6); qi.zero(); qf.zero();
-				// code...
+				// shorthands for the loads
+				FloatArray &qi = BeamLoads[elNum].first, &qf = BeamLoads[elNum].second;
 				
 				std::map< double, FloatArray > &Forces = BeamForces[elem->giveNumber()];
 
