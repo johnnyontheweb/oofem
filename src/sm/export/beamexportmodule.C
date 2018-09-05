@@ -95,9 +95,9 @@ namespace oofem {
 		if (tot2 != 0.0) center2 = (qi.at(2) + 2 * qf.at(2))*len / 3 / (qi.at(2) + qf.at(2));
 		if (tot3 != 0.0) center3 = (qi.at(3) + 2 * qf.at(3))*len / 3 / (qi.at(3) + qf.at(3));
 		double V1I, V2I, V3I;
-		V1I = tot1*center1 / len;
-		V2I = tot2*center2 / len;
-		V3I = tot3*center3 / len;
+		V1I = tot1*(len-center1) / len;
+		V2I = tot2*(len-center2) / len;
+		V3I = tot3*(len-center3) / len;
 		double V1E, V2E, V3E;
 		V1E = V1I-tot1;
 		V2E = V2I-tot2;
@@ -106,11 +106,11 @@ namespace oofem {
 
 		if (!momentOnly) {
 			// axial force.
-			dst.at(1) += V1E - (qi.at(1)*pos + (qf.at(1) - qi.at(1)) / 2 / len*pos*pos);
+			dst.at(1) += V1I - (qi.at(1)*pos + (qf.at(1) - qi.at(1)) / 2 / len*pos*pos);
 
 			// shear forces.
-			dst.at(2) += V1E - (qi.at(2)*pos + (qf.at(2) - qi.at(2)) / 2 / len*pos*pos);
-			dst.at(3) += V1E - (qi.at(3)*pos + (qf.at(3) - qi.at(3)) / 2 / len*pos*pos);
+			dst.at(2) += V2I - (qi.at(2)*pos + (qf.at(2) - qi.at(2)) / 2 / len*pos*pos);
+			dst.at(3) += V3I - (qi.at(3)*pos + (qf.at(3) - qi.at(3)) / 2 / len*pos*pos);
 		}
 
 		// moments.
@@ -279,6 +279,8 @@ namespace oofem {
 							FloatArray compArr;
 							FloatArray coords(3);
 
+							coords.at(1) = -1;  // 1st node param. coord
+
 							// CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
 							CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
 
@@ -286,7 +288,7 @@ namespace oofem {
 							if (CLoad->giveCoordSystMode() == Load::CoordSystType::CST_Global)	compArr.rotatedWith(T, 'n');
 							FinalLoads.first.add(compArr);
 							
-							coords.at(1) = l;
+							coords.at(1) = 1;  // 2nd node param. coord
 
 							// CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
 							CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
@@ -354,11 +356,11 @@ namespace oofem {
 
 						// can't use this until beam is fixed?
 						// elem->giveGlobalIPValue(ipState, gp, (InternalStateType)1, tStep); // IST_StressTensor
-						ipState.zero();
-						ipState.beScaled(midP, Diff);
-						ipState.add(I);
+						ipState.resize(6);
+						//ipState.beScaled(midP, Diff);
+						//ipState.add(I);
 
-						addComponents(ipState, FinalLoads, pos, l, true);
+						addComponents(ipState, FinalLoads, pos, l, false);
 
 						ForceDict[pos] = ipState;
 					}
