@@ -437,13 +437,6 @@ namespace oofem {
 								std::pair<FloatArray, FloatArray> localpair;
 								localpair.first = compArr;
 
-								coords.at(1) = ele->computeLength();
-								CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
-								// transform to local coordinates
-								d->giveElement(elNum)->computeGtoLRotationMatrix(T);
-								T.resizeWithData(6, 6);
-								if (CLoad->giveCoordSystMode() == Load::CoordSystType::CST_Global)	compArr.rotatedWith(T, 'n');
-
 								// add loads to our map
 								BeamLoads[elNum].second += compArr;
 								localpair.second = compArr;
@@ -485,7 +478,8 @@ namespace oofem {
 								Element* ele = d->giveElement(elNum);
 								if (!this->checkValidType(ele->giveClassName())) continue;
 
-								FloatArray coords;
+								FloatArray coords(3);
+								coords.at(1) = -1;
 
 								// CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
 								CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
@@ -502,7 +496,7 @@ namespace oofem {
 								std::pair<FloatArray, FloatArray> localpair;
 								localpair.first = compArr;
 
-								coords.at(1) = ele->computeLength();
+								coords.at(1) = 1;
 								CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
 								// transform to local coordinates
 								d->giveElement(elNum)->computeGtoLRotationMatrix(T);
