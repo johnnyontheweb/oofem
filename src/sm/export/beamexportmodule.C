@@ -984,10 +984,10 @@ namespace oofem {
 							
 								az = (qf.at(3) - qi.at(3)) / 120 / EJyy / l;
 								bz = qi.at(3) / 24 / EJyy;
-								cz = (240 * EJyy*GKzAz*(vy_0 - vy_l) + l*(GKzAz*(120 * EJyy*(phiy_0 + phiy_l) - l_3*(3 * qf.at(3) + 7 * qi.at(3))) - 40 * EJyy*l*(qf.at(3) + 2 * qi.at(3)))) / (120 * EJyy*l*(GKzAz*l_2 + 12 * EJyy));
-								dz = -(360 * EJyy*GKzAz*l*(vy_0 - vy_l) + GKzAz*l_2*(120 * EJyy*(2 * phiy_0 + phiy_l) - l_3*(2 * qf.at(3) + 3 * qi.at(3))) + 30 * EJyy*(24 * EJyy*(phiy_0 - phiy_l) - l_3*(qf.at(3) + qi.at(3)))) / (120 * EJyy*l*(GKzAz*l_2 + 12 * EJyy));
-								ez = phiz_0;
-								fz = vy_0;
+								cz = (240 * EJyy*GKzAz*(vz_0 - vz_l) + l*(GKzAz*(120 * EJyy*(phiy_0 + phiy_l) - l_3*(3 * qf.at(3) + 7 * qi.at(3))) - 40 * EJyy*l*(qf.at(3) + 2 * qi.at(3)))) / (120 * EJyy*l*(GKzAz*l_2 + 12 * EJyy));
+								dz = -(360 * EJyy*GKzAz*l*(vz_0 - vz_l) + GKzAz*l_2*(120 * EJyy*(2 * phiy_0 + phiy_l) - l_3*(2 * qf.at(3) + 3 * qi.at(3))) + 30 * EJyy*(24 * EJyy*(phiy_0 - phiy_l) - l_3*(qf.at(3) + qi.at(3)))) / (120 * EJyy*l*(GKzAz*l_2 + 12 * EJyy));
+								ez = phiy_0;
+								fz = vz_0;
 							}
 						}
 
