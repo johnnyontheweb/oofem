@@ -356,9 +356,12 @@ namespace oofem {
 
 						// can't use this until beam is fixed?
 						// elem->giveGlobalIPValue(ipState, gp, (InternalStateType)1, tStep); // IST_StressTensor
-						ipState.resize(6);
-						//ipState.beScaled(midP, Diff);
-						//ipState.add(I);
+						ipState.resize(6); ipState.zero();
+						// ipState.beScaled(midP, Diff);
+						// moments only
+						ipState.at(5) = Diff.at(5) * midP;
+						ipState.at(6) = Diff.at(6) * midP;
+						ipState.add(I);
 
 						addComponents(ipState, FinalLoads, pos, l, false);
 
@@ -1008,15 +1011,15 @@ namespace oofem {
 
 						atx = (qf.at(1) - qi.at(1)) / (6 * GJ*l);
 						btx = qi.at(1) / (2 * GJ);
-						ctx = -(6 * GJ*(dx_0 - dx_l) + l_2*(qf.at(1) + 2 * qi.at(1))) / (6 * GJ*l);
-						dtx = dx_0;
+						ctx = -(6 * GJ*(tx_0 - tx_l) + l_2*(qf.at(1) + 2 * qi.at(1))) / (6 * GJ*l);
+						dtx = tx_0;
 						
 						calc = true;
 					}
 
 					FloatArray disps(6);
 					FloatArray wink(6); // winkler reactions
-					disps.at(1) = anx*pos_2 + bnx*pos + cnx;
+					disps.at(1) = anx*pos_3 + bnx*pos_2 + cnx*pos + dnx;
 					double lamxY, lamxZ, lamxY1, lamxY2, lamxZ1, lamxZ2;
 					lamxY = lambdaY*pos;
 					lamxZ = lambdaZ*pos;
@@ -1136,7 +1139,7 @@ namespace oofem {
 						disps.at(5) = -(5 * az*pos_4 + 4 * bz*pos_3 + 3 * cz*pos_2 + 2*dz*pos + ez);  // inverted signs for rotations about y.
 					}
 					
-					disps.at(4) = atx*pos_2 + btx*pos + ctx;
+					disps.at(4) = atx*pos_3 + btx*pos_2 + ctx*pos + dtx;
 
 					//disps -= (dI+ddN*ksi);
 
