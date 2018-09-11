@@ -106,11 +106,11 @@ namespace oofem {
 
 		if (!momentOnly) {
 			// axial force.
-			dst.at(1) += V1I - (qi.at(1)*pos + (qf.at(1) - qi.at(1)) / 2 / len*pos*pos);
+			dst.at(1) -= (qi.at(1)*pos + (qf.at(1) - qi.at(1)) / 2 / len*pos*pos);
 
 			// shear forces.
-			dst.at(2) += V2I - (qi.at(2)*pos + (qf.at(2) - qi.at(2)) / 2 / len*pos*pos);
-			dst.at(3) += V3I - (qi.at(3)*pos + (qf.at(3) - qi.at(3)) / 2 / len*pos*pos);
+			dst.at(2) -= (qi.at(2)*pos + (qf.at(2) - qi.at(2)) / 2 / len*pos*pos);
+			dst.at(3) -= (qi.at(3)*pos + (qf.at(3) - qi.at(3)) / 2 / len*pos*pos);
 		}
 
 		// moments.
@@ -975,8 +975,8 @@ namespace oofem {
 								bz = qi.at(3) / 24 / EJyy;
 								cz = (240 * EJyy*(vy_0 - vy_l) + l*(120 * EJyy*(phiy_0 + phiy_l) - l_3*(3 * qf.at(3) + 7 * qi.at(3)))) / (120 * EJyy*l_3);
 								dz = -(360 * EJyy*(vy_0 - vy_l) + l*(120 * EJyy*(2 * phiy_0 + phiy_l) - l_3*(2 * qf.at(3) + 3 * qi.at(3)))) / (120 * EJyy*l_2);
-								ez = phiz_0;
-								fz = vy_0;
+								ez = phiy_0;
+								fz = vz_0;
 							}
 							else { // timoshenko formulation for transversal displacements
 								//az = bl.at(3) / 24 / EJyy;
