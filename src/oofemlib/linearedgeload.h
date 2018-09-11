@@ -44,6 +44,8 @@
 #define _IFT_LinearEdgeLoad_formulation "formulation"
 #define _IFT_LinearEdgeLoad_startcoord "sc"
 #define _IFT_LinearEdgeLoad_endcoord "ec"
+#define _IFT_LinearEdgeLoad_startlocal "sl"
+#define _IFT_LinearEdgeLoad_endlocal "el"
 //@}
 
 namespace oofem {
@@ -70,6 +72,7 @@ class OOFEM_EXPORT LinearEdgeLoad : public EdgeLoad
 protected:
     /// Coordinates of start and end point
     FloatArray startCoords, endCoords;
+	double startLocal, endLocal;
     FormulationType formulation;
 
 public:
