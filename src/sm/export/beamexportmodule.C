@@ -836,8 +836,8 @@ namespace oofem {
 
 								ay = (qf.at(2) - qi.at(2)) / 120 / EJzz / l;
 								by = qi.at(2) / 24 / EJzz;
-								cy = (240 * EJzz*(vy_0 - vy_l) + l*(120 * EJzz*(phiy_0 + phiy_l) - l_3*(3 * qf.at(2) + 7 * qi.at(2)))) / (120 * EJzz*l_3);
-								dy = -(360 * EJzz*(vy_0 - vy_l) + l*(120 * EJzz*(2 * phiy_0 + phiy_l) - l_3*(2 * qf.at(2) + 3 * qi.at(2)))) / (120 * EJzz*l_2);
+								cy = (240 * EJzz*(vy_0 - vy_l) + l*(120 * EJzz*(phiz_0 + phiz_l) - l_3*(3 * qf.at(2) + 7 * qi.at(2)))) / (120 * EJzz*l_3);
+								dy = -(360 * EJzz*(vy_0 - vy_l) + l*(120 * EJzz*(2 * phiz_0 + phiz_l) - l_3*(2 * qf.at(2) + 3 * qi.at(2)))) / (120 * EJzz*l_2);
 								ey = phiz_0;
 								fy = vy_0;
 							}
@@ -850,8 +850,8 @@ namespace oofem {
 								
 								ay = (qf.at(2) - qi.at(2)) / 120 / EJzz / l;
 								by = qi.at(2) / 24 / EJzz;
-								cy = (240 * EJzz*GKyAy*(vy_0 - vy_l) + l*(GKyAy*(120 * EJzz*(phiy_0 + phiy_l) - l_3*(3 * qf.at(2) + 7 * qi.at(2))) - 40 * EJzz*l*(qf.at(2) + 2 * qi.at(2)))) / (120 * EJzz*l*(GKyAy*l_2 + 12 * EJzz));
-								dy = -(360 * EJzz*GKyAy*l*(vy_0 - vy_l) + GKyAy*l_2*(120 * EJzz*(2 * phiy_0 + phiy_l) - l_3*(2 * qf.at(2) + 3 * qi.at(2))) + 30 * EJzz*(24 * EJzz*(phiy_0 - phiy_l) - l_3*(qf.at(2) + qi.at(2)))) / (120 * EJzz*l*(GKyAy*l_2 + 12 * EJzz));
+								cy = (240 * EJzz*GKyAy*(vy_0 - vy_l) + l*(GKyAy*(120 * EJzz*(phiz_0 + phiz_l) - l_3*(3 * qf.at(2) + 7 * qi.at(2))) - 40 * EJzz*l*(qf.at(2) + 2 * qi.at(2)))) / (120 * EJzz*l*(GKyAy*l_2 + 12 * EJzz));
+								dy = -(360 * EJzz*GKyAy*l*(vy_0 - vy_l) + GKyAy*l_2*(120 * EJzz*(2 * phiz_0 + phiz_l) - l_3*(2 * qf.at(2) + 3 * qi.at(2))) + 30 * EJzz*(24 * EJzz*(phiz_0 - phiz_l) - l_3*(qf.at(2) + qi.at(2)))) / (120 * EJzz*l*(GKyAy*l_2 + 12 * EJzz));
 								ey = phiz_0;
 								fy = vy_0;
 							}
