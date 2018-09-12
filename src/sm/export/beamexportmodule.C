@@ -449,6 +449,9 @@ namespace oofem {
 								BeamLoads[elNum].second += compArr;
 								localpair.second = compArr;
 
+								double ll = d->giveElement(elNum)->computeLength();
+								FloatArray Diff; Diff.beDifferenceOf(BeamForces[elNum][ll], BeamForces[elNum][0.0]);
+
 								// compute contribution to internal forces
 								map< double, FloatArray >Dst = BeamForces[elNum];
 								for (auto &PointVals : Dst) {
@@ -456,8 +459,17 @@ namespace oofem {
 									FloatArray Vals = PointVals.second;
 
 									// tamper with values?
-									addComponents(Vals, localpair, pos, d->giveElement(elNum)->computeLength());
-
+									// addComponents(Vals, localpair, pos, d->giveElement(elNum)->computeLength());
+									if (pos == 0.0 || pos == ll) {
+										addComponents(Vals, localpair, pos, ll, true);
+									} else {
+										// moments only
+										Vals.at(5) = Diff.at(5) * pos / ll;
+										Vals.at(6) = Diff.at(6) * pos / ll;
+										Vals.add(BeamForces[elNum][0.0]);
+										addComponents(Vals, localpair, pos, ll, false);
+									}
+									
 									// update in point-forces map
 									PointVals.second = Vals;
 								}
@@ -515,6 +527,9 @@ namespace oofem {
 								BeamLoads[elNum].second += compArr;
 								localpair.second = compArr;
 
+								double ll = d->giveElement(elNum)->computeLength();
+								FloatArray Diff; Diff.beDifferenceOf(BeamForces[elNum][ll], BeamForces[elNum][0.0]);
+								
 								// compute contribution to internal forces
 								map< double, FloatArray >Dst = BeamForces[elNum];
 								for (auto &PointVals : Dst) {
@@ -522,7 +537,17 @@ namespace oofem {
 									FloatArray Vals = PointVals.second;
 
 									// tamper with values?
-									addComponents(Vals, localpair, pos, d->giveElement(elNum)->computeLength());
+									// addComponents(Vals, localpair, pos, d->giveElement(elNum)->computeLength());
+									if (pos == 0.0 || pos == ll) {
+										addComponents(Vals, localpair, pos, ll, true);
+									}
+									else {
+										// moments only
+										Vals.at(5) = Diff.at(5) * pos / ll;
+										Vals.at(6) = Diff.at(6) * pos / ll;
+										Vals.add(BeamForces[elNum][0.0]);
+										addComponents(Vals, localpair, pos, ll, false);
+									}
 
 									// update in point-forces map
 									PointVals.second = Vals;
