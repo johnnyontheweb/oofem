@@ -50,7 +50,7 @@ LinearEdgeLoad :: initializeFrom(InputRecord *ir)
 	startLocal = 0; endLocal = 0;
 	IR_GIVE_OPTIONAL_FIELD(ir, startLocal, _IFT_LinearEdgeLoad_startlocal);
 	IR_GIVE_OPTIONAL_FIELD(ir, endLocal, _IFT_LinearEdgeLoad_endlocal);
-	if (startLocal>endLocal || startLocal < 0 || endLocal > 1) {
+	if (startLocal>endLocal) {
 		OOFEM_WARNING("incorrect local coordinates: start > end!");
 		return IRRT_NOTFOUND;
 	}
@@ -124,8 +124,7 @@ LinearEdgeLoad :: computeNArray(FloatArray &answer, const FloatArray &coords) co
 			}
 			else { // gp is inside the load
 				// convert lcs of the element into load isopar. lcs
-				double ratio = fabs((2 * endLocal - 1) - (2 * startLocal - 1)) / 2;
-				ksi = ratio * (coords.at(1) - (2 * startLocal - 1));
+				ksi = (fabs(coords.at(1) - (2 * startLocal - 1)) - (endLocal - startLocal)) / (endLocal - startLocal);
 			}
 		} else {
 			ksi = coords.at(1);

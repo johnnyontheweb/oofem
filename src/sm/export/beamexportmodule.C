@@ -310,9 +310,14 @@ namespace oofem {
 					//winkDict[0.0] = wI;
 
 					std::list<double> midPoints;
+					//midPoints.push_back(0.125);
 					midPoints.push_back(0.25);
+					//midPoints.push_back(0.375);
 					midPoints.push_back(0.5);
+					//midPoints.push_back(0.625);
 					midPoints.push_back(0.75);
+					//midPoints.push_back(0.875);
+
 					//double tempmidpoint = 0;
 					//int count = 0;
 
