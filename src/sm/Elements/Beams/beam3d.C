@@ -265,12 +265,12 @@ Beam3d :: computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, 
     for ( GaussPoint *gp: *this->giveDefaultIntegrationRulePtr() ) {
         const FloatArray &lcoords = gp->giveNaturalCoordinates();
         this->computeNmatrixAt(lcoords, N);
-        //if ( load ) {
-        //    this->computeGlobalCoordinates(coords, lcoords);
-        //    load->computeValues(t, tStep, coords, {D_u, D_v, D_w, R_u, R_v, R_w}, mode);
-        //} else {
-            load->computeValues(t, tStep, lcoords, {D_u, D_v, D_w, R_u, R_v, R_w}, mode);
-        //}
+		if (load->giveFormulationType() == Load::FT_Entity) {
+			load->computeValues(t, tStep, lcoords, { D_u, D_v, D_w, R_u, R_v, R_w }, mode);
+		} else {
+            this->computeGlobalCoordinates(coords, lcoords);
+            load->computeValues(t, tStep, coords, {D_u, D_v, D_w, R_u, R_v, R_w}, mode);
+        }
 
         if ( load->giveCoordSystMode() == Load :: CST_Global ) {
             if ( this->computeLoadGToLRotationMtrx(T) ) {
@@ -718,31 +718,6 @@ void
 		answer.subtract(loadEndForces);
 	}
 
-	// add exact end forces due to nonnodal loading applied indirectly (via sets)
-	BCTracker *bct = this->domain->giveBCTracker();
-	BCTracker::entryListType bcList = bct->getElementRecords(this->number);
-	FloatArray help;
-
-	for (BCTracker::entryListType::iterator it = bcList.begin(); it != bcList.end(); ++it) {
-		GeneralBoundaryCondition *bc = this->domain->giveBc((*it).bcNumber);
-		BodyLoad *bodyLoad;
-		BoundaryLoad *boundaryLoad;
-		if (bc->isImposed(tStep)) {
-			if ((bodyLoad = dynamic_cast<BodyLoad*>(bc))) { // body load
-				this->computeBodyLoadVectorAt(help, bodyLoad, tStep, VM_Total); // this one is local
-				answer.subtract(help);
-			}
-			else if ((boundaryLoad = dynamic_cast<BoundaryLoad*>(bc))) {
-				// compute Boundary Edge load vector in GLOBAL CS !!!!!!!
-				this->computeBoundaryEdgeLoadVector(help, boundaryLoad, (*it).boundaryId,
-					ExternalForcesVector, VM_Total, tStep, false);
-				// get it transformed back to local c.s.
-				// this->computeGtoLRotationMatrix(t);
-				// help.rotatedWith(t, 'n');
-				answer.subtract(help);
-			}
-		}
-	}
     /*
     if (subsoilMat) {
       // @todo: linear subsoil assumed here; more general approach should integrate internal forces

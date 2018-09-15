@@ -254,6 +254,15 @@ namespace oofem {
 					temp.at(5) = 5;
 					temp.at(6) = 6;
 
+					std::list<double> midPoints;
+					//midPoints.push_back(0.125);
+					midPoints.push_back(0.25);
+					//midPoints.push_back(0.375);
+					midPoints.push_back(0.5);
+					//midPoints.push_back(0.625);
+					midPoints.push_back(0.75);
+					//midPoints.push_back(0.875);
+
 					IntArray *loads = elem->giveBoundaryLoadArray();
 					int nBoundaryLoads = loads->giveSize() / 2;
 					for (int i = 1; i <= nBoundaryLoads; i++)
@@ -296,6 +305,10 @@ namespace oofem {
 							// transform to local coordinates
 							if (CLoad->giveCoordSystMode() == Load::CoordSystType::CST_Global)	compArr.rotatedWith(T, 'n');
 							FinalLoads.second.add(compArr);
+
+							// add stations
+							// midPoints.insert(n, CLoad->startLocal);
+							// midPoints.insert(n, CLoad->endLocal);
 						}
 					}
 
@@ -309,14 +322,6 @@ namespace oofem {
 					//wE.at(1) = qEy; wE.at(2) = qEz;
 					//winkDict[0.0] = wI;
 
-					std::list<double> midPoints;
-					//midPoints.push_back(0.125);
-					midPoints.push_back(0.25);
-					//midPoints.push_back(0.375);
-					midPoints.push_back(0.5);
-					//midPoints.push_back(0.625);
-					midPoints.push_back(0.75);
-					//midPoints.push_back(0.875);
 
 					//double tempmidpoint = 0;
 					//int count = 0;
@@ -394,7 +399,7 @@ namespace oofem {
 
 			//vector< unique_ptr< GeneralBoundaryCondition > > BCs = d->giveBcs();
 
-			// tamper with stuff only if sets are defined.
+			// only if sets are defined. actually not used, wrong end forces in oofem for beam edge loads.
 			if (d->giveNumberOfSets()) {
 				temp.resize(6);
 				temp.at(1) = 1;
