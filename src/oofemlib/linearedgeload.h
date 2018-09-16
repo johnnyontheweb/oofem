@@ -72,12 +72,11 @@ class OOFEM_EXPORT LinearEdgeLoad : public EdgeLoad
 protected:
     /// Coordinates of start and end point
     FloatArray startCoords, endCoords;
-	double startLocal, endLocal;
     FormulationType formulation;
 
 public:
     LinearEdgeLoad(int i, Domain * d) : EdgeLoad(i, d) { }
-
+	double startLocal, endLocal;
     virtual int giveApproxOrder() { return 1; }
     virtual IRResultType initializeFrom(InputRecord *ir);
     virtual void giveInputRecord(DynamicInputRecord &input);
