@@ -63,6 +63,7 @@ protected:
 public:
     /// @name Iterator for for-each loops:
     //@{
+	// auto begin() -> decltype(this->values.begin()) { return this->values.begin(); }
     auto begin() { return this->values.begin(); }
     auto end() { return this->values.end(); }
     auto begin() const { return this->values.begin(); }

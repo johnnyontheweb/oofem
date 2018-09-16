@@ -139,6 +139,11 @@ public:
                                                MatResponseMode mode, GaussPoint *gp,
                                                TimeStep *tStep);
 
+    /// Computes local 3d stiffness matrix of the receiver.
+    virtual void give3dLocalMaterialStiffnessMatrix(FloatMatrix &answer,
+                                                    MatResponseMode mode, GaussPoint *gp,
+                                                    TimeStep *tStep);
+
 protected:
     void giveTensorRotationMatrix(FloatMatrix &answer, GaussPoint *gp);
     void giveRotationMatrix(FloatMatrix &answer, GaussPoint *gp);
