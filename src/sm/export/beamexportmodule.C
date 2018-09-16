@@ -306,9 +306,13 @@ namespace oofem {
 							if (CLoad->giveCoordSystMode() == Load::CoordSystType::CST_Global)	compArr.rotatedWith(T, 'n');
 							FinalLoads.second.add(compArr);
 
-							// add stations
-							// midPoints.insert(n, CLoad->startLocal);
-							// midPoints.insert(n, CLoad->endLocal);
+							// add stations inside load
+							midPoints.push_back(CLoad->startLocal);
+							double halfL = CLoad->endLocal - CLoad->startLocal;
+							midPoints.push_back(CLoad->startLocal + 0.25 * halfL);
+							midPoints.push_back(CLoad->startLocal + 0.5 * halfL);
+							midPoints.push_back(CLoad->startLocal + 0.75 * halfL);
+							midPoints.push_back(CLoad->endLocal);
 						}
 					}
 
