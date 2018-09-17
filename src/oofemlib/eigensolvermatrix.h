@@ -37,27 +37,22 @@
 
 #include <iostream>
 //#include <../unsupported/Eigen/ArpackSupport>
-#include <../Eigen/SparseCore>
-#include <../Eigen/SparseCholesky>
+#include <../Eigen/Sparse>
 #include "sparsemtrx.h"
 #include "intarray.h"
 #include "floatarray.h"
 
 #include <memory>
 
-/* DSS module lives in global namespace, not in oofem namespace */
 class EigenSolver;
-
 namespace oofem {
 /**
- * Interface to Direct Sparse Solver written by R.Vonracek.
+ * Interface to Eigen
  * This class represent the sparse matrix interface to DSS library. It allows to build internal structure,
  * assemble the DSS sparse matrix, and to factorize and back substitution operations.
  */
 	class OOFEM_EXPORT EigenSolverMatrix : public SparseMtrx, public Eigen::SparseMatrix<double>
 {
-public:
-
 protected:
 	
 public:
@@ -95,9 +90,8 @@ public:
 	double &operator() (int i, int j);
 };
 
-#define SparseMat Eigen::SparseMatrix<double, 0, int>
+// #define SparseMat Eigen::SparseMatrix<double, 0, int>
 
 } // end namespace oofem
 
 #endif // eigensolvermatrix_h
-

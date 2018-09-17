@@ -43,9 +43,6 @@
 #include <iostream>
 #include "sparsegeneigenvalsystemnm.h"
 #include "floatarray.h"
-#include <../Eigen/Core>
-#include <../Eigen/SparseCore>
-#include <../Eigen/SparseCholesky>
 
 namespace oofem {
 class Domain;

@@ -33,8 +33,7 @@
  */
 
 #include "eigensolvermatrix.h"
-#include <../Eigen/SparseCore>
-#include <../Eigen/SparseCholesky>
+#include <Eigen/Sparse>
 #include "error.h"
 #include "engngm.h"
 #include "domain.h"
@@ -52,7 +51,9 @@ namespace oofem {
 
 REGISTER_SparseMtrx( EigenSolverMatrix, SMT_EigenSparse);
 
-EigenSolverMatrix::EigenSolverMatrix(int n) : SparseMtrx(n, n), SparseMat(n,n)
+typedef Eigen::SparseMatrix<double, 0, int> SparseMat;
+
+EigenSolverMatrix::EigenSolverMatrix(int n) : SparseMtrx(n, n), SparseMat(n, n)
 {
 }
 
@@ -77,7 +78,7 @@ SparseMtrx *EigenSolverMatrix :: GiveCopy() const
 
 void EigenSolverMatrix :: times(const FloatArray &x, FloatArray &answer) const
 {
-  // Note: not really eficient. The sparse matrix is assembled directly into its block structure,
+  // Note: not really efficient. The sparse matrix is assembled directly into its block structure,
   // which is efficient for factorization, but unfortunately not efficient for implementing the multiplication,
   // as the blocks have to be identified (see implementation of ElementAt method) when traversing rows
   // Also note, that this method will yield correct results only before factorization, after that the blocks
@@ -177,7 +178,7 @@ double &EigenSolverMatrix :: at(int i, int j)
 {
     // increment version
     this->version++;
-    return this->SparseMat::coeffRef(i - 1, j - 1);
+	return this->SparseMat::coeffRef(i - 1, j - 1);
 }
 
 

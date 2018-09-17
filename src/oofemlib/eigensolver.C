@@ -50,7 +50,7 @@
 #include "engngm.h"
 #include <memory>
 
-using namespace Spectra;
+// using namespace Spectra;
 
 namespace oofem {
 
@@ -117,7 +117,7 @@ EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatri
 
 #ifdef TIME_REPORT
 	timer.stopTimer();
-	OOFEM_LOG_INFO("SLEPcSolver info: user time consumed by solution: %.2fs\n", timer.getUtime());
+	OOFEM_LOG_INFO("EigenSolver info: user time consumed by solution: %.2fs\n", timer.getUtime());
 #endif
 
 	return NM_Success;
