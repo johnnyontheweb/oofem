@@ -32,7 +32,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include <../unsupported/Eigen/ArpackSupport>
+// #include <../unsupported/Eigen/ArpackSupport>
+#include <../Eigen/Core>
 #include <../Eigen/SparseCore>
 #include <../Eigen/SparseCholesky>
 #include <SymGEigsSolver.h>

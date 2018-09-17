@@ -36,7 +36,7 @@
 #define eigensolvermatrix_h
 
 #include <iostream>
-#include <../unsupported/Eigen/ArpackSupport>
+//#include <../unsupported/Eigen/ArpackSupport>
 #include <../Eigen/SparseCore>
 #include <../Eigen/SparseCholesky>
 #include "sparsemtrx.h"

@@ -33,6 +33,8 @@
  */
 
 #include "eigensolvermatrix.h"
+#include <../Eigen/SparseCore>
+#include <../Eigen/SparseCholesky>
 #include "error.h"
 #include "engngm.h"
 #include "domain.h"
