@@ -504,10 +504,14 @@ Beam3d :: giveLocalCoordinateSystem(FloatMatrix &answer)
 
         lz.beVectorProductOf(lx, help);
         lz.normalize();
+		ly.beVectorProductOf(lz, lx);
+		ly.normalize();
     } else if ( this->zaxis.giveSize() > 0 ) {
         lz = this->zaxis;
         lz.add(lz.dotProduct(lx), lx);
         lz.normalize();
+		ly.beVectorProductOf(lz, lx);
+		ly.normalize();
     } else {
         FloatMatrix rot(3, 3);
         double theta = referenceAngle * M_PI / 180.0;
@@ -524,21 +528,23 @@ Beam3d :: giveLocalCoordinateSystem(FloatMatrix &answer)
         rot.at(3, 2) = lx.at(3) * lx.at(2) * ( 1 - cos(theta) ) + lx.at(1) * sin(theta);
         rot.at(3, 3) = cos(theta) + pow(lx.at(3), 2) * ( 1 - cos(theta) );
 
-        help.at(3) = 1.0;         // up-vector
-        // here is ly is used as a temp var
+		help.at(3) = 1.0;         // up-vector
+		// here is ly is used as a temp var
 		// double prvect = acos(lx.dotProduct(help));
 		// if (prvect < 0.001 || prvect > M_PI - 0.001) { // Check if it is vertical
 		if (fabs(lx.dotProduct(help)) > 0.999) { // Check if it is vertical
-			ly = { 0., 1., 0. };
-        } else {
-            ly.beVectorProductOf(lx, help);
-        }
-        lz.beProductOf(rot, ly);
-        lz.normalize();
-    }
+			lz = { 1., 0., 0. };
+		}
+		else {
+			ly.beVectorProductOf(lx, help);
+			lz.beVectorProductOf(ly, lx);
+		}
+		ly.beProductOf(rot, lz);
+		ly.normalize();
+		lz.beVectorProductOf(lx, ly);
+		lz.normalize();
+	}
 
-    ly.beVectorProductOf(lz, lx);
-    ly.normalize();
 
     answer.resize(3, 3);
     answer.zero();
