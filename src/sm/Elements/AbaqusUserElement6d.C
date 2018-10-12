@@ -339,6 +339,9 @@ void AbaqusUserElement6d :: giveInternalForcesVector(FloatArray &answer, TimeSte
     // init U vector
     //this->computeVectorOf(this->dofs, VM_Total, tStep, U);
 	this->computeVectorOf(VM_Total, tStep, U, false);
+	// get A and V
+	this->computeVectorOf(VM_Velocity, tStep, V, false);
+	this->computeVectorOf(VM_Acceleration, tStep, A, false);
     FloatArray tempIntVect;
     // init DU vector
     //this->computeVectorOf(this->dofs, VM_Incremental, tStep, tempIntVect);
