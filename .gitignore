@@ -923,3 +923,5 @@ tests/sm/t3d.bmf
 /CMakeFiles/3.12.3/CompilerIdCXX/CompilerIdCXX.vcxproj
 /CMakeFiles/3.12.3/VCTargetsPath.txt
 /CMakeFiles/3.12.3/VCTargetsPath.vcxproj
+/MinSizeRel/testWinklerSubSoil.in
+/MinSizeRel/testWinklerSubSoil_lin.in
