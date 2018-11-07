@@ -84,24 +84,24 @@ EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatri
 	//typedef Eigen::ArpackGeneralizedSelfAdjointEigenSolver <SparseMat, SparseChol> Arpack;
 	//Arpack arpack;
 	//// define sparse matrix A
-	SparseMat* A = dynamic_cast<SparseMat*>(&a);
-	SparseMat* B = dynamic_cast<SparseMat*>(&b);
+	Eigen::SparseMatrix<double, 0, int>* A = dynamic_cast<Eigen::SparseMatrix<double, 0, int>*>(&a);
+	Eigen::SparseMatrix<double, 0, int>* B = dynamic_cast<Eigen::SparseMatrix<double, 0, int>*>(&b);
 	if (!A || !B)
 		OOFEM_ERROR("Error casting matrices");
 	////...
 	//// calculate the two smallest eigenvalues
 	//arpack.compute(*A, *B, nroot, "SM");
 
-	SparseGenMatProd<double,0,int> op(*A);
-	SparseGenMatProd<double,0,int> opB(*B);
+	Spectra::SparseGenMatProd<double,0,int> op(*A);
+	Spectra::SparseGenMatProd<double, 0, int> opB(*B);
 	// Construct eigen solver object, requesting the largest three eigenvalues
-	SymGEigsSolver< double, SMALLEST_REAL, SparseGenMatProd<double, 0, int>, SparseGenMatProd<double, 0, int>, GEIGS_REGULAR_INVERSE  > eigs(&op, &opB, nroot, min(2 * nroot, a.giveNumberOfColumns()));
+	Spectra::SymGEigsSolver< double, Spectra::SMALLEST_REAL, Spectra::SparseGenMatProd<double, 0, int>, Spectra::SparseGenMatProd<double, 0, int>, Spectra::GEIGS_REGULAR_INVERSE  > eigs(&op, &opB, nroot, min(2 * nroot, a.giveNumberOfColumns()));
 	// Initialize and compute
 	eigs.init();
 	int nconv = eigs.compute();
 	// Retrieve results
 	Eigen::VectorXcd evalues;
-	if (eigs.info() == SUCCESSFUL)
+	if (eigs.info() == Spectra::SUCCESSFUL)
 		evalues = eigs.eigenvalues();
 	_eigv.resize(evalues.size());
 	for (int i=0;i<evalues.size();++i)
