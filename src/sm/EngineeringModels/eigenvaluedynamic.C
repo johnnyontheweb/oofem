@@ -101,6 +101,9 @@ namespace oofem {
 		IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_EngngModel_smtype);
 		sparseMtrxType = (SparseMtrxType)val;
 
+		if (solverType == GenEigvalSolverType::GES_Eigen)
+			sparseMtrxType = SparseMtrxType::SMT_EigenSparse;
+
 		return IRRT_OK;
 	}
 

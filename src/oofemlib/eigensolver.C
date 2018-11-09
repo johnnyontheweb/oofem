@@ -85,16 +85,16 @@ EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatri
 	//typedef Eigen::ArpackGeneralizedSelfAdjointEigenSolver <SparseMat, SparseChol> Arpack;
 	//Arpack arpack;
 	//// define sparse matrix A
-	Eigen::SparseMatrix<double, 0, int>* A = dynamic_cast<Eigen::SparseMatrix<double>*>(&a);
-	Eigen::SparseMatrix<double, 0, int>* B = dynamic_cast<Eigen::SparseMatrix<double>*>(&b);
+	EigenSolverMatrix* A = dynamic_cast<EigenSolverMatrix*>(&a);
+	EigenSolverMatrix* B = dynamic_cast<EigenSolverMatrix*>(&b);
 	//if (!A || !B)
 	//	OOFEM_ERROR("Error casting matrices");
 	////...
 	//// calculate the two smallest eigenvalues
 	//arpack.compute(*A, *B, nroot, "SM");
 
-	Spectra::SparseGenMatProd<double> op(*A);
-	Spectra::SparseCholesky<double> opB(*B);
+	Spectra::SparseGenMatProd<double> op(A->giveEigenMatrix());
+	Spectra::SparseCholesky<double> opB(B->giveEigenMatrix());
 	// Construct eigen solver object, requesting the largest three eigenvalues
 	Spectra::SymGEigsSolver< double, Spectra::SMALLEST_REAL, Spectra::SparseGenMatProd<double>, Spectra::SparseCholesky<double>, Spectra::GEIGS_CHOLESKY  > eigs(&op, &opB, nroot, min(2 * nroot, a.giveNumberOfColumns()));
 	// Initialize and compute

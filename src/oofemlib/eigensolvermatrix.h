@@ -52,9 +52,11 @@ namespace oofem {
  * assemble the DSS sparse matrix, and to factorize and back substitution operations.
  */
 	// not exportable OOFEM_EXPORT
-	class  EigenSolverMatrix : public SparseMtrx, public Eigen::SparseMatrix<double>
+	class  EigenSolverMatrix : public SparseMtrx
 {
 protected:
+
+	std::unique_ptr<Eigen::SparseMatrix<double>> eigenMatrix;
 	
 public:
 	EigenSolverMatrix() {};  // default
@@ -74,7 +76,7 @@ public:
     virtual SparseMtrx *GiveCopy() const;
     virtual void times(const FloatArray &x, FloatArray &answer) const;
     virtual void times(double x);
-	virtual int buildInternalStructure(EngngModel *, int, const UnknownNumberingScheme & s) { return 0; };
+	virtual int buildInternalStructure(EngngModel *, int, const UnknownNumberingScheme & s);
     virtual int assemble(const IntArray &loc, const FloatMatrix &mat);
     virtual int assemble(const IntArray &rloc, const IntArray &cloc, const FloatMatrix &mat);
     virtual bool canBeFactorized() const { return false; }
@@ -90,6 +92,9 @@ public:
 	double operator() (int i, int j) const;
 	/// implements 0-based access
 	double &operator() (int i, int j);
+
+	Eigen::SparseMatrix<double>& giveEigenMatrix() { return *eigenMatrix.get(); }
+	const Eigen::SparseMatrix<double>& giveEigenMatrix() const { return *eigenMatrix.get(); }
 };
 
 // #define SparseMat Eigen::SparseMatrix<double, 0, int>

@@ -44,6 +44,7 @@
 #include "classfactory.h"
 #include "activebc.h"
 #include "eigensolver.h"
+#include "unknownnumberingscheme.h"
 
 #include <set>
 
@@ -53,7 +54,7 @@ REGISTER_SparseMtrx( EigenSolverMatrix, SMT_EigenSparse);
 
 //typedef Eigen::SparseMatrix<double, 0, int> SparseMat;
 
-EigenSolverMatrix::EigenSolverMatrix(int n) : SparseMtrx(n, n), Eigen::SparseMatrix<double, 0, int>(n, n)
+EigenSolverMatrix::EigenSolverMatrix(int n) : SparseMtrx(n, n)
 {
 }
 
@@ -65,8 +66,9 @@ EigenSolverMatrix :: ~EigenSolverMatrix()
 /*  Copy constructor         */
 /*****************************/
 
-EigenSolverMatrix::EigenSolverMatrix(const EigenSolverMatrix &S) : SparseMtrx(S.nRows, S.nColumns), Eigen::SparseMatrix<double, 0, int>(S.nRows, S.nColumns)
+EigenSolverMatrix::EigenSolverMatrix(const EigenSolverMatrix &S) : SparseMtrx(S.nRows, S.nColumns)
 {
+	eigenMatrix.reset(new Eigen::SparseMatrix<double>(S.giveEigenMatrix()));
     OOFEM_ERROR("not implemented");
 }
 
@@ -94,14 +96,28 @@ void EigenSolverMatrix :: times(const FloatArray &x, FloatArray &answer) const
   for (i = 1; i <= dim; i++) {
 	  for (j = 1; j <= dim; j++)
 	  {
-		  answer.at(i) += this->coeff(i - 1, j - 1) * x.at(j);
+		  answer.at(i) += this->eigenMatrix->coeff(i - 1, j - 1) * x.at(j);
 	  }
   }
 }
 
 void EigenSolverMatrix :: times(double x)
 {
-	(*this) *= x;
+	(*this->eigenMatrix) *= x;
+}
+
+int EigenSolverMatrix :: buildInternalStructure(EngngModel *eModel, int di, const UnknownNumberingScheme &s)
+{
+	int neq;
+	if (s.isDefault()) {
+		neq = eModel->giveNumberOfDomainEquations(di, s);
+	}
+	else {
+		neq = s.giveRequiredNumberOfDomainEquation();
+	}
+	nRows = nColumns = neq;
+	eigenMatrix.reset(new Eigen::SparseMatrix<double>(nRows, nColumns));
+	return true;
 }
 
 int EigenSolverMatrix :: assemble(const IntArray &loc, const FloatMatrix &mat)
@@ -124,7 +140,7 @@ int EigenSolverMatrix :: assemble(const IntArray &loc, const FloatMatrix &mat)
 			for (i = 1; i <= dim; i++) {
 				ii = loc.at(i);
 				if (ii) {
-					Eigen::SparseMatrix<double, 0, int>::coeffRef(ii - 1, jj - 1) += mat.at(i, j);
+					this->eigenMatrix->coeffRef(ii - 1, jj - 1) += mat.at(i, j);
 				}
 			}
 		}
@@ -150,7 +166,7 @@ int EigenSolverMatrix :: assemble(const IntArray &rloc, const IntArray &cloc, co
 			for (int j = 1; j <= dim2; j++) {
 				int jj = cloc.at(j);
 				if (jj) {
-					Eigen::SparseMatrix<double, 0, int>::coeffRef(ii - 1, jj - 1) += mat.at(i, j);
+					this->eigenMatrix->coeffRef(ii - 1, jj - 1) += mat.at(i, j);
 				}
 			}
 		}
@@ -164,7 +180,7 @@ int EigenSolverMatrix :: assemble(const IntArray &rloc, const IntArray &cloc, co
 
 void EigenSolverMatrix :: zero()
 {
-	this->Eigen::SparseMatrix<double, 0, int>::data().clear(); // don't know if this works as intended
+	this->eigenMatrix->data().clear(); // don't know if this works as intended
 
     // increment version
     this->version++;
@@ -178,25 +194,25 @@ double &EigenSolverMatrix :: at(int i, int j)
 {
     // increment version
     this->version++;
-	return this->Eigen::SparseMatrix<double, 0, int>::coeffRef(i - 1, j - 1);
+	return this->eigenMatrix->coeffRef(i - 1, j - 1);
 }
 
 
 double EigenSolverMatrix :: at(int i, int j) const
 {
-	return this->Eigen::SparseMatrix<double, 0, int>::coeff(i - 1, j - 1);
+	return this->eigenMatrix->coeff(i - 1, j - 1);
 }
 
 double EigenSolverMatrix :: operator() (int i, int j)  const
 {
-	return this->Eigen::SparseMatrix<double, 0, int>::coeff(i, j);
+	return this->eigenMatrix->coeff(i, j);
 }
 
 double &EigenSolverMatrix :: operator() (int i, int j)
 {
     // increment version
     this->version++;
-	return this->Eigen::SparseMatrix<double, 0, int>::coeffRef(i, j);
+	return this->eigenMatrix->coeffRef(i, j);
 }
 } // end namespace oofem
 
