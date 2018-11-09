@@ -94,9 +94,9 @@ EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatri
 	//arpack.compute(*A, *B, nroot, "SM");
 
 	Spectra::SparseCholesky<double> op(A->giveEigenMatrix());
-	Spectra::SparseGenMatProd<double> opB(B->giveEigenMatrix());
+	Spectra::SparseSymMatProd<double> opB(B->giveEigenMatrix());
 	// Construct eigen solver object, requesting the largest three eigenvalues
-	Spectra::SymGEigsSolver< double, Spectra::SMALLEST_REAL, Spectra::SparseGenMatProd<double>, Spectra::SparseCholesky<double>, Spectra::GEIGS_CHOLESKY  > eigs(&opB, &op, nroot, min(2 * nroot, a.giveNumberOfColumns()));
+	Spectra::SymGEigsSolver< double, Spectra::LARGEST_MAGN, Spectra::SparseSymMatProd<double>, Spectra::SparseCholesky<double>, Spectra::GEIGS_CHOLESKY  > eigs(&opB, &op, nroot, min(2 * nroot, a.giveNumberOfColumns()));
 	// Initialize and compute
 	eigs.init();
 	int nconv = eigs.compute();
@@ -106,7 +106,7 @@ EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatri
 		evalues = eigs.eigenvalues();
 	_eigv.resize(evalues.size());
 	for (int i=0;i<evalues.size();++i)
-		_eigv.at(i+1)=evalues.coeff(i).real();
+		_eigv.at(i+1)=1/evalues.coeff(i).real();
 
 	Eigen::MatrixXcd evectors = eigs.eigenvectors();
 	_r.resize(evectors.rows(), evectors.cols());
