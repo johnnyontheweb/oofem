@@ -95,6 +95,8 @@ public:
 
 	Eigen::SparseMatrix<double>& giveEigenMatrix() { return *eigenMatrix.get(); }
 	const Eigen::SparseMatrix<double>& giveEigenMatrix() const { return *eigenMatrix.get(); }
+
+	virtual void writeToFile(const char *fname) const;
 };
 
 // #define SparseMat Eigen::SparseMatrix<double, 0, int>
