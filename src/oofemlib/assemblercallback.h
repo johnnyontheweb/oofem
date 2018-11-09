@@ -61,7 +61,7 @@ class ActiveBoundaryCondition;
  * Default implementations are that no contributions are considered (empty vectors on output).
  * @author Mikael Öhman
  */
-class  VectorAssembler
+class OOFEM_EXPORT VectorAssembler
 {
 public:
     virtual void vectorFromElement(FloatArray &vec, Element &element, TimeStep *tStep, ValueModeType mode) const;
