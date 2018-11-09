@@ -61,7 +61,7 @@ class ActiveBoundaryCondition;
  * Default implementations are that no contributions are considered (empty vectors on output).
  * @author Mikael Öhman
  */
-class OOFEM_EXPORT VectorAssembler
+class  VectorAssembler
 {
 public:
     virtual void vectorFromElement(FloatArray &vec, Element &element, TimeStep *tStep, ValueModeType mode) const;
@@ -81,7 +81,7 @@ public:
  * Callback class for assembling specific types of matrices
  * @author Mikael Öhman
  */
-class OOFEM_EXPORT MatrixAssembler
+class  MatrixAssembler
 {
 public:
     virtual void matrixFromElement(FloatMatrix &mat, Element &element, TimeStep *tStep) const;
@@ -99,7 +99,7 @@ public:
  * Implementation for assembling internal forces vectors in standard monolithic, nonlinear FE-problems
  * @author Mikael Öhman
  */
-class OOFEM_EXPORT InternalForceAssembler : public VectorAssembler
+class  InternalForceAssembler : public VectorAssembler
 {
 public:
     virtual void vectorFromElement(FloatArray &vec, Element &element, TimeStep *tStep, ValueModeType mode) const;
@@ -113,7 +113,7 @@ public:
  * Implementation for assembling external forces vectors in standard monolithic FE-problems
  * @author Mikael Öhman
  */
-class OOFEM_EXPORT ExternalForceAssembler : public VectorAssembler
+class  ExternalForceAssembler : public VectorAssembler
 {
 public:
     virtual void vectorFromElement(FloatArray &vec, Element &element, TimeStep *tStep, ValueModeType mode) const; ///@todo Temporary: Remove when switch to sets is complete
@@ -128,7 +128,7 @@ public:
  * Implementation for assembling lumped mass matrix (diagonal components) in vector form.
  * @author Mikael Öhman
  */
-class OOFEM_EXPORT LumpedMassVectorAssembler : public VectorAssembler
+class  LumpedMassVectorAssembler : public VectorAssembler
 {
 public:
     virtual void vectorFromElement(FloatArray &vec, Element &element, TimeStep *tStep, ValueModeType mode) const;
@@ -138,7 +138,7 @@ public:
  * Implementation for assembling the intertia forces vector (i.e. C * dT/dt or M * a)
  * @author Mikael Öhman
  */
-class OOFEM_EXPORT InertiaForceAssembler : public VectorAssembler
+class  InertiaForceAssembler : public VectorAssembler
 {
 public:
     virtual void vectorFromElement(FloatArray &vec, Element &element, TimeStep *tStep, ValueModeType mode) const;
@@ -150,7 +150,7 @@ public:
  * This is useful for computing; f = K * u for extrapolated forces, without constructing the K-matrix.
  * @author Mikael Öhman
  */
-class OOFEM_EXPORT MatrixProductAssembler : public VectorAssembler
+class  MatrixProductAssembler : public VectorAssembler
 {
 protected:
     MatrixAssembler mAssem;
@@ -170,7 +170,7 @@ public:
  * Implementation for assembling tangent matrices in standard monolithic FE-problems
  * @author Mikael Öhman
  */
-class OOFEM_EXPORT TangentAssembler : public MatrixAssembler
+class  TangentAssembler : public MatrixAssembler
 {
 protected:
     ///@todo This is more general than just material responses; we should make a "TangentType"
@@ -191,7 +191,7 @@ public:
  * Implementation for assembling the consistent mass matrix
  * @author Mikael Öhman
  */
-class OOFEM_EXPORT MassMatrixAssembler : public MatrixAssembler
+class  MassMatrixAssembler : public MatrixAssembler
 {
 public:
     virtual void matrixFromElement(FloatMatrix &mat, Element &element, TimeStep *tStep) const;
@@ -202,7 +202,7 @@ public:
  * Callback class for assembling effective tangents composed of stiffness and mass matrix.
  * @author Mikael Öhman
  */
-class OOFEM_EXPORT EffectiveTangentAssembler : public MatrixAssembler
+class  EffectiveTangentAssembler : public MatrixAssembler
 {
 protected:
     double lumped;
