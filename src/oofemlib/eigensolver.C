@@ -38,6 +38,7 @@
 #include <../Eigen/SparseCholesky>
 #include <SymGEigsSolver.h>
 #include <MatOp/SparseGenMatProd.h>
+#include <MatOp/SparseCholesky.h>
 #include "eigensolvermatrix.h"
 #include "eigensolver.h"
 #include "floatmatrix.h"
@@ -84,18 +85,18 @@ EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatri
 	//typedef Eigen::ArpackGeneralizedSelfAdjointEigenSolver <SparseMat, SparseChol> Arpack;
 	//Arpack arpack;
 	//// define sparse matrix A
-	Eigen::SparseMatrix<double, 0, int>* A = dynamic_cast<Eigen::SparseMatrix<double, 0, int>*>(&a);
-	Eigen::SparseMatrix<double, 0, int>* B = dynamic_cast<Eigen::SparseMatrix<double, 0, int>*>(&b);
-	if (!A || !B)
-		OOFEM_ERROR("Error casting matrices");
+	Eigen::SparseMatrix<double, 0, int>* A = dynamic_cast<Eigen::SparseMatrix<double>*>(&a);
+	Eigen::SparseMatrix<double, 0, int>* B = dynamic_cast<Eigen::SparseMatrix<double>*>(&b);
+	//if (!A || !B)
+	//	OOFEM_ERROR("Error casting matrices");
 	////...
 	//// calculate the two smallest eigenvalues
 	//arpack.compute(*A, *B, nroot, "SM");
 
-	Spectra::SparseGenMatProd<double,0,int> op(*A);
-	Spectra::SparseGenMatProd<double, 0, int> opB(*B);
+	Spectra::SparseGenMatProd<double> op(*A);
+	Spectra::SparseCholesky<double> opB(*B);
 	// Construct eigen solver object, requesting the largest three eigenvalues
-	Spectra::SymGEigsSolver< double, Spectra::SMALLEST_REAL, Spectra::SparseGenMatProd<double, 0, int>, Spectra::SparseGenMatProd<double, 0, int>, Spectra::GEIGS_REGULAR_INVERSE  > eigs(&op, &opB, nroot, min(2 * nroot, a.giveNumberOfColumns()));
+	Spectra::SymGEigsSolver< double, Spectra::SMALLEST_REAL, Spectra::SparseGenMatProd<double>, Spectra::SparseCholesky<double>, Spectra::GEIGS_CHOLESKY  > eigs(&op, &opB, nroot, min(2 * nroot, a.giveNumberOfColumns()));
 	// Initialize and compute
 	eigs.init();
 	int nconv = eigs.compute();

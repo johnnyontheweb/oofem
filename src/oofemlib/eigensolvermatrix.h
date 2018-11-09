@@ -56,6 +56,7 @@ namespace oofem {
 protected:
 	
 public:
+	EigenSolverMatrix() {};  // default
     /**
      * Constructor. Before any operation an internal profile must be built.
      * @param t Storage type
@@ -72,7 +73,7 @@ public:
     virtual SparseMtrx *GiveCopy() const;
     virtual void times(const FloatArray &x, FloatArray &answer) const;
     virtual void times(double x);
-	virtual int buildInternalStructure(EngngModel *, int, const UnknownNumberingScheme & s) {};
+	virtual int buildInternalStructure(EngngModel *, int, const UnknownNumberingScheme & s) { return 0; };
     virtual int assemble(const IntArray &loc, const FloatMatrix &mat);
     virtual int assemble(const IntArray &rloc, const IntArray &cloc, const FloatMatrix &mat);
     virtual bool canBeFactorized() const { return false; }

@@ -1,6 +1,6 @@
 eigen_beam3d_2.out
 eigen vibration analysis of simple suported beam
-EigenValueDynamic nroot 6 rtolv 1.e-6 nmodules 1
+EigenValueDynamic nroot 6 rtolv 1.e-6 nmodules 1 stype 3
 #ResponseSpectrum nroot 6 rtolv 1.e-6 nmodules 1
 errorcheck
 domain 3dShell
