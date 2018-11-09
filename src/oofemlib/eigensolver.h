@@ -64,7 +64,8 @@ class EngngModel;
  *
  *
  */
-class OOFEM_EXPORT EigenSolver : public SparseGeneralEigenValueSystemNM
+ // not exportable due to conflicts with eigen OOFEM_EXPORT
+class  EigenSolver : public SparseGeneralEigenValueSystemNM
 {
 private:
     int nitem;

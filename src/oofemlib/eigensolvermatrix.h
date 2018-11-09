@@ -51,7 +51,8 @@ namespace oofem {
  * This class represent the sparse matrix interface to DSS library. It allows to build internal structure,
  * assemble the DSS sparse matrix, and to factorize and back substitution operations.
  */
-	class OOFEM_EXPORT EigenSolverMatrix : public SparseMtrx, public Eigen::SparseMatrix<double>
+	// not exportable OOFEM_EXPORT
+	class  EigenSolverMatrix : public SparseMtrx, public Eigen::SparseMatrix<double>
 {
 protected:
 	
