@@ -105,16 +105,13 @@ LinearStability :: initializeFrom(InputRecord *ir)
     IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_LinearStability_stype);
     solverType = ( GenEigvalSolverType ) val;
 
-	val = 0; //Default Skyline
-	IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_EngngModel_smtype);
-	sparseMtrxType = (SparseMtrxType)val;
+	sparseMtrxType= SparseMtrxType::SMT_Skyline; //Default Skyline
+	linStype = LinSystSolverType::ST_Direct;
 
-	val = 0; // ST_Direct
-	IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_LinearStability_ltype);
-	linStype = (LinSystSolverType)val;
-
-	if (solverType == GenEigvalSolverType::GES_Eigen)
+	if (solverType == GenEigvalSolverType::GES_Eigen){
 		sparseMtrxType = SparseMtrxType::SMT_EigenSparse; // linStype = ST_Spooles;
+		linStype = LinSystSolverType::ST_EigenLib;
+	}
 
     nMetaSteps = 0;
 

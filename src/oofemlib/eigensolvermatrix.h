@@ -79,7 +79,7 @@ public:
 	virtual int buildInternalStructure(EngngModel *, int, const UnknownNumberingScheme & s);
     virtual int assemble(const IntArray &loc, const FloatMatrix &mat);
     virtual int assemble(const IntArray &rloc, const IntArray &cloc, const FloatMatrix &mat);
-    virtual bool canBeFactorized() const { return false; }
+    virtual bool canBeFactorized() const { return true; }
     virtual void zero();
     virtual double &at(int i, int j);
     virtual double at(int i, int j) const;

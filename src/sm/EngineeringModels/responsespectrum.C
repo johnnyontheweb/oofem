@@ -115,6 +115,11 @@ namespace oofem {
 		IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_EngngModel_smtype);
 		sparseMtrxType = (SparseMtrxType)val;
 
+		if (solverType == GenEigvalSolverType::GES_Eigen){
+			sparseMtrxType = SparseMtrxType::SMT_EigenSparse; // linStype = ST_Spooles;
+			linStype = LinSystSolverType::ST_EigenLib;
+		}
+
 		IR_GIVE_FIELD(ir, val, _IFT_ResponseSpectrum_func);
 		func = (int)val; // we'll check in postInitialize whether this id exists or not
 
@@ -662,7 +667,7 @@ namespace oofem {
 				}
 			}
 			else {
-				nLinMethod.reset(classFactory.createSparseLinSolver(ST_Direct, this->giveDomain(1), this));
+				nLinMethod.reset(classFactory.createSparseLinSolver(linStype, this->giveDomain(1), this));
 			}
 			if (!nLinMethod) {
 				OOFEM_ERROR("linear solver creation failed for lstype %d", solverType);

@@ -197,8 +197,8 @@ namespace oofem {
 #endif
 
 #ifdef DEBUG
-		stiffnessMatrix->writeToFile("K.dat");
-		massMatrix->writeToFile("M.dat");
+		//stiffnessMatrix->writeToFile("K.dat");
+		//massMatrix->writeToFile("M.dat");
 #endif
 
 		nMethod->solve(*stiffnessMatrix, *massMatrix, eigVal, eigVec, rtolv, numberOfRequiredEigenValues);

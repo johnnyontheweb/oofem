@@ -50,7 +50,6 @@
 #define _IFT_LinearStability_nroot "nroot"
 #define _IFT_LinearStability_rtolv "rtolv"
 #define _IFT_LinearStability_stype "stype"
-#define _IFT_LinearStability_ltype "ltype"
 //@}
 
 namespace oofem {

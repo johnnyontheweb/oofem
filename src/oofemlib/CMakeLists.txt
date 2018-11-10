@@ -36,6 +36,7 @@ set (core_unsorted
     ldltfact.C
     inverseit.C subspaceit.C gjacobi.C
 	eigensolver.C
+	ldltfacteigenlib.C
     #
     symcompcol.C compcol.C
     unstructuredgridfield.C

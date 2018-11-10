@@ -69,13 +69,15 @@ EigenSolverMatrix :: ~EigenSolverMatrix()
 EigenSolverMatrix::EigenSolverMatrix(const EigenSolverMatrix &S) : SparseMtrx(S.nRows, S.nColumns)
 {
 	eigenMatrix.reset(new Eigen::SparseMatrix<double>(S.giveEigenMatrix()));
-    OOFEM_ERROR("not implemented");
+//    OOFEM_ERROR("not implemented");
 }
 
 SparseMtrx *EigenSolverMatrix :: GiveCopy() const
 {
-    OOFEM_ERROR("not implemented");
-    return NULL;
+	EigenSolverMatrix *answer;
+
+	answer = new EigenSolverMatrix(*this);
+	return answer;
 }
 
 void EigenSolverMatrix :: times(const FloatArray &x, FloatArray &answer) const
