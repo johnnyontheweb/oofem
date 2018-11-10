@@ -95,7 +95,7 @@ private:
     std :: unique_ptr< SparseGeneralEigenValueSystemNM > nMethod;
     GenEigvalSolverType solverType;
 	/// Numerical method used to solve the static problem.
-	LinSystSolverType linStype;
+	LinSystSolverType linStype = ST_Direct;
 	RSpecComboType modalCombo;
 	double csi;
 	int func;
