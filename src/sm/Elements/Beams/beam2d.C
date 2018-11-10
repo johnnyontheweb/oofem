@@ -546,11 +546,11 @@ Beam2d :: computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, 
     for ( GaussPoint *gp : *this->giveDefaultIntegrationRulePtr() ) {
         const FloatArray &lcoords = gp->giveNaturalCoordinates();
         this->computeNmatrixAt(lcoords, N);
-        if ( load ) {
+		if (load->giveFormulationType() == Load::FT_Entity) {
+			load->computeValues(t, tStep, lcoords, { D_u, D_w, R_v }, mode);
+		} else {
             this->computeGlobalCoordinates(coords, lcoords);
             load->computeValues(t, tStep, coords, { D_u, D_w, R_v }, mode);
-        } else {
-            load->computeValues(t, tStep, lcoords, { D_u, D_w, R_v }, mode);
         }
 
         if ( load->giveCoordSystMode() == Load :: CST_Global ) {

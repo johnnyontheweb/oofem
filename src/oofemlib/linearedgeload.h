@@ -44,6 +44,8 @@
 #define _IFT_LinearEdgeLoad_formulation "formulation"
 #define _IFT_LinearEdgeLoad_startcoord "sc"
 #define _IFT_LinearEdgeLoad_endcoord "ec"
+#define _IFT_LinearEdgeLoad_startlocal "sl"
+#define _IFT_LinearEdgeLoad_endlocal "el"
 //@}
 
 namespace oofem {
@@ -74,7 +76,7 @@ protected:
 
 public:
     LinearEdgeLoad(int i, Domain * d) : EdgeLoad(i, d) { }
-
+	double startLocal, endLocal;
     virtual int giveApproxOrder() { return 1; }
     virtual IRResultType initializeFrom(InputRecord *ir);
     virtual void giveInputRecord(DynamicInputRecord &input);

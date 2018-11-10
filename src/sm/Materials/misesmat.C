@@ -80,7 +80,8 @@ MisesMat :: initializeFrom(InputRecord *ir)
 
     G = static_cast< IsotropicLinearElasticMaterial * >(linearElasticMaterial)->giveShearModulus();
     K = static_cast< IsotropicLinearElasticMaterial * >(linearElasticMaterial)->giveBulkModulus();
-
+	this->propertyDictionary.add('E', K);
+	this->propertyDictionary.add('G', G);
     IR_GIVE_FIELD(ir, sig0, _IFT_MisesMat_sig0); // uniaxial yield stress
 
     H = 0.;

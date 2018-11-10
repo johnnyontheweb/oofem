@@ -265,6 +265,15 @@ double NonLinearStatic :: giveUnknownComponent(ValueModeType mode, TimeStep *tSt
             return 0.;
         }
 
+	case VM_Acceleration:
+		if (incrementOfDisplacement.isNotEmpty()) {
+			double t = tStep->giveTimeIncrement();
+			return incrementOfDisplacement.at(eq) / t / t;
+		}
+		else {
+			return 0.;
+		}
+
     default:
         OOFEM_ERROR("Unknown is of undefined ValueModeType for this problem");
     }

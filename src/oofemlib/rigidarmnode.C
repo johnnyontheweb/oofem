@@ -66,6 +66,10 @@ RigidArmNode :: initializeFrom(InputRecord *ir)
         return IRRT_BAD_FORMAT;
     }
 
+	if (masterDofMngr == this->giveLabel()) {
+		OOFEM_ERROR("rigidarmnode %d is own master", this->giveLabel());
+	}
+
     return IRRT_OK;
 }
 

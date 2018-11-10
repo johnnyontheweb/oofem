@@ -45,6 +45,7 @@
 #include "classfactory.h"
 #include "generalboundarycondition.h"
 #include "constantedgeload.h"
+#include "linearedgeload.h"
 #include "fei3dlinelin.h"
 #include "inputrecord.h"
 #include "../sm/EngineeringModels/responsespectrum.h"
@@ -82,20 +83,39 @@ namespace oofem {
 	}
 
 	void
-		addComponents(FloatArray &dst, FloatArray &src, double pos, double len, bool momentOnly = false)
+		addComponents(FloatArray &dst, std::pair<FloatArray,FloatArray> &src, double pos, double len, bool momentOnly = false)
 	{
-		if (!momentOnly) {
-			// axial force. linear interpolation
-			dst.at(1) += src.at(1) * (len / 2 - pos);
+		FloatArray &qi = src.first, &qf = src.second;
+		double tot1, tot2, tot3;
+		tot1 = (qi.at(1) + qf.at(1))*len / 2;
+		tot2 = (qi.at(2) + qf.at(2))*len / 2;
+		tot3 = (qi.at(3) + qf.at(3))*len / 2;
+		double center1 = len / 2, center2 = len / 2, center3 = len / 2;
+		if (tot1 != 0.0) center1 = (qi.at(1) + 2 * qf.at(1))*len / 3 / (qi.at(1) + qf.at(1));
+		if (tot2 != 0.0) center2 = (qi.at(2) + 2 * qf.at(2))*len / 3 / (qi.at(2) + qf.at(2));
+		if (tot3 != 0.0) center3 = (qi.at(3) + 2 * qf.at(3))*len / 3 / (qi.at(3) + qf.at(3));
+		double V1I, V2I, V3I;
+		V1I = tot1*(len-center1) / len;
+		V2I = tot2*(len-center2) / len;
+		V3I = tot3*(len-center3) / len;
+		double V1E, V2E, V3E;
+		V1E = V1I-tot1;
+		V2E = V2I-tot2;
+		V3E = V3I-tot3;
+		double pos2 = pos*pos, pos3 = pos2*pos;
 
-			// shear forces. linear interpolation
-			dst.at(3) += src.at(3) * (len / 2 - pos);
-			dst.at(2) += src.at(2) * (len / 2 - pos);
+		if (!momentOnly) {
+			// axial force.
+			dst.at(1) -= (qi.at(1)*pos + (qf.at(1) - qi.at(1)) / 2 / len*pos*pos);
+
+			// shear forces.
+			dst.at(2) -= (qi.at(2)*pos + (qf.at(2) - qi.at(2)) / 2 / len*pos*pos);
+			dst.at(3) -= (qi.at(3)*pos + (qf.at(3) - qi.at(3)) / 2 / len*pos*pos);
 		}
 
-		// only these two parabolic. linear interpolation should be enough for the other directions
-		dst.at(5) += src.at(3) * (pos) / 2 * (len - pos);
-		dst.at(6) -= src.at(2) * (pos) / 2 * (len - pos);
+		// moments.
+		dst.at(5) += (V3E + V3I) / len / len*pos3 - (2 * V3I + V3E) / len*pos2 + V3I*pos;
+		dst.at(6) -= (V2E + V2I) / len / len*pos3 - (2 * V2I + V2E) / len*pos2 + V2I*pos;
 	}
 
 	//int checkValidType(const char* name)
@@ -111,7 +131,7 @@ namespace oofem {
 		}
 
 		vector< int >beamIDs;
-		map<int, FloatArray >BeamLoads;
+		map<int, std::pair<FloatArray,FloatArray> >BeamLoads;
 		IntArray temp;
 		// loop through the beam elements
 		Domain *d = emodel->giveDomain(1);
@@ -168,9 +188,19 @@ namespace oofem {
 
 					Diff.beDifferenceOf(E, I);
 
-					FloatArray FinalLoads;
-					FinalLoads.resize(6);
-					FinalLoads.zero();
+					std::pair<FloatArray, FloatArray> FinalLoads;
+					FinalLoads.first.resize(6);
+					FinalLoads.first.zero();
+					FinalLoads.second.resize(6);
+					FinalLoads.second.zero();
+
+					//FloatArray FinalLoads;
+					//FinalLoads.resize(6);
+					//FinalLoads.zero();
+
+					//FloatArray FinalLoadsL;
+					//FinalLoadsL.resize(12); // 6 by 2 position (start & end)
+					//FinalLoadsL.zero();
 
 					// temporary stuff for winker
 					//double wy, wz;
@@ -224,6 +254,15 @@ namespace oofem {
 					temp.at(5) = 5;
 					temp.at(6) = 6;
 
+					std::list<double> midPoints;
+					//midPoints.push_back(0.125);
+					midPoints.push_back(0.25);
+					//midPoints.push_back(0.375);
+					midPoints.push_back(0.5);
+					//midPoints.push_back(0.625);
+					midPoints.push_back(0.75);
+					//midPoints.push_back(0.875);
+
 					IntArray *loads = elem->giveBoundaryLoadArray();
 					int nBoundaryLoads = loads->giveSize() / 2;
 					for (int i = 1; i <= nBoundaryLoads; i++)
@@ -233,14 +272,47 @@ namespace oofem {
 						if (strcmp(bc->giveClassName(), "ConstantEdgeLoad") == 0) {
 							ConstantEdgeLoad *CLoad = static_cast<ConstantEdgeLoad *>(bc);
 							FloatArray compArr;
-							const FloatArray coords;
+							FloatArray coords;
 
 							// CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
 							CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
 
 							// transform to local coordinates
 							if (CLoad->giveCoordSystMode() == Load::CoordSystType::CST_Global)	compArr.rotatedWith(T, 'n');
-							FinalLoads.add(compArr);
+							// they're the same
+							FinalLoads.first.add(compArr);
+							FinalLoads.second.add(compArr);
+						}
+						else if (strcmp(bc->giveClassName(), "LinearEdgeLoad") == 0) {
+							LinearEdgeLoad *CLoad = static_cast<LinearEdgeLoad *>(bc);
+							FloatArray compArr;
+							FloatArray coords(3);
+
+							coords.at(1) = -1;  // 1st node param. coord
+
+							// CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
+							CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
+
+							// transform to local coordinates
+							if (CLoad->giveCoordSystMode() == Load::CoordSystType::CST_Global)	compArr.rotatedWith(T, 'n');
+							FinalLoads.first.add(compArr);
+							
+							coords.at(1) = 1;  // 2nd node param. coord
+
+							// CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
+							CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
+
+							// transform to local coordinates
+							if (CLoad->giveCoordSystMode() == Load::CoordSystType::CST_Global)	compArr.rotatedWith(T, 'n');
+							FinalLoads.second.add(compArr);
+
+							//// add stations inside load
+							//midPoints.push_back(CLoad->startLocal);
+							//double halfL = CLoad->endLocal - CLoad->startLocal;
+							//midPoints.push_back(CLoad->startLocal + 0.25 * halfL);
+							//midPoints.push_back(CLoad->startLocal + 0.5 * halfL);
+							//midPoints.push_back(CLoad->startLocal + 0.75 * halfL);
+							//midPoints.push_back(CLoad->endLocal);
 						}
 					}
 
@@ -254,10 +326,7 @@ namespace oofem {
 					//wE.at(1) = qEy; wE.at(2) = qEz;
 					//winkDict[0.0] = wI;
 
-					std::list<double> midPoints;
-					midPoints.push_back(0.25);
-					midPoints.push_back(0.5);
-					midPoints.push_back(0.75);
+
 					//double tempmidpoint = 0;
 					//int count = 0;
 
@@ -301,11 +370,14 @@ namespace oofem {
 
 						// can't use this until beam is fixed?
 						// elem->giveGlobalIPValue(ipState, gp, (InternalStateType)1, tStep); // IST_StressTensor
-						ipState.zero();
-						ipState.beScaled(midP, Diff);
+						ipState.resize(6); ipState.zero();
+						// ipState.beScaled(midP, Diff);
+						// moments only
+						ipState.at(5) = Diff.at(5) * midP;
+						ipState.at(6) = Diff.at(6) * midP;
 						ipState.add(I);
 
-						addComponents(ipState, FinalLoads, pos, l, true);
+						addComponents(ipState, FinalLoads, pos, l, false);
 
 						ForceDict[pos] = ipState;
 					}
@@ -331,7 +403,7 @@ namespace oofem {
 
 			//vector< unique_ptr< GeneralBoundaryCondition > > BCs = d->giveBcs();
 
-			// tamper with stuff only if sets are defined.
+			// only if sets are defined. actually not used, wrong end forces in oofem for beam edge loads.
 			if (d->giveNumberOfSets()) {
 				temp.resize(6);
 				temp.at(1) = 1;
@@ -365,7 +437,7 @@ namespace oofem {
 								Element* ele = d->giveElement(elNum);
 								if (!this->checkValidType(ele->giveClassName())) continue;
 
-								const FloatArray coords;
+								FloatArray coords;
 
 								// CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
 								CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
@@ -377,9 +449,17 @@ namespace oofem {
 								if (CLoad->giveCoordSystMode() == Load::CoordSystType::CST_Global)	compArr.rotatedWith(T, 'n');
 
 								// add loads to our map
-								BeamLoads[elNum] += compArr;
-								//BeamLoads[elNum].first += compArr.at(2);
-								//BeamLoads[elNum].second += compArr.at(3);
+								BeamLoads[elNum].first += compArr;
+
+								std::pair<FloatArray, FloatArray> localpair;
+								localpair.first = compArr;
+
+								// add loads to our map
+								BeamLoads[elNum].second += compArr;
+								localpair.second = compArr;
+
+								double ll = d->giveElement(elNum)->computeLength();
+								FloatArray Diff; Diff.beDifferenceOf(BeamForces[elNum][ll], BeamForces[elNum][0.0]);
 
 								// compute contribution to internal forces
 								map< double, FloatArray >Dst = BeamForces[elNum];
@@ -388,7 +468,95 @@ namespace oofem {
 									FloatArray Vals = PointVals.second;
 
 									// tamper with values?
-									addComponents(Vals, compArr, pos, d->giveElement(elNum)->computeLength());
+									// addComponents(Vals, localpair, pos, d->giveElement(elNum)->computeLength());
+									if (pos == 0.0 || pos == ll) {
+										addComponents(Vals, localpair, pos, ll, true);
+									} else {
+										// moments only
+										Vals.at(5) = Diff.at(5) * pos / ll;
+										Vals.at(6) = Diff.at(6) * pos / ll;
+										Vals.add(BeamForces[elNum][0.0]);
+										addComponents(Vals, localpair, pos, ll, false);
+									}
+									
+									// update in point-forces map
+									PointVals.second = Vals;
+								}
+								// update in beam-forces map
+								BeamForces[elNum] = Dst;
+							}
+						}
+					} else if (strcmp(bc->giveClassName(), "LinearEdgeLoad") == 0) {
+						LinearEdgeLoad *CLoad = static_cast<LinearEdgeLoad *>(bc.get());
+
+						// is it in a set?
+						int nSet = CLoad->giveSetNumber();
+						if (nSet) {
+							Set *mySet = d->giveSet(nSet);
+							// contains any of our beams?
+							const IntArray &EdgeList = mySet->giveEdgeList();
+							int numEdges = EdgeList.giveSize();
+
+							int c = 1;
+							while (c <= numEdges) {
+								FloatArray compArr, tempArr;
+								FloatMatrix T;
+								int elNum = EdgeList.at(c);
+								c += 2; // increment counter in interleaved array
+
+								Element* ele = d->giveElement(elNum);
+								if (!this->checkValidType(ele->giveClassName())) continue;
+
+								FloatArray coords(3);
+								coords.at(1) = -1;
+
+								// CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
+								CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
+								//d->giveElement(elNum)->computeBoundaryEdgeLoadVector(compArr, CLoad, edgeNum, ExternalForcesVector, VM_Total, tStep); // always vm_total???
+
+								// transform to local coordinates
+								d->giveElement(elNum)->computeGtoLRotationMatrix(T);
+								T.resizeWithData(6, 6);
+								if (CLoad->giveCoordSystMode() == Load::CoordSystType::CST_Global)	compArr.rotatedWith(T, 'n');
+
+								// add loads to our map
+								BeamLoads[elNum].first += compArr;
+
+								std::pair<FloatArray, FloatArray> localpair;
+								localpair.first = compArr;
+
+								coords.at(1) = 1;
+								CLoad->computeValues(compArr, tStep, coords, temp, VM_Total);
+								// transform to local coordinates
+								d->giveElement(elNum)->computeGtoLRotationMatrix(T);
+								T.resizeWithData(6, 6);
+								if (CLoad->giveCoordSystMode() == Load::CoordSystType::CST_Global)	compArr.rotatedWith(T, 'n');
+
+								// add loads to our map
+								BeamLoads[elNum].second += compArr;
+								localpair.second = compArr;
+
+								double ll = d->giveElement(elNum)->computeLength();
+								FloatArray Diff; Diff.beDifferenceOf(BeamForces[elNum][ll], BeamForces[elNum][0.0]);
+								
+								// compute contribution to internal forces
+								map< double, FloatArray >Dst = BeamForces[elNum];
+								for (auto &PointVals : Dst) {
+									const double &pos = PointVals.first;
+									FloatArray Vals = PointVals.second;
+
+									// tamper with values?
+									// addComponents(Vals, localpair, pos, d->giveElement(elNum)->computeLength());
+									if (pos == 0.0 || pos == ll) {
+										addComponents(Vals, localpair, pos, ll, true);
+									}
+									else {
+										// moments only
+										Vals.at(5) = Diff.at(5) * pos / ll;
+										Vals.at(6) = Diff.at(6) * pos / ll;
+										Vals.add(BeamForces[elNum][0.0]);
+										addComponents(Vals, localpair, pos, ll, false);
+									}
 
 									// update in point-forces map
 									PointVals.second = Vals;
@@ -398,7 +566,7 @@ namespace oofem {
 							}
 						}
 					}
-					//}
+
 				}
 			}
 
@@ -475,10 +643,10 @@ namespace oofem {
 
 				double EJyy = 0, EJzz = 0, EA = 0, GJ = 0, GKyAy = 0, GKzAz = 0;
 				double psi_y = 0, psi_z = 0;
-				double ay = 0, by = 0, cy = 0, dy = 0, fy = 0;
-				double anx = 0, bnx = 0, cnx = 0;
-				double az = 0, bz = 0, cz = 0, dz = 0, fz = 0;
-				double atx = 0, btx = 0, ctx = 0;
+				double ay = 0, by = 0, cy = 0, dy = 0, ey=0, fy = 0;
+				double anx = 0, bnx = 0, cnx = 0, dnx=0;
+				double az = 0, bz = 0, cz = 0, dz = 0, ez=0, fz = 0;
+				double atx = 0, btx = 0, ctx = 0, dtx=0;
 				bool hasWinklerY, hasWinklerZ;
 				hasWinklerY = hasWinklerZ = false;
 				double wy = 0, wz = 0;  // winkler stiffness
@@ -493,16 +661,18 @@ namespace oofem {
 				// saving winkler reaction for each gp
 				map< double, FloatArray > WinkDict;
 
-				FloatArray &bl = BeamLoads[elNum];
 				FloatArray *disps = &dI;
 
+				// shorthands for the loads
+				FloatArray &qi = BeamLoads[elNum].first, &qf = BeamLoads[elNum].second;
+				
 				std::map< double, FloatArray > &Forces = BeamForces[elem->giveNumber()];
 
 				for (auto &force : Forces) {
 				//for (GaussPoint *gp : *elem->giveDefaultIntegrationRulePtr()) {
 					//FloatArray ipState;
 					double pos = force.first;
-					double pos_2, pos_3, pos_4;
+					double pos_2, pos_3, pos_4, pos_5;
 
 					//ksi = 0.5 + 0.5 * gp->giveNaturalCoordinate(1);
 					//pos = ksi*l;
@@ -510,6 +680,7 @@ namespace oofem {
 					pos_2 = pos*pos;
 					pos_3 = pos_2*pos;
 					pos_4 = pos_2*pos_2;
+					pos_5 = pos_2*pos_3;
 
 					// calculate this stuff on the first pass. Constant section along the length
 					if (!calc){
@@ -672,10 +843,15 @@ namespace oofem {
 								}
 							}
 
-							rhs.at(1) = dI.at(2) - bl.at(2) / wy;
-							rhs.at(2) = dE.at(2) - bl.at(2) / wy;
-							rhs.at(3) = dI.at(6);
-							rhs.at(4) = dE.at(6);
+							//rhs.at(1) = dI.at(2) - bl.at(2) / wy;
+							//rhs.at(2) = dE.at(2) - bl.at(2) / wy;
+							//rhs.at(3) = dI.at(6);
+							//rhs.at(4) = dE.at(6);
+
+							rhs.at(1) = dI.at(2) - qi.at(2) / wy;
+							rhs.at(2) = dE.at(2) - qf.at(2) / wy;
+							rhs.at(3) = dI.at(6) + (qf.at(2) - qi.at(2)) / (wy*l);
+							rhs.at(4) = dE.at(6) + (qf.at(2) - qi.at(2)) / (wy*l);
 
 							//odeMtrx.computeReciprocalCondition('1');
 							odeMtrx.solveForRhs(rhs, abcd);
@@ -691,18 +867,32 @@ namespace oofem {
 						}
 						else {
 							if (psi_y == 0.0) {  // Euler Bernoulli formulation
-								ay = bl.at(2) / 24 / EJzz;
-								dy = phiz_0;
+								//ay = bl.at(2) / 24 / EJzz;
+								//dy = phiz_0;
+								//fy = vy_0;
+								//by = (2 * (vy_0 - vy_l) + l*(phiz_l + phiz_0)) / (l_3)-2 * ay*l;
+								//cy = -(3 * (vy_0 - vy_l) + l*(2 * phiz_0 + phiz_l)) / l_2 + ay*l_2;
+
+								ay = (qf.at(2) - qi.at(2)) / 120 / EJzz / l;
+								by = qi.at(2) / 24 / EJzz;
+								cy = (240 * EJzz*(vy_0 - vy_l) + l*(120 * EJzz*(phiz_0 + phiz_l) - l_3*(3 * qf.at(2) + 7 * qi.at(2)))) / (120 * EJzz*l_3);
+								dy = -(360 * EJzz*(vy_0 - vy_l) + l*(120 * EJzz*(2 * phiz_0 + phiz_l) - l_3*(2 * qf.at(2) + 3 * qi.at(2)))) / (120 * EJzz*l_2);
+								ey = phiz_0;
 								fy = vy_0;
-								by = (2 * (vy_0 - vy_l) + l*(phiz_l + phiz_0)) / (l_3)-2 * ay*l;
-								cy = -(3 * (vy_0 - vy_l) + l*(2 * phiz_0 + phiz_l)) / l_2 + ay*l_2;
 							}
 							else { // timoshenko formulation for transversal displacements
-								ay = bl.at(2) / 24 / EJzz;
-								dy = phiz_0;
+								//ay = bl.at(2) / 24 / EJzz;
+								//dy = phiz_0;
+								//fy = vy_0;
+								//by = (2 / l*(vy_0 - vy_l) + (phiz_l + phiz_0)) / (l_2 + 12 * psi_y) - 2 * ay*l;
+								//cy = -(72 * EJzz*GKyAy*l* (vy_0 - vy_l) + GKyAy*l_2*(24 * EJzz*(2 * phiz_0 + phiz_l) - l_3*bl.at(2)) + 12 * EJzz*(12 * EJzz*(phiz_0 - phiz_l) - l_3*bl.at(2))) / (24 * EJzz*l* (GKyAy*l_2 + 12 * EJzz));
+								
+								ay = (qf.at(2) - qi.at(2)) / 120 / EJzz / l;
+								by = qi.at(2) / 24 / EJzz;
+								cy = (240 * EJzz*GKyAy*(vy_0 - vy_l) + l*(GKyAy*(120 * EJzz*(phiz_0 + phiz_l) - l_3*(3 * qf.at(2) + 7 * qi.at(2))) - 40 * EJzz*l*(qf.at(2) + 2 * qi.at(2)))) / (120 * EJzz*l*(GKyAy*l_2 + 12 * EJzz));
+								dy = -(360 * EJzz*GKyAy*l*(vy_0 - vy_l) + GKyAy*l_2*(120 * EJzz*(2 * phiz_0 + phiz_l) - l_3*(2 * qf.at(2) + 3 * qi.at(2))) + 30 * EJzz*(24 * EJzz*(phiz_0 - phiz_l) - l_3*(qf.at(2) + qi.at(2)))) / (120 * EJzz*l*(GKyAy*l_2 + 12 * EJzz));
+								ey = phiz_0;
 								fy = vy_0;
-								by = (2 / l*(vy_0 - vy_l) + (phiz_l + phiz_0)) / (l_2 + 12 * psi_y) - 2 * ay*l;
-								cy = -(72 * EJzz*GKyAy*l* (vy_0 - vy_l) + GKyAy*l_2*(24 * EJzz*(2 * phiz_0 + phiz_l) - l_3*bl.at(2)) + 12 * EJzz*(12 * EJzz*(phiz_0 - phiz_l) - l_3*bl.at(2))) / (24 * EJzz*l* (GKyAy*l_2 + 12 * EJzz));
 							}
 						}
 
@@ -795,10 +985,15 @@ namespace oofem {
 								}
 							}
 
-							rhs.at(1) = dI.at(3) - bl.at(3) / wz;
-							rhs.at(2) = dE.at(3) - bl.at(3) / wz;
-							rhs.at(3) = -dI.at(5);
-							rhs.at(4) = -dE.at(5);
+							//rhs.at(1) = dI.at(3) - bl.at(3) / wz;
+							//rhs.at(2) = dE.at(3) - bl.at(3) / wz;
+							//rhs.at(3) = -dI.at(5);
+							//rhs.at(4) = -dE.at(5);
+
+							rhs.at(1) = dI.at(3) - qi.at(3) / wy;
+							rhs.at(2) = dE.at(3) - qf.at(3) / wy;
+							rhs.at(3) = -dI.at(5) - (qf.at(3) - qi.at(3)) / (wz*l); // - o + per il secondo addendo?
+							rhs.at(4) = -dE.at(5) - (qf.at(3) - qi.at(3)) / (wz*l);
 
 							odeMtrx.solveForRhs(rhs, abcd);
 
@@ -809,37 +1004,61 @@ namespace oofem {
 						}
 						else {
 							if (psi_z == 0.0) {  // Euler Bernoulli formulation
-								az = bl.at(3) / 24 / EJyy;
-								dz = phiy_0;
+								//az = bl.at(3) / 24 / EJyy;
+								//dz = phiy_0;
+								//fz = vz_0;
+								//bz = (2 * (vz_0 - vz_l) + l*(phiy_l + phiy_0)) / (l_3)-2 * az*l;
+								//cz = -(3 * (vz_0 - vz_l) + l*(2 * phiy_0 + phiy_l)) / l_2 + az*l_2;
+
+								az = (qf.at(3) - qi.at(3)) / 120 / EJyy / l;
+								bz = qi.at(3) / 24 / EJyy;
+								cz = (240 * EJyy*(vy_0 - vy_l) + l*(120 * EJyy*(phiy_0 + phiy_l) - l_3*(3 * qf.at(3) + 7 * qi.at(3)))) / (120 * EJyy*l_3);
+								dz = -(360 * EJyy*(vy_0 - vy_l) + l*(120 * EJyy*(2 * phiy_0 + phiy_l) - l_3*(2 * qf.at(3) + 3 * qi.at(3)))) / (120 * EJyy*l_2);
+								ez = phiy_0;
 								fz = vz_0;
-								bz = (2 * (vz_0 - vz_l) + l*(phiy_l + phiy_0)) / (l_3)-2 * az*l;
-								cz = -(3 * (vz_0 - vz_l) + l*(2 * phiy_0 + phiy_l)) / l_2 + az*l_2;
 							}
 							else { // timoshenko formulation for transversal displacements
-								az = bl.at(3) / 24 / EJyy;
-								dz = phiy_0;
+								//az = bl.at(3) / 24 / EJyy;
+								//dz = phiy_0;
+								//fz = vz_0;
+								//bz = (2 / l*(vz_0 - vz_l) + (phiy_l + phiy_0)) / (l_2 + 12 * psi_z) - 2 * az*l;
+								//cz = -(72 * EJyy*GKzAz*l* (vz_0 - vz_l) + GKzAz*l_2*(24 * EJyy*(2 * phiy_0 + phiy_l) - l_3*bl.at(3)) + 12 * EJyy*(12 * EJyy*(phiy_0 - phiy_l) - l_3*bl.at(3))) / (24 * EJyy*l* (GKzAz*l_2 + 12 * EJyy));
+							
+								az = (qf.at(3) - qi.at(3)) / 120 / EJyy / l;
+								bz = qi.at(3) / 24 / EJyy;
+								cz = (240 * EJyy*GKzAz*(vz_0 - vz_l) + l*(GKzAz*(120 * EJyy*(phiy_0 + phiy_l) - l_3*(3 * qf.at(3) + 7 * qi.at(3))) - 40 * EJyy*l*(qf.at(3) + 2 * qi.at(3)))) / (120 * EJyy*l*(GKzAz*l_2 + 12 * EJyy));
+								dz = -(360 * EJyy*GKzAz*l*(vz_0 - vz_l) + GKzAz*l_2*(120 * EJyy*(2 * phiy_0 + phiy_l) - l_3*(2 * qf.at(3) + 3 * qi.at(3))) + 30 * EJyy*(24 * EJyy*(phiy_0 - phiy_l) - l_3*(qf.at(3) + qi.at(3)))) / (120 * EJyy*l*(GKzAz*l_2 + 12 * EJyy));
+								ez = phiy_0;
 								fz = vz_0;
-								bz = (2 / l*(vz_0 - vz_l) + (phiy_l + phiy_0)) / (l_2 + 12 * psi_z) - 2 * az*l;
-								cz = -(72 * EJyy*GKzAz*l* (vz_0 - vz_l) + GKzAz*l_2*(24 * EJyy*(2 * phiy_0 + phiy_l) - l_3*bl.at(3)) + 12 * EJyy*(12 * EJyy*(phiy_0 - phiy_l) - l_3*bl.at(3))) / (24 * EJyy*l* (GKzAz*l_2 + 12 * EJyy));
 							}
 						}
 
 						// axial displacements
-						cnx = dx_0;
-						anx = -bl.at(1) / 2 / EA;
-						bnx = (dx_l - dx_0) / l - anx*l;
+						//anx = -bl.at(1) / 2 / EA;
+						//bnx = (dx_l - dx_0) / l - anx*l;
+						//cnx = dx_0;
+
+						anx = (qf.at(1) - qi.at(1)) / (6*EA*l);
+						bnx = qi.at(1) / (2*EA);
+						cnx = -(6 * EA*(dx_0 - dx_l) + l_2*(qf.at(1) + 2 * qi.at(1))) / (6 * EA*l);
+						dnx = dx_0;
 
 						// torsional rotations
-						ctx = tx_0;
-						atx = -bl.at(4) / 2 / GJ;
-						btx = (tx_l - tx_0) / l - atx*l;
+						//atx = -bl.at(4) / 2 / GJ;
+						//btx = (tx_l - tx_0) / l - atx*l;
+						//ctx = tx_0;
 
+						atx = (qf.at(1) - qi.at(1)) / (6 * GJ*l);
+						btx = qi.at(1) / (2 * GJ);
+						ctx = -(6 * GJ*(tx_0 - tx_l) + l_2*(qf.at(1) + 2 * qi.at(1))) / (6 * GJ*l);
+						dtx = tx_0;
+						
 						calc = true;
 					}
 
 					FloatArray disps(6);
 					FloatArray wink(6); // winkler reactions
-					disps.at(1) = anx*pos_2 + bnx*pos + cnx;
+					disps.at(1) = anx*pos_3 + bnx*pos_2 + cnx*pos + dnx;
 					double lamxY, lamxZ, lamxY1, lamxY2, lamxZ1, lamxZ2;
 					lamxY = lambdaY*pos;
 					lamxZ = lambdaZ*pos;
@@ -852,7 +1071,8 @@ namespace oofem {
 					{
 						if (psi_y == 0.0) {
 							// displacement
-							disps.at(2) = exp(lamxY)*(ay*cos(lamxY) + by*sin(lamxY)) + (cy*cos(lamxY) + dy*sin(lamxY)) / exp(lamxY) + bl.at(2) / wy;
+							// disps.at(2) = exp(lamxY)*(ay*cos(lamxY) + by*sin(lamxY)) + (cy*cos(lamxY) + dy*sin(lamxY)) / exp(lamxY) + bl.at(2) / wy;
+							disps.at(2) = exp(lamxY)*(ay*cos(lamxY) + by*sin(lamxY)) + (cy*cos(lamxY) + dy*sin(lamxY)) / exp(lamxY) + (qi.at(2)+(qf.at(2)-qi.at(2))*pos/l) / wy;
 							// rotation
 							disps.at(6) = exp(lamxY)*(lambdaY*(ay + by)*cos(lamxY) + lambdaY*(by - ay)*sin(lamxY)) - (lambdaY*(cy - dy)*cos(lamxY) + lambdaY*(cy + dy)*sin(lamxY)) / (exp(lamxY));
 							// adjust the diagrams
@@ -862,7 +1082,7 @@ namespace oofem {
 						else {
 							if (deltaY > 0) {
 								// displacement
-								disps.at(2) = ay*exp(lamxY1) + by / exp(lamxY1) + cy * exp(lamxY2) + dy / exp(lamxY2) + bl.at(2) / wy;
+								disps.at(2) = ay*exp(lamxY1) + by / exp(lamxY1) + cy * exp(lamxY2) + dy / exp(lamxY2) + (qi.at(2) + (qf.at(2) - qi.at(2))*pos / l) / wy;
 								// rotation
 								disps.at(6) = psi_y*(ay*lambdaY1*lambdaY1*lambdaY1*exp(lamxY1)-by*lambdaY1*lambdaY1*lambdaY1*exp(-lamxY1) + cy*lambdaY2*lambdaY2*lambdaY2*exp(lamxY2)-dy*lambdaY2*lambdaY2*lambdaY2*exp(-lamxY2)) - (alphaY*psi_y - 1)*(ay*lambdaY1*exp(lamxY1)-by*lambdaY1*exp(-lamxY1) + cy*lambdaY2*exp(lamxY2)-dy*lambdaY2*exp(-lamxY2));
 								// adjust the diagrams
@@ -871,7 +1091,7 @@ namespace oofem {
 							}
 							else if (deltaY == 0) { 
 								// displacement
-								disps.at(2) = ay*exp(lamxY1) + by / exp(lamxY1) + pos*(cy * exp(lamxY1) + dy / exp(lamxY1)) + bl.at(2) / wy;
+								disps.at(2) = ay*exp(lamxY1) + by / exp(lamxY1) + pos*(cy * exp(lamxY1) + dy / exp(lamxY1)) + (qi.at(2) + (qf.at(2) - qi.at(2))*pos / l) / wy;
 								// rotation
 								disps.at(6) = psi_y*(lambdaY1*lambdaY1*exp(lamxY1)*(cy*lamxY1 + ay*lambdaY1 + 3*cy) - lambdaY1*lambdaY1*exp(-lamxY1)*(dy*lamxY1 + by*lambdaY1 - 3*dy)) - (alphaY*psi_y - 1)*(exp(lamxY1)*(cy*lamxY1 + ay*lambdaY1 + cy) - exp(-lamxY1)*(dy*lamxY1 + by*lambdaY1 - dy));
 								// adjust the diagrams
@@ -880,7 +1100,7 @@ namespace oofem {
 							}
 							else {
 								// displacement
-								disps.at(2) = exp(lamxY1)*(ay*cos(lamxY2) + cy*sin(lamxY2)) + (by*cos(lamxY2) + dy*sin(lamxY2)) / exp(lamxY1) + bl.at(2) / wy;
+								disps.at(2) = exp(lamxY1)*(ay*cos(lamxY2) + cy*sin(lamxY2)) + (by*cos(lamxY2) + dy*sin(lamxY2)) / exp(lamxY1) + (qi.at(2) + (qf.at(2) - qi.at(2))*pos / l) / wy;
 								// rotation
 								disps.at(6) = psi_y*(exp(lamxY1)*((ay*lambdaY1*(lambdaY1*lambdaY1 - 3*lambdaY2*lambdaY2) + cy*lambdaY2*(3*lambdaY1*lambdaY1 - lambdaY2*lambdaY2))*cos(lamxY2) - (ay*lambdaY2*(3*lambdaY1*lambdaY1 - lambdaY2*lambdaY2) + cy*lambdaY1*(3*lambdaY2*lambdaY2 - lambdaY1*lambdaY1))*sin(lamxY2)) - exp(-lamxY1)*((by*lambdaY1*(lambdaY1*lambdaY1 - 3*lambdaY2*lambdaY2) + dy*lambdaY2*(lambdaY2*lambdaY2 - 3*lambdaY1*lambdaY1))*cos(lamxY2) + (by*lambdaY2*(3*lambdaY1*lambdaY1 - lambdaY2*lambdaY2) + dy*lambdaY1*(lambdaY1*lambdaY1 - 3*lambdaY2*lambdaY2))*sin(lamxY2))) - (alphaY*psi_y - 1)*(exp(lamxY1)*((ay*lambdaY1 + cy*lambdaY2)*cos(lamxY2) + (cy*lambdaY1 - ay*lambdaY2)*sin(lamxY2)) - exp(-lamxY1)*((by*lambdaY1 - dy*lambdaY2)*cos(lamxY2) + (by*lambdaY2 + dy*lambdaY1)*sin(lamxY2)));
 								// adjust the diagrams
@@ -894,19 +1114,20 @@ namespace oofem {
 					else{
 						// displacement
 						if (psi_y == 0.0) {
-							disps.at(2) = ay*pos_4 + by*pos_3 + cy*pos_2 + dy*pos + fy;
+							disps.at(2) = ay*pos_5 + by*pos_4 + cy*pos_3 + dy*pos_2 + ey*pos + fy;
 						}
 						else {
-							disps.at(2) = ay*pos_4 + by*pos_3 + (cy - 12 * ay*psi_y)*pos_2 + (dy - 6 * by*psi_y)*pos + fy;
+							disps.at(2) = ay*pos_5 + by*pos_4 + (cy - 20 * ay*psi_y)*pos_3 + (dy - 12 * by*psi_y)*pos_2 + (ey-6*cy*psi_y)*pos + fy;
 						}
 						// rotation
-						disps.at(6) = 4 * ay*pos_3 + 3 * by*pos_2 + 2 * cy*pos + dy;
+						//disps.at(6) = 4 * ay*pos_3 + 3 * by*pos_2 + 2 * cy*pos + dy;
+						disps.at(6) = 5 * ay*pos_4 + 4 * by*pos_3 + 3 * cy*pos_2 + 2*dy*pos + ey;
 					}
 
 					if (hasWinklerZ) {
 						if (psi_z == 0.0) {
 							// displacement
-							disps.at(3) = exp(lamxZ)*(az*cos(lamxZ) + bz*sin(lamxZ)) + (cz*cos(lamxZ) + dz*sin(lamxZ)) / exp(lamxZ) + bl.at(3) / wz;
+							disps.at(3) = exp(lamxZ)*(az*cos(lamxZ) + bz*sin(lamxZ)) + (cz*cos(lamxZ) + dz*sin(lamxZ)) / exp(lamxZ) + (qi.at(3) + (qf.at(3) - qi.at(3))*pos / l) / wz;
 							// rotation
 							disps.at(5) = -(exp(lamxZ)*(lambdaZ*(az + bz)*cos(lamxZ) + lambdaZ*(bz - az)*sin(lamxZ)) - (lambdaZ*(cz - dz)*cos(lamxZ) + lambdaZ*(cz + dz)*sin(lamxZ)) / (exp(lamxZ)));
 							// adjust the diagrams
@@ -916,7 +1137,7 @@ namespace oofem {
 						else {
 							if (deltaZ > 0) {
 								// displacement
-								disps.at(3) = az*exp(lamxZ1) + bz / exp(lamxZ1) + cz * exp(lamxZ2) + dz / exp(lamxZ2) + bl.at(3) / wz;
+								disps.at(3) = az*exp(lamxZ1) + bz / exp(lamxZ1) + cz * exp(lamxZ2) + dz / exp(lamxZ2) + (qi.at(3) + (qf.at(3) - qi.at(3))*pos / l) / wz;
 								// rotation
 								disps.at(5) = -psi_z*(az*lambdaZ1*lambdaZ1*lambdaZ1*exp(lamxZ1) - bz*lambdaZ1*lambdaZ1*lambdaZ1*exp(-lamxZ1) + cz*lambdaZ2*lambdaZ2*lambdaZ2*exp(lamxZ2) - dz*lambdaZ2*lambdaZ2*lambdaZ2*exp(-lamxZ2)) + (alphaZ*psi_z - 1)*(az*lambdaZ1*exp(lamxZ1) - bz*lambdaZ1*exp(-lamxZ1) + cz*lambdaZ2*exp(lamxZ2) - dz*lambdaZ2*exp(-lamxZ2));
 								// adjust the diagrams
@@ -925,7 +1146,7 @@ namespace oofem {
 							}
 							else if (deltaZ == 0) {
 								// displacement
-								disps.at(3) = az*exp(lamxZ1) + bz / exp(lamxZ1) + pos*(cz * exp(lamxZ1) + dz / exp(lamxZ1)) + bl.at(3) / wz;
+								disps.at(3) = az*exp(lamxZ1) + bz / exp(lamxZ1) + pos*(cz * exp(lamxZ1) + dz / exp(lamxZ1)) + (qi.at(3) + (qf.at(3) - qi.at(3))*pos / l) / wz;
 								// rotation
 								disps.at(5) = -psi_z*(lambdaZ1*lambdaZ1*exp(lamxZ1)*(cz*lamxZ1 + az*lambdaZ1 + 3 * cz) - lambdaZ1*lambdaZ1*exp(-lamxZ1)*(dz*lamxZ1 + bz*lambdaZ1 - 3 * dz)) + (alphaZ*psi_z - 1)*(exp(lamxZ1)*(cz*lamxZ1 + az*lambdaZ1 + cz) - exp(-lamxZ1)*(dz*lamxZ1 + bz*lambdaZ1 - dz));
 								// adjust the diagrams
@@ -934,7 +1155,7 @@ namespace oofem {
 							}
 							else {
 								// displacement
-								disps.at(3) = exp(lamxZ1)*(az*cos(lamxZ2) + cz*sin(lamxZ2)) + (bz*cos(lamxZ2) + dz*sin(lamxZ2)) / exp(lamxZ1) + bl.at(3) / wz;
+								disps.at(3) = exp(lamxZ1)*(az*cos(lamxZ2) + cz*sin(lamxZ2)) + (bz*cos(lamxZ2) + dz*sin(lamxZ2)) / exp(lamxZ1) + (qi.at(3) + (qf.at(3) - qi.at(3))*pos / l) / wz;
 								// rotation
 								disps.at(5) = -psi_z*(exp(lamxZ1)*((az*lambdaZ1*(lambdaZ1*lambdaZ1 - 3 * lambdaZ2*lambdaZ2) + cz*lambdaZ2*(3 * lambdaZ1*lambdaZ1 - lambdaZ2*lambdaZ2))*cos(lamxZ2) - (az*lambdaZ2*(3 * lambdaZ1*lambdaZ1 - lambdaZ2*lambdaZ2) + cz*lambdaZ1*(3 * lambdaZ2*lambdaZ2 - lambdaZ1*lambdaZ1))*sin(lamxZ2)) - exp(-lamxZ1)*((bz*lambdaZ1*(lambdaZ1*lambdaZ1 - 3 * lambdaZ2*lambdaZ2) + dz*lambdaZ2*(lambdaZ2*lambdaZ2 - 3 * lambdaZ1*lambdaZ1))*cos(lamxZ2) + (bz*lambdaZ2*(3 * lambdaZ1*lambdaZ1 - lambdaZ2*lambdaZ2) + dz*lambdaZ1*(lambdaZ1*lambdaZ1 - 3 * lambdaZ2*lambdaZ2))*sin(lamxZ2))) + (alphaZ*psi_z - 1)*(exp(lamxZ1)*((az*lambdaZ1 + cz*lambdaZ2)*cos(lamxZ2) + (cz*lambdaZ1 - az*lambdaZ2)*sin(lamxZ2)) - exp(-lamxZ1)*((bz*lambdaZ1 - dz*lambdaZ2)*cos(lamxZ2) + (bz*lambdaZ2 + dz*lambdaZ1)*sin(lamxZ2)));
 								// adjust the diagrams
@@ -947,16 +1168,17 @@ namespace oofem {
 					else {
 						// displacement
 						if (psi_z == 0) {
-							disps.at(3) = az*pos_4 + bz*pos_3 + cz*pos_2 + dz*pos + fz;
+							disps.at(3) = az*pos_5 + bz*pos_4 + cz*pos_3 + dz*pos_2 + ez*pos + fz;
 						}
 						else {
-							disps.at(3) = az*pos_4 + bz*pos_3 + (cz - 12 * az*psi_z)*pos_2 + (dz - 6 * bz*psi_z)*pos + fz;
+							disps.at(3) = az*pos_5 + bz*pos_4 + (cz - 20 * az*psi_z)*pos_3 + (dz - 12 * bz*psi_z)*pos_2 + (ez - 6 * cz*psi_z) * pos + fz;
 						}
 						// rotation
-						disps.at(5) = -(4 * az*pos_3 + 3 * bz*pos_2 + 2 * cz*pos + dz);  // inverted signs for rotations about y.
+						// disps.at(5) = -(4 * az*pos_3 + 3 * bz*pos_2 + 2 * cz*pos + dz);  // inverted signs for rotations about y.
+						disps.at(5) = -(5 * az*pos_4 + 4 * bz*pos_3 + 3 * cz*pos_2 + 2*dz*pos + ez);  // inverted signs for rotations about y.
 					}
 					
-					disps.at(4) = atx*pos_2 + btx*pos + ctx;
+					disps.at(4) = atx*pos_3 + btx*pos_2 + ctx*pos + dtx;
 
 					//disps -= (dI+ddN*ksi);
 

@@ -37,6 +37,7 @@
 #include "classfactory.h"
 #include "dynamicinputrecord.h"
 #include "dofmanager.h"
+#include "dof.h"
 #include "node.h"
 
 #ifdef _WIN32 //_MSC_VER and __MINGW32__ included
@@ -239,6 +240,9 @@ void AbaqusUserElement :: giveInternalForcesVector(FloatArray &answer, TimeStep 
     // init U vector
     // this->computeVectorOf(this->dofs, VM_Total, tStep, U);
 	this->computeVectorOf(VM_Total, tStep, U, false);
+	// get A and V
+	this->computeVectorOf(VM_Velocity, tStep, V, false);
+	this->computeVectorOf(VM_Acceleration, tStep, A, false);
     FloatArray tempIntVect;
     // init DU vector
     //this->computeVectorOf(this->dofs, VM_Incremental, tStep, tempIntVect);

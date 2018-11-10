@@ -265,11 +265,11 @@ Beam3d :: computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, 
     for ( GaussPoint *gp: *this->giveDefaultIntegrationRulePtr() ) {
         const FloatArray &lcoords = gp->giveNaturalCoordinates();
         this->computeNmatrixAt(lcoords, N);
-        if ( load ) {
+		if (load->giveFormulationType() == Load::FT_Entity) {
+			load->computeValues(t, tStep, lcoords, { D_u, D_v, D_w, R_u, R_v, R_w }, mode);
+		} else {
             this->computeGlobalCoordinates(coords, lcoords);
             load->computeValues(t, tStep, coords, {D_u, D_v, D_w, R_u, R_v, R_w}, mode);
-        } else {
-            load->computeValues(t, tStep, lcoords, {D_u, D_v, D_w, R_u, R_v, R_w}, mode);
         }
 
         if ( load->giveCoordSystMode() == Load :: CST_Global ) {
@@ -504,10 +504,14 @@ Beam3d :: giveLocalCoordinateSystem(FloatMatrix &answer)
 
         lz.beVectorProductOf(lx, help);
         lz.normalize();
+		ly.beVectorProductOf(lz, lx);
+		ly.normalize();
     } else if ( this->zaxis.giveSize() > 0 ) {
         lz = this->zaxis;
         lz.add(lz.dotProduct(lx), lx);
         lz.normalize();
+		ly.beVectorProductOf(lz, lx);
+		ly.normalize();
     } else {
         FloatMatrix rot(3, 3);
         double theta = referenceAngle * M_PI / 180.0;
@@ -524,21 +528,23 @@ Beam3d :: giveLocalCoordinateSystem(FloatMatrix &answer)
         rot.at(3, 2) = lx.at(3) * lx.at(2) * ( 1 - cos(theta) ) + lx.at(1) * sin(theta);
         rot.at(3, 3) = cos(theta) + pow(lx.at(3), 2) * ( 1 - cos(theta) );
 
-        help.at(3) = 1.0;         // up-vector
-        // here is ly is used as a temp var
+		help.at(3) = 1.0;         // up-vector
+		// here is ly is used as a temp var
 		// double prvect = acos(lx.dotProduct(help));
 		// if (prvect < 0.001 || prvect > M_PI - 0.001) { // Check if it is vertical
 		if (fabs(lx.dotProduct(help)) > 0.999) { // Check if it is vertical
-			ly = { 0., 1., 0. };
-        } else {
-            ly.beVectorProductOf(lx, help);
-        }
-        lz.beProductOf(rot, ly);
-        lz.normalize();
-    }
+			lz = { 1., 0., 0. };
+		}
+		else {
+			ly.beVectorProductOf(lx, help);
+			lz.beVectorProductOf(ly, lx);
+		}
+		ly.beProductOf(rot, lz);
+		ly.normalize();
+		lz.beVectorProductOf(lx, ly);
+		lz.normalize();
+	}
 
-    ly.beVectorProductOf(lz, lx);
-    ly.normalize();
 
     answer.resize(3, 3);
     answer.zero();
@@ -718,31 +724,6 @@ void
 		answer.subtract(loadEndForces);
 	}
 
-	// add exact end forces due to nonnodal loading applied indirectly (via sets)
-	BCTracker *bct = this->domain->giveBCTracker();
-	BCTracker::entryListType bcList = bct->getElementRecords(this->number);
-	FloatArray help;
-
-	for (BCTracker::entryListType::iterator it = bcList.begin(); it != bcList.end(); ++it) {
-		GeneralBoundaryCondition *bc = this->domain->giveBc((*it).bcNumber);
-		BodyLoad *bodyLoad;
-		BoundaryLoad *boundaryLoad;
-		if (bc->isImposed(tStep)) {
-			if ((bodyLoad = dynamic_cast<BodyLoad*>(bc))) { // body load
-				this->computeBodyLoadVectorAt(help, bodyLoad, tStep, VM_Total); // this one is local
-				answer.subtract(help);
-			}
-			else if ((boundaryLoad = dynamic_cast<BoundaryLoad*>(bc))) {
-				// compute Boundary Edge load vector in GLOBAL CS !!!!!!!
-				this->computeBoundaryEdgeLoadVector(help, boundaryLoad, (*it).boundaryId,
-					ExternalForcesVector, VM_Total, tStep, false);
-				// get it transformed back to local c.s.
-				// this->computeGtoLRotationMatrix(t);
-				// help.rotatedWith(t, 'n');
-				answer.subtract(help);
-			}
-		}
-	}
     /*
     if (subsoilMat) {
       // @todo: linear subsoil assumed here; more general approach should integrate internal forces
@@ -760,7 +741,7 @@ void
 void
 Beam3d :: printOutputAt(FILE *File, TimeStep *tStep)
 {
-    fprintf(File, "beam element %d (%8d) %d :\n", this->giveLabel(), this->giveNumber(), this->macroElem);
+    fprintf(File, "beam element %d (%8d) macroelem %d :\n", this->giveLabel(), this->giveNumber(), this->macroElem);
 #ifdef DEBUG
 	FloatArray rl, Fl;
 	// ask for global element displacement vector
@@ -1247,13 +1228,14 @@ Beam3d :: computeInternalForcesFromBoundaryEdgeLoadVectorAtPoint(FloatArray &ans
 
 
     for ( GaussPoint *gp: *this->giveDefaultIntegrationRulePtr() ) {
-        const FloatArray &lcoords = gp->giveNaturalCoordinates();
-	this->computeGlobalCoordinates(coords, lcoords, pointCoords);
-        if ( load ) {
-            load->computeValues(t, tStep, coords, {D_u, D_v, D_w, R_u, R_v, R_w}, mode);
-        } else {
-            load->computeValues(t, tStep, lcoords, {D_u, D_v, D_w, R_u, R_v, R_w}, mode);
-        }
+		const FloatArray &lcoords = gp->giveNaturalCoordinates();
+		this->computeGlobalCoordinates(coords, lcoords, pointCoords);
+		if (load->giveFormulationType() == Load::FT_Entity) {
+			load->computeValues(t, tStep, lcoords, { D_u, D_v, D_w, R_u, R_v, R_w }, mode);
+		}
+		else {
+			load->computeValues(t, tStep, coords, { D_u, D_v, D_w, R_u, R_v, R_w }, mode);
+		}
 
         if ( load->giveCoordSystMode() == Load :: CST_Global ) {
             if ( this->computeLoadGToLRotationMtrx(T) ) {
