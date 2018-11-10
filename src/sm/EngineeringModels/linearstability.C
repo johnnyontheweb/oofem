@@ -71,7 +71,7 @@ NumericalMethod *LinearStability :: giveNumericalMethod(MetaStep *mStep)
 SparseLinearSystemNM *LinearStability :: giveNumericalMethodForLinStaticProblem(TimeStep *tStep)
 {
     if ( !nMethodLS ) {
-        nMethodLS.reset( classFactory.createSparseLinSolver(ST_Direct, this->giveDomain(1), this) ); ///@todo Support other solvers
+        nMethodLS.reset( classFactory.createSparseLinSolver(linStype, this->giveDomain(1), this) ); ///@todo Support other solvers
         if ( !nMethodLS ) {
             OOFEM_ERROR("solver creation failed");
         }
@@ -105,6 +105,16 @@ LinearStability :: initializeFrom(InputRecord *ir)
     IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_LinearStability_stype);
     solverType = ( GenEigvalSolverType ) val;
 
+	val = 0; //Default Skyline
+	IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_EngngModel_smtype);
+	sparseMtrxType = (SparseMtrxType)val;
+
+	val = 0; // ST_Direct
+	IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_LinearStability_ltype);
+	linStype = (LinSystSolverType)val;
+
+	if (solverType == GenEigvalSolverType::GES_Eigen)
+		sparseMtrxType = SparseMtrxType::SMT_EigenSparse; // linStype = ST_Spooles;
 
     nMetaSteps = 0;
 
@@ -179,7 +189,7 @@ void LinearStability :: solveYourselfAt(TimeStep *tStep)
         //
         // first step - solve linear static problem
         //
-        stiffnessMatrix.reset( classFactory.createSparseMtrx(SMT_Skyline) ); ///@todo Don't hardcode skyline matrix only
+		stiffnessMatrix.reset(classFactory.createSparseMtrx(sparseMtrxType));
         stiffnessMatrix->buildInternalStructure( this, 1, EModelDefaultEquationNumbering() );
 
         //

@@ -50,6 +50,7 @@
 #define _IFT_LinearStability_nroot "nroot"
 #define _IFT_LinearStability_rtolv "rtolv"
 #define _IFT_LinearStability_stype "stype"
+#define _IFT_LinearStability_ltype "ltype"
 //@}
 
 namespace oofem {
@@ -70,6 +71,7 @@ class LinearStability : public StructuralEngngModel
 private:
     std :: unique_ptr< SparseMtrx > stiffnessMatrix;
     std :: unique_ptr< SparseMtrx > initialStressMatrix;
+	SparseMtrxType sparseMtrxType;
     FloatArray loadVector;
     FloatArray displacementVector;
     FloatMatrix eigVec;
@@ -80,6 +82,7 @@ private:
     GenEigvalSolverType solverType;
     std :: unique_ptr< SparseGeneralEigenValueSystemNM > nMethod;
     /// Numerical method used to solve the static problem.
+	LinSystSolverType linStype;
     std :: unique_ptr< SparseLinearSystemNM > nMethodLS;
 
 public:
