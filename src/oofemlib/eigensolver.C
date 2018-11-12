@@ -103,9 +103,9 @@ EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatri
 	// Retrieve results
 	Eigen::VectorXcd evalues;
 	//if (eigs.info() == Spectra::SUCCESSFUL) // always copy
-		evalues = eigs.eigenvalues();
+	evalues = eigs.eigenvalues();
 	//_eigv.resize(evalues.size());
-	_eigv.resize(nroot); _eigv.zero();
+	_eigv.resize(nroot); _eigv.zero(); // return zero if not converged for all
 
 	for (int i=0;i<evalues.size();++i)
 		_eigv.at(i+1)=1/evalues.coeff(i).real();
@@ -121,13 +121,11 @@ EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatri
 	timer.stopTimer();
 	OOFEM_LOG_INFO("EigenSolver info: user time consumed by solution: %.2fs\n", timer.getUtime());
 #endif
-	//if (eigs.info() == Spectra::SUCCESSFUL) {
-	fprintf(outStream, "Eigen-Spectra :: convergence reached\n");
+	if (eigs.info() == Spectra::SUCCESSFUL) {
+		fprintf(outStream, "Eigen-Spectra :: convergence reached\n");
+	} else {
+		fprintf(outStream, "Eigen-Spectra :: convergence not reached\n");
+	}
 	return NM_Success;
-	//} else {
-	//	fprintf(outStream, "Eigen-Spectra :: convergence not reached\n");
-	//	return NM_NoSuccess;
-	//}
-	//return (eigs.info() == Spectra::SUCCESSFUL) ? NM_Success : NM_NoSuccess;
 }
 } // end namespace oofem
