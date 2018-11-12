@@ -120,6 +120,6 @@ EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatri
 	OOFEM_LOG_INFO("EigenSolver info: user time consumed by solution: %.2fs\n", timer.getUtime());
 #endif
 
-	return NM_Success;
+	return (eigs.info() == Spectra::SUCCESSFUL) ? NM_Success : NM_NoSuccess;
 }
 } // end namespace oofem

@@ -55,8 +55,7 @@ REGISTER_SparseMtrx( EigenSolverMatrix, SMT_EigenSparse);
 //typedef Eigen::SparseMatrix<double, 0, int> SparseMat;
 
 EigenSolverMatrix::EigenSolverMatrix(int n) : SparseMtrx(n, n)
-{
-}
+{ }
 
 EigenSolverMatrix :: ~EigenSolverMatrix()
 {
@@ -119,6 +118,7 @@ int EigenSolverMatrix :: buildInternalStructure(EngngModel *eModel, int di, cons
 	}
 	nRows = nColumns = neq;
 	eigenMatrix.reset(new Eigen::SparseMatrix<double>(nRows, nColumns));
+	tripletList.reserve(neq / 20); //5% rough guess
 	return true;
 }
 
@@ -145,7 +145,8 @@ int EigenSolverMatrix :: assemble(const IntArray &loc, const FloatMatrix &mat)
 					if (jj > ii) {
 						continue; // symmetric
 					}
-					this->eigenMatrix->coeffRef(ii - 1, jj - 1) += mat.at(i, j);
+					//this->eigenMatrix->coeffRef(ii - 1, jj - 1) += mat.at(i, j);
+					tripletList.push_back(Eigen::Triplet<double>(ii - 1, jj - 1, mat.at(i, j)));
 				}
 			}
 		}
@@ -171,7 +172,8 @@ int EigenSolverMatrix :: assemble(const IntArray &rloc, const IntArray &cloc, co
 			for (int j = 1; j <= dim2; j++) {
 				int jj = cloc.at(j);
 				if (jj && (jj <= ii) ) {
-					this->eigenMatrix->coeffRef(ii - 1, jj - 1) += mat.at(i, j);
+					//this->eigenMatrix->coeffRef(ii - 1, jj - 1) += mat.at(i, j);
+					tripletList.push_back(Eigen::Triplet<double>(ii - 1, jj - 1, mat.at(i, j)));
 				}
 			}
 		}
@@ -181,6 +183,12 @@ int EigenSolverMatrix :: assemble(const IntArray &rloc, const IntArray &cloc, co
     this->version++;
 
     return 1;
+}
+
+int EigenSolverMatrix :: assembleEnd()
+{
+	eigenMatrix->setFromTriplets(tripletList.begin(), tripletList.end());
+	return 1;
 }
 
 void EigenSolverMatrix :: zero()

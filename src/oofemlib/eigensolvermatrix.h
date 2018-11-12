@@ -57,6 +57,7 @@ namespace oofem {
 protected:
 
 	std::unique_ptr<Eigen::SparseMatrix<double>> eigenMatrix;
+	std::vector<Eigen::Triplet<double>> tripletList;
 	
 public:
 	EigenSolverMatrix() {};  // default
@@ -79,6 +80,7 @@ public:
 	virtual int buildInternalStructure(EngngModel *, int, const UnknownNumberingScheme & s);
     virtual int assemble(const IntArray &loc, const FloatMatrix &mat);
     virtual int assemble(const IntArray &rloc, const IntArray &cloc, const FloatMatrix &mat);
+	virtual int assembleEnd();
     virtual bool canBeFactorized() const { return true; }
     virtual void zero();
     virtual double &at(int i, int j);
