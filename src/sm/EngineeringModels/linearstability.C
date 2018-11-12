@@ -279,6 +279,11 @@ void LinearStability :: solveYourselfAt(TimeStep *tStep)
     OOFEM_LOG_INFO("Solving ...\n");
 #endif
 
+#ifdef DEBUG
+	//stiffnessMatrix->writeToFile("K.dat");
+	//initialStressMatrix->writeToFile("M.dat");
+#endif
+
     nMethod->solve(*stiffnessMatrix, *initialStressMatrix, eigVal, eigVec, rtolv, numberOfRequiredEigenValues);
 }
 
@@ -348,7 +353,7 @@ void LinearStability :: terminate(TimeStep *tStep)
     fprintf(outputStream, "\nLinear Stability:");
     fprintf(outputStream, "\nEigen Values are:\n-----------------\n");
 
-    for ( int i = 1; i <= numberOfRequiredEigenValues; i++ ) {
+	for (int i = 1; i <= eigVal.giveSize(); i++) { // numberOfRequiredEigenValues
         fprintf( outputStream, "%15.8e ", eigVal.at(i) );
         if ( ( i % 5 ) == 0 ) {
             fprintf(outputStream, "\n");
@@ -359,7 +364,7 @@ void LinearStability :: terminate(TimeStep *tStep)
 
     int nnodes = domain->giveNumberOfDofManagers();
 
-    for ( int i = 1; i <= numberOfRequiredEigenValues; i++ ) {
+	for (int i = 1; i <= eigVal.giveSize(); i++) { // numberOfRequiredEigenValues
         fprintf(outputStream, "\nOutput for eigen value no.  %.3e \n", ( double ) i);
         fprintf( outputStream,
                 "Printing eigen vector no. %d, corresponding eigen value is %15.8e\n\n",

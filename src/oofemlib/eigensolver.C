@@ -102,7 +102,7 @@ EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatri
 	int nconv = eigs.compute();
 	// Retrieve results
 	Eigen::VectorXcd evalues;
-	if (eigs.info() == Spectra::SUCCESSFUL)
+	//if (eigs.info() == Spectra::SUCCESSFUL) // always copy
 		evalues = eigs.eigenvalues();
 	_eigv.resize(evalues.size());
 	for (int i=0;i<evalues.size();++i)
@@ -114,7 +114,6 @@ EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatri
 		for (int j = 0; j < evectors.cols(); ++j){
 			_r.at(i + 1, j + 1) = evectors.coeff(i, j).real();
 		}
-		
 
 #ifdef TIME_REPORT
 	timer.stopTimer();

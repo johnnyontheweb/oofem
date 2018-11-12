@@ -142,6 +142,9 @@ int EigenSolverMatrix :: assemble(const IntArray &loc, const FloatMatrix &mat)
 			for (i = 1; i <= dim; i++) {
 				ii = loc.at(i);
 				if (ii) {
+					if (jj > ii) {
+						continue; // symmetric
+					}
 					this->eigenMatrix->coeffRef(ii - 1, jj - 1) += mat.at(i, j);
 				}
 			}
@@ -167,7 +170,7 @@ int EigenSolverMatrix :: assemble(const IntArray &rloc, const IntArray &cloc, co
 		if (ii) {
 			for (int j = 1; j <= dim2; j++) {
 				int jj = cloc.at(j);
-				if (jj) {
+				if (jj && (jj <= ii) ) {
 					this->eigenMatrix->coeffRef(ii - 1, jj - 1) += mat.at(i, j);
 				}
 			}
