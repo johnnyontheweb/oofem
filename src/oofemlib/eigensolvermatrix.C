@@ -68,6 +68,7 @@ EigenSolverMatrix :: ~EigenSolverMatrix()
 EigenSolverMatrix::EigenSolverMatrix(const EigenSolverMatrix &S) : SparseMtrx(S.nRows, S.nColumns)
 {
 	eigenMatrix.reset(new Eigen::SparseMatrix<double>(S.giveEigenMatrix()));
+	tripletList = S.tripletList;
 //    OOFEM_ERROR("not implemented");
 }
 
@@ -188,6 +189,7 @@ int EigenSolverMatrix :: assemble(const IntArray &rloc, const IntArray &cloc, co
 int EigenSolverMatrix :: assembleEnd()
 {
 	eigenMatrix->setFromTriplets(tripletList.begin(), tripletList.end());
+	tripletList.clear();
 	return 1;
 }
 
