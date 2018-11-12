@@ -692,7 +692,6 @@ namespace oofem {
 			}
 
 			// solve linear system
-			if (linStype = LinSystSolverType::ST_EigenLib) dummyDisps.resize(loadVector.giveSize());
 			NM_Status s = nLinMethod->solve(*stiffnessMatrix, loadVector, dummyDisps);  // solve linear system
 			if (!(s & NM_Success)) {
 				OOFEM_ERROR("No success in solving system.");

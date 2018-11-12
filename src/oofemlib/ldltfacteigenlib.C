@@ -64,6 +64,7 @@ LDLTFactEigenLib :: solve(SparseMtrx &A, FloatArray &b, FloatArray &x)
 	Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> sparseSolver(opA->giveEigenMatrix());
 	Eigen::VectorXd opx = sparseSolver.solve(opb);     // solving
 
+	x.resize(opx.size());
 	for (int i = 0; i < x.giveSize(); ++i)
 		x[i] = opx[i];
 
