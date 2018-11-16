@@ -116,7 +116,7 @@ namespace oofem {
 		sparseMtrxType = (SparseMtrxType)val;
 
 		if (solverType == GenEigvalSolverType::GES_Eigen){
-			sparseMtrxType = SparseMtrxType::SMT_EigenSparse; // linStype = ST_Spooles;
+			sparseMtrxType = SparseMtrxType::SMT_EigenSparse;
 			linStype = LinSystSolverType::ST_EigenLib;
 		}
 
@@ -307,8 +307,8 @@ namespace oofem {
 		}
 		// eigVec has been normalized
 
-		for (int i = 1; i < numberOfRequiredEigenValues; i++)
-			for (int j = 1; j < numberOfRequiredEigenValues; j++){
+		for (int i = 1; i <= numberOfRequiredEigenValues; i++)
+			for (int j = 1; j <= numberOfRequiredEigenValues; j++){
 				double beta = periods.at(i) / periods.at(j);
 				rhos.at(i, j) = 8 * pow(this->csi, 2.0) * pow(beta, 1.5) / (1.0 + beta) / (pow(1 - beta, 2.0) + 4 * pow(this->csi, 2.0)*beta);
 			}
@@ -876,7 +876,7 @@ namespace oofem {
 				FloatArray &reactions2 = *reac_it2;
 				for (int z = 1; z <= reactions.giveSize(); z++)
 				{
-					combReactions.at(z) += reactions.at(z)*reactions2.at(z)*rhos.at(i, j);
+					combReactions.at(z) += fabs(reactions.at(z)*reactions2.at(z)*rhos.at(i, j));
 				}
 			}
 		}
@@ -895,7 +895,7 @@ namespace oofem {
 				FloatArray &disps2 = *disp_it2;
 				for (int z = 1; z <= disps.giveSize(); z++)
 				{
-					combDisps.at(z) += disps2.at(z)*disps2.at(z)*rhos.at(i, j);
+					combDisps.at(z) += fabs(disps2.at(z)*disps2.at(z)*rhos.at(i, j));
 				}
 			}
 		}
@@ -1069,7 +1069,7 @@ void addMultiply(map<int, map<int, map<int, map<string, FloatArray>>>> &answer, 
 					for (int i = 1; i <= srcRespArray.giveSize(); i++)
 					{	
 						// square it and add it
-						destRespArray.at(i) += srcRespArray.at(i)*srcRespArray2.at(i)*fact;
+						destRespArray.at(i) += fabs(srcRespArray.at(i)*srcRespArray2.at(i)*fact);
 					}
 				}
 			}
@@ -1162,7 +1162,7 @@ void addMultiply(map<int, map<string, FloatArray>> &answer, map<int, map<string,
 			for (int i = 1; i <= srcRespArray.giveSize(); i++)
 			{
 				// square it and add it
-				destRespArray.at(i) += srcRespArray.at(i)*srcRespArray2.at(i)*fact;
+				destRespArray.at(i) += fabs(srcRespArray.at(i)*srcRespArray2.at(i)*fact);
 			}
 		}
 	}

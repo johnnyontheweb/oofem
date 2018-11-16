@@ -1360,7 +1360,7 @@ namespace oofem {
 				for (int i = 1; i <= srcRespArray.giveSize(); i++)
 				{
 					// square it and add it
-					destRespArray.at(i) += srcRespArray.at(i)*srcRespArray2.at(i)*fact;
+					destRespArray.at(i) += fabs(srcRespArray.at(i)*srcRespArray2.at(i)*fact);
 				}
 			}
 		}
