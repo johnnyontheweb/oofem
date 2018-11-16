@@ -45,6 +45,7 @@
 #include "activebc.h"
 #include "eigensolver.h"
 #include "unknownnumberingscheme.h"
+#include <MatOp/SparseGenMatProd.h>
 
 #include <set>
 
@@ -95,12 +96,15 @@ void EigenSolverMatrix :: times(const FloatArray &x, FloatArray &answer) const
   answer.resize(dim);
   answer.zero();
 
-  for (i = 1; i <= dim; i++) {
-	  for (j = 1; j <= dim; j++)
-	  {
-		  answer.at(i) += this->eigenMatrix->coeff(i - 1, j - 1) * x.at(j);
-	  }
-  }
+  Spectra::SparseGenMatProd<double> op(*(eigenMatrix.get()));
+  op.perform_op(x.givePointer(), answer.givePointer());
+
+  //for (i = 1; i <= dim; i++) {
+	 // for (j = 1; j <= dim; j++)
+	 // {
+		//  answer.at(i) += this->eigenMatrix->coeff(i - 1, j - 1) * x.at(j);
+	 // }
+  //}
 }
 
 void EigenSolverMatrix :: times(double x)
