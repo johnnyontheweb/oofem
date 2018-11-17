@@ -895,7 +895,7 @@ namespace oofem {
 				FloatArray &disps2 = *disp_it2;
 				for (int z = 1; z <= disps.giveSize(); z++)
 				{
-					combDisps.at(z) += fabs(disps2.at(z)*disps2.at(z)*rhos.at(i, j));
+					combDisps.at(z) += fabs(disps.at(z)*disps2.at(z)*rhos.at(i, j));
 				}
 			}
 		}

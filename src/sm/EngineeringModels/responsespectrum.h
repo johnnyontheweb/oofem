@@ -54,7 +54,7 @@
 #define _IFT_ResponseSpectrum_stype "stype"
 #define _IFT_ResponseSpectrum_func "func"
 #define _IFT_ResponseSpectrum_dir "dir"
-#define _IFT_ResponseSpectrum_modalCombo "modalCombo"
+#define _IFT_ResponseSpectrum_modalCombo "modalcombo"
 #define _IFT_ResponseSpectrum_damp "damp"
 //@}
 
