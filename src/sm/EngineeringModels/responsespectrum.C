@@ -771,14 +771,14 @@ namespace oofem {
 
 					b->operator[]("endforces") = Fl;
 
-#ifdef DEBUG
-					if (SElem->giveNumber() == 7) {
-							FloatArray tempnd;
-							DofManager *dofMan = SElem->giveDofManager(2);
-							dofMan->giveCompleteUnknownVector(tempnd, VM_Total, tStep);
-							OOFEM_WARNING("Stop %e",tempnd.at(1));
-							}
-#endif
+//#ifdef DEBUG
+//					if (SElem->giveNumber() == 7) {
+//							FloatArray tempnd;
+//							DofManager *dofMan = SElem->giveDofManager(2);
+//							dofMan->giveCompleteUnknownVector(tempnd, VM_Total, tStep);
+//							OOFEM_WARNING("Stop %e",tempnd.at(1));
+//							}
+//#endif
 					beamResponse[elem->giveNumber()] = *b;
 
 				}

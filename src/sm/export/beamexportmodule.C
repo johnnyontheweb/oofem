@@ -1227,10 +1227,10 @@ namespace oofem {
 				BeamForces = combBeamForces;
 				BeamWinkler = combBeamWinkler;
 
-#ifdef DEBUG
-				map<double, FloatArray> elem = combBeamDisplacements[7];
-				OOFEM_WARNING("Stop %e", elem.at(4).at(1));
-#endif
+//#ifdef DEBUG
+//				map<double, FloatArray> elem = combBeamDisplacements[7];
+//				OOFEM_WARNING("Stop %e", elem.at(4).at(1));
+//#endif
 
 				combBeamDisplacements.clear();
 				combBeamForces.clear();
