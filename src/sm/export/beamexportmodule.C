@@ -1338,7 +1338,6 @@ namespace oofem {
 			populateElResults(answer, src);
 		}
 
-		// awful iteration
 		map<int, map<double, FloatArray>>::iterator destElem_it = answer.begin();
 		map<int, map<double, FloatArray>>::iterator srcElem_it = src.begin();
 		map<int, map<double, FloatArray>>::iterator srcElem_it2 = src2.begin();
@@ -1368,7 +1367,6 @@ namespace oofem {
 
 	void BeamExportModule::calcRoot(map<int, map<double, FloatArray>> &answer)
 	{
-		// another awful iteration
 		map<int, map<double, FloatArray>>::iterator destElem_it = answer.begin();
 		for (; destElem_it != answer.end(); ++destElem_it)
 		{
@@ -1388,13 +1386,46 @@ namespace oofem {
 		}
 	}
 
+
+	void BeamExportModule::correctSigns(map<int, map<double, FloatArray>> &answer, map<int, map<double, FloatArray>> &src, bool use1stmode)
+	{
+		map<int, map<double, FloatArray>>::iterator destElem_it = answer.begin();
+		map<int, map<double, FloatArray>>::iterator srcElem_it = src.begin();
+		for (; destElem_it != answer.end(); ++destElem_it, ++srcElem_it)
+		{
+			map<double, FloatArray> &destRespMap = destElem_it->second;
+			map<double, FloatArray> &srcRespMap = srcElem_it->second; // I'm using this from the dominant mode only
+
+			map<double, FloatArray>::iterator destRespMap_it = destRespMap.begin();
+			map<double, FloatArray>::iterator srcRespMap_it = srcRespMap.begin();
+			for (; destRespMap_it != destRespMap.end(); ++destRespMap_it, ++srcRespMap_it)
+			{
+				FloatArray &destRespArray = destRespMap_it->second;
+				FloatArray &srcRespArray = srcRespMap_it->second;
+
+				for (int i = 1; i <= destRespArray.giveSize(); i++)
+				{
+					// square it and add it
+					double res = destRespArray.at(i);
+					if (use1stmode) res *= signbit(srcRespArray.at(i)) ? -1 : 1;
+					destRespArray.at(i) = res;
+				}
+			}
+		}
+	}
+
 	void BeamExportModule::SRSS(){
+		int dominantMode;
+		rs->giveDominantMode(dominantMode);
+
 		list<map<int, map<double, FloatArray>>>::iterator disps_it = BeamDisplacementsList.begin();
 		for (; disps_it != BeamDisplacementsList.end(); ++disps_it)
 		{
 			addMultiply(combBeamDisplacements, *disps_it, *disps_it);
 		}
 		calcRoot(combBeamDisplacements);
+		disps_it = std::next(BeamDisplacementsList.begin(), dominantMode - 1);  // dominant mode only
+		correctSigns(combBeamDisplacements, *disps_it, true);
 
 		list<map<int, map<double, FloatArray>>>::iterator forces_it = BeamForcesList.begin();
 		for (; forces_it != BeamForcesList.end(); ++forces_it)
@@ -1409,12 +1440,16 @@ namespace oofem {
 			addMultiply(combBeamWinkler, *winks_it, *winks_it);  // mult by 1.0
 		}
 		calcRoot(combBeamWinkler);
+		winks_it = std::next(BeamWinklerList.begin(), dominantMode - 1);	// dominant mode only
+		correctSigns(combBeamWinkler, *winks_it, true);
 
 	}
 
 	void BeamExportModule::CQC(){
 		FloatMatrix rhos;
 		rs->giveRhos(rhos);
+		int dominantMode;
+		rs->giveDominantMode(dominantMode);
 
 		list<map<int, map<double, FloatArray>>>::iterator disps_it = BeamDisplacementsList.begin();
 
@@ -1427,6 +1462,8 @@ namespace oofem {
 			}
 		}
 		calcRoot(combBeamDisplacements);
+		disps_it = std::next(BeamDisplacementsList.begin(), dominantMode - 1);  // dominant mode only
+		correctSigns(combBeamDisplacements, *disps_it, true);
 
 		list<map<int, map<double, FloatArray>>>::iterator forces_it = BeamForcesList.begin();
 
@@ -1451,6 +1488,8 @@ namespace oofem {
 			}
 		}
 		calcRoot(combBeamWinkler);
+		winks_it = std::next(BeamWinklerList.begin(), dominantMode - 1);	// dominant mode only
+		correctSigns(combBeamWinkler, *winks_it, true);
 	}
 
 	void

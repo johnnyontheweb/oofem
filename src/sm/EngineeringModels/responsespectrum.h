@@ -86,6 +86,7 @@ private:
 	FloatArray totMass;
 	FloatMatrix partFact;
 	FloatMatrix massPart;
+	int dominantMode = 1;
     int numberOfRequiredEigenValues;
     int activeVector;
     int restoreFlag;
@@ -150,6 +151,7 @@ public:
 	virtual void SRSS();
 	virtual void CQC();
 	virtual void giveRhos(FloatMatrix &rhos);
+	virtual void giveDominantMode(int &mode);
 	virtual RSpecComboType giveComboType();
 
     // identification

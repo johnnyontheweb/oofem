@@ -674,7 +674,19 @@ namespace oofem {
 			}
 		}
 
-		for (int dN = 1; dN <= numberOfRequiredEigenValues; dN++)
+		// determine dominat mode in requested direction
+		FloatArray dirVect(dir);
+		FloatArray dirFactors(numberOfRequiredEigenValues);
+		dirVect.normalize();
+		for (int dN = 1; dN <= numberOfRequiredEigenValues; ++dN) {
+			for (int nDir = 1; nDir <= 3; ++nDir)
+				dirFactors.at(dN) += partFact.at(dN, nDir)*dirVect.at(nDir);
+			dirFactors.at(dN) = fabs(dirFactors.at(dN));
+		}
+		// mode with highes participation factor in requested direction
+		dominantMode = std::distance(dirFactors.begin(), std::max_element(dirFactors.begin(), dirFactors.end()))+1;
+
+		for (int dN = 1; dN <= numberOfRequiredEigenValues; ++dN)
 		{
 			OOFEM_LOG_INFO("Creation of loaded model %d...\n", dN);
 
@@ -831,9 +843,13 @@ namespace oofem {
 			combReactions.at(z) = sqrt(combReactions.at(z));
 		}
 
+		disp_it = std::next(dispList.begin(), dominantMode - 1);
+		FloatArray &disps = *disp_it; // dominant mode
 		for (int z = 1; z <= combDisps.giveSize(); z++)
 		{
-			combDisps.at(z) = sqrt(combDisps.at(z));
+			double res = sqrt(combDisps.at(z));
+			res *= signbit(disps.at(z)) ? -1 : 1;
+			combDisps.at(z) = res;
 		}
 
 		calcRoot(combElemResponse);
@@ -900,9 +916,13 @@ namespace oofem {
 			}
 		}
 
+		disp_it = std::next(dispList.begin(), dominantMode - 1);
+		FloatArray &disps = *disp_it; // dominant mode
 		for (int z = 1; z <= combDisps.giveSize(); z++)
 		{
-			combDisps.at(z) = sqrt(combDisps.at(z));
+			double res = sqrt(combDisps.at(z));
+			res *= signbit(disps.at(z)) ? -1 : 1;
+			combDisps.at(z) = res;
 		}
 
 	}
@@ -937,6 +957,11 @@ namespace oofem {
 	void ResponseSpectrum::giveRhos(FloatMatrix &ans)
 	{
 		ans = rhos;
+	}
+
+	void ResponseSpectrum::giveDominantMode(int &mode)
+	{
+		mode = dominantMode;
 	}
 
 	RSpecComboType ResponseSpectrum::giveComboType()
@@ -1029,7 +1054,6 @@ void addMultiply(map<int, map<int, map<int, map<string, FloatArray>>>> &answer, 
 		populateElResults(answer, src);
 	}
 
-	// awful iteration
 	map<int, map<int, map<int, map<string, FloatArray>>>>::iterator destElem_it = answer.begin();
 	map<int, map<int, map<int, map<string, FloatArray>>>>::iterator srcElem_it = src.begin();
 	map<int, map<int, map<int, map<string, FloatArray>>>>::iterator srcElem_it2 = src2.begin();
@@ -1079,7 +1103,6 @@ void addMultiply(map<int, map<int, map<int, map<string, FloatArray>>>> &answer, 
 
 void calcRoot(map<int, map<int, map<int, map<string, FloatArray>>>> &answer)
 {
-	// another awful iteration
 	map<int, map<int, map<int, map<string, FloatArray>>>>::iterator destElem_it = answer.begin();
 	for (; destElem_it != answer.end(); ++destElem_it)
 	{
@@ -1111,10 +1134,8 @@ void calcRoot(map<int, map<int, map<int, map<string, FloatArray>>>> &answer)
 	}
 }
 
-
 void populateElResults(map<int, map<string, FloatArray>> &answer, map<int, map<string, FloatArray>> &src)
 {
-
 	map<int, map<string, FloatArray>>::iterator srcElem_it = src.begin();
 	for (; srcElem_it != src.end(); ++srcElem_it)
 	{
@@ -1140,7 +1161,6 @@ void addMultiply(map<int, map<string, FloatArray>> &answer, map<int, map<string,
 		populateElResults(answer, src);
 	}
 
-	// awful iteration
 	map<int, map<string, FloatArray>>::iterator destElem_it = answer.begin();
 	map<int, map<string, FloatArray>>::iterator srcElem_it = src.begin();
 	map<int, map<string, FloatArray>>::iterator srcElem_it2 = src2.begin();
@@ -1170,7 +1190,6 @@ void addMultiply(map<int, map<string, FloatArray>> &answer, map<int, map<string,
 
 void calcRoot(map<int, map<string, FloatArray>> &answer)
 {
-	// another awful iteration
 	map<int, map<string, FloatArray>>::iterator destElem_it = answer.begin();
 	for (; destElem_it != answer.end(); ++destElem_it)
 	{
@@ -1189,7 +1208,6 @@ void calcRoot(map<int, map<string, FloatArray>> &answer)
 		}
 	}
 }
-
 
 void
 ResponseSpectrum::computeExternalLoadReactionContribution(FloatArray &reactions, TimeStep *tStep, int di)

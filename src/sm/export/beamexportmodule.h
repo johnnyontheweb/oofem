@@ -109,6 +109,7 @@ private:
 	virtual void populateElResults(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src);
 	virtual void addMultiply(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src, std::map<int, std::map<double, FloatArray>> &src2, double fact = 1.0);
 	virtual void calcRoot(std::map<int, std::map<double, FloatArray>> &answer);
+	void correctSigns(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src, bool use1stmode = true);
 	virtual void SRSS();
 	virtual void CQC();
 
