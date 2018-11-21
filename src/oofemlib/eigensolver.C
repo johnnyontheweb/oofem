@@ -99,7 +99,7 @@ EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatri
 	Spectra::SymGEigsSolver< double, Spectra::LARGEST_MAGN, Spectra::SparseSymMatProd<double>, Spectra::SparseCholesky<double>, Spectra::GEIGS_CHOLESKY  > eigs(&opB, &op, nroot, min(2 * nroot, a.giveNumberOfColumns()));
 	// Initialize and compute
 	eigs.init();
-	int nconv = eigs.compute();
+	int nconv = eigs.compute(1000, rtol);
 	// Retrieve results
 	Eigen::VectorXcd evalues;
 	//if (eigs.info() == Spectra::SUCCESSFUL) // always copy
