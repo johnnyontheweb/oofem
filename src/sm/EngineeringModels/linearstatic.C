@@ -143,6 +143,10 @@ double LinearStatic :: giveUnknownComponent(ValueModeType mode, TimeStep *tStep,
         } else {
             return 0.;
         }
+	case VM_Velocity:
+		return 0.;
+	case VM_Acceleration:
+		return 0.;
 
     default:
         OOFEM_ERROR("Unknown is of undefined type for this problem");

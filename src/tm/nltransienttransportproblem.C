@@ -270,6 +270,16 @@ double NLTransientTransportProblem :: giveUnknownComponent(ValueModeType mode, T
         } else {
             OOFEM_ERROR("Unknown mode %s is undefined for this problem", __ValueModeTypeToString(mode) );
         }
+	}
+	else if (mode == VM_Velocity) {
+		double val1 = UnknownsField->giveUnknownValue(dof, VM_Total, currentStep);
+		double val0 = UnknownsField->giveUnknownValue(dof, VM_Total, previousStep);
+		return (val1 - val0) / tStep->giveTimeIncrement();
+	}
+	else if (mode == VM_Acceleration) {
+		double val1 = UnknownsField->giveUnknownValue(dof, VM_Total, currentStep);
+		double val0 = UnknownsField->giveUnknownValue(dof, VM_Total, previousStep);
+		return (val1 - val0) / tStep->giveTimeIncrement() / tStep->giveTimeIncrement();
     } else {
         OOFEM_ERROR("time value %f not within bounds %f and %f", t, previousStep->giveTargetTime(), currentStep->giveTargetTime() );
     }

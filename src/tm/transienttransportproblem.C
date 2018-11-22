@@ -135,6 +135,8 @@ double TransientTransportProblem :: giveUnknownComponent(ValueModeType mode, Tim
         //return val1;
     } else if ( mode == VM_Velocity ) {
         return (val1 - val0) / tStep->giveTimeIncrement();
+	} else if (mode == VM_Acceleration) {
+		return (val1 - val0) / tStep->giveTimeIncrement() / tStep->giveTimeIncrement();
     } else if ( mode == VM_Incremental ) {
         return val1 - val0;
     } else {

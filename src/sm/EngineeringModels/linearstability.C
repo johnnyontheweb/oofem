@@ -131,13 +131,17 @@ double LinearStability :: giveUnknownComponent(ValueModeType mode, TimeStep *tSt
 
     int activeVector = ( int ) tStep->giveTargetTime();
     switch ( mode ) {
+	case VM_Incremental:
     case VM_Total: // EigenVector
         if ( activeVector ) {
             return eigVec.at(eq, activeVector);
         }
 
         return displacementVector.at(eq);
-
+	case VM_Velocity:
+		return 0.;
+	case VM_Acceleration:
+		return 0.;
     default:
         OOFEM_ERROR("Unknown is of undefined type for this problem");
     }

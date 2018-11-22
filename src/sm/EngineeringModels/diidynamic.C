@@ -154,6 +154,13 @@ double DIIDynamic :: giveUnknownComponent(ValueModeType mode, TimeStep *tStep, D
     }
 
     switch ( mode ) {
+	case VM_Incremental:
+		if (displacementVector.isNotEmpty() && previousDisplacementVector.isNotEmpty()) {
+			return displacementVector.at(eq) - previousDisplacementVector.at(eq);
+		}
+		else {
+			return 0.;
+		}
     case VM_Total:
         return displacementVector.at(eq);
 

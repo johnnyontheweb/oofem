@@ -182,9 +182,12 @@ namespace oofem {
 			{
 				return dummyDisps.at(eq);
 			}
-
+		case VM_Velocity:
+			return 0.;
+		case VM_Acceleration:
+			return 0.;
 		default:
-			OOFEM_ERROR("Unknown is of undefined type for this problem");
+			OOFEM_WARNING("Unknown is of undefined type for this problem");
 		}
 
 		return 0.;

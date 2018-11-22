@@ -123,7 +123,10 @@ namespace oofem {
 		case VM_Total:  // EigenVector
 		case VM_Incremental:
 			return eigVec.at(eq, (int)tStep->giveTargetTime());
-
+		case VM_Velocity:
+			return 0.;
+		case VM_Acceleration:
+			return 0.;
 		default:
 			OOFEM_ERROR("Unknown is of undefined type for this problem");
 		}
