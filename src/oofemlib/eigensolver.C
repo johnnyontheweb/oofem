@@ -80,6 +80,10 @@ EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatri
 		OOFEM_ERROR("matrices size mismatch");
 	}
 
+	// spectra supports n-1 eigenvalues
+	if (nroot >= a.giveNumberOfRows() || nroot <= 0)
+		OOFEM_ERROR("invalid number of eigenvalues");
+
 	//typedef Eigen::SparseMatrix<double,0,int> SparseMat;
 	//typedef Eigen::SimplicialLDLT<SparseMat> SparseChol;
 	//typedef Eigen::ArpackGeneralizedSelfAdjointEigenSolver <SparseMat, SparseChol> Arpack;
