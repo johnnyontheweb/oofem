@@ -96,7 +96,7 @@ protected:
     int numberOfCondensedDofs;
 
     /// Subsoil material
-    int subsoilMat;
+    int subsoilMat = 0;
     
 	// macro element number
 	int macroElem;

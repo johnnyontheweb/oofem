@@ -39,6 +39,7 @@
 #include "material.h"
 #include "contextioerr.h"
 #include "gaussintegrationrule.h"
+#include "datastream.h"
 
 namespace oofem {
     
@@ -173,11 +174,40 @@ CrossSection :: give(CrossSectionProperty aProperty, const FloatArray &coords, E
     return 0.0;
 }
 
-
 double
 CrossSection :: predictRelativeComputationalCost(GaussPoint *gp)
 {
     return this->giveRelativeSelfComputationalCost() * this->giveMaterial(gp)->predictRelativeComputationalCost(gp);
+}
+
+contextIOResultType 
+CrossSection::saveContext(DataStream &stream, ContextMode mode, void *obj)
+{
+	FEMComponent::saveContext(stream, mode);
+
+	if ((mode & CM_Definition)) {
+		propertyDictionary.saveContext(stream, mode);
+
+		if (!stream.write(setNumber)) {
+			THROW_CIOERR(CIO_IOERR);
+		}
+	}
+	return CIO_OK;
+}
+
+contextIOResultType 
+CrossSection::restoreContext(DataStream &stream, ContextMode mode, void *obj)
+{
+	FEMComponent::restoreContext(stream, mode);
+
+	if (mode & CM_Definition) {
+		propertyDictionary.restoreContext(stream, mode);
+
+		if (!stream.read(setNumber)) {
+			THROW_CIOERR(CIO_IOERR);
+		}
+	}
+	return CIO_OK;
 }
 
 } // end namespace oofem

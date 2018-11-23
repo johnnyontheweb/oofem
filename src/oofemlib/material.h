@@ -45,6 +45,8 @@
 #include "internalstatevaluetype.h"
 #include "matresponsemode.h"
 #include "dictionary.h"
+#include "contextioerr.h"
+#include "datastream.h"
 
 ///@name Input fields for Material
 //@{
@@ -326,6 +328,48 @@ public:
      * calls its initTempStatus method.
      */
     virtual void initTempStatus(GaussPoint *gp);
+
+
+	contextIOResultType Material::saveContext(DataStream &stream, ContextMode mode, void *obj = NULL)
+		// saves full element context (saves state variables, that completely describe current state)
+	{
+		contextIOResultType iores;
+
+		if ((iores = FEMComponent::saveContext(stream, mode, obj)) != CIO_OK) {
+			THROW_CIOERR(iores);
+		}
+
+		if ((mode & CM_Definition)) {
+			propertyDictionary.saveContext(stream, mode);
+
+			if (!stream.write(castingTime)) {
+				THROW_CIOERR(CIO_IOERR);
+			}
+		}
+
+		return CIO_OK;
+	}
+
+
+	contextIOResultType Material::restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL)
+		// restores full element context (saves state variables, that completely describe current state)
+	{
+		contextIOResultType iores;
+
+		if ((iores = FEMComponent::restoreContext(stream, mode, obj)) != CIO_OK) {
+			THROW_CIOERR(iores);
+		}
+
+		if (mode & CM_Definition) {
+			propertyDictionary.restoreContext(stream, mode);
+
+			if (!stream.read(castingTime)) {
+				THROW_CIOERR(CIO_IOERR);
+			}
+
+		}
+		return CIO_OK;
+	}
 };
 } // end namespace oofem
 #endif // material_h
