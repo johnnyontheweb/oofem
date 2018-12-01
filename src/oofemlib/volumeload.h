@@ -32,14 +32,14 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef deadweight_h
-#define deadweight_h
+#ifndef VolumeLoad_h
+#define VolumeLoad_h
 
 #include "bodyload.h"
 #include "bcgeomtype.h"
 #include "valuemodetype.h"
 
-#define _IFT_DeadWeight_Name "deadweight"
+#define _IFT_VolumeLoad_Name "VolumeLoad"
 
 namespace oofem {
 /**
@@ -49,13 +49,13 @@ namespace oofem {
  *
  * Its task is to return the body force @f$ \rho a @f$
  */
-class OOFEM_EXPORT DeadWeight : public BodyLoad
+class OOFEM_EXPORT VolumeLoad : public BodyLoad
 {
 public:
     /// Constructor
-    DeadWeight(int i, Domain * d) : BodyLoad(i, d) { }
+    VolumeLoad(int i, Domain * d) : BodyLoad(i, d) { }
     /**
-     * Computes components values of deadweight field at given point (coordinates given in Global c.s.).
+     * Computes components values of VolumeLoad field at given point (coordinates given in Global c.s.).
      * taking into account corresponding load time function value while respecting load response mode.
      * @param answer Component values at given point and time.
      * @param tStep Time step.
@@ -66,13 +66,13 @@ public:
 
     virtual bcValType giveBCValType() const { return ForceLoadBVT; }
     virtual bcGeomType giveBCGeoType() const { return BodyLoadBGT; }
-	// for StokesFlowVelocityHomogenization only
-    void setDeadWeighComponents(FloatArray newComponents);
 
-    virtual const char *giveClassName() const { return "DeadWeight"; }
-    virtual const char *giveInputRecordName() const { return _IFT_DeadWeight_Name; }
+    void setVolumeLoadComponents(FloatArray newComponents);
 
-	virtual VolumeType giveVolumeType() { return SelfWeight; }
+    virtual const char *giveClassName() const { return "VolumeLoad"; }
+    virtual const char *giveInputRecordName() const { return _IFT_VolumeLoad_Name; }
+
+	virtual VolumeType giveVolumeType() { return General; }
 };
 } // end namespace oofem
-#endif // deadweight_h
+#endif // VolumeLoad_h

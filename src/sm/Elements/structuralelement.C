@@ -272,6 +272,8 @@ StructuralElement :: computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, 
         OOFEM_ERROR("unknown load type");
     }
 
+	BodyLoad::VolumeType volType = forLoad->giveVolumeType();
+
     // note: force is assumed to be in global coordinate system.
     forLoad->computeComponentArrayAt(force, tStep, mode);
     // transform from global to element local c.s
@@ -285,7 +287,9 @@ StructuralElement :: computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, 
         for ( GaussPoint *gp : *this->giveDefaultIntegrationRulePtr() ) {
             this->computeNmatrixAt(gp->giveSubPatchCoordinates(), n);
             dV  = this->computeVolumeAround(gp);
-            dens = this->giveCrossSection()->give('d', gp);
+			if (volType == Load::SelfWeight) {
+				dens = this->giveCrossSection()->give('d', gp);
+			} else { dens = 1; }
             ntf.beTProductOf(n, force);
             answer.add(dV * dens, ntf);
         }

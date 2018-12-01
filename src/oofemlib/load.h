@@ -79,6 +79,20 @@ public:
         FT_Global,
     };
 
+
+	/**
+	* Type determining the type of volume load.
+	*/
+	enum VolumeType {
+		SelfWeight,
+		General,
+	};
+
+	/**
+	* Restore default for volume type.
+	*/
+	virtual VolumeType giveVolumeType() { return SelfWeight; }
+
 protected:
     /// Components of boundary condition.
     FloatArray componentArray;

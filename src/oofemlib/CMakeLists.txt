@@ -273,6 +273,7 @@ set (core_bc
     constantsurfaceload.C
     nodalload.C
     deadweight.C
+    volumeload.C
     reinforcement.C
     surfacetensionbc.C
     linearconstraintbc.C
