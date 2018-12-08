@@ -32,7 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "isoheatmat.h"
+#include "isoheatadvmat.h"
 #include "floatmatrix.h"
 #include "function.h"
 #include "gausspoint.h"
@@ -40,33 +40,46 @@
 #include "engngm.h"
 
 namespace oofem {
-REGISTER_Material(IsotropicHeatTransferMaterial);
+REGISTER_Material(IsotropicHeatAdvTransferMaterial);
 
-IsotropicHeatTransferMaterial :: IsotropicHeatTransferMaterial(int n, Domain *d) : TransportMaterial(n, d)
+IsotropicHeatAdvTransferMaterial :: IsotropicHeatAdvTransferMaterial(int n, Domain *d) : TransportMaterial(n, d)
 {
     // constructor
     maturityT0 = 0.;
 }
 
-IsotropicHeatTransferMaterial :: ~IsotropicHeatTransferMaterial() {
+IsotropicHeatAdvTransferMaterial :: ~IsotropicHeatAdvTransferMaterial() {
     // destructor
 }
 
 IRResultType
-IsotropicHeatTransferMaterial :: initializeFrom(InputRecord *ir)
+IsotropicHeatAdvTransferMaterial :: initializeFrom(InputRecord *ir)
 {
     IRResultType result;                // Required by IR_GIVE_FIELD macro
 
-    IR_GIVE_FIELD(ir, conductivity, _IFT_IsotropicHeatTransferMaterial_k);
-    IR_GIVE_FIELD(ir, capacity, _IFT_IsotropicHeatTransferMaterial_c);
-    IR_GIVE_OPTIONAL_FIELD(ir, maturityT0, _IFT_IsotropicHeatTransferMaterial_maturityT0);
-    IR_GIVE_OPTIONAL_FIELD(ir, density, _IFT_IsotropicHeatTransferMaterial_d);
+    IR_GIVE_FIELD(ir, conductivity, _IFT_IsotropicHeatAdvTransferMaterial_k);
+    IR_GIVE_FIELD(ir, capacity, _IFT_IsotropicHeatAdvTransferMaterial_c);
+    IR_GIVE_OPTIONAL_FIELD(ir, maturityT0, _IFT_IsotropicHeatAdvTransferMaterial_maturityT0);
+    IR_GIVE_OPTIONAL_FIELD(ir, density, _IFT_IsotropicHeatAdvTransferMaterial_d);
 
+	IR_GIVE_OPTIONAL_FIELD(ir, funcD, _IFT_IsotropicHeatAdvTransferMaterial_dFunc);
+	IR_GIVE_OPTIONAL_FIELD(ir, funcK, _IFT_IsotropicHeatAdvTransferMaterial_kFunc);
+	IR_GIVE_OPTIONAL_FIELD(ir, funcC, _IFT_IsotropicHeatAdvTransferMaterial_cFunc);
+	
     return Material :: initializeFrom(ir);
 }
 
+void IsotropicHeatAdvTransferMaterial::postInitialize()
+{
+	// we check whether the spectrum function exists or not.
+	if (funcD > 0) {
+		Function *fD = this->giveDomain()->giveFunction(funcD);
+		if (fD == NULL) OOFEM_ERROR("Invalid function given");
+	}
+}
+
 double
-IsotropicHeatTransferMaterial :: give(int aProperty, GaussPoint *gp, TimeStep *tStep)
+IsotropicHeatAdvTransferMaterial :: give(int aProperty, GaussPoint *gp, TimeStep *tStep)
 //
 // Returns the value of the property aProperty (e.g. 'k' the conductivity of the receiver).
 //
@@ -86,7 +99,7 @@ IsotropicHeatTransferMaterial :: give(int aProperty, GaussPoint *gp, TimeStep *t
 
 
 void
-IsotropicHeatTransferMaterial :: giveFluxVector(FloatArray &answer, GaussPoint *gp, const FloatArray &grad, const FloatArray &field, TimeStep *tStep)
+IsotropicHeatAdvTransferMaterial :: giveFluxVector(FloatArray &answer, GaussPoint *gp, const FloatArray &grad, const FloatArray &field, TimeStep *tStep)
 {
     TransportMaterialStatus *ms = static_cast< TransportMaterialStatus * >( this->giveStatus(gp) );
 
@@ -101,7 +114,7 @@ IsotropicHeatTransferMaterial :: giveFluxVector(FloatArray &answer, GaussPoint *
 
 
 void
-IsotropicHeatTransferMaterial :: giveCharacteristicMatrix(FloatMatrix &answer,
+IsotropicHeatAdvTransferMaterial :: giveCharacteristicMatrix(FloatMatrix &answer,
                                                           MatResponseMode mode,
                                                           GaussPoint *gp,
                                                           TimeStep *tStep)
@@ -135,12 +148,12 @@ IsotropicHeatTransferMaterial :: giveCharacteristicMatrix(FloatMatrix &answer,
 }
 
 double
-IsotropicHeatTransferMaterial :: giveIsotropicConductivity(GaussPoint *gp, TimeStep *tStep) {
+IsotropicHeatAdvTransferMaterial :: giveIsotropicConductivity(GaussPoint *gp, TimeStep *tStep) {
     return give('k', gp, tStep);
 }
 
 double
-IsotropicHeatTransferMaterial :: giveCharacteristicValue(MatResponseMode mode,
+IsotropicHeatAdvTransferMaterial :: giveCharacteristicValue(MatResponseMode mode,
                                                          GaussPoint *gp,
                                                          TimeStep *tStep)
 {
@@ -155,7 +168,7 @@ IsotropicHeatTransferMaterial :: giveCharacteristicValue(MatResponseMode mode,
 
 
 int
-IsotropicHeatTransferMaterial :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep)
+IsotropicHeatAdvTransferMaterial :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep)
 {
     if (  type == IST_HydrationDegree ) {
         answer.resize(1);
@@ -181,32 +194,36 @@ IsotropicHeatTransferMaterial :: giveIPValue(FloatArray &answer, GaussPoint *gp,
 }
 
 
+
+
+
+
 MaterialStatus *
-IsotropicHeatTransferMaterial :: CreateStatus(GaussPoint *gp) const
+IsotropicHeatAdvTransferMaterial :: CreateStatus(GaussPoint *gp) const
 {
-    return new IsotropicHeatTransferMaterialStatus(1, domain, gp);
+    return new IsotropicHeatAdvTransferMaterialStatus(1, domain, gp);
 }
 
-IsotropicHeatTransferMaterialStatus :: IsotropicHeatTransferMaterialStatus(int n, Domain *d, GaussPoint *g) : TransportMaterialStatus(n, d, g)
+IsotropicHeatAdvTransferMaterialStatus :: IsotropicHeatAdvTransferMaterialStatus(int n, Domain *d, GaussPoint *g) : TransportMaterialStatus(n, d, g)
 {
     //constructor
 }
 
 
-IsotropicHeatTransferMaterialStatus :: ~IsotropicHeatTransferMaterialStatus()
+IsotropicHeatAdvTransferMaterialStatus :: ~IsotropicHeatAdvTransferMaterialStatus()
 {
     //destructor
 }
 
 void
-IsotropicHeatTransferMaterialStatus :: updateYourself(TimeStep *tStep)
+IsotropicHeatAdvTransferMaterialStatus :: updateYourself(TimeStep *tStep)
 {
     TransportMaterialStatus :: updateYourself(tStep);
 }
 
-double IsotropicHeatTransferMaterial :: giveTemperature(GaussPoint *gp)
+double IsotropicHeatAdvTransferMaterial :: giveTemperature(GaussPoint *gp)
 {
-    IsotropicHeatTransferMaterialStatus *ms = static_cast< IsotropicHeatTransferMaterialStatus * >( this->giveStatus(gp) );
+    IsotropicHeatAdvTransferMaterialStatus *ms = static_cast< IsotropicHeatAdvTransferMaterialStatus * >( this->giveStatus(gp) );
     return ms->giveTempField().at(1);
 }
 

@@ -50,6 +50,7 @@ set (tm_material
     hemokunzelmat.C
     hemobaznajmat.C
     isoheatmat.C
+    isoheatadvmat.C
     isomoisturemat.C
     isolinmoisturemat.C
     bazantnajjarmat.C

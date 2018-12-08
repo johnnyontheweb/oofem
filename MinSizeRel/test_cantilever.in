@@ -1,7 +1,7 @@
 test_cantilever.out
 -> NextFEM model 7/20/2016 9:41:21 PM
-LinearStatic nsteps 1 nmodules 2
-vtkxml tstep_all domain_all vars 6 9 10 11 104 1 4 cellvars 6 9 10 11 104 1 4 primvars 1 1 stype 1
+LinearStatic nsteps 1 nmodules 1
+#vtkxml tstep_all domain_all vars 6 9 10 11 104 1 4 cellvars 6 9 10 11 104 1 4 primvars 1 1 stype 1
 nrm tstep_all domain_all vars 6 9 10 11 104 1 4 stype 1
 domain 3dShell
 OutputManager tstep_all dofman_all element_all
