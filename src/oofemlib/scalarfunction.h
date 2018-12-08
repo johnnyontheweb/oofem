@@ -69,7 +69,7 @@ class ScalarFunction
     int fReference;
 
     /// Enum value determining the dataValue type.
-    enum { DV_Undefined, DV_ValueType, DV_SimpleExpressionType, DV_FunctionReferenceType } dvType;
+	enum { DV_Undefined, DV_ValueType, DV_SimpleExpressionType, DV_FunctionReferenceType, DV_FunctionMultiplierType } dvType;
 
 public:
     /**
@@ -109,7 +109,8 @@ public:
      * Sets receiver to be a scalar function defined using external function
      * @param val External function number
      */
-    void setReference(int val);
+	void setReference(int val);
+	void setMultiplierReference(int val);
 
     /**
      * Evaluates the receiver.

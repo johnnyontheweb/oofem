@@ -46,7 +46,7 @@
 #define _IFT_IsotropicHeatAdvTransferMaterial_k "k" ///< Conductivity
 #define _IFT_IsotropicHeatAdvTransferMaterial_c "c" ///< Specific heat
 #define _IFT_IsotropicHeatAdvTransferMaterial_maturityT0 "maturityt0" ///< Baseline for maturity method
-#define _IFT_IsotropicHeatAdvTransferMaterial_d "td"
+#define _IFT_IsotropicHeatAdvTransferMaterial_d "d"
 #define _IFT_IsotropicHeatAdvTransferMaterial_dFunc "funcd"
 #define _IFT_IsotropicHeatAdvTransferMaterial_kFunc "funck"
 #define _IFT_IsotropicHeatAdvTransferMaterial_cFunc "funcc"

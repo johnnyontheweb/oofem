@@ -60,21 +60,32 @@ IsotropicHeatAdvTransferMaterial :: initializeFrom(InputRecord *ir)
     IR_GIVE_FIELD(ir, conductivity, _IFT_IsotropicHeatAdvTransferMaterial_k);
     IR_GIVE_FIELD(ir, capacity, _IFT_IsotropicHeatAdvTransferMaterial_c);
     IR_GIVE_OPTIONAL_FIELD(ir, maturityT0, _IFT_IsotropicHeatAdvTransferMaterial_maturityT0);
-    IR_GIVE_OPTIONAL_FIELD(ir, density, _IFT_IsotropicHeatAdvTransferMaterial_d);
+    IR_GIVE_OPTIONAL_FIELD(ir, density, _IFT_IsotropicHeatAdvTransferMaterial_d); // old td - reverted to d
 
 	IR_GIVE_OPTIONAL_FIELD(ir, funcD, _IFT_IsotropicHeatAdvTransferMaterial_dFunc);
+	if (funcD) density.setMultiplierReference(funcD);
 	IR_GIVE_OPTIONAL_FIELD(ir, funcK, _IFT_IsotropicHeatAdvTransferMaterial_kFunc);
+	if (funcK) conductivity.setMultiplierReference(funcK);
 	IR_GIVE_OPTIONAL_FIELD(ir, funcC, _IFT_IsotropicHeatAdvTransferMaterial_cFunc);
+	if (funcC) capacity.setMultiplierReference(funcC);
 	
     return Material :: initializeFrom(ir);
 }
 
-void IsotropicHeatAdvTransferMaterial::postInitialize()
+void IsotropicHeatAdvTransferMaterial::postInitialize() // not called
 {
-	// we check whether the spectrum function exists or not.
+	// we check whether the function exists or not.
 	if (funcD > 0) {
 		Function *fD = this->giveDomain()->giveFunction(funcD);
 		if (fD == NULL) OOFEM_ERROR("Invalid function given");
+	}
+	if (funcK > 0) {
+		Function *fK = this->giveDomain()->giveFunction(funcK);
+		if (fK == NULL) OOFEM_ERROR("Invalid function given");
+	}
+	if (funcC > 0) {
+		Function *fC = this->giveDomain()->giveFunction(funcC);
+		if (fC == NULL) OOFEM_ERROR("Invalid function given");
 	}
 }
 
