@@ -55,7 +55,12 @@ IRResultType Set :: initializeFrom(InputRecord *ir)
     IntArray inputNodes;
     std :: list< Range >inputNodeRanges;
     if ( ir->hasField(_IFT_Set_allNodes) ) { // generate a list with all the node numbers
-       this->nodes.enumerate(this->giveDomain()->giveNumberOfDofManagers()); 
+       // this->nodes.enumerate(this->giveDomain()->giveNumberOfDofManagers()); 
+		int maxValue = this->giveDomain()->giveNumberOfDofManagers();
+		this->nodes.resize(maxValue);
+		for (int i = 1; i <= maxValue; ++i) {
+			this->nodes.at(i) = this->giveDomain()->giveDofManager(i)->giveLabel();
+		}
     } else {
         IR_GIVE_OPTIONAL_FIELD(ir, inputNodes, _IFT_Set_nodes);
         IR_GIVE_OPTIONAL_FIELD(ir, inputNodeRanges, _IFT_Set_nodeRanges);
@@ -63,7 +68,12 @@ IRResultType Set :: initializeFrom(InputRecord *ir)
     }
 
     if ( ir->hasField(_IFT_Set_allElements) ) { // generate a list with all the element numbers
-        this->elements.enumerate(this->giveDomain()->giveNumberOfElements());
+        // this->elements.enumerate(this->giveDomain()->giveNumberOfElements());
+		int maxValue = this->giveDomain()->giveNumberOfElements();
+		this->elements.resize(maxValue);
+		for (int i = 1; i <= maxValue; ++i) {
+			this->elements.at(i) = this->giveDomain()->giveElement(i)->giveLabel();
+		}
         mElementListIsSorted = false;
     } else {
         IntArray inputElements;
