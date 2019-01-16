@@ -38,9 +38,9 @@
 #include "matstatus.h"
 #include "interface.h"
 #include "intarray.h"
-
+#include "dynamicinputrecord.h"
 #include <list>
-
+#include <memory>
 ///@name Input fields for NonlocalMaterialExtensionInterface
 //@{
 #define _IFT_NonlocalMaterialExtensionInterface_regionmap "regionmap"
