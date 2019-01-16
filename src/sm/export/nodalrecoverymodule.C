@@ -135,7 +135,7 @@ namespace oofem {
 		const FloatArray *val = NULL;
 
 		//this->giveSmoother();
-
+		
 		if (!((valID == IST_DisplacementVector) || (valID == IST_MaterialInterfaceVal))) {
 			this->smoother->recoverValues(*this->elemSet, valID, tStep);
 		}
@@ -486,7 +486,10 @@ namespace oofem {
 		if (this->smoother == NULL) {
 			this->smoother = classFactory.createNodalRecoveryModel(this->stype, d);
 		}
-
+		// if already null, creates error
+		if (this->smoother == NULL) {
+			OOFEM_ERROR("Cannot create NRM interface")
+		}
 		// create a new set containing all elements
 		elemSet = new Set(0, d);
 		elemSet->addAllElements();
