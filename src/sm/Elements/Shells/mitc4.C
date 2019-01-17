@@ -972,7 +972,8 @@ MITC4Shell::computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, T
 		if (drillCoeff > 0.) {
 			this->interp_lin.evalN(n, gp->giveNaturalCoordinates(), FEIElementGeometryWrapper(this));
 			for (int j = 0; j < num; j++) {      // TODO: adapt when evalN is fixed for mitc4
-				n(j % 2) -= gp->giveWeight() / numberOfGaussPoints;  //    | +1 - (-1) |^3 = 2^3 normalized to 1.
+				// n(j >> 1) -= gp->giveWeight() / numberOfGaussPoints;  //    | +1 - (-1) |^3 = 2^3 normalized to 1.
+				n(j % nPointsZ) -= gp->giveWeight() / numberOfGaussPoints;
 			}
 			drillStiffness.plusDyadSymmUpper(n, 0.0005*E*drillCoeff * dV);
 			drillCoeffFlag = true;
