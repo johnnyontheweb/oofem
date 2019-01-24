@@ -676,6 +676,7 @@ Domain :: instanciateYourself(DataReader *dr)
             OOFEM_ERROR("Couldn't create node of type: %s\n", name.c_str());
         }
 
+        dman->setGlobalNumber(num);    // set label
         dman->initializeFrom(ir);
         if ( dofManLabelMap.find(num) == dofManLabelMap.end() ) {
             // label does not exist yet
@@ -684,7 +685,6 @@ Domain :: instanciateYourself(DataReader *dr)
             OOFEM_ERROR("iDofmanager entry already exist (label=%d)", num);
         }
 
-        dman->setGlobalNumber(num);    // set label
         dofManagerList[i - 1] = std :: move(dman);
 
         ir->finish();

@@ -85,10 +85,10 @@ SlaveDof :: giveNumberOfPrimaryMasterDofs()
 {
     if ( countOfPrimaryMasterDofs > 0 ) {
         return countOfPrimaryMasterDofs;
-    } else
-      //if ( countOfPrimaryMasterDofs == 0 ) {
-      //OOFEM_ERROR("slaveDof is own master");
-      //}
+    }  else
+//    if ( countOfPrimaryMasterDofs == 0 ) {
+ //     OOFEM_ERROR("slaveDof is own master");
+ //   }
 
     countOfPrimaryMasterDofs = 0;
 
