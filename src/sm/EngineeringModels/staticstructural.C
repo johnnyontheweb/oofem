@@ -300,8 +300,18 @@ double StaticStructural :: giveUnknownComponent(ValueModeType mode, TimeStep *tS
     } else if ( mode == VM_Incremental ) {
         double val0 = dof->giveUnknownsDictionaryValue(tStep->givePreviousStep(), VM_Total);
         return val1 - val0;
+
+	} else if (mode == VM_Velocity) {
+		double val0 = dof->giveUnknownsDictionaryValue(tStep->givePreviousStep(), VM_Total);
+		return (val1 - val0) / tStep->giveTimeIncrement();
+
+	} else if (mode == VM_Acceleration) {
+		//double val0 = dof->giveUnknownsDictionaryValue(tStep->givePreviousStep(), VM_Total);
+		//double t = tStep->giveTimeIncrement();
+		//return (val1 - val0) / t / t;
+		return 0;
     } else {
-        OOFEM_ERROR("Unknown value mode requested");
+        OOFEM_WARNING("Unknown value mode requested");
         return 0;
     }
     return this->field->giveUnknownValue(dof, mode, tStep);
