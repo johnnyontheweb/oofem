@@ -296,7 +296,7 @@ void AbaqusUserElement1d :: giveInternalForcesVector(FloatArray &answer, TimeSte
         this->lFlags.at(1) = 1;                 // 1 based access
         this->lFlags.at(3) = 1;                 // 1 based access
         this->lFlags.at(4) = 0;                 // 1 based access
-
+		int label = this->giveLabel();
         int nprops = props.giveSize();
         int njprops = jprops.giveSize();
 
@@ -333,7 +333,7 @@ void AbaqusUserElement1d :: giveInternalForcesVector(FloatArray &answer, TimeSte
             & dtime,
             & kstep,
             & kinc,
-            & ( this->number ),
+            & ( label ),
             params,
             & ndLoad,
             jdltype,
