@@ -241,7 +241,11 @@ restart:
      * this is used to test whether k has negative or positive slope */
 
     Lambda = ReachedLambda;
-    DeltaLambda = deltaLambda = sgn(XR) * deltaL / p;
+	if (p == 0) {
+		DeltaLambda = deltaLambda = sgn(XR) * deltaL;
+	} else {
+		DeltaLambda = deltaLambda = sgn(XR) * deltaL / p;
+	}
     Lambda += DeltaLambda;
     //
     // A.3.
@@ -1046,8 +1050,12 @@ CylindricalALM :: computeDeltaLambda(double &deltaLambda, const FloatArray &dX, 
         }
 
         discr = sqrt(discr);
-        double lam1 = ( -a2 + discr ) / 2. / a1;
-        double lam2 = ( -a2 - discr ) / 2. / a1;
+		double lam1 = DeltaLambda0;
+		double lam2 = DeltaLambda0;
+		if (a1 != 0) {
+			lam1=(-a2 + discr) / 2. / a1;
+			lam2=(-a2 - discr) / 2. / a1;
+		}
 
         // select better lam (according to angle between deltar0 and deltar1(2).
         //
@@ -1109,7 +1117,8 @@ CylindricalALM :: computeDeltaLambda(double &deltaLambda, const FloatArray &dX, 
 
         deltaLambda = ( deltaL - nom ) / denom;
     }
-
+	// final check to avoid 0
+	if (deltaLambda = 0) deltaLambda = DeltaLambda0;
     return 0;
 }
 

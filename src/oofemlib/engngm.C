@@ -1447,6 +1447,7 @@ EngngModel :: assemblePrescribedExtrapolatedForces(FloatArray &answer, TimeStep 
         ///@todo This is not perfect. It is probably no good for viscoelastic materials, and possibly other scenarios that are rate dependent
         ///(tangent will be computed for the previous step, with whatever deltaT it had)
         element->giveCharacteristicMatrix(charMatrix, type, tStep);
+		if (charMatrix.giveNumberOfRows() == 0) continue; // GR: prevents errors in product below (i.e. lumpedmass for stiffness matrix)
         element->computeVectorOfPrescribed(VM_Incremental, tStep, delta_u);
         charVec.beProductOf(charMatrix, delta_u);
         if ( element->giveRotationMatrix(R) ) {
