@@ -1118,7 +1118,7 @@ CylindricalALM :: computeDeltaLambda(double &deltaLambda, const FloatArray &dX, 
         deltaLambda = ( deltaL - nom ) / denom;
     }
 	// final check to avoid 0
-	if (deltaLambda = 0) deltaLambda = DeltaLambda0;
+	if (deltaLambda == 0) { deltaLambda = DeltaLambda0; }
     return 0;
 }
 
