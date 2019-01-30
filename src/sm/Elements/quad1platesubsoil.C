@@ -55,7 +55,7 @@ FEI2dQuadLin Quad1PlateSubSoil :: interp_lin(1, 2);
 
 Quad1PlateSubSoil :: Quad1PlateSubSoil(int n, Domain *aDomain) :
     StructuralElement(n, aDomain), ZZNodalRecoveryModelInterface(this),
-    SPRNodalRecoveryModelInterface()
+	SPRNodalRecoveryModelInterface() // , NodalAveragingRecoveryModelInterface()
 {
     numberOfGaussPoints = 4;
     numberOfDofMans = 4;
@@ -133,9 +133,25 @@ IRResultType
 Quad1PlateSubSoil :: initializeFrom(InputRecord *ir)
 {
     this->numberOfGaussPoints = 4;
-    return StructuralElement :: initializeFrom(ir);
+	IRResultType result = StructuralElement::initializeFrom(ir);
+	// optional record for 1st local axes - here it is not used, unuseful
+	la1.resize(3);
+	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_Quad1PlateSubSoil_lcs);
+
+	this->macroElem = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_Quad1PlateSubSoil_macroelem);
+
+	return IRRT_OK;
 }
 
+
+void
+Quad1PlateSubSoil::NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,
+InternalStateType type, TimeStep *tStep)
+{
+	this->giveIPValue(answer, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint(0), type, tStep);
+}
 
 void
 Quad1PlateSubSoil :: giveDofManDofIDMask(int inode, IntArray &answer) const
@@ -182,7 +198,7 @@ void
 Quad1PlateSubSoil :: computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep)
 // Returns the lumped mass matrix of the receiver.
 {
-  OOFEM_ERROR("Mass matrix not provided");
+  // OOFEM_ERROR("Mass matrix not provided");
 }
 
 
@@ -211,7 +227,9 @@ Quad1PlateSubSoil :: giveInterface(InterfaceType interface)
         return static_cast< ZZNodalRecoveryModelInterface * >(this);
     } else if ( interface == SPRNodalRecoveryModelInterfaceType ) {
         return static_cast< SPRNodalRecoveryModelInterface * >(this);
-    }
+	//} else if (interface == NodalAveragingRecoveryModelInterfaceType) {
+	// return static_cast< NodalAveragingRecoveryModelInterface * >(this);
+	}
 
     return NULL;
 }

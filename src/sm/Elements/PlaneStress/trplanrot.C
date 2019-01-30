@@ -563,7 +563,7 @@ TrPlaneStrRot :: initializeFrom(InputRecord *ir)
 {
     IRResultType result;              // Required by IR_GIVE_FIELD macro
 
-    numberOfGaussPoints = 4;
+    numberOfGaussPoints = 1;
     result = TrPlaneStress2d :: initializeFrom(ir);
     if ( result != IRRT_OK ) {
         return result;

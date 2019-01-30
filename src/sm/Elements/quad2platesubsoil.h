@@ -39,6 +39,8 @@
 #include "../sm/Elements/quad1platesubsoil.h"
 
 #define _IFT_Quad2PlateSubSoil_Name "quad2platesubsoil"
+#define _IFT_Quad2PlateSubSoil_lcs "lcs1"
+#define _IFT_Quad2PlateSubSoil_macroelem "macroelem"
 
 namespace oofem {
 class FEI2dQuadQuad;
@@ -57,6 +59,10 @@ class Quad2PlateSubSoil : public Quad1PlateSubSoil
 {
 protected:
     static FEI2dQuadQuad interp_quad;
+	// 1st local axis
+	FloatArray la1;
+	// macro element number
+	int macroElem;
 
 public:
     Quad2PlateSubSoil(int n, Domain * d);
@@ -75,7 +81,8 @@ public:
 protected:
     virtual void computeGaussPoints();
     virtual void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int = 1, int = ALL_STRAINS);
-
+	virtual void NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,
+		InternalStateType type, TimeStep *tStep);
     virtual void SPRNodalRecoveryMI_giveSPRAssemblyPoints(IntArray &pap);
     virtual void SPRNodalRecoveryMI_giveDofMansDeterminedByPatch(IntArray &answer, int pap);
 };

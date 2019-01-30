@@ -38,8 +38,11 @@
 #include "../sm/Elements/structuralelement.h"
 #include "zznodalrecoverymodel.h"
 #include "sprnodalrecoverymodel.h"
+#include "nodalaveragingrecoverymodel.h"
 
 #define _IFT_Tria1PlateSubSoil_Name "tria1platesubsoil"
+#define _IFT_Tria1PlateSubSoil_lcs "lcs1"
+#define _IFT_Tria1PlateSubSoil_macroelem "macroelem"
 
 namespace oofem {
 class FEI2dTrLin;
@@ -56,10 +59,14 @@ class FEI2dTrLin;
  */
 class Tria1PlateSubSoil : public StructuralElement,
 public ZZNodalRecoveryModelInterface,
-public SPRNodalRecoveryModelInterface
+public SPRNodalRecoveryModelInterface //, public NodalAveragingRecoveryModelInterface
 {
 protected:
     static FEI2dTrLin interp_lin;
+	// 1st local axis
+	FloatArray la1;
+	// macro element number
+	int macroElem;
 
 public:
     Tria1PlateSubSoil(int n, Domain * d);
@@ -98,7 +105,8 @@ protected:
 
     virtual void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep);
     virtual void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep);
-
+	virtual void NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,
+		InternalStateType type, TimeStep *tStep);
     virtual void SPRNodalRecoveryMI_giveSPRAssemblyPoints(IntArray &pap);
     virtual void SPRNodalRecoveryMI_giveDofMansDeterminedByPatch(IntArray &answer, int pap);
     virtual int SPRNodalRecoveryMI_giveNumberOfIP() { return this->numberOfGaussPoints; }

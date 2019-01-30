@@ -103,9 +103,25 @@ IRResultType
 Quad2PlateSubSoil :: initializeFrom(InputRecord *ir)
 {
     this->numberOfGaussPoints = 4;
-    return StructuralElement :: initializeFrom(ir);
+	IRResultType result = StructuralElement::initializeFrom(ir);
+	// optional record for 1st local axes - here it is not used, unuseful
+	la1.resize(3);
+	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_Quad2PlateSubSoil_lcs);
+
+	this->macroElem = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_Quad2PlateSubSoil_macroelem);
+
+	return IRRT_OK;
 }
 
+
+void
+Quad2PlateSubSoil::NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,
+InternalStateType type, TimeStep *tStep)
+{
+	this->giveIPValue(answer, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint(0), type, tStep);
+}
 
 void
 Quad2PlateSubSoil :: SPRNodalRecoveryMI_giveSPRAssemblyPoints(IntArray &pap)

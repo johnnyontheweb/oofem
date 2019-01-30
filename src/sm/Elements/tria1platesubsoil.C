@@ -55,7 +55,7 @@ FEI2dTrLin Tria1PlateSubSoil :: interp_lin(1, 2);
 
 Tria1PlateSubSoil :: Tria1PlateSubSoil(int n, Domain *aDomain) :
     StructuralElement(n, aDomain), ZZNodalRecoveryModelInterface(this),
-    SPRNodalRecoveryModelInterface()
+	SPRNodalRecoveryModelInterface()  // , NodalAveragingRecoveryModelInterface()
 {
     numberOfGaussPoints = 1;
     numberOfDofMans = 3;
@@ -133,7 +133,16 @@ IRResultType
 Tria1PlateSubSoil :: initializeFrom(InputRecord *ir)
 {
     this->numberOfGaussPoints = 1;
-    return StructuralElement :: initializeFrom(ir);
+	IRResultType result = StructuralElement::initializeFrom(ir);
+	// optional record for 1st local axes - here it is not used, unuseful
+	la1.resize(3);
+	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_Tria1PlateSubSoil_lcs);
+
+	this->macroElem = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_Tria1PlateSubSoil_macroelem);
+
+	return IRRT_OK;
 }
 
 
@@ -182,7 +191,7 @@ void
 Tria1PlateSubSoil :: computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep)
 // Returns the lumped mass matrix of the receiver.
 {
-  OOFEM_ERROR("Mass matrix not provided");
+  // OOFEM_ERROR("Mass matrix not provided");
 }
 
 
@@ -192,6 +201,13 @@ Tria1PlateSubSoil :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalSta
   return StructuralElement :: giveIPValue(answer, gp, type, tStep);
 }
 
+void
+Tria1PlateSubSoil::NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,
+InternalStateType type, TimeStep *tStep)
+{
+	this->giveIPValue(answer, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint(0), type, tStep);
+}
+
 Interface *
 Tria1PlateSubSoil :: giveInterface(InterfaceType interface)
 {
@@ -199,6 +215,8 @@ Tria1PlateSubSoil :: giveInterface(InterfaceType interface)
         return static_cast< ZZNodalRecoveryModelInterface * >(this);
     } else if ( interface == SPRNodalRecoveryModelInterfaceType ) {
         return static_cast< SPRNodalRecoveryModelInterface * >(this);
+	//} else if (interface == NodalAveragingRecoveryModelInterfaceType) {
+	//	return static_cast< NodalAveragingRecoveryModelInterface * >(this);
     }
 
     return NULL;
