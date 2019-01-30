@@ -103,9 +103,9 @@ WinklerMaterial :: give2dPlateSubSoilStiffMtrx(FloatMatrix &answer, MatResponseM
     answer.resize(3, 3);
     answer.zero();
 
-    answer.at(1, 1) = c1.at(1);
-    //answer.at(2, 2) = c2;
-    //answer.at(3, 3) = c2;
+    answer.at(1, 1) = c1.at(3);
+	answer.at(2, 2) = c1.at(2);
+	answer.at(3, 3) = c1.at(1);
 }
 
 
