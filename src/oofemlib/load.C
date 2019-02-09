@@ -37,10 +37,12 @@
 #include "timestep.h"
 #include "function.h"
 #include "dynamicinputrecord.h"
+#include "datastream.h"
+#include "contextioerr.h"
 
 namespace oofem {
 Load :: Load(int i, Domain *aDomain) :
-    GeneralBoundaryCondition(i, aDomain), componentArray(), dofExcludeMask()
+    GeneralBoundaryCondition(i, aDomain), componentArray(), dofExcludeMask(), reference(false)
 {
     timeFunction = 0;
 }
@@ -120,6 +122,8 @@ Load :: initializeFrom(InputRecord *ir)
         }
     }
 
+    this->reference = ir->hasField(_IFT_Load_reference);
+
     return GeneralBoundaryCondition :: initializeFrom(ir);
 }
 
@@ -131,6 +135,7 @@ void Load :: giveInputRecord(DynamicInputRecord &input)
     if ( !this->dofExcludeMask.containsOnlyZeroes() ) {
         input.setField(this->dofExcludeMask, _IFT_Load_dofexcludemask);
     }
+    if ( this->reference ) input.setField(_IFT_Load_reference);
 }
 
 
@@ -145,4 +150,56 @@ Load :: isDofExcluded(int indx)
 
     return 0;
 }
+
+
+void
+Load :: scale(double s)
+{
+    this->componentArray.times(s);
+    this->reference = false;
+}
+
+
+contextIOResultType
+Load::saveContext(DataStream &stream, ContextMode mode, void *obj)
+{
+    GeneralBoundaryCondition :: saveContext(stream, mode);
+
+    if ( mode & CM_Definition ) {
+        contextIOResultType iores;
+        if ( ( iores = componentArray.storeYourself(stream) ) != CIO_OK ) {
+            THROW_CIOERR(iores);
+        }
+        if ( ( iores = dofExcludeMask.storeYourself(stream) ) != CIO_OK ) {
+            THROW_CIOERR(iores);
+        }
+        if ( !stream.write(reference) ) {
+          THROW_CIOERR(CIO_IOERR);
+        }
+    }
+	return CIO_OK;
+}
+
+
+contextIOResultType
+Load::restoreContext(DataStream &stream, ContextMode mode, void *obj)
+{
+    GeneralBoundaryCondition :: restoreContext(stream, mode);
+
+    if ( mode & CM_Definition ) {
+        contextIOResultType iores;
+        if ( ( iores = componentArray.restoreYourself(stream) ) != CIO_OK ) {
+            THROW_CIOERR(iores);
+        }
+        if ( ( iores = dofExcludeMask.restoreYourself(stream) ) != CIO_OK ) {
+            THROW_CIOERR(iores);
+        }
+        if ( !stream.read(reference) ) {
+          THROW_CIOERR(CIO_IOERR);
+        }
+    }
+	return CIO_OK;
+}
+
+  
 } // end namespace oofem

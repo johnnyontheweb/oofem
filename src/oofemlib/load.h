@@ -45,6 +45,7 @@
 //@{
 #define _IFT_Load_components "components"
 #define _IFT_Load_dofexcludemask "dofexcludemask"
+#define _IFT_Load_reference "reference"
 //@}
 
 namespace oofem {
@@ -109,6 +110,9 @@ protected:
     IntArray dofExcludeMask;
 
 public:
+    // Marks the BC as a reference load. 
+    bool reference;
+
     /**
      * Constructor. Creates boundary condition with given number, belonging to given domain.
      * @param n Boundary condition number
@@ -143,7 +147,7 @@ public:
      * @param coords Global (or local) problem coordinates, which are used to evaluate components values.
      * @param dofids List of DOF IDs to evaluate for.
      * @param mode Determines response mode.
-     */    
+     */
     virtual void computeValues(FloatArray &answer, TimeStep *tStep, const FloatArray &coords, const IntArray &dofids, ValueModeType mode);
     /**
      * Returns the value of dofExcludeMask corresponding to given index.
@@ -152,6 +156,8 @@ public:
      * @return Nonzero if excluded, zero otherwise.
      */
     int isDofExcluded(int index);
+
+    void scale(double s) override;
 
     /**
      * Returns receiver's coordinate system.
@@ -176,14 +182,17 @@ public:
         return 0;
     }
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    IRResultType initializeFrom(InputRecord *ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
     /**
      * @return Pointer to receiver component array, where component values of boundary condition are stored.
      */
     const FloatArray &giveComponentArray() const;
-    void setComponentArray(FloatArray &arry) { componentArray = arry; }
+    void setComponentArray(FloatArray &arry) { componentArray = std::move(arry); }
+
+	contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL) override;
+	contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL) override;
 };
 } // end namespace oofem
 #endif // load_h
