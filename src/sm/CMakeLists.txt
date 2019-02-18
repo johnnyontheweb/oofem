@@ -103,10 +103,12 @@ set (sm_interface_elements
     Elements/Interfaces/intelline2.C
     Elements/Interfaces/intelline2intpen.C
     Elements/Interfaces/intelsurftr1.C
+    Elements/Interfaces/intelsurfquad.C
     Elements/Interfaces/Deprecated/interfaceelement1d.C
     Elements/Interfaces/Deprecated/interfaceelem2dlin.C
     Elements/Interfaces/Deprecated/interfaceelem2dquad.C
     Elements/Interfaces/Deprecated/interfaceelem3dtrlin.C
+    Elements/Interfaces/Deprecated/interfaceelem3dquadlin.C
     )
 
 set (sm_boundary_conditions
