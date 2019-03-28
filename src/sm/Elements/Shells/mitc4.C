@@ -66,6 +66,8 @@ MITC4Shell :: MITC4Shell(int n, Domain *aDomain) :
     nPointsXY = 4;
     nPointsZ = 2;
     numberOfGaussPoints = nPointsXY * nPointsZ;
+	BMatrices.resize(numberOfGaussPoints);
+	LMatrices.resize(4);
 }
 
 
@@ -315,6 +317,14 @@ MITC4Shell :: computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer)
 // evaluated at gp.
 // Zeroes in rows 4, 5, 6.
 {
+	answer.resize(6, 24);
+	answer.zero();
+
+	if (NMatrix.get() != nullptr) {
+		answer.add(*NMatrix);
+		return;
+	}
+
     FloatArray h(4);
 
     interp_lin.evalN( h, iLocCoord,  FEIElementGeometryWrapper(this) );
@@ -378,6 +388,8 @@ MITC4Shell :: computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer)
     answer.at(2, 24) =  iLocCoord.at(3) / 2.0 *a4 *h.at(4) * V14.at(2);
     answer.at(3, 23) = -iLocCoord.at(3) / 2.0 *a4 *h.at(4) * V24.at(3);
     answer.at(3, 24) =  iLocCoord.at(3) / 2.0 *a4 *h.at(4) * V14.at(3);
+
+	NMatrix.reset(new FloatMatrix(answer));
 }
 
 
@@ -554,12 +566,17 @@ MITC4Shell :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int 
 // Returns the [6x20] strain-displacement matrix {B} of the receiver,
 // evaluated at gp.
 {
+	answer.resize(6, 24);
+	answer.zero();
+	if (BMatrices.at(gp->giveNumber()-1).get() != nullptr) {
+		answer.add(*BMatrices.at(gp->giveNumber() - 1));
+		return;
+	}
     FloatArray h(4);
     FloatMatrix jacobianMatrix(3, 3);
     FloatMatrix dn(4, 2);
     FloatMatrix dndx(4, 2);
 
-    answer.resize(6, 24);
     // get node coordinates
     double x1, x2, x3, x4, y1, y2, y3, y4, z1, z2, z3, z4;
     this->giveNodeCoordinates(x1, x2, x3, x4, y1, y2, y3, y4, z1, z2, z3, z4);
@@ -619,7 +636,6 @@ MITC4Shell :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int 
     V24.beVectorProductOf(V4, V14);
 
 
-    answer.zero();
     answer.at(4, 1) = 1. / 32. * ( ( a1 * V1.at(1) + a2 * V2.at(1) ) * ( cb * ( 1. + r2 ) ) + ( a1 * V1.at(1) + a4 * V4.at(1) ) * ( ca * ( 1. + r1 ) ) );
     answer.at(4, 2) = 1. / 32. * ( ( a1 * V1.at(2) + a2 * V2.at(2) ) * ( cb * ( 1. + r2 ) ) + ( a1 * V1.at(2) + a4 * V4.at(2) ) * ( ca * ( 1. + r1 ) ) );
     answer.at(4, 3) = 1. / 32. * ( ( a1 * V1.at(3) + a2 * V2.at(3) ) * ( cb * ( 1. + r2 ) ) + ( a1 * V1.at(3) + a4 * V4.at(3) ) * ( ca * ( 1. + r1 ) ) );
@@ -719,7 +735,7 @@ MITC4Shell :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int 
     answer.at(6, 22) = -r3 / 2. * a4 * ( hkx.at(4) * V24.at(2) + hky.at(4) * V24.at(1) );
     answer.at(6, 23) = r3 / 2. * a4 * ( hky.at(4) * V14.at(1) + hky.at(4) * V14.at(2) );
 
-	
+	BMatrices.at(gp->giveNumber() - 1).reset(new FloatMatrix(answer));
 }
 
 //void
@@ -839,6 +855,19 @@ MITC4Shell :: computeLToDirectorRotationMatrix(FloatMatrix &answer1, FloatMatrix
 // e3'    : e1' x help
 // e2'    : e3' x e1'
 {
+	answer1.resize(3, 3);
+	answer2.resize(3, 3);
+	answer3.resize(3, 3);
+	answer4.resize(3, 3);
+
+	if (LMatrices.at(0).get() != nullptr){
+		answer1.add(*LMatrices.at(0));
+		answer2.add(*LMatrices.at(1));
+		answer3.add(*LMatrices.at(2));
+		answer4.add(*LMatrices.at(3));
+		return;
+	}
+
     FloatArray e1, e2, e3;
 
     this->computeLocalBaseVectors(e1, e2, e3);
@@ -861,11 +890,6 @@ MITC4Shell :: computeLToDirectorRotationMatrix(FloatMatrix &answer1, FloatMatrix
     V22.beVectorProductOf(V2, V12);
     V23.beVectorProductOf(V3, V13);
     V24.beVectorProductOf(V4, V14);
-
-    answer1.resize(3, 3);
-    answer2.resize(3, 3);
-    answer3.resize(3, 3);
-    answer4.resize(3, 3);
 
     answer1.at(1, 1) = V11.dotProduct(e1);
     answer1.at(1, 2) = V11.dotProduct(e2);
@@ -906,6 +930,11 @@ MITC4Shell :: computeLToDirectorRotationMatrix(FloatMatrix &answer1, FloatMatrix
     answer4.at(3, 1) = V4.dotProduct(e1);
     answer4.at(3, 2) = V4.dotProduct(e2);
     answer4.at(3, 3) = V4.dotProduct(e3);
+
+	LMatrices.at(0).reset(new FloatMatrix(answer1));
+	LMatrices.at(1).reset(new FloatMatrix(answer2));
+	LMatrices.at(2).reset(new FloatMatrix(answer3));
+	LMatrices.at(3).reset(new FloatMatrix(answer4));
 }
 
 bool
