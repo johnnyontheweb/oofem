@@ -124,7 +124,7 @@ DynamicRelaxationSolver :: solve(SparseMtrx &k, FloatArray &R, FloatArray *R0, F
         engngModel->updateComponent(tStep, InternalRhs, domain);
         rhs.beDifferenceOf(RT, F);
 
-        converged = this->checkConvergence(RT, F, rhs, ddX, X, RRT, internalForcesEBENorm, nite, errorOutOfRangeFlag);
+        converged = this->checkConvergence(RT, F, rhs, ddX, X, RRT, internalForcesEBENorm, nite, errorOutOfRangeFlag, tStep);
         if ( errorOutOfRangeFlag ) {
             status = NM_NoSuccess;
             dX.zero();

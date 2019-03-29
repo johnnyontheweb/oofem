@@ -196,7 +196,7 @@ protected:
      * @return True if solution has converged, otherwise false.
      */
     bool checkConvergence(FloatArray &RT, FloatArray &F, FloatArray &rhs, FloatArray &ddX, FloatArray &X,
-                          double RRT, const FloatArray &internalForcesEBENorm, int nite, bool &errorOutOfRange);
+		double RRT, const FloatArray &internalForcesEBENorm, int nite, bool &errorOutOfRange, TimeStep *tStep);
 };
 } // end namespace oofem
 #endif // nrsolver_h

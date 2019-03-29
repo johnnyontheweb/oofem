@@ -309,7 +309,7 @@ StaggeredSolver :: solve(SparseMtrx &k, FloatArray &R, FloatArray *R0, FloatArra
         
         // Check convergence of total system
         RHS.beDifferenceOf(RT, F);
-        converged = this->checkConvergence(RT, F, RHS, ddXtotal, Xtotal, RRTtotal, internalForcesEBENorm, nStaggeredIter, errorOutOfRangeFlag);
+        converged = this->checkConvergence(RT, F, RHS, ddXtotal, Xtotal, RRTtotal, internalForcesEBENorm, nStaggeredIter, errorOutOfRangeFlag, tStep);
         if ( converged && ( nStaggeredIter >= minIterations ) ) {
             break;
         }

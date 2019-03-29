@@ -255,7 +255,7 @@ NRSolver :: solve(SparseMtrx &k, FloatArray &R, FloatArray *R0,
         }
 
         // convergence check
-        converged = this->checkConvergence(RT, F, rhs, ddX, X, RRT, internalForcesEBENorm, nite, errorOutOfRangeFlag);
+        converged = this->checkConvergence(RT, F, rhs, ddX, X, RRT, internalForcesEBENorm, nite, errorOutOfRangeFlag, tStep);
 
         if ( errorOutOfRangeFlag ) {
             status = NM_NoSuccess;
@@ -540,7 +540,7 @@ NRSolver :: printState(FILE *outputStream)
 bool
 NRSolver :: checkConvergence(FloatArray &RT, FloatArray &F, FloatArray &rhs,  FloatArray &ddX, FloatArray &X,
                              double RRT, const FloatArray &internalForcesEBENorm,
-                             int nite, bool &errorOutOfRange)
+                             int nite, bool &errorOutOfRange, TimeStep *tStep)
 {
     double forceErr, dispErr;
     FloatArray dg_forceErr, dg_dispErr, dg_totalLoadLevel, dg_totalDisp;
@@ -674,7 +674,7 @@ NRSolver :: checkConvergence(FloatArray &RT, FloatArray &F, FloatArray &rhs,  Fl
         parallel_context->accumulate(dg_totalDisp,      collectiveErr);
         dg_totalDisp      = collectiveErr;
 
-        OOFEM_LOG_INFO("NRSolver: %-5d", nite);
+		OOFEM_LOG_INFO("t=%g  iter=%-5d", tStep->giveIntrinsicTime(), nite);
         //bool zeroNorm = false;
         // loop over dof groups and check convergence individually
         for ( int dg = 1; dg <= nccdg; dg++ ) {
