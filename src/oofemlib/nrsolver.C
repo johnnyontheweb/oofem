@@ -674,7 +674,7 @@ NRSolver :: checkConvergence(FloatArray &RT, FloatArray &F, FloatArray &rhs,  Fl
         parallel_context->accumulate(dg_totalDisp,      collectiveErr);
         dg_totalDisp      = collectiveErr;
 
-		OOFEM_LOG_INFO("t=%g  iter=%-5d", tStep->giveIntrinsicTime(), nite);
+		OOFEM_LOG_INFO("t=%g  dt=%g  iter=%-5d", tStep->giveIntrinsicTime(), tStep->giveTimeIncrement(), nite);
         //bool zeroNorm = false;
         // loop over dof groups and check convergence individually
         for ( int dg = 1; dg <= nccdg; dg++ ) {
