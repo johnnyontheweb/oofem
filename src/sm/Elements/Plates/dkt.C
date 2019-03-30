@@ -153,6 +153,13 @@ DKTPlate :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int ui
 // Returns the [5x9] strain-displacement matrix {B} of the receiver,
 // evaluated at gp.
 {
+	answer.resize(5, 9);
+	answer.zero();
+	if (BMatrices.at(gp->giveNumber() - 1).get() != nullptr) {
+		answer.add(*BMatrices.at(gp->giveNumber() - 1));
+		return;
+	}
+
     // get node coordinates
     double x1, x2, x3, y1, y2, y3, z1, z2, z3;
     this->giveNodeCoordinates(x1, x2, x3, y1, y2, y3, z1, z2, z3);
@@ -264,8 +271,8 @@ DKTPlate :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int ui
     double T68 = -0.25 * c6 * s6 - 0.5 * c6 * s6;
     double T69 = -0.25 * s6 * s6 + 0.5 * c6 * c6;
 
-    answer.resize(5, 9);
-    answer.zero();
+    //answer.resize(5, 9);
+    //answer.zero();
 
     answer.at(1, 1) = T21 * dN108 + T61 * dN112;
     answer.at(1, 2) = T22 * dN108 + T62 * dN112;
@@ -298,6 +305,7 @@ DKTPlate :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int ui
     answer.at(3, 9) = -dN205 - T39 * dN110 - T59 * dN112 - T49 * dN209 - T69 * dN211;
 
     // Note: no shear strains, no shear forces => the 4th and 5th rows are zero
+	BMatrices.at(gp->giveNumber() - 1).reset(new FloatMatrix(answer));
 }
 
 
@@ -366,6 +374,8 @@ DKTPlate :: initializeFrom(InputRecord *ir)
 	if (result != IRRT_OK) {
 		return result;
 	}
+
+	BMatrices.resize(this->numberOfGaussPoints);
 
 	// optional record for 1st local axes
 	la1.resize(3);

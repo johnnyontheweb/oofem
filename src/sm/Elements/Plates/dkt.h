@@ -78,6 +78,8 @@ protected:
     FloatMatrix vertexMoments;
     StateCounterType stateCounter;
 #endif
+private:
+	std::vector<std::auto_ptr<FloatMatrix>> BMatrices;
 
 public:
     DKTPlate(int n, Domain *d);
