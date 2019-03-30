@@ -130,14 +130,19 @@ TrPlanestressRotAllman :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, 
 // Returns the [3x12] strain-displacement matrix {B} of the receiver, eva-
 // luated at gp.
 {
+	answer.resize(3, 9);
+	answer.zero();
+
+	if (BMatrices.at(gp->giveNumber() - 1).get() != nullptr) {
+		answer.add(*BMatrices.at(gp->giveNumber() - 1));
+		return;
+	}
+
     FloatMatrix dnx;
     std::vector< FloatArray > lxy;
 
     this->computeLocalNodalCoordinates(lxy); // get ready for tranformation into 3d
     this->qinterpolation.evaldNdx( dnx, gp->giveNaturalCoordinates(), FEIVertexListGeometryWrapper(lxy) );
-
-    answer.resize(3, 9);
-    answer.zero();
 
     // epsilon_x
     answer.at(1, 1) = dnx.at(1, 1) + 0.5 * dnx.at(4, 1) + 0.5 * dnx.at(6, 1);
@@ -169,6 +174,8 @@ TrPlanestressRotAllman :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, 
     answer.at(3, 6) += -dnx.at(4, 1) * ( lxy [ 1 ].at(1) - lxy [ 0 ].at(1) ) / 8.0 + dnx.at(5, 1) * ( lxy [ 2 ].at(1) - lxy [ 1 ].at(1) ) / 8.0;
     answer.at(3, 9) = dnx.at(5, 2) * ( lxy [ 2 ].at(2) - lxy [ 1 ].at(2) ) / 8.0 - dnx.at(6, 2) * ( lxy [ 0 ].at(2) - lxy [ 2 ].at(2) ) / 8.0;
     answer.at(3, 9) += -dnx.at(5, 1) * ( lxy [ 2 ].at(1) - lxy [ 1 ].at(1) ) / 8.0 + dnx.at(6, 1) * ( lxy [ 0 ].at(1) - lxy [ 2 ].at(1) ) / 8.0;
+
+	BMatrices.at(gp->giveNumber() - 1).reset(new FloatMatrix(answer));
 }
 
 
@@ -459,6 +466,8 @@ TrPlanestressRotAllman :: initializeFrom(InputRecord *ir)
         return result;
     }
     numberOfGaussPoints = 4;
+	BMatrices.resize(this->numberOfGaussPoints);
+
 	// optional record for 1st local axes
 	la1.resize(3);
 	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;

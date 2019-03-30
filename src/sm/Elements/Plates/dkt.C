@@ -305,6 +305,7 @@ DKTPlate :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int ui
     answer.at(3, 9) = -dN205 - T39 * dN110 - T59 * dN112 - T49 * dN209 - T69 * dN211;
 
     // Note: no shear strains, no shear forces => the 4th and 5th rows are zero
+
 	BMatrices.at(gp->giveNumber() - 1).reset(new FloatMatrix(answer));
 }
 

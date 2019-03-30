@@ -59,6 +59,8 @@ class TrPlanestressRotAllman : public TrPlaneStress2d
 {
 protected:
     static FEI2dTrQuad qinterpolation; // quadratic interpolation for constructing shape functons
+private:
+	std::vector<std::auto_ptr<FloatMatrix>> BMatrices;
 
 public:
     TrPlanestressRotAllman(int, Domain *);
