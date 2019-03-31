@@ -163,6 +163,9 @@ protected:
 		double &y1, double &y2, double &y3,
 		double &z1, double &z2, double &z3);
 	void giveLocalCoordinates(FloatArray &answer, FloatArray &global);
+	virtual void computeSurfaceNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords);
+	virtual void computeEdgeNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords);
+	virtual double computeEdgeVolumeAround(GaussPoint *gp, int iEdge);
 
 public:
     virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep)

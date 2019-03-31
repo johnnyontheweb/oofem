@@ -71,9 +71,7 @@ class DKTPlate : public NLStructuralElement,
     public ZZErrorEstimatorInterface
 {
 protected:
-    /// Element geometry approximation
-    static FEI2dTrLin interp_lin;
-    double area;
+	double area;
 #ifdef DKT_EnableVertexMomentsCache
     FloatMatrix vertexMoments;
     StateCounterType stateCounter;
@@ -84,7 +82,8 @@ private:
 public:
     DKTPlate(int n, Domain *d);
     virtual ~DKTPlate() { }
-
+	/// Element geometry approximation
+	static FEI2dTrLin interp_lin;
 	FloatArray la1;
 
     virtual FEInterpolation *giveInterpolation() const;

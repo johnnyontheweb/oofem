@@ -436,7 +436,36 @@ TR_SHELL02 :: printOutputAt(FILE *file, TimeStep *tStep)
 #endif
 }
 
+void
+TR_SHELL02::computeEdgeNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords)
+{
+	FloatArray n_vec;
+	this->giveInterpolation()->boundaryEdgeEvalN(n_vec, boundaryID, lcoords, FEIElementGeometryWrapper(this));
+	answer.beNMatrixOf(n_vec, 6);
+}
 
+void
+TR_SHELL02::computeSurfaceNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords)
+{
+	FloatArray n_vec;
+	this->giveInterpolation()->boundarySurfaceEvalN(n_vec, boundaryID, lcoords, FEIElementGeometryWrapper(this));
+	answer.beNMatrixOf(n_vec, 6);
+}
+
+double
+TR_SHELL02::computeEdgeVolumeAround(GaussPoint *gp, int iEdge)
+{
+	std::vector< FloatArray >lc = {
+		FloatArray(3), FloatArray(3), FloatArray(3)
+	};
+	this->giveNodeCoordinates(lc[0].at(1), lc[1].at(1), lc[2].at(1),
+		lc[0].at(2), lc[1].at(2), lc[2].at(2),
+		lc[0].at(3), lc[1].at(3), lc[2].at(3));
+
+
+	double detJ = this->plate->interp_lin.edgeGiveTransformationJacobian(iEdge, gp->giveNaturalCoordinates(), FEIVertexListGeometryWrapper(lc));
+	return detJ * gp->giveWeight();
+}
 
 contextIOResultType
 TR_SHELL02 :: saveContext(DataStream &stream, ContextMode mode, void *obj)
