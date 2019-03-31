@@ -67,6 +67,8 @@ protected:
     //static FEI2dTrRot interp_rot;
 
     double area;
+private:
+	std::vector<std::auto_ptr<FloatMatrix>> BMatrices;
 
 public:
     CCTPlate(int n, Domain * d);

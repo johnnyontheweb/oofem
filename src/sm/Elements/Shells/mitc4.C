@@ -320,10 +320,10 @@ MITC4Shell :: computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer)
 	answer.resize(6, 24);
 	answer.zero();
 
-	if (NMatrix.get() != nullptr) {
-		answer.add(*NMatrix);
-		return;
-	}
+	//if (NMatrix.get() != nullptr) {
+	//	answer.add(*NMatrix);
+	//	return;
+	//}
 
     FloatArray h(4);
 
@@ -389,7 +389,7 @@ MITC4Shell :: computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer)
     answer.at(3, 23) = -iLocCoord.at(3) / 2.0 *a4 *h.at(4) * V24.at(3);
     answer.at(3, 24) =  iLocCoord.at(3) / 2.0 *a4 *h.at(4) * V14.at(3);
 
-	NMatrix.reset(new FloatMatrix(answer));
+	//NMatrix.reset(new FloatMatrix(answer));
 }
 
 

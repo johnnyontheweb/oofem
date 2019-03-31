@@ -59,6 +59,8 @@ class TrPlaneStrRot : public TrPlaneStress2d
 {
 protected:
     int numberOfRotGaussPoints;
+private:
+	std::vector<std::auto_ptr<FloatMatrix>> BMatrices;
 
 public:
     TrPlaneStrRot(int, Domain *);

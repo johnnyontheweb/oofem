@@ -89,7 +89,7 @@ namespace oofem {
 	// macro element number
 	int macroElem;
 	private:
-		std::auto_ptr<FloatMatrix> NMatrix;
+		//std::auto_ptr<FloatMatrix> NMatrix;
 		std::vector<std::auto_ptr<FloatMatrix>> BMatrices;
 		std::vector<std::auto_ptr<FloatMatrix>> LMatrices;
 

@@ -146,14 +146,21 @@ CCTPlate :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int ui
 // Returns the [5x9] strain-displacement matrix {B} of the receiver,
 // evaluated at gp.
 {
-    // get node coordinates
-  double x1, x2, x3, y1, y2, y3, z1, z2, z3;
-  this->giveNodeCoordinates(x1, x2, x3, y1, y2, y3, z1, z2, z3);
+	answer.resize(5, 9);
+	answer.zero();
+	if (BMatrices.at(gp->giveNumber() - 1).get() != nullptr) {
+		answer.add(*BMatrices.at(gp->giveNumber() - 1));
+		return;
+	}
 
-    //
-    double area, b1, b2, b3, c1, c2, c3, l1, l2, l3;
+	// get node coordinates
+	double x1, x2, x3, y1, y2, y3, z1, z2, z3;
+	this->giveNodeCoordinates(x1, x2, x3, y1, y2, y3, z1, z2, z3);
 
-    b1 = y2 - y3;
+	//
+	double area, b1, b2, b3, c1, c2, c3, l1, l2, l3;
+
+	b1 = y2 - y3;
     b2 = y3 - y1;
     b3 = y1 - y2;
 
@@ -167,8 +174,8 @@ CCTPlate :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int ui
 
     area = this->computeArea();
 
-    answer.resize(5, 9);
-    answer.zero();
+    //answer.resize(5, 9);
+    //answer.zero();
 
     answer.at(1, 3) = b1;
     answer.at(1, 6) = b2;
@@ -206,6 +213,8 @@ CCTPlate :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int ui
     answer.at(5, 9) = ( -c3 * c2 * l1 + c3 * c1 * l2 ) * 0.5;
 
     answer.times( 1. / ( 2. * area ) );
+
+	BMatrices.at(gp->giveNumber() - 1).reset(new FloatMatrix(answer));
 }
 
 
@@ -322,7 +331,8 @@ CCTPlate :: initializeFrom(InputRecord *ir)
 	la1.resize(3);
 	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
 	IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_CCTPlate_FirstLocalAxis);
-	
+
+	BMatrices.resize(this->numberOfGaussPoints);
     // return NLStructuralElement :: initializeFrom(ir);
 }
 

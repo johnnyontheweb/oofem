@@ -80,6 +80,12 @@ TrPlaneStrRot :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, i
 // evaluated at gp.
 {
 #if 1 
+	answer.resize(4, 9);
+	answer.zero();
+	if (BMatrices.at(gp->giveNumber() - 1).get() != nullptr) {
+		answer.add(*BMatrices.at(gp->giveNumber() - 1));
+		return;
+	}
     // New version (13-09-2014 /JB)
     // Computes the B-matrix, directly taking into account the reduced 
     // integration of the fourth strain component.
@@ -110,7 +116,7 @@ TrPlaneStrRot :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, i
     
     double area = this->giveArea();
     double detJ = 1.0 / ( 2.0 * area );
-    answer.resize(4, 9);
+    //answer.resize(4, 9);
     for ( int i = 1; i <= 3; i++ ) {
         answer.at(1, 3 * i - 2) = b.at(i) * detJ;
         answer.at(1, 3 * i - 0) = nx.at(i) * detJ;
@@ -130,6 +136,8 @@ TrPlaneStrRot :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, i
         answer.at(4, 3 * i - 0) = ( -4. * area * shapeFunct.at(i) + nxRed.at(i) - nyRed.at(i) ) * 1.0 / 4.0 / area;
             
     }
+
+	BMatrices.at(gp->giveNumber() - 1).reset(new FloatMatrix(answer));
 
 #else
     // OLD version - commented out 13-09-2014 // JB
@@ -584,6 +592,8 @@ TrPlaneStrRot :: initializeFrom(InputRecord *ir)
         OOFEM_ERROR("numberOfRotGaussPoints size mismatch - must be equal to one");
     }
     
+	BMatrices.resize(this->numberOfGaussPoints);
+
     return IRRT_OK;
 }
 
