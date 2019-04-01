@@ -1266,7 +1266,7 @@ MITC4Shell :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
     CharTensor cht;
 
     answer.resize(6);
-
+	answer.zero();
     if (  type == IST_StrainTensor ) {
   //      cht = GlobalStrainTensor;
 		//this->giveCharacteristicTensor(globTensor, cht, gp, tStep);
