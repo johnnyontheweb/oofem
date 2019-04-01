@@ -393,8 +393,10 @@ void
 TR_SHELL02 :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,
                                                          InternalStateType type, TimeStep *tStep)
 {
-	// temporary workaround
-	if (this->numberOfGaussPoints == 4) {
+	// choose least squares or not
+	if (this->numberOfGaussPoints == 1) {
+		this->giveIPValue(answer, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint(0), type, tStep);
+	}else{
 		double x1 = 0.0, x2 = 0.0, y = 0.0;
 		FloatMatrix A(3, 3);
 		FloatMatrix b, r;
@@ -458,9 +460,6 @@ TR_SHELL02 :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int
 		for (int j = 1; j <= size; j++) {
 			answer.at(j) = b.at(1, j) + x1 *b.at(2, j) + x2 *b.at(3, j);
 		}
-	}
-	else{
-		this->giveIPValue(answer, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint(0), type, tStep);
 	}
 }
 
