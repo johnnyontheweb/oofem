@@ -70,18 +70,22 @@ TR_SHELL01 :: initializeFrom(InputRecord *ir)
         return result;
     }
 
-#if 0
+//#if 0
+	int val=-1;
     IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_Element_nip);
-    if ( val != -1 ) {
-        OOFEM_WARNING("key word NIP is not allowed for element TR_SHELL01");
-        return result;
-    }
-    IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_TrPlaneStrRot_niprot, "niprot");
-    if ( val != -1 ) {
-        OOFEM_WARNING("key word NIProt is not allowed for element TR_SHELL01");
-        return result;
-    }
-#endif
+	// set GPs in plate and membrane?
+	
+
+    //if ( val != -1 ) {
+    //    OOFEM_WARNING("key word NIP is not allowed for element TR_SHELL01");
+    //    //return result;
+    //}
+    //IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_TrPlaneStrRot_niprot, "niprot");
+    //if ( val != -1 ) {
+    //    OOFEM_WARNING("key word NIProt is not allowed for element TR_SHELL01");
+    //    //return result;
+    //}
+//#endif
 
 	// optional record for 1st local axes
 	la1.resize(3);
@@ -109,6 +113,9 @@ TR_SHELL01 :: initializeFrom(InputRecord *ir)
 void
 TR_SHELL01 :: postInitialize()
 {
+	// force cross-section update
+	//this->setCrossSection(this->crossSection);
+
     StructuralElement :: postInitialize();
 
     if ( plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints() != membrane->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints() ) {

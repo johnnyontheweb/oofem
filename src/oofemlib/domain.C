@@ -707,7 +707,10 @@ Domain :: instanciateYourself(DataReader *dr)
             OOFEM_ERROR("Couldn't create element: %s", name.c_str());
         }
 
-        elem->initializeFrom(ir);
+		IRResultType result = elem->initializeFrom(ir);
+		if (result != IRRT_OK) {
+			OOFEM_WARNING("Initialization of element %d incomplete", elem->giveLabel());
+		}
 
         if ( elemLabelMap.find(num) == elemLabelMap.end() ) {
             // label does not exist yet

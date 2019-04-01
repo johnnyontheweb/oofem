@@ -76,6 +76,7 @@ public:
     virtual ~TrPlanestressRotAllman3d() {
         delete GtoLRotationMatrix;
     }
+    virtual void computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode);
 
 protected:
     void computeLocalNodalCoordinates(std::vector< FloatArray > &lxy);
@@ -84,7 +85,6 @@ protected:
     void giveCharacteristicTensor(FloatMatrix &answer, CharTensor type, GaussPoint *gp, TimeStep *tStep);
 
     virtual int computeLoadGToLRotationMtrx(FloatMatrix &answer);
-    virtual void computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode);
 
 public:
     // definition & identification

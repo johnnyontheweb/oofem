@@ -79,6 +79,7 @@ protected:
 public:
     DKTPlate3d(int n, Domain * d);
     virtual ~DKTPlate3d() {}
+    virtual void computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode);
 
 protected:
     void giveLocalCoordinates(FloatArray &answer, FloatArray &global);
@@ -88,7 +89,6 @@ protected:
 
     void giveCharacteristicTensor(FloatMatrix &answer, CharTensor type, GaussPoint *gp, TimeStep *tStep);
     virtual int computeLoadGToLRotationMtrx(FloatMatrix &answer);
-    virtual void computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode);
 
     /**
      * @name Edge load support

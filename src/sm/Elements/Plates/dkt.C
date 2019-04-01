@@ -63,7 +63,7 @@ DKTPlate :: DKTPlate(int n, Domain *aDomain) :
     NodalAveragingRecoveryModelInterface(), SPRNodalRecoveryModelInterface(), ZZErrorEstimatorInterface(this)
 {
     numberOfDofMans = 3;
-    numberOfGaussPoints = 3;
+    numberOfGaussPoints = 4;
     area = 0;
 }
 

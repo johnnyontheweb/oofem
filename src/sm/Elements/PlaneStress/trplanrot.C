@@ -55,7 +55,7 @@ TrPlaneStrRot :: TrPlaneStrRot(int n, Domain *aDomain) :
     TrPlaneStress2d(n, aDomain)
 {
     numberOfDofMans        = 3;
-    numberOfGaussPoints    = 4;
+    numberOfGaussPoints    = 1;
     numberOfRotGaussPoints = 1;
 }
 
@@ -79,13 +79,14 @@ TrPlaneStrRot :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, i
 // type of this part is [3,9]  r=(u1,w1,fi1,u2,w2,fi2,u3,w3,fi3)
 // evaluated at gp.
 {
-#if 1 
+#if 1
 	answer.resize(4, 9);
 	answer.zero();
-	if (BMatrices.at(gp->giveNumber() - 1).get() != nullptr) {
+		if (BMatrices.at(gp->giveNumber() - 1).get() != nullptr) {
 		answer.add(*BMatrices.at(gp->giveNumber() - 1));
 		return;
 	}
+
     // New version (13-09-2014 /JB)
     // Computes the B-matrix, directly taking into account the reduced 
     // integration of the fourth strain component.

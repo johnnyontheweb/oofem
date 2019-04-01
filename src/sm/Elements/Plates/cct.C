@@ -334,6 +334,7 @@ CCTPlate :: initializeFrom(InputRecord *ir)
 
 	BMatrices.resize(this->numberOfGaussPoints);
     // return NLStructuralElement :: initializeFrom(ir);
+	return IRRT_OK;
 }
 
 
