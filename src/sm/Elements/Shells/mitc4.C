@@ -1406,47 +1406,47 @@ MITC4Shell :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int
 
     A.solveForRhs(r, b);
 
-    switch ( node ) {
-    case 1:
-        x1 = -1.0;
-        x2 = -1.0;
-        break;
-    case 2:
-        x1 =  1.0;
-        x2 = -1.0;
-        break;
-    case 3:
-        x1 =  1.0;
-        x2 =  1.0;
-        break;
-    case 4:
-        x1 = -1.0;
-        x2 =  1.0;
-        break;
-    default:
-        OOFEM_ERROR("unsupported node");
-    }
+    //switch ( node ) {
+    //case 1:
+    //    x1 = -1.0;
+    //    x2 = -1.0;
+    //    break;
+    //case 2:
+    //    x1 =  1.0;
+    //    x2 = -1.0;
+    //    break;
+    //case 3:
+    //    x1 =  1.0;
+    //    x2 =  1.0;
+    //    break;
+    //case 4:
+    //    x1 = -1.0;
+    //    x2 =  1.0;
+    //    break;
+    //default:
+    //    OOFEM_ERROR("unsupported node");
+    //}
 
-	//switch (node) {
-	//case 1:
-	//	x1 = 1.0;
-	//	x2 = 1.0;
-	//	break;
-	//case 2:
-	//	x1 = -1.0;
-	//	x2 = 1.0;
-	//	break;
-	//case 3:
-	//	x1 = -1.0;
-	//	x2 = -1.0;
-	//	break;
-	//case 4:
-	//	x1 = 1.0;
-	//	x2 = -1.0;
-	//	break;
-	//default:
-	//	OOFEM_ERROR("unsupported node");
-	//}
+	switch (node) {
+	case 1:
+		x1 = 1.0;
+		x2 = 1.0;
+		break;
+	case 2:
+		x1 = -1.0;
+		x2 = 1.0;
+		break;
+	case 3:
+		x1 = -1.0;
+		x2 = -1.0;
+		break;
+	case 4:
+		x1 = 1.0;
+		x2 = -1.0;
+		break;
+	default:
+		OOFEM_ERROR("unsupported node");
+	}
 
     answer.resize(size);
     for ( int j = 1; j <= size; j++ ) {
