@@ -1064,7 +1064,6 @@ void
 MITC4Shell :: printOutputAt(FILE *file, TimeStep *tStep)
 // Performs end-of-step operations.
 {
-
 	fprintf(file, "element %d (%8d) macroelem %d :\n", this->giveLabel(), number,this->macroElem);
 
 //#ifdef DEBUG
@@ -1136,7 +1135,7 @@ MITC4Shell :: giveMidplaneIPValue(FloatArray &answer, int gpXY, InternalStateTyp
             thickness = this->giveCrossSection()->give(CS_Thickness, gp->giveGlobalCoordinates(), this, false);
             J = thickness / 2.0;
             if (  type == IST_ShellMomentTensor ) {
-                z = gp->giveNaturalCoordinates().at(3) * ( thickness / 2 );
+                z = gp->giveNaturalCoordinates().at(3) * J;
             } else if (  type == IST_ShellForceTensor ) {
                 z = 1;
             }
@@ -1148,10 +1147,9 @@ MITC4Shell :: giveMidplaneIPValue(FloatArray &answer, int gpXY, InternalStateTyp
             mLocal.add(w, localStress);
         }
 
-        // local to global
-        StructuralMaterial *mat = dynamic_cast< StructuralMaterial * >( this->giveStructuralCrossSection()->giveMaterial(gp) );
-        this->computeGtoLRotationMatrix();
-        mat->transformStressVectorTo(answer,  GtoLRotationMatrix, mLocal, false);
+		// local to global
+		this->computeGtoLRotationMatrix();
+		StructuralMaterial::transformStressVectorTo(answer, GtoLRotationMatrix, mLocal, false);
     } else if ( type == IST_CurvatureTensor ) {
         FloatArray h;
         FloatMatrix dn;
@@ -1159,9 +1157,6 @@ MITC4Shell :: giveMidplaneIPValue(FloatArray &answer, int gpXY, InternalStateTyp
 
         gp = integrationRulesArray [ 0 ]->getIntegrationPoint(nPointsZ * gpXY);
         coords = gp->giveNaturalCoordinates();
-
-        StructuralMaterial *mat = dynamic_cast< StructuralMaterial * >( this->giveStructuralCrossSection()->giveMaterial(gp) );
-
         FloatArray hkx, hky;
         this->givedNdx(hkx, hky, coords);
 
@@ -1181,7 +1176,7 @@ MITC4Shell :: giveMidplaneIPValue(FloatArray &answer, int gpXY, InternalStateTyp
         cLocal.at(2) = -rotX.dotProduct(hky);
         cLocal.at(6) = rotY.dotProduct(hky) - rotX.dotProduct(hkx);
 
-        mat->transformStrainVectorTo(answer,  GtoLRotationMatrix, cLocal, false);
+		StructuralMaterial::transformStrainVectorTo(answer, GtoLRotationMatrix, cLocal, false);
     } else if ( type == IST_ShellStrainTensor ) {
         FloatArray coords;
         gp = integrationRulesArray [ 0 ]->getIntegrationPoint(nPointsZ * gpXY);

@@ -97,7 +97,7 @@ void
 TR_SHELL02 :: postInitialize()
 {
     StructuralElement :: postInitialize();
-
+	this->numberOfGaussPoints = plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints();
     if ( plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints() != membrane->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints() ) {
         OOFEM_ERROR("incompatible integration rules detected");
     }
@@ -405,7 +405,9 @@ TR_SHELL02 :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int
 
 		int size = 0;
 
-		for (GaussPoint *gp : *integrationRulesArray[0]) {
+		//for (GaussPoint *gp : *integrationRulesArray[0]) {
+		for (int i = 0; i < plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints(); i++) {
+			GaussPoint *gp = plate->giveDefaultIntegrationRulePtr()->getIntegrationPoint(i);
 			giveIPValue(val, gp, type, tStep);
 			if (size == 0) {
 				size = val.giveSize();
@@ -468,48 +470,49 @@ void
 TR_SHELL02 :: printOutputAt(FILE *file, TimeStep *tStep)
 // Performs end-of-step operations.
 {
-    FloatArray v, aux;
-    IntegrationRule *iRule = this->giveDefaultIntegrationRulePtr();
+	fprintf(file, "element %d (%8d) macroelem %d :\n", this->giveLabel(), this->giveNumber(), this->macroElem);
 
-#ifdef DEBUG
-    fprintf( file, "element %d (%8d) :\n", this->giveLabel(), this->giveNumber() );
-
-    for ( GaussPoint *gp: *iRule ) {
-        fprintf( file, "  GP %2d.%-2d :", iRule->giveNumber(), gp->giveNumber() );
-        GaussPoint *membraneGP = membrane->giveDefaultIntegrationRulePtr()->getIntegrationPoint(gp->giveNumber() - 1);
-        // Strain - Curvature
-        plate->giveIPValue(v, gp, IST_ShellStrainTensor, tStep);
-        membrane->giveIPValue(aux, membraneGP, IST_ShellStrainTensor, tStep);
-        v.add(aux);
-
-        fprintf(file, "  strains    ");
-        for ( auto &val : v ) fprintf(file, " %.4e", val);
-
-        plate->giveIPValue(v, gp, IST_CurvatureTensor, tStep);
-        membrane->giveIPValue(aux, membraneGP, IST_CurvatureTensor, tStep);
-        v.add(aux);
-
-        fprintf(file, "\n              curvatures ");
-        for ( auto &val : v ) fprintf(file, " %.4e", val);
-
-        // Forces - Moments
-        plate->giveIPValue(v, gp, IST_ShellForceTensor, tStep);
-        membrane->giveIPValue(aux, membraneGP, IST_ShellForceTensor, tStep);
-        v.add(aux);
-
-        fprintf(file, "\n              stresses   ");
-        for ( auto &val : v ) fprintf(file, " %.4e", val);
-
-        plate->giveIPValue(v, gp, IST_ShellMomentTensor, tStep);
-        membrane->giveIPValue(aux, membraneGP, IST_ShellMomentTensor, tStep);
-        v.add(aux);
-
-        fprintf(file, "\n              moments    ");
-        for ( auto &val : v ) fprintf(file, " %.4e", val);
-
-        fprintf(file, "\n");
-    }
-#endif
+//#ifdef DEBUG
+//    FloatArray v, aux;
+//    IntegrationRule *iRule = this->giveDefaultIntegrationRulePtr();
+//    //fprintf( file, "element %d (%8d) :\n", this->giveLabel(), this->giveNumber() );
+//
+//    for ( GaussPoint *gp: *iRule ) {
+//        fprintf( file, "  GP %2d.%-2d :", iRule->giveNumber(), gp->giveNumber() );
+//        GaussPoint *membraneGP = membrane->giveDefaultIntegrationRulePtr()->getIntegrationPoint(gp->giveNumber() - 1);
+//        // Strain - Curvature
+//        plate->giveIPValue(v, gp, IST_ShellStrainTensor, tStep);
+//        membrane->giveIPValue(aux, membraneGP, IST_ShellStrainTensor, tStep);
+//        v.add(aux);
+//
+//        fprintf(file, "  strains    ");
+//        for ( auto &val : v ) fprintf(file, " %.4e", val);
+//
+//        plate->giveIPValue(v, gp, IST_CurvatureTensor, tStep);
+//        membrane->giveIPValue(aux, membraneGP, IST_CurvatureTensor, tStep);
+//        v.add(aux);
+//
+//        fprintf(file, "\n              curvatures ");
+//        for ( auto &val : v ) fprintf(file, " %.4e", val);
+//
+//        // Forces - Moments
+//        plate->giveIPValue(v, gp, IST_ShellForceTensor, tStep);
+//        membrane->giveIPValue(aux, membraneGP, IST_ShellForceTensor, tStep);
+//        v.add(aux);
+//
+//        fprintf(file, "\n              stresses   ");
+//        for ( auto &val : v ) fprintf(file, " %.4e", val);
+//
+//        plate->giveIPValue(v, gp, IST_ShellMomentTensor, tStep);
+//        membrane->giveIPValue(aux, membraneGP, IST_ShellMomentTensor, tStep);
+//        v.add(aux);
+//
+//        fprintf(file, "\n              moments    ");
+//        for ( auto &val : v ) fprintf(file, " %.4e", val);
+//
+//        fprintf(file, "\n");
+//    }
+//#endif
 }
 
 void
