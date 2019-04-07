@@ -363,16 +363,16 @@ FEI2dQuadLin :: giveDerivatives(FloatMatrix &dn, const FloatArray &lc)
     dn.resize(4, 2);
 
     // dn/dxi
-    dn.at(1, 1) = -0.25 * ( 1. - eta );
-    dn.at(2, 1) =  0.25 * ( 1. - eta );
-    dn.at(3, 1) =  0.25 * ( 1. + eta );
-    dn.at(4, 1) = -0.25 * ( 1. + eta );
+	dn.at(1, 1) =  0.25 * (1. + eta);
+	dn.at(2, 1) = -0.25 * (1. + eta);
+	dn.at(3, 1) = -0.25 * (1. - eta);
+	dn.at(4, 1) =  0.25 * (1. - eta);
 
-    // dn/deta
-    dn.at(1, 2) = -0.25 * ( 1. - ksi );
-    dn.at(2, 2) = -0.25 * ( 1. + ksi );
-    dn.at(3, 2) = +0.25 * ( 1. + ksi );
-    dn.at(4, 2) = +0.25 * ( 1. - ksi );
+	// dn/deta
+	dn.at(1, 2) =  0.25 * (1. + ksi);
+	dn.at(2, 2) =  0.25 * (1. - ksi);
+	dn.at(3, 2) = -0.25 * (1. - ksi);
+	dn.at(4, 2) = -0.25 * (1. + ksi);
 }
 
 double FEI2dQuadLin :: evalNXIntegral(int iEdge, const FEICellGeometry &cellgeo)

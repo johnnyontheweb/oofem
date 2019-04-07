@@ -814,7 +814,7 @@ MITC4Shell :: computeLocalBaseVectors(FloatArray &e1, FloatArray &e2, FloatArray
     coordB.add( * this->giveNode(4)->giveCoordinates() );
 
     // compute e1' = [B-A]
-    e1.beDifferenceOf(coordA, coordB);
+    e1.beDifferenceOf(coordB, coordA);
 
 
     // compute A - (node3+node4)/2
@@ -828,7 +828,7 @@ MITC4Shell :: computeLocalBaseVectors(FloatArray &e1, FloatArray &e2, FloatArray
     coordB.add( * this->giveNode(2)->giveCoordinates() );
 
     // compute help = [B-A]
-    help.beDifferenceOf(coordA, coordB);
+    help.beDifferenceOf(coordB, coordA);
 
     // let us normalize e1'
     e1.normalize();
