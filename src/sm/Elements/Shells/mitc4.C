@@ -816,6 +816,10 @@ MITC4Shell :: computeLocalBaseVectors(FloatArray &e1, FloatArray &e2, FloatArray
     // compute e1' = [B-A]
     e1.beDifferenceOf(coordB, coordA);
 
+	if (la1.computeNorm() != 0) {
+		// custom local axes
+		e1 = la1;
+	}
 
     // compute A - (node3+node4)/2
     coordA.beDifferenceOf( * this->giveNode(4)->giveCoordinates(), * this->giveNode(3)->giveCoordinates() );
