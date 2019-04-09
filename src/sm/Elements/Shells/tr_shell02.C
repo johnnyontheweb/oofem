@@ -380,6 +380,10 @@ TR_SHELL02 :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
         membrane->giveIPValue(aux, membraneGP, type, tStep);
         answer.add(aux);
         return 1;
+	} else if (type == IST_StrainTensor || type == IST_StressTensor) {
+		answer.resize(6);
+		answer.zero();
+		return 1;
     } else {
         return StructuralElement :: giveIPValue(answer, gp, type, tStep);
     }
