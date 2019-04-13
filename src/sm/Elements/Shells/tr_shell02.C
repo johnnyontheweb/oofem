@@ -455,8 +455,8 @@ TR_SHELL02 :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int
 			x2 = 0.0;
 			break;
 		case 3:
-			x1 = 1.0;
-			x2 = 0.0;
+			x1 = 0.0;
+			x2 = 1.0;
 			break;
 		default:
 			OOFEM_ERROR("unsupported node");
