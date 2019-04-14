@@ -1140,7 +1140,8 @@ MITC4Shell :: giveMidplaneIPValue(FloatArray &answer, int gpXY, InternalStateTyp
             J = thickness / 2.0;
             if (  type == IST_ShellMomentTensor ) {
                 z = gp->giveNaturalCoordinates().at(3) * J;
-            } else if (  type == IST_ShellForceTensor ) {
+			} else {
+				 // if (type == IST_ShellForceTensor) { // to remove warning
                 z = 1;
             }
             w = gp->giveWeight() * J * z;

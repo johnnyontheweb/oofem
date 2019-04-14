@@ -44,6 +44,8 @@
 #include "eleminterpmapperinterface.h"
 
 #define _IFT_LinQuad3DPlaneStress_Name "linquad3dplanestress"
+// optional record for 1st local axes
+// #define _IFT_LinQuad3DPlaneStress_FirstLocalAxis "lcs1"
 
 namespace oofem {
 class FEI2dQuadLin;
@@ -87,7 +89,7 @@ public:
     virtual int computeNumberOfGlobalDofs() { return 12; }
     virtual void giveDofManDofIDMask(int inode, IntArray &) const;
 
-
+	// FloatArray la1;
     const FloatMatrix *computeGtoLRotationMatrix();
     virtual bool computeGtoLRotationMatrix(FloatMatrix &answer);
     virtual int computeLoadGToLRotationMtrx(FloatMatrix &answer);

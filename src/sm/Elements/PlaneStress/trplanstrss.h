@@ -68,6 +68,11 @@ public HuertaErrorEstimatorInterface
 protected:
     static FEI2dTrLin interp;
     double area;
+	/**
+	* Transformation Matrix form GtoL(3,3) is stored
+	* at the element level for computation efficiency
+	*/
+	FloatMatrix GtoLRotationMatrix;
 
 public:
     TrPlaneStress2d(int n, Domain * d);
@@ -77,7 +82,8 @@ public:
     virtual double giveCharacteristicSize(GaussPoint *gp, FloatArray &normalToCrackPlane, ElementCharSizeMethod method);
     virtual double giveParentElSize() const { return 0.5; }
     virtual Interface *giveInterface(InterfaceType);
-
+	const FloatMatrix *computeGtoLRotationMatrix();
+	virtual bool computeGtoLRotationMatrix(FloatMatrix &answer);
 	FloatArray la1;
 
 #ifdef __OOFEG

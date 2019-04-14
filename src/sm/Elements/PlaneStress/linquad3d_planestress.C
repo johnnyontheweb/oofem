@@ -139,6 +139,11 @@ LinQuad3DPlaneStress :: computeGtoLRotationMatrix()
         // let us normalize e1'
         e1.normalize();
 
+		if (la1.computeNorm() != 0) {
+			// custom local axes
+			e1 = la1;
+		}
+
         // compute e3' : vector product of e1' x help
         e3.beVectorProductOf(e1, help);
         // let us normalize

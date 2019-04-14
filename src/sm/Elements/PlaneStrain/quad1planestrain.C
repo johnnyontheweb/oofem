@@ -71,6 +71,54 @@ Quad1PlaneStrain :: ~Quad1PlaneStrain()
 
 FEInterpolation *Quad1PlaneStrain :: giveInterpolation() const { return & interp; }
 
+const FloatMatrix *
+Quad1PlaneStrain::computeGtoLRotationMatrix()
+// Returns the rotation matrix of the receiver of the size [3,3]
+// coords(local) = T * coords(global)
+//
+// local coordinate (described by vector triplet e1',e2',e3') is defined as follows:
+//
+// e1'    : [N2-N1]    Ni - means i - th node
+// help   : [N3-N1]
+// e3'    : e1' x help
+// e2'    : e3' x e1'
+{
+	if (!GtoLRotationMatrix.isNotEmpty()) {
+		FloatArray e1, e2, e3, help;
+
+		// compute e1' = [N2-N1]  and  help = [N3-N1]
+		e1.beDifferenceOf(*this->giveNode(2)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
+		help.beDifferenceOf(*this->giveNode(3)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
+
+		// let us normalize e1'
+		e1.normalize();
+
+		if (la1.computeNorm() != 0) {
+			// custom local axes
+			e1 = la1;
+		}
+
+		// compute e3' : vector product of e1' x help
+		e3.beVectorProductOf(e1, help);
+		// let us normalize
+		e3.normalize();
+
+		// now from e3' x e1' compute e2'
+		e2.beVectorProductOf(e3, e1);
+
+		//
+		GtoLRotationMatrix.resize(3, 3);
+
+		for (int i = 1; i <= 3; i++) {
+			GtoLRotationMatrix.at(1, i) = e1.at(i);
+			GtoLRotationMatrix.at(2, i) = e2.at(i);
+			GtoLRotationMatrix.at(3, i) = e3.at(i);
+		}
+	}
+
+	return &GtoLRotationMatrix;
+}
+
 
 void
 Quad1PlaneStrain :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int ui)
@@ -163,6 +211,11 @@ Quad1PlaneStrain :: initializeFrom(InputRecord *ir)
             ( numberOfGaussPoints == 16 ) ) ) {
         numberOfGaussPoints = 4;
     }
+
+	// optional record for 1st local axes
+	la1.resize(3);
+	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_Quad1PlaneStrain_FirstLocalAxis);
 
     return IRRT_OK;
 }

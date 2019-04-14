@@ -43,6 +43,8 @@
 #include "spatiallocalizer.h"
 
 #define _IFT_PlaneStress2d_Name "planestress2d"
+// optional record for 1st local axes
+#define _IFT_PlaneStress2d_FirstLocalAxis "lcs1"
 
 namespace oofem {
 class FEI2dQuadLin;
@@ -66,7 +68,7 @@ public:
 
     virtual double giveCharacteristicSize(GaussPoint *gp, FloatArray &normalToCrackPlane, ElementCharSizeMethod method);
     virtual double giveParentElSize() const { return 4.0; }
-
+	FloatArray la1;
     virtual Interface *giveInterface(InterfaceType it);
     virtual FEInterpolation *giveInterpolation() const;
 

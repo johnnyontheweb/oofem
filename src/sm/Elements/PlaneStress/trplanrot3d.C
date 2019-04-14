@@ -179,7 +179,7 @@ TrPlaneStrRot3d :: computeGtoLRotationMatrix(FloatMatrix &answer)
 // r(local) = T * r(global)
 // for one node (r written transposed): {u,v,r3} = T * {u,v,w,r1,r2,r3}
 {
-    // test if pereviously computed
+    // test if previously computed
     if ( !GtoLRotationMatrix.isNotEmpty() ) {
         this->computeGtoLRotationMatrix();
     }

@@ -43,6 +43,8 @@
 #include "spatiallocalizer.h"
 
 #define _IFT_Quad1PlaneStrain_Name "quad1planestrain"
+// optional record for 1st local axes
+#define _IFT_Quad1PlaneStrain_FirstLocalAxis "lcs1"
 
 namespace oofem {
 class FEI2dQuadLin;
@@ -61,14 +63,19 @@ class Quad1PlaneStrain : public PlaneStrainElement, public ZZNodalRecoveryModelI
 {
 protected:
     static FEI2dQuadLin interp;
+	/**
+	* Transformation Matrix form GtoL(3,3) is stored
+	* at the element level for computation efficiency
+	*/
+	FloatMatrix GtoLRotationMatrix;
 
 public:
     Quad1PlaneStrain(int n, Domain *d);
     virtual ~Quad1PlaneStrain();
-
+	FloatArray la1;
     virtual FEInterpolation *giveInterpolation() const;
     virtual Interface *giveInterface(InterfaceType it);
-
+	const FloatMatrix *computeGtoLRotationMatrix();
     virtual void SPRNodalRecoveryMI_giveSPRAssemblyPoints(IntArray &pap);
     virtual void SPRNodalRecoveryMI_giveDofMansDeterminedByPatch(IntArray &answer, int pap);
     virtual int SPRNodalRecoveryMI_giveNumberOfIP();

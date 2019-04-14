@@ -112,6 +112,55 @@ TrPlaneStrain :: initializeFrom(InputRecord *ir)
     return IRRT_OK;
 }
 
+const FloatMatrix *
+TrPlaneStrain::computeGtoLRotationMatrix()
+// Returns the rotation matrix of the receiver of the size [3,3]
+// coords(local) = T * coords(global)
+//
+// local coordinate (described by vector triplet e1',e2',e3') is defined as follows:
+//
+// e1'    : [N2-N1]    Ni - means i - th node
+// help   : [N3-N1]
+// e3'    : e1' x help
+// e2'    : e3' x e1'
+{
+	if (!GtoLRotationMatrix.isNotEmpty()) {
+		FloatArray e1, e2, e3, help;
+
+		// compute e1' = [N2-N1]  and  help = [N3-N1]
+		e1.beDifferenceOf(*this->giveNode(2)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
+		help.beDifferenceOf(*this->giveNode(3)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
+
+		// let us normalize e1'
+		e1.normalize();
+
+		if (la1.computeNorm() != 0) {
+			// custom local axes
+			e1 = la1;
+		}
+
+		// compute e3' : vector product of e1' x help
+		e3.beVectorProductOf(e1, help);
+		// let us normalize
+		e3.normalize();
+
+		// now from e3' x e1' compute e2'
+		e2.beVectorProductOf(e3, e1);
+
+		//
+		GtoLRotationMatrix.resize(3, 3);
+
+		for (int i = 1; i <= 3; i++) {
+			GtoLRotationMatrix.at(1, i) = e1.at(i);
+			GtoLRotationMatrix.at(2, i) = e2.at(i);
+			GtoLRotationMatrix.at(3, i) = e3.at(i);
+		}
+	}
+
+	return &GtoLRotationMatrix;
+}
+
+
 // #define POINT_TOL 1.e-3
 //int
 //TrPlaneStrain :: global2local(FloatArray &answer, const FloatArray &coords, const FEICellGeometry &cellgeo)

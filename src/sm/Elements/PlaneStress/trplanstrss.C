@@ -115,6 +115,77 @@ TrPlaneStress2d :: giveArea()
     return ( area = fabs( this->interp.giveArea( FEIElementGeometryWrapper(this) ) ) );
 }
 
+const FloatMatrix *
+TrPlaneStress2d::computeGtoLRotationMatrix()
+// Returns the rotation matrix of the receiver of the size [3,3]
+// coords(local) = T * coords(global)
+//
+// local coordinate (described by vector triplet e1',e2',e3') is defined as follows:
+//
+// e1'    : [N2-N1]    Ni - means i - th node
+// help   : [N3-N1]
+// e3'    : e1' x help
+// e2'    : e3' x e1'
+{
+	if (!GtoLRotationMatrix.isNotEmpty()) {
+		FloatArray e1, e2, e3, help;
+
+		// compute e1' = [N2-N1]  and  help = [N3-N1]
+		e1.beDifferenceOf(*this->giveNode(2)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
+		help.beDifferenceOf(*this->giveNode(3)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
+
+		// let us normalize e1'
+		e1.normalize();
+
+		if (la1.computeNorm() != 0) {
+			// custom local axes
+			e1 = la1;
+		}
+
+		// compute e3' : vector product of e1' x help
+		e3.beVectorProductOf(e1, help);
+		// let us normalize
+		e3.normalize();
+
+		// now from e3' x e1' compute e2'
+		e2.beVectorProductOf(e3, e1);
+
+		//
+		GtoLRotationMatrix.resize(3, 3);
+
+		for (int i = 1; i <= 3; i++) {
+			GtoLRotationMatrix.at(1, i) = e1.at(i);
+			GtoLRotationMatrix.at(2, i) = e2.at(i);
+			GtoLRotationMatrix.at(3, i) = e3.at(i);
+		}
+	}
+
+	return &GtoLRotationMatrix;
+}
+
+bool
+TrPlaneStress2d::computeGtoLRotationMatrix(FloatMatrix &answer)
+// Returns the rotation matrix of the receiver of the size [6,6]
+// r(local) = T * r(global)
+// for one node (r written transposed): {u,v} = T * {u,v}
+{
+	// test if previously computed
+	if (!GtoLRotationMatrix.isNotEmpty()) {
+		this->computeGtoLRotationMatrix();
+	}
+
+	answer.resize(6, 6);
+	answer.zero();
+
+	for (int i = 1; i <= 3; i++) {
+		answer.at(1, i) = answer.at(1 + 2, i + 3) = GtoLRotationMatrix.at(1, i);
+		answer.at(2, i) = answer.at(2 + 2, i + 3) = GtoLRotationMatrix.at(2, i);
+		answer.at(3, i) = answer.at(3 + 2, i + 3) = GtoLRotationMatrix.at(3, i);
+	}
+
+	return 1;
+}
+
 
 double
 TrPlaneStress2d :: giveCharacteristicSize(GaussPoint *gp, FloatArray &normalToCrackPlane, ElementCharSizeMethod method)
