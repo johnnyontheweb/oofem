@@ -134,15 +134,15 @@ TrPlaneStrain::computeGtoLRotationMatrix()
 		// let us normalize e1'
 		e1.normalize();
 
-		if (la1.computeNorm() != 0) {
-			// custom local axes
-			e1 = la1;
-		}
-
 		// compute e3' : vector product of e1' x help
 		e3.beVectorProductOf(e1, help);
 		// let us normalize
 		e3.normalize();
+
+		if (la1.computeNorm() != 0) {
+			// custom local axes
+			e1 = la1;
+		}
 
 		// now from e3' x e1' compute e2'
 		e2.beVectorProductOf(e3, e1);
