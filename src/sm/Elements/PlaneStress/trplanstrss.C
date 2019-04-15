@@ -33,6 +33,9 @@
  */
 
 #include "Elements/PlaneStress/trplanstrss.h"
+#include "../sm/Materials/structuralms.h"
+#include "../sm/Materials/structuralmaterial.h"
+#include "../sm/CrossSections/structuralcrosssection.h"
 #include "fei2dtrlin.h"
 #include "node.h"
 #include "crosssection.h"
@@ -273,8 +276,45 @@ void
 TrPlaneStress2d :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,
                                                               InternalStateType type, TimeStep *tStep)
 {
-    GaussPoint *gp = integrationRulesArray [ 0 ]->getIntegrationPoint(0);
-    this->giveIPValue(answer, gp, type, tStep);
+    //GaussPoint *gp = integrationRulesArray [ 0 ]->getIntegrationPoint(0);
+    //this->giveIPValue(answer, gp, type, tStep);
+
+	answer.zero();
+	GaussPoint *gp = integrationRulesArray[0]->getIntegrationPoint(0);
+	FloatArray localStress, localStrain;
+	this->computeStrainVector(localStrain, gp, tStep);
+	this->computeStressVector(localStress, localStrain, gp, tStep);
+
+	if ( type == IST_ShellForceTensor) {
+		double thickness, w;
+		FloatArray mLocal;
+		mLocal.resize(6);
+		mLocal.zero();
+
+		thickness = this->giveCrossSection()->give(CS_Thickness, gp->giveGlobalCoordinates(), this, false);
+		w = gp->giveWeight() * thickness;
+		// mLocal.add(w, localStress);
+		mLocal.at(1) = localStress.at(1) * w;
+		mLocal.at(2) = localStress.at(2) * w;
+		mLocal.at(6) = localStress.at(3) * w;
+
+		// local to global
+		this->computeGtoLRotationMatrix();
+		StructuralMaterial::transformStressVectorTo(answer, GtoLRotationMatrix, mLocal, false);
+	} else if (type == IST_ShellMomentTensor || type == IST_CurvatureTensor) {
+		// nothing
+	} else if (type == IST_ShellStrainTensor) {
+		FloatArray mLocal;
+		mLocal.resize(6);
+		mLocal.zero();
+		mLocal.at(1) = localStrain.at(1);
+		mLocal.at(2) = localStrain.at(2);
+		mLocal.at(6) = localStrain.at(3);
+
+		// local to global
+		this->computeGtoLRotationMatrix();
+		StructuralMaterial::transformStressVectorTo(answer, GtoLRotationMatrix, mLocal, false);
+	}
 }
 
 
