@@ -166,28 +166,28 @@ TrPlaneStress2d::computeGtoLRotationMatrix()
 	return &GtoLRotationMatrix;
 }
 
-bool
-TrPlaneStress2d::computeGtoLRotationMatrix(FloatMatrix &answer)
-// Returns the rotation matrix of the receiver of the size [6,6]
-// r(local) = T * r(global)
-// for one node (r written transposed): {u,v} = T * {u,v}
-{
-	// test if previously computed
-	if (!GtoLRotationMatrix.isNotEmpty()) {
-		this->computeGtoLRotationMatrix();
-	}
-
-	answer.resize(6, 6);
-	answer.zero();
-
-	for (int i = 1; i <= 3; i++) {
-		answer.at(1, i) = answer.at(1 + 2, i + 3) = GtoLRotationMatrix.at(1, i);
-		answer.at(2, i) = answer.at(2 + 2, i + 3) = GtoLRotationMatrix.at(2, i);
-		answer.at(3, i) = answer.at(3 + 2, i + 3) = GtoLRotationMatrix.at(3, i);
-	}
-
-	return 1;
-}
+//bool
+//TrPlaneStress2d::computeGtoLRotationMatrix(FloatMatrix &answer)
+//// Returns the rotation matrix of the receiver of the size [6,6]
+//// r(local) = T * r(global)
+//// for one node (r written transposed): {u,v} = T * {u,v}
+//{
+//	// test if previously computed
+//	if (!GtoLRotationMatrix.isNotEmpty()) {
+//		this->computeGtoLRotationMatrix();
+//	}
+//
+//	answer.resize(6, 6);
+//	answer.zero();
+//
+//	for (int i = 1; i <= 2; i++) {
+//		answer.at(1, i) = answer.at(1 + (i - 1) * 2, i + 3) = GtoLRotationMatrix.at(1, i);
+//		answer.at(2, i) = answer.at(2 + (i - 1) * 2, i + 3) = GtoLRotationMatrix.at(2, i);
+//		answer.at(3, i) = answer.at(3 + (i - 1) * 2, i + 3) = GtoLRotationMatrix.at(3, i);
+//	}
+//
+//	return 1;
+//}
 
 
 double
