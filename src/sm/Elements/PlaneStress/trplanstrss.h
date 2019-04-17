@@ -83,7 +83,7 @@ public:
     virtual double giveParentElSize() const { return 0.5; }
     virtual Interface *giveInterface(InterfaceType);
 	const FloatMatrix *computeGtoLRotationMatrix();
-	virtual bool computeGtoLRotationMatrix(FloatMatrix &answer);
+	//virtual bool computeGtoLRotationMatrix(FloatMatrix &answer);
 	FloatArray la1;
 
 #ifdef __OOFEG

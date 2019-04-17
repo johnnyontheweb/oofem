@@ -1127,7 +1127,7 @@ void
 MITC4Shell :: giveMidplaneIPValue(FloatArray &answer, int gpXY, InternalStateType type, TimeStep *tStep)
 {
     GaussPoint *gp = NULL;
-
+	answer.zero();
     if ( type == IST_ShellMomentTensor || type == IST_ShellForceTensor ) {
         double J, thickness, z, w;
         FloatArray mLocal;

@@ -640,6 +640,9 @@ TrPlaneStrRot :: computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, Time
 
     // note: force is assumed to be in global coordinate system.
     forLoad->computeComponentArrayAt(force, tStep, mode);
+	// get it in local c.s.
+	this->computeLoadGToLRotationMtrx(T);
+	force.rotatedWith(T, 'n');
 
     if ( force.giveSize() ) {
         GaussPoint *gp = integrationRulesArray [ 0 ]->getIntegrationPoint(0);
@@ -661,9 +664,9 @@ TrPlaneStrRot :: computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, Time
         answer.at(8) = load;
 
         // transform result from global cs to local element cs.
-        if ( this->computeGtoLRotationMatrix(T) ) {
-            answer.rotatedWith(T, 'n');
-        }
+        //if ( this->computeGtoLRotationMatrix(T) ) {
+        //    answer.rotatedWith(T, 'n');
+        //}
     } else {
         answer.clear();          // nil resultant
     }
