@@ -113,9 +113,6 @@ TR_SHELL01 :: initializeFrom(InputRecord *ir)
 void
 TR_SHELL01 :: postInitialize()
 {
-	// force cross-section update
-	//this->setCrossSection(this->crossSection);
-
     StructuralElement :: postInitialize();
 
     if ( plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints() != membrane->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints() ) {
@@ -418,7 +415,25 @@ TR_SHELL01 :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int
                                                          InternalStateType type, TimeStep *tStep)
 {
 	GaussPoint *gp = this->giveDefaultIntegrationRulePtr()->getIntegrationPoint(0);
-	this->giveIPValue(answer, gp, type, tStep);
+	//// stress recovery in traditional way
+	//if (this->giveMaterial()->hasNonLinearBehaviour() == 0) {
+	//	FloatArray u;
+	//	FloatMatrix D, N1, N2, N; N.resize(6, 18);
+	//	this->computeVectorOf(VM_Total, tStep, u); // total displ.
+	//	this->giveStructuralCrossSection()->giveCharMaterialStiffnessMatrix(D, SecantStiffness, gp, tStep);
+	//	// evaluate N at nodes
+	//	FloatArray n1; n1.resize(2); n1.zero();
+	//	this->plate->computeBmatrixAt(n1, N1);
+	//	this->membrane->computeBmatrixAt(n1, N2);
+	//	N.assemble(N1, loc_plate);
+	//	N.assemble(N2, loc_membrane);
+	//	// ...
+	//	FloatArray n2; n2.resize(2); n2.zero(); n2.at(1) = 0;
+	//	this->plate->computeNmatrixAt(n2, N);
+
+	//}else{ // nl material
+		this->giveIPValue(answer, gp, type, tStep);
+	//}
 }
 
 

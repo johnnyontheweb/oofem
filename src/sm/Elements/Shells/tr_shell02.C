@@ -397,95 +397,97 @@ void
 TR_SHELL02 :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,
                                                          InternalStateType type, TimeStep *tStep)
 {
-	if (node < 1 || node>3) {
-		OOFEM_ERROR("unsupported node");
-	}
-
-	int size = 0;
-	FloatArray val;
-	FloatArray Nweights;
-	FEIElementGeometryWrapper wrap(this);
-	for (int i = 0; i < plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints(); i++) {
-		GaussPoint *gp = plate->giveDefaultIntegrationRulePtr()->getIntegrationPoint(i);
-		giveIPValue(val, gp, type, tStep);
-		if (size == 0) {
-			size = val.giveSize();
-			answer.resize(size);
-		}
-		plate->giveInterpolation()->evalN(Nweights, gp->giveNaturalCoordinates(), wrap);
-		answer.add(Nweights.at(node), val);
-	}
-
-	//// choose least squares or not
-	//if (this->numberOfGaussPoints == 1) {
-	//	this->giveIPValue(answer, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint(0), type, tStep);
-	//}else{
-	//	double x1 = 0.0, x2 = 0.0, y = 0.0;
-	//	FloatMatrix A(3, 3);
-	//	FloatMatrix b, r;
-	//	FloatArray val;
-	//	double u, v;
-
-	//	int size = 0;
-
-	//	//for (GaussPoint *gp : *integrationRulesArray[0]) {
-	//	for (int i = 0; i < plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints(); i++) {
-	//		GaussPoint *gp = plate->giveDefaultIntegrationRulePtr()->getIntegrationPoint(i);
-	//		giveIPValue(val, gp, type, tStep);
-	//		if (size == 0) {
-	//			size = val.giveSize();
-	//			b.resize(3, size);
-	//			r.resize(3, size);
-	//			A.zero();
-	//			r.zero();
-	//		}
-
-	//		const FloatArray &coord = gp->giveNaturalCoordinates();
-	//		u = coord.at(1);
-	//		v = coord.at(2);
-
-	//		A.at(1, 1) += 1;
-	//		A.at(1, 2) += u;
-	//		A.at(1, 3) += v;
-	//		A.at(2, 1) += u;
-	//		A.at(2, 2) += u * u;
-	//		A.at(2, 3) += u * v;
-	//		A.at(3, 1) += v;
-	//		A.at(3, 2) += v * u;
-	//		A.at(3, 3) += v * v;
-
-	//		for (int j = 1; j <= size; j++) {
-	//			y = val.at(j);
-	//			r.at(1, j) += y;
-	//			r.at(2, j) += y * u;
-	//			r.at(3, j) += y * v;
-	//		}
-	//	}
-
-	//	A.solveForRhs(r, b);
-
-	//	switch (node) {
-	//	case 1:
-	//		x1 = 0.0;
-	//		x2 = 0.0;
-	//		break;
-	//	case 2:
-	//		x1 = 1.0;
-	//		x2 = 0.0;
-	//		break;
-	//	case 3:
-	//		x1 = 0.0;
-	//		x2 = 1.0;
-	//		break;
-	//	default:
-	//		OOFEM_ERROR("unsupported node");
-	//	}
-
-	//	answer.resize(size);
-	//	for (int j = 1; j <= size; j++) {
-	//		answer.at(j) = b.at(1, j) + x1 *b.at(2, j) + x2 *b.at(3, j);
-	//	}
+	//if (node < 1 || node>3) {
+	//	OOFEM_ERROR("unsupported node");
 	//}
+
+	//int size = 0;
+	//FloatArray val;
+	//FloatArray Nweights;
+	//FEIElementGeometryWrapper wrap(this);
+	//for (int i = 0; i < plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints(); i++) {
+	//	GaussPoint *gpP = plate->giveDefaultIntegrationRulePtr()->getIntegrationPoint(i);
+	//	//GaussPoint *gpM = membrane->giveDefaultIntegrationRulePtr()->getIntegrationPoint(i);
+	//	giveIPValue(val, gpP, type, tStep);
+	//	if (size == 0) {
+	//		size = val.giveSize();
+	//		answer.resize(size);
+	//	}
+	//	plate->giveInterpolation()->evalN(Nweights, gpP->giveNaturalCoordinates(), wrap);
+	//	//membrane->giveInterpolation()->evalN(Nweights, gpM->giveNaturalCoordinates(), wrap);
+	//	answer.add(Nweights.at(node), val);
+	//}
+
+	// choose least squares or not
+	if (this->numberOfGaussPoints == 1) {
+		this->giveIPValue(answer, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint(0), type, tStep);
+	}else{
+		double x1 = 0.0, x2 = 0.0, y = 0.0;
+		FloatMatrix A(3, 3);
+		FloatMatrix b, r;
+		FloatArray val;
+		double u, v;
+
+		int size = 0;
+
+		//for (GaussPoint *gp : *integrationRulesArray[0]) {
+		for (int i = 0; i < plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints(); i++) {
+			GaussPoint *gp = plate->giveDefaultIntegrationRulePtr()->getIntegrationPoint(i);
+			giveIPValue(val, gp, type, tStep);
+			if (size == 0) {
+				size = val.giveSize();
+				b.resize(3, size);
+				r.resize(3, size);
+				A.zero();
+				r.zero();
+			}
+
+			const FloatArray &coord = gp->giveNaturalCoordinates();
+			u = coord.at(1);
+			v = coord.at(2);
+
+			A.at(1, 1) += 1;
+			A.at(1, 2) += u;
+			A.at(1, 3) += v;
+			A.at(2, 1) += u;
+			A.at(2, 2) += u * u;
+			A.at(2, 3) += u * v;
+			A.at(3, 1) += v;
+			A.at(3, 2) += v * u;
+			A.at(3, 3) += v * v;
+
+			for (int j = 1; j <= size; j++) {
+				y = val.at(j);
+				r.at(1, j) += y;
+				r.at(2, j) += y * u;
+				r.at(3, j) += y * v;
+			}
+		}
+
+		A.solveForRhs(r, b);
+
+		switch (node) {
+		case 1:
+			x1 = 0.0;
+			x2 = 0.0;
+			break;
+		case 2:
+			x1 = 1.0;
+			x2 = 0.0;
+			break;
+		case 3:
+			x1 = 0.0;
+			x2 = 1.0;
+			break;
+		default:
+			OOFEM_ERROR("unsupported node");
+		}
+
+		answer.resize(size);
+		for (int j = 1; j <= size; j++) {
+			answer.at(j) = b.at(1, j) + x1 *b.at(2, j) + x2 *b.at(3, j);
+		}
+	}
 }
 
 
