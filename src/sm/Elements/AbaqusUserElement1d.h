@@ -186,7 +186,7 @@ public:
     { OOFEM_ERROR("Abaqus user element cannot support computation of local unknown vector\n"); }
     virtual void updateYourself(TimeStep *tStep);
     virtual void updateInternalState(TimeStep *tStep);
-
+	virtual void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep);
 	virtual int computeNumberOfGlobalDofs() { return 6; }
 
     bool hasTangent() const {

@@ -373,4 +373,12 @@ AbaqusUserElement::printOutputAt(FILE *File, TimeStep *tStep)
 	fprintf(File, "\n");
 }
 
+void
+AbaqusUserElement::computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
+{
+	// computes initial stress matrix of receiver (or geometric stiffness matrix)
+	answer.resize(ndofel, ndofel);
+	answer.zero();
+}
+
 }       // namespace oofem

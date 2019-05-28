@@ -189,7 +189,7 @@ public:
     virtual void updateInternalState(TimeStep *tStep);
 
 	virtual int computeNumberOfGlobalDofs() { return 12; }
-
+	virtual void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep);
     bool hasTangent() const {
         return hasTangentFlag;
     }
