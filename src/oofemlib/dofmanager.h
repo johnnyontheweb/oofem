@@ -534,14 +534,10 @@ public:
     int givePartitionsConnectivitySize();
     /// Returns true if receiver is locally maintained.
     bool isLocal();
-    /// Returns true if receiver is shared.
-    bool isShared() {
-        if ( parallel_mode == DofManager_shared ) {
-            return true;
-        } else {
-            return false;
-        }
-    }
+	/// Returns true if receiver is shared.
+	bool isShared() { return parallel_mode == DofManager_shared; }
+	/// Returns true if receiver is shared.
+	bool isNull() { return parallel_mode == DofManager_null; }
 };
 } // end namespace oofem
 #endif // dofmanager_h
