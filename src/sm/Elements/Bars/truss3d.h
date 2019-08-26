@@ -70,9 +70,10 @@ public:
 
     virtual double computeLength();
 
+	virtual void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep);
     virtual void computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep);
-    virtual void computeMassMatrix(FloatMatrix &answer, TimeStep *tStep)
-    { this->computeLumpedMassMatrix(answer, tStep); }
+    virtual void computeMassMatrix(FloatMatrix &answer, TimeStep *tStep) { this->computeLumpedMassMatrix(answer, tStep); }
+	void giveEndForcesVector(FloatArray &answer, TimeStep *tStep);
     virtual int giveLocalCoordinateSystem(FloatMatrix &answer);
 
     virtual int computeNumberOfDofs() { return 6; }
@@ -112,6 +113,9 @@ protected:
     virtual void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int = 1, int = ALL_STRAINS);
     virtual void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer);
     virtual void computeGaussPoints();
+
+private:
+	void computeLocalForceLoadVector(FloatArray &answer, TimeStep *tStep, ValueModeType mode);
 
 };
 } // end namespace oofem

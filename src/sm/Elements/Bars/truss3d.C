@@ -44,6 +44,10 @@
 #include "intarray.h"
 #include "mathfem.h"
 #include "classfactory.h"
+#include "bctracker.h"
+
+#include "bodyload.h"
+#include "boundaryload.h"
 
 #ifdef __OOFEG
  #include "oofeggraphiccontext.h"
@@ -55,7 +59,7 @@ REGISTER_Element(Truss3d);
 FEI3dLineLin Truss3d :: interp;
 
 Truss3d :: Truss3d(int n, Domain *aDomain) :
-    NLStructuralElement(n, aDomain), ZZNodalRecoveryModelInterface(this)
+NLStructuralElement(n, aDomain), ZZNodalRecoveryModelInterface(this)
 {
     numberOfDofMans = 2;
 }
@@ -122,6 +126,51 @@ double
 Truss3d :: computeLength()
 {
     return this->interp.giveLength( FEIElementGeometryWrapper(this) );
+}
+
+
+void
+Truss3d :: computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
+{
+	// computes initial stress matrix of receiver (or geometric stiffness matrix)
+
+	FloatMatrix stiff;
+	FloatArray endForces;
+
+	double l = this->computeLength();
+	double N;
+
+	answer.resize(6, 6);
+	answer.zero();
+
+	answer.at(2, 2) = 1;
+	answer.at(2, 5) = -1;
+
+	answer.at(3, 3) = 1;
+	answer.at(3, 6) = -1;
+
+	answer.at(5, 2) = -1;
+	answer.at(5, 5) = 1;
+
+	answer.at(6, 3) = -1;
+	answer.at(6, 6) = 1;
+
+	StructuralMaterial *mat = dynamic_cast<StructuralMaterial *>(this->giveMaterial());
+
+	FloatMatrix mat3d;
+	double area, G;
+
+	GaussPoint* gp = integrationRulesArray[0]->getIntegrationPoint(0);
+	mat->give1dStressStiffMtrx(mat3d, ElasticStiffness, gp, tStep);
+	G = mat->give('G', gp);
+	area = this->giveStructuralCrossSection()->give(CS_Area, gp);
+
+	answer.symmetrized();
+	// ask end forces in g.c.s
+	this->giveEndForcesVector(endForces, tStep);
+
+	N = (-endForces.at(1) + endForces.at(7)) / 2.;
+	answer.times(N / l);
 }
 
 
@@ -283,6 +332,114 @@ Truss3d :: computeLoadLEToLRotationMatrix(FloatMatrix &answer, int iEdge, GaussP
     answer.beTranspositionOf(lcs);
 
     return 1;
+}
+
+void
+Truss3d :: computeLocalForceLoadVector(FloatArray &answer, TimeStep *tStep, ValueModeType mode)
+// computes the part of load vector, which is imposed by force loads acting
+// on element volume (surface).
+// Why is this function taken separately ?
+// When reactions forces are computed, they are computed from element::GiveRealStressVector
+// in this vector a real forces are stored (temperature part is subtracted).
+// so we need further subtract part corresponding to non-nodal loading.
+{
+	FloatArray helpLoadVector(1);
+	answer.clear();
+
+	// loop over body load array first
+	int nBodyLoads = this->giveBodyLoadArray()->giveSize();
+	for (int i = 1; i <= nBodyLoads; i++) {
+		int id = bodyLoadArray.at(i);
+		Load *load = domain->giveLoad(id);
+		bcGeomType ltype = load->giveBCGeoType();
+		if ((ltype == BodyLoadBGT) && (load->giveBCValType() == ForceLoadBVT)) {
+			this->computeBodyLoadVectorAt(helpLoadVector, load, tStep, mode);
+			if (helpLoadVector.giveSize()) {
+				answer.add(helpLoadVector);
+			}
+		}
+		else {
+			if (load->giveBCValType() != TemperatureBVT && load->giveBCValType() != EigenstrainBVT) {
+				// temperature and eigenstrain is handled separately at computeLoadVectorAt subroutine
+				OOFEM_ERROR("body load %d is of unsupported type (%d)", id, ltype);
+			}
+		}
+	}
+
+	// loop over boundary load array
+	int nBoundaryLoads = this->giveBoundaryLoadArray()->giveSize() / 2;
+	for (int i = 1; i <= nBoundaryLoads; i++) {
+		int n = boundaryLoadArray.at(1 + (i - 1) * 2);
+		int id = boundaryLoadArray.at(i * 2);
+		Load *load = domain->giveLoad(n);
+		BoundaryLoad* bLoad;
+		if ((bLoad = dynamic_cast<BoundaryLoad*> (load))) {
+			bcGeomType ltype = load->giveBCGeoType();
+			if (ltype == EdgeLoadBGT) {
+				this->computeBoundaryEdgeLoadVector(helpLoadVector, bLoad, id, ExternalForcesVector, mode, tStep, false);
+				if (helpLoadVector.giveSize()) {
+					answer.add(helpLoadVector);
+				}
+			}
+			else if (ltype == SurfaceLoadBGT) {
+				this->computeBoundarySurfaceLoadVector(helpLoadVector, bLoad, id, ExternalForcesVector, mode, tStep, false);
+				if (helpLoadVector.giveSize()) {
+					answer.add(helpLoadVector);
+				}
+			}
+			else if (ltype == PointLoadBGT) {
+				// id not used
+				this->computePointLoadVectorAt(helpLoadVector, load, tStep, mode, false);
+				if (helpLoadVector.giveSize()) {
+					answer.add(helpLoadVector);
+				}
+			}
+			else {
+				OOFEM_ERROR("boundary load %d is of unsupported type (%d)", id, ltype);
+			}
+		}
+	}
+
+
+	// add exact end forces due to nonnodal loading applied indirectly (via sets)
+	BCTracker *bct = this->domain->giveBCTracker();
+	BCTracker::entryListType bcList = bct->getElementRecords(this->number);
+	FloatArray help;
+
+	for (BCTracker::entryListType::iterator it = bcList.begin(); it != bcList.end(); ++it) {
+		GeneralBoundaryCondition *bc = this->domain->giveBc((*it).bcNumber);
+		BodyLoad *bodyLoad;
+		BoundaryLoad *boundaryLoad;
+		if (bc->isImposed(tStep)) {
+			if ((bodyLoad = dynamic_cast<BodyLoad*>(bc))) { // body load
+				this->computeBodyLoadVectorAt(help, bodyLoad, tStep, VM_Total); // this one is local
+				answer.add(help);
+			}
+			else if ((boundaryLoad = dynamic_cast<BoundaryLoad*>(bc))) {
+				// compute Boundary Edge load vector in GLOBAL CS !!!!!!!
+				this->computeBoundaryEdgeLoadVector(help, boundaryLoad, (*it).boundaryId,
+					ExternalForcesVector, VM_Total, tStep, false);
+				// get it transformed back to local c.s.
+				// this->computeGtoLRotationMatrix(t);
+				// help.rotatedWith(t, 'n');
+				answer.add(help);
+			}
+		}
+	}
+}
+
+void
+Truss3d :: giveEndForcesVector(FloatArray &answer, TimeStep *tStep)
+{
+	// computes exact global end-forces vector
+	FloatArray loadEndForces;
+	NLStructuralElement::giveInternalForcesVector(answer, tStep, false);
+
+	// add exact end forces due to nonnodal loading
+	this->computeLocalForceLoadVector(loadEndForces, tStep, VM_Total); // will compute only contribution of loads applied directly on receiver (not using sets)
+	if (loadEndForces.giveSize()) {
+		answer.subtract(loadEndForces);
+	}
 }
 
 void
