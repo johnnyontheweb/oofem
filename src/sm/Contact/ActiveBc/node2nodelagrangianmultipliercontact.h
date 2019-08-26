@@ -79,6 +79,11 @@ public:
     /// Destructor.
     virtual ~Node2NodeLagrangianMultiplierContact() {};
 
+private:
+	Node2NodeLagrangianMultiplierContact(Node2NodeLagrangianMultiplierContact const&);
+	void operator=(Node2NodeLagrangianMultiplierContact const&);
+public:
+
     virtual IRResultType initializeFrom(InputRecord *ir);
 
 	virtual void assemble(SparseMtrx &answer, TimeStep *tStep,
