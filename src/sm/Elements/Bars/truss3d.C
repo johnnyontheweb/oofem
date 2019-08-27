@@ -155,21 +155,14 @@ Truss3d :: computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
 	answer.at(6, 3) = -1;
 	answer.at(6, 6) = 1;
 
-	StructuralMaterial *mat = dynamic_cast<StructuralMaterial *>(this->giveMaterial());
-
-	FloatMatrix mat3d;
-	double area, G;
-
 	GaussPoint* gp = integrationRulesArray[0]->getIntegrationPoint(0);
-	mat->give1dStressStiffMtrx(mat3d, ElasticStiffness, gp, tStep);
-	G = mat->give('G', gp);
-	area = this->giveStructuralCrossSection()->give(CS_Area, gp);
+	double area = this->giveStructuralCrossSection()->give(CS_Area, gp);
 
 	answer.symmetrized();
 	// ask end forces in g.c.s
 	this->giveEndForcesVector(endForces, tStep);
 
-	N = (-endForces.at(1) + endForces.at(7)) / 2.;
+	N = (-endForces.at(1) + endForces.at(4)) / 2.;
 	answer.times(N / l);
 }
 
