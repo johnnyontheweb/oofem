@@ -158,11 +158,29 @@ Truss3d :: computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
 	GaussPoint* gp = integrationRulesArray[0]->getIntegrationPoint(0);
 	double area = this->giveStructuralCrossSection()->give(CS_Area, gp);
 
-	answer.symmetrized();
+	FloatMatrix lcs;
+	this->giveLocalCoordinateSystem(lcs);
+
+	FloatMatrix transf(6, 6);
+	IntArray ind({ 1, 2, 3 });
+	IntArray ind2({ 4, 5, 6 });
+	transf.assemble(lcs, ind, ind);
+	transf.assemble(lcs, ind2, ind2);
+
+	answer.rotatedWith(transf, 'n');
 	// ask end forces in g.c.s
 	this->giveEndForcesVector(endForces, tStep);
 
-	N = (-endForces.at(1) + endForces.at(4)) / 2.;
+	FloatArray N1, N2;
+	N1.beSubArrayOf(endForces, ind);
+	N2.beSubArrayOf(endForces, ind2);
+
+	FloatArray lx;
+	lx.beDifferenceOf(*this->giveNode(2)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
+	lx.normalize();
+
+	// sign of N?
+	N = (-N1.dotProduct(lx) + N2.dotProduct(lx)) / 2.;
 	answer.times(N / l);
 }
 
