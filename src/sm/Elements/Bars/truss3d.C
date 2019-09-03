@@ -86,7 +86,7 @@ void
 Truss3d :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node, InternalStateType type, TimeStep *tStep)
 {
     answer.clear();
-    OOFEM_WARNING("IP values will not be transferred to nodes. Use ZZNodalRecovery instead (parameter stype 1)");
+    // OOFEM_WARNING("IP values will not be transferred to nodes. Use ZZNodalRecovery instead (parameter stype 1)");
 }
 
 
@@ -179,7 +179,7 @@ Truss3d :: computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
 	lx.beDifferenceOf(*this->giveNode(2)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
 	lx.normalize();
 
-	// sign of N?
+	// sign of N
 	N = (-N1.dotProduct(lx) + N2.dotProduct(lx)) / 2.;
 	answer.times(N / l);
 }
