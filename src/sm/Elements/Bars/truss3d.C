@@ -155,8 +155,8 @@ Truss3d :: computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
 	answer.at(6, 3) = -1;
 	answer.at(6, 6) = 1;
 
-	GaussPoint* gp = integrationRulesArray[0]->getIntegrationPoint(0);
-	double area = this->giveStructuralCrossSection()->give(CS_Area, gp);
+	// GaussPoint* gp = integrationRulesArray[0]->getIntegrationPoint(0);
+	// double area = this->giveStructuralCrossSection()->give(CS_Area, gp);
 
 	FloatMatrix lcs;
 	this->giveLocalCoordinateSystem(lcs);
