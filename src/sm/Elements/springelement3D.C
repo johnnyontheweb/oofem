@@ -205,9 +205,18 @@ SpringElement3D :: initializeFrom(InputRecord *ir)
 void SpringElement3D :: printOutputAt(FILE *File, TimeStep *tStep)
 {
 	if (this->macroElem != 0) {
-		fprintf(File, "SpringElement3D %d dir 3 %.4e %.4e %.4e macroelem %d : %.4e\n", this->giveLabel(), this->dir.at(1), this->dir.at(2), this->dir.at(3), this->macroElem, this->computeSpringInternalForce(tStep));
+		FloatArray u;
+		FloatArray res; res.resize(6);
+		res.at(1) = (u.at(7) - u.at(1));
+		res.at(2) = (u.at(8) - u.at(2));
+		res.at(3) = (u.at(9) - u.at(3));
+		res.at(4) = (u.at(10) - u.at(4));
+		res.at(5) = (u.at(11) - u.at(5));
+		res.at(6) = (u.at(12) - u.at(6));
+		this->computeVectorOf(VM_Total, tStep, u);
+		fprintf(File, "SpringElement3D %d dir 3 %.4e %.4e %.4e disp 6 %.4e %.4e %.4e %.4e %.4e %.4e macroelem %d : %.4e %.4e %.4e %.4e %.4e %.4e\n", this->giveLabel(), this->dir.at(1), this->dir.at(2), this->dir.at(3), res.at(1),res.at(2),res.at(3), res.at(4), res.at(5), res.at(6), this->macroElem, this->computeSpringInternalForce(tStep));
 	} else {
-		fprintf(File, "SpringElement3D %d : %.4e\n", this->giveLabel(), this->computeSpringInternalForce(tStep));
+		fprintf(File, "SpringElement3D %d :%.4e %.4e %.4e %.4e %.4e %.4e\n", this->giveLabel(), this->computeSpringInternalForce(tStep));
 	}
 }
 } // end namespace oofem
