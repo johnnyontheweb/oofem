@@ -83,6 +83,7 @@ set (sm_element
     Elements/graddpelement.C 
     Elements/lumpedmasselement.C
     Elements/springelement.C
+    Elements/springelement3D.C
     Elements/lattice2d.C
     Elements/tet21ghostsolid.C
     Elements/quad1platesubsoil.C 
