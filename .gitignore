@@ -946,3 +946,23 @@ tests/sm/t3d.bmf
 /src/oofemlib/load.C.bak
 /src/oofemlib/load.h.bak
 /src/sm/EngineeringModels/staticstructural.zip
+/.vs/oofem/v15/Browse.VC.db
+/.vs/oofem/v15/Solution.VC.db
+/.vs/oofem/v15/Solution.VC.db-shm
+/.vs/oofem/v15/Solution.VC.db-wal
+/.vs/oofem/v15/ipch/AutoPCH/118399e6092e8a51/NODE2NODELAGRANGIANMULTIPLIERCONTACT.ipch
+/.vs/oofem/v15/ipch/AutoPCH/44da3203f15dc599/NODE2NODELAGRANGIANMULTIPLIERCONTACT.ipch
+/MinSizeRel/1_wall-invSt.in
+/MinSizeRel/1_wall-st.out - Copia.nrm
+/MinSizeRel/EdificioCA_synX.in
+/MinSizeRel/EdificioCA_synX.zip
+/MinSizeRel/Xmas tree.in
+/MinSizeRel/cilindro_tria.in
+/MinSizeRel/termica6-thermal2.in
+/MinSizeRel/termica7-thermal2.in
+/MinSizeRel/testSEQall.in
+/beam01.dir/RelWithDebInfo/beam01.vcxprojAssemblyReference.cache
+/liboofem.dir/MinSizeRel/liboofem.vcxprojAssemblyReference.cache
+/liboofem.dir/RelWithDebInfo/liboofem.vcxprojAssemblyReference.cache
+/oofem.dir/RelWithDebInfo/oofem.vcxprojAssemblyReference.cache
+/src/sm/sm.dir/RelWithDebInfo/sm.pdb

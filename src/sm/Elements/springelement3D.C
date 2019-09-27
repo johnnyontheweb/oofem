@@ -47,7 +47,7 @@ REGISTER_Element(SpringElement3D);
 
 SpringElement3D :: SpringElement3D(int n, Domain *aDomain) : StructuralElement(n, aDomain)
 {
-    numberOfDofMans = 12;
+    numberOfDofMans = 2;
     springC1 = springC2 = springC3 = springC4 = springC5 = springC6 = 0.0;
 }
 
@@ -116,10 +116,27 @@ SpringElement3D::giveLocalCoordinateSystem(FloatMatrix &answer)
 // stored rowwise (mainly used by some materials with ortho and anisotrophy)
 //
 {
-	FloatArray lx, ly, lz, help(3);
+	FloatArray lx, ly, lz, help(3); help.zero();
 	lx = dir;
+	FloatMatrix rot(3, 3);
+	double theta = referenceAngle * M_PI / 180.0;
+
+	rot.at(1, 1) = cos(theta) + pow(lx.at(1), 2) * (1 - cos(theta));
+	rot.at(1, 2) = lx.at(1) * lx.at(2) * (1 - cos(theta)) - lx.at(3) * sin(theta);
+	rot.at(1, 3) = lx.at(1) * lx.at(3) * (1 - cos(theta)) + lx.at(2) * sin(theta);
+
+	rot.at(2, 1) = lx.at(2) * lx.at(1) * (1 - cos(theta)) + lx.at(3) * sin(theta);
+	rot.at(2, 2) = cos(theta) + pow(lx.at(2), 2) * (1 - cos(theta));
+	rot.at(2, 3) = lx.at(2) * lx.at(3) * (1 - cos(theta)) - lx.at(1) * sin(theta);
+
+	rot.at(3, 1) = lx.at(3) * lx.at(1) * (1 - cos(theta)) - lx.at(2) * sin(theta);
+	rot.at(3, 2) = lx.at(3) * lx.at(2) * (1 - cos(theta)) + lx.at(1) * sin(theta);
+	rot.at(3, 3) = cos(theta) + pow(lx.at(3), 2) * (1 - cos(theta));
+
 	help.at(3) = 1.0;         // up-vector
 	// here is ly is used as a temp var
+	// double prvect = acos(lx.dotProduct(help));
+	// if (prvect < 0.001 || prvect > M_PI - 0.001) { // Check if it is vertical
 	if (fabs(lx.dotProduct(help)) > 0.999) { // Check if it is vertical
 		lz = { 1., 0., 0. };
 	}
@@ -127,7 +144,7 @@ SpringElement3D::giveLocalCoordinateSystem(FloatMatrix &answer)
 		ly.beVectorProductOf(lx, help);
 		lz.beVectorProductOf(ly, lx);
 	}
-	// ly.beProductOf(rot, lz); // for theta angle if necessary
+	ly.beProductOf(rot, lz);
 	ly.normalize();
 	lz.beVectorProductOf(lx, ly);
 	lz.normalize();
@@ -199,6 +216,9 @@ SpringElement3D :: initializeFrom(InputRecord *ir)
 	this->macroElem = 0;
 	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_SpringElement3D_macroElem);
 
+	this->referenceAngle = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, this->referenceAngle, _IFT_SpringElement3D_refangle);
+
     return StructuralElement :: initializeFrom(ir);
 }
 
@@ -214,7 +234,7 @@ void SpringElement3D :: printOutputAt(FILE *File, TimeStep *tStep)
 		res.at(5) = (u.at(11) - u.at(5));
 		res.at(6) = (u.at(12) - u.at(6));
 		this->computeVectorOf(VM_Total, tStep, u);
-		fprintf(File, "SpringElement3D %d dir 3 %.4e %.4e %.4e disp 6 %.4e %.4e %.4e %.4e %.4e %.4e macroelem %d : %.4e %.4e %.4e %.4e %.4e %.4e\n", this->giveLabel(), this->dir.at(1), this->dir.at(2), this->dir.at(3), res.at(1),res.at(2),res.at(3), res.at(4), res.at(5), res.at(6), this->macroElem, this->computeSpringInternalForce(tStep));
+		fprintf(File, "SpringElement3D %d dir 3 %.4e %.4e %.4e refangle %.4e disp 6 %.4e %.4e %.4e %.4e %.4e %.4e macroelem %d : %.4e %.4e %.4e %.4e %.4e %.4e\n", this->giveLabel(), this->dir.at(1), this->dir.at(2), this->dir.at(3),this->referenceAngle, res.at(1), res.at(2), res.at(3), res.at(4), res.at(5), res.at(6), this->macroElem, this->computeSpringInternalForce(tStep));
 	} else {
 		fprintf(File, "SpringElement3D %d :%.4e %.4e %.4e %.4e %.4e %.4e\n", this->giveLabel(), this->computeSpringInternalForce(tStep));
 	}

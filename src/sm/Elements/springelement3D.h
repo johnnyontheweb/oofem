@@ -50,7 +50,7 @@
 #define _IFT_SpringElement3D_springC6 "k6"
 #define _IFT_SpringElement3D_mass "m"
 #define _IFT_SpringElement3D_macroElem "macroelem"
-
+#define _IFT_SpringElement3D_refangle "refangle"
 //@}
 
 namespace oofem {
@@ -73,7 +73,7 @@ protected:
     FloatArray dir;
 	// macro element number
 	int macroElem;
-
+	double referenceAngle = 0;
 public:
     SpringElement3D(int n, Domain * d);
     virtual ~SpringElement3D() { }
