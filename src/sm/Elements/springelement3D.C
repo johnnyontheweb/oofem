@@ -81,8 +81,8 @@ SpringElement3D :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep,
 {
     FloatArray f = this->computeSpringInternalForce(tStep);
     answer.resize(12);
-	answer.at(1) = -f.at(1); answer.at(2) = -f.at(2); answer.at(3) = -f.at(3); 	answer.at(6) = -f.at(4); answer.at(5) = -f.at(5); answer.at(6) = -f.at(6);
-	answer.at(7) = f.at(1); answer.at(8) = f.at(2); answer.at(9) = f.at(3);	answer.at(10) = f.at(4); answer.at(11) = f.at(6); answer.at(12) = f.at(6);
+	answer.at(1) = -f.at(1); answer.at(2) = -f.at(2); answer.at(3) = -f.at(3); 	answer.at(4) = -f.at(4); answer.at(5) = -f.at(5); answer.at(6) = -f.at(6);
+	answer.at(7) = f.at(1); answer.at(8) = f.at(2); answer.at(9) = f.at(3);	answer.at(10) = f.at(4); answer.at(11) = f.at(5); answer.at(12) = f.at(6);
 }
 
 
@@ -226,6 +226,7 @@ void SpringElement3D :: printOutputAt(FILE *File, TimeStep *tStep)
 {
 	if (this->macroElem != 0) {
 		FloatArray u;
+		this->computeVectorOf(VM_Total, tStep, u);
 		FloatArray res; res.resize(6);
 		res.at(1) = (u.at(7) - u.at(1));
 		res.at(2) = (u.at(8) - u.at(2));
@@ -233,7 +234,6 @@ void SpringElement3D :: printOutputAt(FILE *File, TimeStep *tStep)
 		res.at(4) = (u.at(10) - u.at(4));
 		res.at(5) = (u.at(11) - u.at(5));
 		res.at(6) = (u.at(12) - u.at(6));
-		this->computeVectorOf(VM_Total, tStep, u);
 		fprintf(File, "SpringElement3D %d dir 3 %.4e %.4e %.4e refangle %.4e disp 6 %.4e %.4e %.4e %.4e %.4e %.4e macroelem %d : %.4e %.4e %.4e %.4e %.4e %.4e\n", this->giveLabel(), this->dir.at(1), this->dir.at(2), this->dir.at(3),this->referenceAngle, res.at(1), res.at(2), res.at(3), res.at(4), res.at(5), res.at(6), this->macroElem, this->computeSpringInternalForce(tStep));
 	} else {
 		fprintf(File, "SpringElement3D %d :%.4e %.4e %.4e %.4e %.4e %.4e\n", this->giveLabel(), this->computeSpringInternalForce(tStep));
