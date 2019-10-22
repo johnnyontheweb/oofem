@@ -295,19 +295,6 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
         this->assemble( *stiffnessMatrix, tStep, TangentAssembler(TangentStiffness),
                        EModelDefaultEquationNumbering(), this->giveDomain(1) );
 
-
-		// PDELTA approx solution without iterations
-#ifdef VERBOSE
-		OOFEM_LOG_INFO("Assembling initial stress matrix\n");
-#endif
-		// initialStressMatrix->zero();
-		initialStressMatrix.reset(stiffnessMatrix->GiveCopy());
-		this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(),
-			EModelDefaultEquationNumbering(), this->giveDomain(1));
-		// initialStressMatrix->times(-1.0);
-
-		// PDELTA end p-delta stiffness
-
         initFlag = 0;
     }
 
@@ -352,7 +339,7 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 	bool saneMatrix;
 	// printf("%d;", solverType);
 	if (solverType == 0) {
-		badRow = initialStressMatrix->sanityCheck(&saneMatrix);
+		badRow = stiffnessMatrix->sanityCheck(&saneMatrix);
 		if (!saneMatrix){
 			int nodeNum = 0, elemNum = 0;
 			DofIDItem dofID;
@@ -383,8 +370,29 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 #ifdef VERBOSE
     OOFEM_LOG_INFO("\n\nSolving ...\n\n");
 #endif
-	NM_Status s = nMethod->solve(*initialStressMatrix, loadVector, displacementVector);
-    if ( !( s & NM_Success ) ) {
+	NM_Status s = nMethod->solve(*stiffnessMatrix, loadVector, displacementVector);
+
+	// PDELTA approx solution without iterations
+#ifdef VERBOSE
+	OOFEM_LOG_INFO("Assembling initial stress matrix\n");
+#endif
+	// initialStressMatrix.reset(stiffnessMatrix->GiveCopy());
+	// initialStressMatrix->zero();
+	initialStressMatrix.reset(classFactory.createSparseMtrx(sparseMtrxType)); // stresses are in the model now
+	initialStressMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
+	this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(),
+		EModelDefaultEquationNumbering(), this->giveDomain(1));
+	// initialStressMatrix->times(-1.0);
+	stiffnessMatrix->add(-1.0, *initialStressMatrix);
+	// solve again
+#ifdef VERBOSE
+	OOFEM_LOG_INFO("\n\nSolving ...\n\n");
+#endif
+	// displacementVector.zero(); // not needed
+	NM_Status s1 = nMethod->solve(*stiffnessMatrix, loadVector, displacementVector);
+	// PDELTA end p-delta stiffness
+	
+    if ( !( s1 & NM_Success ) ) {
 		badRow = initialStressMatrix->giveErrorFlag();
 		int nodeNum = 0, elemNum = 0;
 		DofIDItem dofID;
