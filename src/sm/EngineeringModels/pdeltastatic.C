@@ -46,6 +46,8 @@
 #include "contextioerr.h"
 #include "classfactory.h"
 #include "unknownnumberingscheme.h"
+#include "geneigvalsolvertype.h"
+#include "sparsegeneigenvalsystemnm.h"
 
 #ifdef __PARALLEL_MODE
  #include "problemcomm.h"
@@ -97,13 +99,15 @@ PDeltaStatic :: initializeFrom(InputRecord *ir)
         return result;
     }
 
-    int val = 0;
-    IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_EngngModel_lstype);
-    solverType = ( LinSystSolverType ) val;
+    // int val = 0;
+    // IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_EngngModel_lstype);
+    // solverType = ( LinSystSolverType ) val;
+	solverType = ST_EigenLib;
 
-    val = 0;
-    IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_EngngModel_smtype);
-    sparseMtrxType = ( SparseMtrxType ) val;
+    // val = 0;
+    // IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_EngngModel_smtype);
+    // sparseMtrxType = ( SparseMtrxType ) val;
+	sparseMtrxType = SMT_EigenSparse;
 
 #ifdef __PARALLEL_MODE
     if ( isParallel() ) {
@@ -113,8 +117,7 @@ PDeltaStatic :: initializeFrom(InputRecord *ir)
     }
 
 #endif
-
-
+	
     return IRRT_OK;
 }
 
@@ -370,7 +373,8 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 #ifdef VERBOSE
     OOFEM_LOG_INFO("\n\nSolving ...\n\n");
 #endif
-	NM_Status s = nMethod->solve(*stiffnessMatrix, loadVector, displacementVector);
+	//NM_Status s = 
+	nMethod->solve(*stiffnessMatrix, loadVector, displacementVector);
 
 	// PDELTA approx solution without iterations
 #ifdef VERBOSE
@@ -382,8 +386,17 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 	initialStressMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
 	this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(),
 		EModelDefaultEquationNumbering(), this->giveDomain(1));
+
+	int numEigv = 1;
+	FloatMatrix eigVec; eigVec.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), numEigv);
+	FloatArray eigVal; eigVal.resize(numEigv);
+	GenEigvalSolverType eigSolver = GES_Eigen;
+	std::unique_ptr< SparseGeneralEigenValueSystemNM > nMethodST;
+	nMethodST.reset(classFactory.createGeneralizedEigenValueSolver(eigSolver, this->giveDomain(1), this));
+	nMethodST->solve(*stiffnessMatrix, *initialStressMatrix, eigVal, eigVec, 0.0001, numEigv);
+
 	// initialStressMatrix->times(-1.0);
-	stiffnessMatrix->add(-1.0, *initialStressMatrix);
+	stiffnessMatrix->add(eigVal.at(1), *initialStressMatrix);
 	// solve again
 #ifdef VERBOSE
 	OOFEM_LOG_INFO("\n\nSolving ...\n\n");

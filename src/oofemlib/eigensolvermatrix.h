@@ -77,6 +77,7 @@ public:
     virtual SparseMtrx *GiveCopy() const;
     virtual void times(const FloatArray &x, FloatArray &answer) const;
     virtual void times(double x);
+	virtual void add(double x, SparseMtrx &m);
 	virtual int buildInternalStructure(EngngModel *, int, const UnknownNumberingScheme & s);
     virtual int assemble(const IntArray &loc, const FloatMatrix &mat);
     virtual int assemble(const IntArray &rloc, const IntArray &cloc, const FloatMatrix &mat);

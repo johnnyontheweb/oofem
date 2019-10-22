@@ -105,6 +105,22 @@ void EigenSolverMatrix :: times(double x)
 	(*this->eigenMatrix) *= x;
 }
 
+void EigenSolverMatrix::add(double x, SparseMtrx &m)
+{
+	int i, j;
+	int dime = this->nColumns;
+	// Spectra::SparseGenMatProd<double> op(*(eigenMatrix.get()));
+	// op.perform_op(x.givePointer(), answer.givePointer());
+
+	for (i = 1; i <= dime; i++) {
+	 for (j = 1; j <= dime; j++)
+	 {
+		 // this->eigenMatrix->coeff(i - 1, j - 1) += m.at(i - 1, j - 1) * x;
+		 tripletList.push_back(Eigen::Triplet<double>(i - 1, j - 1, m.at(i, j) * x ));
+	 }
+	}
+}
+
 int EigenSolverMatrix :: buildInternalStructure(EngngModel *eModel, int di, const UnknownNumberingScheme &s)
 {
 	int neq;
