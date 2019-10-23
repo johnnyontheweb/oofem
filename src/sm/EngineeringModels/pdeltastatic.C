@@ -272,8 +272,9 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 	initialStressMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
 	this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(),
 		EModelDefaultEquationNumbering(), this->giveDomain(1));
+	initialStressMatrix->times(-1.0);
 
-	int numEigv = 3;
+	int numEigv = 1;
 	FloatMatrix eigVec; eigVec.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), numEigv);
 	FloatArray eigVal; eigVal.resize(numEigv);
 	GenEigvalSolverType eigSolver = GES_Eigen;
@@ -281,8 +282,9 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 	nMethodST.reset(classFactory.createGeneralizedEigenValueSolver(eigSolver, this->giveDomain(1), this));
 	nMethodST->solve(*stiffnessMatrix, *initialStressMatrix, eigVal, eigVec, rtolv, numEigv);
 
-	// initialStressMatrix->times(-1.0);
-	stiffnessMatrix->add(eigVal.at(1), *initialStressMatrix);
+	stiffnessMatrix->add(-abs(eigVal.at(1)), *initialStressMatrix);
+	// initialStressMatrix->times(eigVal.at(1));
+	// initialStressMatrix->add(1.0, *stiffnessMatrix);
 	// solve again
 #ifdef VERBOSE
 	OOFEM_LOG_INFO("\n\nSolving ...\n\n");
