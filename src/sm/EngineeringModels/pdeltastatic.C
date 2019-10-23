@@ -264,7 +264,7 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 
 	// PDELTA approx solution without iterations
 	// terminate linear static computation (necessary, in order to compute stresses in elements).
-	this->updateAfterStatic(this->giveCurrentStep(), this->giveDomain(1));
+	// this->updateAfterStatic(this->giveCurrentStep(), this->giveDomain(1)); // not needed
 #ifdef VERBOSE
 	OOFEM_LOG_INFO("Assembling initial stress matrix\n");
 #endif
@@ -274,7 +274,7 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 	initialStressMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
 	this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(),
 		EModelDefaultEquationNumbering(), this->giveDomain(1));
-	initialStressMatrix->times(-1.0);
+	//initialStressMatrix->times(-1.0);
 
 #ifdef DEBUG
 	stiffnessMatrix->writeToFile("K.dat");
@@ -289,7 +289,7 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 	nMethodST.reset(classFactory.createGeneralizedEigenValueSolver(eigSolver, this->giveDomain(1), this));
 	nMethodST->solve(*stiffnessMatrix, *initialStressMatrix, eigVal, eigVec, rtolv, numEigv);
 
-	stiffnessMatrix->add(-1/abs(eigVal.at(1)), *initialStressMatrix);
+	stiffnessMatrix->add(1/abs(eigVal.at(1)), *initialStressMatrix); // without "-" if ->times(-1.0) is not used.
 
 #ifdef DEBUG
 	stiffnessMatrix->writeToFile("Kupd.dat");
