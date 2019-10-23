@@ -40,6 +40,7 @@
 #include "sparsemtrxtype.h"
 
 #define _IFT_PDeltaStatic_Name "PDeltaStatic"
+#define _IFT_PDeltaStatic_rtolv "rtolv"
 
 namespace oofem {
 class SparseMtrx;
@@ -71,7 +72,7 @@ protected:
     SparseMtrxType sparseMtrxType;
     /// Numerical method used to solve the problem.
     std :: unique_ptr< SparseLinearSystemNM > nMethod;
-
+	double rtolv;
     int initFlag;
 
 public:

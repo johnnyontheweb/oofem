@@ -109,6 +109,8 @@ PDeltaStatic :: initializeFrom(InputRecord *ir)
     // sparseMtrxType = ( SparseMtrxType ) val;
 	sparseMtrxType = SMT_EigenSparse;
 
+	IR_GIVE_FIELD(ir, rtolv, _IFT_PDeltaStatic_rtolv);
+
 #ifdef __PARALLEL_MODE
     if ( isParallel() ) {
         commBuff = new CommunicatorBuff( this->giveNumberOfProcesses() );
@@ -172,90 +174,6 @@ TimeStep *PDeltaStatic :: giveNextStep()
     return currentStep.get();
 }
 
-// PDELTA name of the function changed for avoiding conflict with linearstatic
-bool findDofGivenEquationPdelta(int badRow, Domain* d, int* nodeNum, int* elementNum, DofIDItem* dof)
-// also elements beacuse of internal dofs
-{
-	// initialize stuff
-	int dType = 0;
-	int eqN = 0;
-	*nodeNum = 0;
-	*elementNum = 0;
-	int curNode = 0;
-	// bool breakFlag = false; // find the first
-	for (std::unique_ptr<DofManager> &node : d->giveDofManagers()) {
-		if (!node->giveNumberOfDofs()) continue;
-
-		IntArray mstrDofs, locArr;
-		node->givePrimaryDofs(mstrDofs);
-		node->giveLocationArray(mstrDofs, locArr, EModelDefaultEquationNumbering());
-		curNode = node->giveLabel();
-
-		int partialDofCount = locArr.giveSize();
-		if (partialDofCount) {
-			// search for our dofs in there
-			for (int myDofIndex = 1; myDofIndex <= partialDofCount; myDofIndex++)
-			{
-				dType = mstrDofs.at(myDofIndex);
-				eqN = locArr.at(myDofIndex);
-				// found the node
-				if (eqN == badRow){
-					*nodeNum = curNode;
-					*dof = (DofIDItem)dType;
-					return true;
-				}
-			}
-		}
-	}
-
-	// no nodes found... is it an element internal dof?
-	for (int ielem = 1; ielem <= d->giveNumberOfElements(); ielem++) {
-		Element *element = d->giveElement(ielem);
-
-		// the following may be simplified.
-		// retrieve internal dof managers and location array
-		for (int i = 1; i <= element->giveNumberOfInternalDofManagers(); i++) {
-			DofManager *intDofMan = element->giveInternalDofManager(i);
-
-			if (!intDofMan) continue; // you may never know...
-
-			IntArray mstrDofs, locArr;
-			IntArray nodalArray, ids;
-			IntArray dofIdArray;
-			int curElem = 0;
-			locArr.clear();
-
-			element->giveInternalDofManDofIDMask(i, ids);
-			intDofMan->giveLocationArray(ids, nodalArray, EModelDefaultEquationNumbering());
-			locArr.followedBy(nodalArray);
-			curElem = element->giveLabel();
-
-			intDofMan->giveMasterDofIDArray(ids, mstrDofs);
-			dofIdArray.followedBy(mstrDofs);
-
-			int partialDofCount = locArr.giveSize();
-			if (partialDofCount) {
-				// search for our dofs in there
-				for (int myDofIndex = 1; myDofIndex <= partialDofCount; myDofIndex++)
-				{
-					int dType = dofIdArray.at(myDofIndex);
-					int eqN = locArr.at(myDofIndex);
-
-					if (eqN == badRow){
-						*elementNum = curElem;
-						*dof = (DofIDItem)dType;
-						return true;
-					}
-				}
-			}
-		}
-	}  // end of search among internal dof managers
-
-	// found nothing
-	return false;
-}
-
-
 void PDeltaStatic :: solveYourself()
 {
     if ( this->isParallel() ) {
@@ -270,7 +188,6 @@ void PDeltaStatic :: solveYourself()
 
     StructuralEngngModel :: solveYourself();
 }
-
 
 
 void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
@@ -336,37 +253,6 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
     //
     this->giveNumericalMethod( this->giveMetaStep( tStep->giveMetaStepNumber() ) );
 
-
-	// look for zero filled rows and invalid fp numbers
-	int badRow = 0; // equation number
-	bool saneMatrix;
-	// printf("%d;", solverType);
-	if (solverType == 0) {
-		badRow = stiffnessMatrix->sanityCheck(&saneMatrix);
-		if (!saneMatrix){
-			int nodeNum = 0, elemNum = 0;
-			DofIDItem dofID;
-			bool isZero = (badRow >= 0); // determine if it is because of zero or NaNs and INFs
-			badRow = abs(badRow);
-
-			// search for dof id...
-			bool found = findDofGivenEquationPdelta(badRow, this->giveDomain(1), &nodeNum, &elemNum, &dofID);
-			// printf("%d;%d;%d;\n", badRow, isZero, found);
-			
-			if (found){
-				if (isZero) {
-					OOFEM_WARNING("Likely lability detected at %s %d - dof %s", nodeNum ? "node" : "element", nodeNum ? nodeNum : elemNum, __DofIDItemToString(dofID).c_str());
-				}
-				else {
-					OOFEM_WARNING("Invalid floating point number detected for %s %d - dof %s", nodeNum ? "node" : "element", nodeNum ? nodeNum : elemNum, __DofIDItemToString(dofID).c_str());
-				}
-			}
-			else {
-				OOFEM_WARNING("Problem detected at equation %d of the stiffness matrix. Cannot pinpoint the associated node or element", badRow);
-			}
-		}
-	} // solvertype 0
-
     //
     // call numerical model to solve arose problem
     //
@@ -387,13 +273,13 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 	this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(),
 		EModelDefaultEquationNumbering(), this->giveDomain(1));
 
-	int numEigv = 1;
+	int numEigv = 3;
 	FloatMatrix eigVec; eigVec.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), numEigv);
 	FloatArray eigVal; eigVal.resize(numEigv);
 	GenEigvalSolverType eigSolver = GES_Eigen;
 	std::unique_ptr< SparseGeneralEigenValueSystemNM > nMethodST;
 	nMethodST.reset(classFactory.createGeneralizedEigenValueSolver(eigSolver, this->giveDomain(1), this));
-	nMethodST->solve(*stiffnessMatrix, *initialStressMatrix, eigVal, eigVec, 0.0001, numEigv);
+	nMethodST->solve(*stiffnessMatrix, *initialStressMatrix, eigVal, eigVec, rtolv, numEigv);
 
 	// initialStressMatrix->times(-1.0);
 	stiffnessMatrix->add(eigVal.at(1), *initialStressMatrix);
@@ -402,29 +288,9 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 	OOFEM_LOG_INFO("\n\nSolving ...\n\n");
 #endif
 	// displacementVector.zero(); // not needed
-	NM_Status s1 = nMethod->solve(*stiffnessMatrix, loadVector, displacementVector);
+	nMethod->solve(*stiffnessMatrix, loadVector, displacementVector);
 	// PDELTA end p-delta stiffness
 	
-    if ( !( s1 & NM_Success ) ) {
-		badRow = initialStressMatrix->giveErrorFlag();
-		int nodeNum = 0, elemNum = 0;
-		DofIDItem dofID;
-
-		if (solverType == 0) {
-		// search for dof id...
-			bool found = findDofGivenEquationPdelta(badRow, this->giveDomain(1), &nodeNum, &elemNum, &dofID);
-			if (found){
-					OOFEM_WARNING("Likely lability detected at %s %d - dof %s", nodeNum ? "node" : "element", nodeNum ? nodeNum : elemNum, __DofIDItemToString(dofID).c_str());
-			}
-			else {
-				OOFEM_WARNING("Problem detected at equation %d of the stiffness matrix. Cannot pinpoint the associated node or element", badRow);
-			}
-
-			// OOFEM_ERROR("No success in solving system.");
-			OOFEM_WARNING("No success in solving system.");
-		} // solvertype 0
-    }
-
     tStep->incrementStateCounter();            // update solution state counter
 }
 
