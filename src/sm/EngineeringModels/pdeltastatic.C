@@ -263,6 +263,8 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 	nMethod->solve(*stiffnessMatrix, loadVector, displacementVector);
 
 	// PDELTA approx solution without iterations
+	// terminate linear static computation (necessary, in order to compute stresses in elements).
+	this->updateAfterStatic(this->giveCurrentStep(), this->giveDomain(1));
 #ifdef VERBOSE
 	OOFEM_LOG_INFO("Assembling initial stress matrix\n");
 #endif
@@ -274,6 +276,11 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 		EModelDefaultEquationNumbering(), this->giveDomain(1));
 	initialStressMatrix->times(-1.0);
 
+#ifdef DEBUG
+	stiffnessMatrix->writeToFile("K.dat");
+	initialStressMatrix->writeToFile("KG.dat");
+#endif
+
 	int numEigv = 1;
 	FloatMatrix eigVec; eigVec.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), numEigv);
 	FloatArray eigVal; eigVal.resize(numEigv);
@@ -282,7 +289,11 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 	nMethodST.reset(classFactory.createGeneralizedEigenValueSolver(eigSolver, this->giveDomain(1), this));
 	nMethodST->solve(*stiffnessMatrix, *initialStressMatrix, eigVal, eigVec, rtolv, numEigv);
 
-	stiffnessMatrix->add(-abs(eigVal.at(1)), *initialStressMatrix);
+	stiffnessMatrix->add(-1/abs(eigVal.at(1)), *initialStressMatrix);
+
+#ifdef DEBUG
+	stiffnessMatrix->writeToFile("Kupd.dat");
+#endif
 	// initialStressMatrix->times(eigVal.at(1));
 	// initialStressMatrix->add(1.0, *stiffnessMatrix);
 	// solve again
@@ -379,6 +390,28 @@ PDeltaStatic::terminate(TimeStep *tStep)
 	StructuralEngngModel::terminate(tStep);
 	this->printReactionForces(tStep, 1);
 	fflush(this->giveOutputStream());
+}
+
+void
+PDeltaStatic::updateAfterStatic(TimeStep *tStep, Domain *domain)
+{
+	// Domain *domain = this->giveDomain(1);
+	//tStep->setTime(0.);
+
+	//if (requiresUnknownsDictionaryUpdate()) {
+	//	for (auto &dman : domain->giveDofManagers()) {
+	//		this->updateDofUnknownsDictionary(dman.get(), tStep);
+	//	}
+	//}
+
+	for (auto &dman : domain->giveDofManagers()) {
+		dman->updateYourself(tStep);
+	}
+
+	for (auto &elem : domain->giveElements()) {
+		elem->updateInternalState(tStep);
+		elem->updateYourself(tStep);
+	}
 }
 
 void

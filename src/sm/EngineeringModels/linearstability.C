@@ -298,7 +298,7 @@ void
 LinearStability :: terminateLinStatic(TimeStep *tStep)
 {
     Domain *domain = this->giveDomain(1);
-    FILE *File = this->giveOutputStream();
+    // FILE *File = this->giveOutputStream();
     tStep->setTime(0.);
 
     //fprintf(File, "\nOutput for time %.3e \n\n", tStep->giveTargetTime() ); // FP: removed output
@@ -329,7 +329,7 @@ LinearStability :: terminateLinStatic(TimeStep *tStep)
 #  ifdef VERBOSE
     VERBOSE_PRINT0("Updated Elements ", domain->giveNumberOfElements())
 #  endif
-    fprintf(File, "\n");
+	// fprintf(File, "\n");
     /*
      * // save context if required
      * // default - save only if ALWAYS is set ( see cltypes.h )

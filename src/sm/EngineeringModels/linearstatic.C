@@ -171,7 +171,7 @@ TimeStep *LinearStatic :: giveNextStep()
 
 
 bool findDofGivenEquation(int badRow, Domain* d, int* nodeNum, int* elementNum, DofIDItem* dof)
-// also elements beacuse of internal dofs
+// also elements because of internal dofs
 {
 	// initialize stuff
 	int dType = 0;

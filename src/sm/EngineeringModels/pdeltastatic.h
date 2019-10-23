@@ -74,6 +74,7 @@ protected:
     std :: unique_ptr< SparseLinearSystemNM > nMethod;
 	double rtolv;
     int initFlag;
+	void updateAfterStatic(TimeStep *tStep, Domain *domain);
 
 public:
     PDeltaStatic(int i, EngngModel * _master = NULL);
