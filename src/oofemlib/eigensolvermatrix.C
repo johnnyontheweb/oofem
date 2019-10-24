@@ -128,6 +128,8 @@ void EigenSolverMatrix::add(double x, SparseMtrx &m)
 	 }
 	}
 	applyTriplets();
+	// increment version?
+	this->version++;
 }
 
 int EigenSolverMatrix :: buildInternalStructure(EngngModel *eModel, int di, const UnknownNumberingScheme &s)
