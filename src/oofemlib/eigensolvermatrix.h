@@ -100,6 +100,9 @@ public:
 	const Eigen::SparseMatrix<double>& giveEigenMatrix() const { return *eigenMatrix.get(); }
 
 	virtual void writeToFile(const char *fname) const;
+
+protected:
+	void applyTriplets();
 };
 
 // #define SparseMat Eigen::SparseMatrix<double, 0, int>

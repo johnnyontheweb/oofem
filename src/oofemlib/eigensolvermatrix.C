@@ -123,10 +123,11 @@ void EigenSolverMatrix::add(double x, SparseMtrx &m)
 	for (i = 1; i <= dime; i++) {
 	 for (j = 1; j <= dime; j++)
 	 {
-		 this->eigenMatrix->coeffRef(i - 1, j - 1) += m.at(i, j) * x;
-		 // tripletList.push_back(Eigen::Triplet<double>(i - 1, j - 1, m.at(i, j) * x ));
+		 //this->eigenMatrix->coeffRef(i - 1, j - 1) += m.at(i, j) * x;
+		 tripletList.push_back(Eigen::Triplet<double>(i - 1, j - 1, m.at(i, j) * x ));
 	 }
 	}
+	applyTriplets();
 }
 
 int EigenSolverMatrix :: buildInternalStructure(EngngModel *eModel, int di, const UnknownNumberingScheme &s)
@@ -207,10 +208,15 @@ int EigenSolverMatrix :: assemble(const IntArray &rloc, const IntArray &cloc, co
     return 1;
 }
 
-int EigenSolverMatrix :: assembleEnd()
+void EigenSolverMatrix :: applyTriplets()
 {
 	eigenMatrix->setFromTriplets(tripletList.begin(), tripletList.end());
 	tripletList.clear();
+}
+
+int EigenSolverMatrix :: assembleEnd()
+{
+	applyTriplets();
 	return 1;
 }
 
