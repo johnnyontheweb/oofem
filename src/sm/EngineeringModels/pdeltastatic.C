@@ -264,7 +264,7 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 
 	// PDELTA approx solution without iterations
 	// terminate linear static computation (necessary, in order to compute stresses in elements).
-	// this->updateAfterStatic(this->giveCurrentStep(), this->giveDomain(1)); // not needed
+	this->updateAfterStatic(this->giveCurrentStep(), this->giveDomain(1)); // not needed for beam - conservatively left (shells?)
 #ifdef VERBOSE
 	OOFEM_LOG_INFO("Assembling initial stress matrix\n");
 #endif

@@ -127,6 +127,8 @@ void EigenSolverMatrix::add(double x, SparseMtrx &m)
 		 // tripletList.push_back(Eigen::Triplet<double>(i - 1, j - 1, m.at(i, j) * x ));
 	 }
 	}
+	// increment version?
+	// this->version++;
 }
 
 int EigenSolverMatrix :: buildInternalStructure(EngngModel *eModel, int di, const UnknownNumberingScheme &s)
