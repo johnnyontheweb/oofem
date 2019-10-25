@@ -109,27 +109,22 @@ void EigenSolverMatrix::add(double x, SparseMtrx &m)
 {
 	int i, j;
 	int dime = this->nColumns;
-	// Spectra::SparseGenMatProd<double> op(*(eigenMatrix.get()));
-	// op.perform_op(x.givePointer(), answer.givePointer());
 
 	if (dime != m.giveNumberOfColumns() ) {
 		OOFEM_ERROR("dimension of 'k' and 'm' mismatch");
 	}
-	
-	//if (tripletList.size() == 0) {
-	//	OOFEM_ERROR("dimension mismatch");
-	//}
 
 	for (i = 1; i <= dime; i++) {
 	 for (j = 1; j <= dime; j++)
 	 {
+		 if (j > i) {
+			 continue; // symmetric lower triangular
+		 }
 		 //this->eigenMatrix->coeffRef(i - 1, j - 1) += m.at(i, j) * x;
 		 tripletList.push_back(Eigen::Triplet<double>(i - 1, j - 1, m.at(i, j) * x ));
 	 }
 	}
 	applyTriplets();
-	// increment version?
-	this->version++;
 }
 
 int EigenSolverMatrix :: buildInternalStructure(EngngModel *eModel, int di, const UnknownNumberingScheme &s)
