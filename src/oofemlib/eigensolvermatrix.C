@@ -121,7 +121,7 @@ void EigenSolverMatrix::add(double x, SparseMtrx &m)
 			 continue; // symmetric lower triangular
 		 }
 		 //this->eigenMatrix->coeffRef(i - 1, j - 1) += m.at(i, j) * x;
-		 tripletList.push_back(Eigen::Triplet<double>(i - 1, j - 1, m.at(i, j) * x ));
+		 tripletList.push_back(Eigen::Triplet<double>(i - 1, j - 1, this->eigenMatrix->coeff(i - 1, j - 1) +  m.at(i, j) * x));
 	 }
 	}
 	applyTriplets();
