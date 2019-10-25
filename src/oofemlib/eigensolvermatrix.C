@@ -114,17 +114,20 @@ void EigenSolverMatrix::add(double x, SparseMtrx &m)
 		OOFEM_ERROR("dimension of 'k' and 'm' mismatch");
 	}
 
-	for (i = 1; i <= dime; i++) {
-	 for (j = 1; j <= dime; j++)
-	 {
-		 if (j > i) {
-			 continue; // symmetric lower triangular
-		 }
-		 //this->eigenMatrix->coeffRef(i - 1, j - 1) += m.at(i, j) * x;
-		 tripletList.push_back(Eigen::Triplet<double>(i - 1, j - 1, this->eigenMatrix->coeff(i - 1, j - 1) +  m.at(i, j) * x));
-	 }
-	}
-	applyTriplets();
+	//for (i = 1; i <= dime; i++) {
+	// for (j = 1; j <= dime; j++)
+	// {
+	//	 if (j > i) {
+	//		 continue; // symmetric lower triangular
+	//	 }
+	//	 //this->eigenMatrix->coeffRef(i - 1, j - 1) += m.at(i, j) * x;
+	//	 tripletList.push_back(Eigen::Triplet<double>(i - 1, j - 1, this->eigenMatrix->coeff(i - 1, j - 1) +  m.at(i, j) * x));
+	// }
+	//}
+	//applyTriplets();
+	this->version++;
+	EigenSolverMatrix& temp = static_cast<EigenSolverMatrix&>(m);
+	eigenMatrix->operator+=(temp.eigenMatrix->operator*(x));
 }
 
 int EigenSolverMatrix :: buildInternalStructure(EngngModel *eModel, int di, const UnknownNumberingScheme &s)
