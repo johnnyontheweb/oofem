@@ -107,10 +107,8 @@ void EigenSolverMatrix :: times(double x)
 
 void EigenSolverMatrix::add(double x, SparseMtrx &m)
 {
-	int i, j;
-	int dime = this->nColumns;
-
-	if (dime != m.giveNumberOfColumns() ) {
+	// for square matrices
+	if (this->nColumns != m.giveNumberOfColumns()) {
 		OOFEM_ERROR("dimension of 'k' and 'm' mismatch");
 	}
 
@@ -125,6 +123,7 @@ void EigenSolverMatrix::add(double x, SparseMtrx &m)
 	// }
 	//}
 	//applyTriplets();
+
 	this->version++;
 	EigenSolverMatrix& temp = static_cast<EigenSolverMatrix&>(m);
 	eigenMatrix->operator+=(temp.eigenMatrix->operator*(x));
