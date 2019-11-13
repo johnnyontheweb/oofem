@@ -281,15 +281,16 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 	initialStressMatrix->writeToFile("KG.dat");
 #endif
 
-	int numEigv = 1;
-	FloatMatrix eigVec; eigVec.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), numEigv);
-	FloatArray eigVal; eigVal.resize(numEigv);
-	GenEigvalSolverType eigSolver = GES_Eigen;
-	std::unique_ptr< SparseGeneralEigenValueSystemNM > nMethodST;
-	nMethodST.reset(classFactory.createGeneralizedEigenValueSolver(eigSolver, this->giveDomain(1), this));
-	nMethodST->solve(*stiffnessMatrix, *initialStressMatrix, eigVal, eigVec, rtolv, numEigv);
-
-	stiffnessMatrix->add(1/abs(eigVal.at(1)), *initialStressMatrix); // without "-" if ->times(-1.0) is not used.
+	//int numEigv = 1;
+	//FloatMatrix eigVec; eigVec.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), numEigv);
+	//FloatArray eigVal; eigVal.resize(numEigv);
+	//GenEigvalSolverType eigSolver = GES_Eigen;
+	//std::unique_ptr< SparseGeneralEigenValueSystemNM > nMethodST;
+	//nMethodST.reset(classFactory.createGeneralizedEigenValueSolver(eigSolver, this->giveDomain(1), this));
+	//nMethodST->solve(*stiffnessMatrix, *initialStressMatrix, eigVal, eigVec, rtolv, numEigv);
+	//fprintf(outputStream, "# Eigenvalue found: %.4e \n", abs(eigVal.at(1)));
+	//stiffnessMatrix->add(1 / abs(eigVal.at(1)), *initialStressMatrix); // without "-" if ->times(-1.0) is not used.
+	stiffnessMatrix->add(1, *initialStressMatrix); // without "-" if ->times(-1.0) is not used.
 
 #ifdef DEBUG
 	stiffnessMatrix->writeToFile("Kupd.dat");
