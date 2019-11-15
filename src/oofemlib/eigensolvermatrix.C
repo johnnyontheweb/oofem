@@ -129,6 +129,24 @@ void EigenSolverMatrix::add(double x, SparseMtrx &m)
 	eigenMatrix->operator+=(temp.eigenMatrix->operator*(x));
 }
 
+//SparseMtrx* EigenSolverMatrix::add(SparseMtrx &n, SparseMtrx &m)
+//{
+//	SparseMtrx* res = n.GiveCopy();
+//	
+//	// for square matrices
+//	if (n.giveNumberOfColumns() != m.giveNumberOfColumns()) {
+//		// OOFEM_ERROR("dimension of 'n' and 'm' mismatch");
+//	}
+//
+//	//EigenSolverMatrix& temp1 = static_cast<EigenSolverMatrix&>(m);
+//	//EigenSolverMatrix& temp2 = static_cast<EigenSolverMatrix&>(n);
+//	//this->eigenMatrix->operator+=(temp1.eigenMatrix);
+//
+//	res->add(1, m);
+//	//res->add(1, n);
+//	return res;
+//}
+
 int EigenSolverMatrix :: buildInternalStructure(EngngModel *eModel, int di, const UnknownNumberingScheme &s)
 {
 	int neq;

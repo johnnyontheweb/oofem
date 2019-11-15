@@ -257,57 +257,91 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
     // call numerical model to solve arose problem
     //
 #ifdef VERBOSE
-    OOFEM_LOG_INFO("\n\nSolving ...\n\n");
+    OOFEM_LOG_INFO("\n\nSolving initial ...\n\n");
 #endif
 	//NM_Status s = 
 	nMethod->solve(*stiffnessMatrix, loadVector, displacementVector);
+	// norm of previous displ. vector
+	double oldNorm = displacementVector.computeSquaredNorm(); double newNorm = 0;
+	bool escape = false; int maxIter = 0;
+	initialStressMatrix.reset(classFactory.createSparseMtrx(sparseMtrxType)); // stresses are in the model now
+	initialStressMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
 
-	// PDELTA approx solution without iterations
-	// terminate linear static computation (necessary, in order to compute stresses in elements).
-	this->updateAfterStatic(this->giveCurrentStep(), this->giveDomain(1)); // not needed for beam - conservatively left (shells?)
+	do {
+		// PDELTA approx solution without iterations - maximum 10 iterations
+		if (newNorm!=0) oldNorm = newNorm;
+		maxIter += 1;
+		// terminate linear static computation (necessary, in order to compute stresses in elements).
+		this->updateAfterStatic(this->giveCurrentStep(), this->giveDomain(1)); // not needed for beam - conservatively left (shells?)
 #ifdef VERBOSE
 	OOFEM_LOG_INFO("Assembling initial stress matrix\n");
 #endif
-	// initialStressMatrix.reset(stiffnessMatrix->GiveCopy());
-	// initialStressMatrix->zero();
-	initialStressMatrix.reset(classFactory.createSparseMtrx(sparseMtrxType)); // stresses are in the model now
-	initialStressMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
-	this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(),
-		EModelDefaultEquationNumbering(), this->giveDomain(1));
-	//initialStressMatrix->times(-1.0);
+		// initialStressMatrix.reset(stiffnessMatrix->GiveCopy());
+		initialStressMatrix->zero();
 
-#ifdef DEBUG
-	stiffnessMatrix->writeToFile("K.dat");
-	initialStressMatrix->writeToFile("KG.dat");
-#endif
+		this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(),	EModelDefaultEquationNumbering(), this->giveDomain(1));
+		//initialStressMatrix->times(-1.0);
 
-	//int numEigv = 1;
-	//FloatMatrix eigVec; eigVec.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), numEigv);
-	//FloatArray eigVal; eigVal.resize(numEigv);
-	//GenEigvalSolverType eigSolver = GES_Eigen;
-	//std::unique_ptr< SparseGeneralEigenValueSystemNM > nMethodST;
-	//nMethodST.reset(classFactory.createGeneralizedEigenValueSolver(eigSolver, this->giveDomain(1), this));
-	//nMethodST->solve(*stiffnessMatrix, *initialStressMatrix, eigVal, eigVec, rtolv, numEigv);
-	//fprintf(outputStream, "# Eigenvalue found: %.4e \n", abs(eigVal.at(1)));
-	//stiffnessMatrix->add(1 / abs(eigVal.at(1)), *initialStressMatrix); // without "-" if ->times(-1.0) is not used.
-	stiffnessMatrix->add(1, *initialStressMatrix); // without "-" if ->times(-1.0) is not used.
+//#ifdef DEBUG
+//	stiffnessMatrix->writeToFile("K.dat");
+//	initialStressMatrix->writeToFile("KG.dat");
+//#endif
 
-#ifdef DEBUG
-	stiffnessMatrix->writeToFile("Kupd.dat");
-#endif
-	// initialStressMatrix->times(eigVal.at(1));
-	// initialStressMatrix->add(1.0, *stiffnessMatrix);
-	// solve again
+		//int numEigv = 1;
+		//FloatMatrix eigVec; eigVec.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), numEigv);
+		//FloatArray eigVal; eigVal.resize(numEigv);
+		//GenEigvalSolverType eigSolver = GES_Eigen;
+		//std::unique_ptr< SparseGeneralEigenValueSystemNM > nMethodST;
+		//nMethodST.reset(classFactory.createGeneralizedEigenValueSolver(eigSolver, this->giveDomain(1), this));
+		//nMethodST->solve(*stiffnessMatrix, *initialStressMatrix, eigVal, eigVec, rtolv, numEigv);
+		//fprintf(outputStream, "# Eigenvalue found: %.4e \n", abs(eigVal.at(1)));
+		//stiffnessMatrix->add(1 / abs(eigVal.at(1)), *initialStressMatrix); // without "-" if ->times(-1.0) is not used.
+
+		//stiffnessMatrix->add(1, *initialStressMatrix); // without "-" if ->times(-1.0) is not used.
+		std::unique_ptr< SparseMtrx > Kiter;
+		Kiter.reset(stiffnessMatrix->GiveCopy());
+		Kiter->add(1, *initialStressMatrix);
+
+//#ifdef DEBUG
+//		stiffnessMatrix->writeToFile("Ke.dat");
+//		Kiter->writeToFile("Kiter.dat");
+//#endif
+		// initialStressMatrix->times(eigVal.at(1));
+		// initialStressMatrix->add(1.0, *stiffnessMatrix);
+		// solve again
 #ifdef VERBOSE
-	OOFEM_LOG_INFO("\n\nSolving ...\n\n");
+	OOFEM_LOG_INFO("\nSolving iteration %d ...\n", maxIter);
 #endif
-	// displacementVector.zero(); // not needed
-	nMethod->solve(*stiffnessMatrix, loadVector, displacementVector);
-	// PDELTA end p-delta stiffness
-	
+		// displacementVector.zero(); // not needed
+		nMethod->solve(*Kiter, loadVector, displacementVector);
+
+		// check convergence on DISPLACEMENTS: ( u(i)^2 - u(i-1)^2 ) / u(i)^2
+		newNorm = displacementVector.computeSquaredNorm();
+		double toll = abs((newNorm - oldNorm) / newNorm);
+		if (toll <= rtolv || maxIter >= 20) escape = true;
+#ifdef VERBOSE
+		OOFEM_LOG_INFO("\nCurrent displ. residual: %.2e \n\n", toll);
+#endif
+		// PDELTA end p-delta stiffness
+	} while (escape == false);
+
     tStep->incrementStateCounter();            // update solution state counter
 }
 
+
+//SparseMtrx* add(SparseMtrx &n, SparseMtrx &m)
+//{
+//	SparseMtrx* res;
+//
+//	// for square matrices
+//	if (n.giveNumberOfColumns() != m.giveNumberOfColumns()) {
+//		OOFEM_ERROR("dimension of 'n' and 'm' mismatch");
+//	}
+//
+//	res->add(1, m);
+//	res->add(1, n);
+//	return res;
+//}
 
 contextIOResultType PDeltaStatic :: saveContext(DataStream *stream, ContextMode mode, void *obj)
 //
