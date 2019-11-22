@@ -176,6 +176,9 @@ namespace oofem {
     virtual void computeSurfaceNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords);
     virtual void computeEdgeNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords);
 	virtual void setupIRForMassMtrxIntegration(IntegrationRule &iRule);
+
+	//double giveAngleIn3Dplane(FloatArray v1, FloatArray v2, FloatArray vn);
+	//FloatArray rotate(FloatArray vec, FloatArray dir, double angle);
  
 	};
 } // end namespace oofem

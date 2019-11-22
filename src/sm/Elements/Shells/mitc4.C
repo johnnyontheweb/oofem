@@ -129,6 +129,33 @@ MITC4Shell :: SPRNodalRecoveryMI_giveDofMansDeterminedByPatch(IntArray &answer, 
 }
 
 
+double giveAngleIn3Dplane(FloatArray v1, FloatArray v2, FloatArray vn)
+{
+	v1.normalize(); v2.normalize(); vn.normalize();
+	double dot = v1.at(1) * v2.at(1) + v1.at(2) * v2.at(2) + v1.at(3) * v2.at(3);
+	double det = v1.at(1) * v2.at(2) * vn.at(3) + v2.at(1) * vn.at(2) * v1.at(3) + vn.at(1) * v1.at(2) * v2.at(3) - v1.at(3) * v2.at(2) * vn.at(1) - v2.at(3) * vn.at(2) * v1.at(1) - vn.at(3) * v1.at(2) * v2.at(1);
+	return atan2(det, dot);
+}
+
+FloatArray rotate(FloatArray vec, FloatArray dir, double theta)
+{
+	FloatArray res; res.resize(3);
+	FloatArray orig; orig.resize(3); orig.zero(); // always around origin
+
+	double x = vec.at(1); double y = vec.at(2); double z = vec.at(3);
+	double a = orig.at(1); // origin of rot. axis
+	double b = orig.at(2); double c = orig.at(3);
+	double u = dir.at(1); // direction of rot. axis
+	double v = dir.at(2); double w = dir.at(3);
+	double cosTh = cos(theta); double senTh = sin(theta);
+
+	res.at(1) = (a * (pow(v, pow(2 + w, 2))) - u * (b * v + c * w - u * x - v * y - w * z)) * (1 - cosTh) + x * cosTh + (-c * v + b * w - w * y + v * z) * senTh;
+	res.at(2) = (b * (pow(u, pow(2 + w, 2))) - v * (a * u + c * w - u * x - v * y - w * z)) * (1 - cosTh) + y * cosTh + (c * u - a * w + w * x - u * z) * senTh;
+	res.at(3) = (c * (pow(u, pow(2 + v, 2))) - w * (a * u + b * v - u * x - v * y - w * z)) * (1 - cosTh) + z * cosTh + (-b * u + a * v - v * x + u * y) * senTh;
+
+	return res;
+}
+
 int
 MITC4Shell :: SPRNodalRecoveryMI_giveNumberOfIP()
 {
@@ -801,8 +828,8 @@ void
 MITC4Shell :: computeLocalBaseVectors(FloatArray &e1, FloatArray &e2, FloatArray &e3)
 {
     FloatArray help;
-    FloatArray coordA, coordB;
-
+     FloatArray coordA, coordB;
+	
     // compute A - (node2+node3)/2
     coordA.beDifferenceOf( * this->giveNode(2)->giveCoordinates(), * this->giveNode(3)->giveCoordinates() );
     coordA.times(0.5);
@@ -815,11 +842,13 @@ MITC4Shell :: computeLocalBaseVectors(FloatArray &e1, FloatArray &e2, FloatArray
 
     // compute e1' = [B-A]
     e1.beDifferenceOf(coordB, coordA);
+	// as in gui
+	// e1.beDifferenceOf(*this->giveNode(2)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
 
-	if (la1.computeNorm() != 0) {
-		// custom local axes
-		e1 = la1;
-	}
+	//if (la1.computeNorm() != 0) {
+	//	// custom local axes
+	//	e1 = la1;
+	//}
 
     // compute A - (node3+node4)/2
     coordA.beDifferenceOf( * this->giveNode(4)->giveCoordinates(), * this->giveNode(3)->giveCoordinates() );
@@ -833,16 +862,23 @@ MITC4Shell :: computeLocalBaseVectors(FloatArray &e1, FloatArray &e2, FloatArray
 
     // compute help = [B-A]
     help.beDifferenceOf(coordB, coordA);
+	// as in gui
+	// help.beDifferenceOf(*this->giveNode(3)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
 
     // let us normalize e1'
     e1.normalize();
 
     // compute e3' : vector product of e1' x help
-    e3.beVectorProductOf(e1, help);
+	e3.beVectorProductOf(e1, help);
     e3.normalize();
 
     // now from e3' x e1' compute e2'
     e2.beVectorProductOf(e3, e1);
+
+	// rotate as to have the 1st local axis equal to la1
+	double ang = -giveAngleIn3Dplane(la1, e1, e3); // radians
+	e1 = rotate(e1, e3, ang);
+	e2 = rotate(e2, e3, ang);
 }
 
 void
