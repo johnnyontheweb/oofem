@@ -32,6 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "angle.h"
 #include "../sm/Elements/Plates/dkt3d.h"
 #include "../sm/Materials/structuralms.h"
 #include "fei2dtrlin.h"
@@ -134,15 +135,20 @@ DKTPlate3d :: computeGtoLRotationMatrix()
         // let us normalize
         e3.normalize();
 
-		if (la1.computeNorm() != 0) {
-			// custom local axes
-			e1 = la1;
-		}
+		//if (la1.computeNorm() != 0) {
+		//	// custom local axes
+		//	e1 = la1;
+		//}
 
         // now from e3' x e1' compute e2'
         e2.beVectorProductOf(e3, e1);
 
-        //
+		// rotate as to have the 1st local axis equal to la1
+		double ang = -Angle::giveAngleIn3Dplane(la1, e1, e3); // radians
+		e1 = Angle::rotate(e1, e3, ang);
+		e2 = Angle::rotate(e2, e3, ang);
+
+        // rot. matrix
         GtoLRotationMatrix.resize(3, 3);
 
         for ( int i = 1; i <= 3; i++ ) {

@@ -50,6 +50,7 @@
 #include "boundaryload.h"
 #include "mathfem.h"
 #include "classfactory.h"
+#include "angle.h"
 
 namespace oofem {
 REGISTER_Element(MITC4Shell);
@@ -126,34 +127,6 @@ MITC4Shell :: SPRNodalRecoveryMI_giveDofMansDeterminedByPatch(IntArray &answer, 
     } else {
         OOFEM_ERROR("unknown node number %d", pap);
     }
-}
-
-
-double giveAngleIn3Dplane(FloatArray v1, FloatArray v2, FloatArray vn)
-{
-	v1.normalize(); v2.normalize(); vn.normalize();
-	double dot = v1.at(1) * v2.at(1) + v1.at(2) * v2.at(2) + v1.at(3) * v2.at(3);
-	double det = v1.at(1) * v2.at(2) * vn.at(3) + v2.at(1) * vn.at(2) * v1.at(3) + vn.at(1) * v1.at(2) * v2.at(3) - v1.at(3) * v2.at(2) * vn.at(1) - v2.at(3) * vn.at(2) * v1.at(1) - vn.at(3) * v1.at(2) * v2.at(1);
-	return atan2(det, dot);
-}
-
-FloatArray rotate(FloatArray vec, FloatArray dir, double theta)
-{
-	FloatArray res; res.resize(3);
-	FloatArray orig; orig.resize(3); orig.zero(); // always around origin
-
-	double x = vec.at(1); double y = vec.at(2); double z = vec.at(3);
-	double a = orig.at(1); // origin of rot. axis
-	double b = orig.at(2); double c = orig.at(3);
-	double u = dir.at(1); // direction of rot. axis
-	double v = dir.at(2); double w = dir.at(3);
-	double cosTh = cos(theta); double senTh = sin(theta);
-
-	res.at(1) = (a * (pow(v, pow(2 + w, 2))) - u * (b * v + c * w - u * x - v * y - w * z)) * (1 - cosTh) + x * cosTh + (-c * v + b * w - w * y + v * z) * senTh;
-	res.at(2) = (b * (pow(u, pow(2 + w, 2))) - v * (a * u + c * w - u * x - v * y - w * z)) * (1 - cosTh) + y * cosTh + (c * u - a * w + w * x - u * z) * senTh;
-	res.at(3) = (c * (pow(u, pow(2 + v, 2))) - w * (a * u + b * v - u * x - v * y - w * z)) * (1 - cosTh) + z * cosTh + (-b * u + a * v - v * x + u * y) * senTh;
-
-	return res;
 }
 
 int
@@ -876,9 +849,9 @@ MITC4Shell :: computeLocalBaseVectors(FloatArray &e1, FloatArray &e2, FloatArray
     e2.beVectorProductOf(e3, e1);
 
 	// rotate as to have the 1st local axis equal to la1
-	double ang = -giveAngleIn3Dplane(la1, e1, e3); // radians
-	e1 = rotate(e1, e3, ang);
-	e2 = rotate(e2, e3, ang);
+	double ang = -Angle::giveAngleIn3Dplane(la1, e1, e3); // radians
+	e1 = Angle::rotate(e1, e3, ang);
+	e2 = Angle::rotate(e2, e3, ang);
 }
 
 void
