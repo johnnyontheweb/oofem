@@ -121,6 +121,7 @@ protected:
     virtual double computeSurfaceVolumeAround(GaussPoint *gp, int iSurf);
     virtual int computeLoadLSToLRotationMatrix(FloatMatrix &answer, int iSurf, GaussPoint *gp);
     //@}
+	virtual void printOutputAt(FILE *file, TimeStep *tStep);
 };
 } // end namespace oofem
 #endif // quad1platesubsoil_H

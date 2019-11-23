@@ -293,5 +293,11 @@ Tria1PlateSubSoil :: computeLoadLSToLRotationMatrix(FloatMatrix &answer, int isu
     return 0;
 }
 
+void
+Tria1PlateSubSoil :: printOutputAt(FILE *file, TimeStep *tStep)
+// Performs end-of-step operations.
+{
+	fprintf(file, "element %d (%8d) macroelem %d :\n", this->giveLabel(), number, this->macroElem);
+}
 
 } // end namespace oofem
