@@ -1137,6 +1137,14 @@ MITC4Shell :: giveMidplaneIPValue(FloatArray &answer, int gpXY, InternalStateTyp
 {
     GaussPoint *gp = NULL;
 	answer.zero();
+
+//#ifdef DEBUG
+//	// debug
+//	if (this->number == 73) {
+//		printf("stop");
+//	}
+//#endif
+
     if ( type == IST_ShellMomentTensor || type == IST_ShellForceTensor ) {
         double J, thickness, z, w;
         FloatArray mLocal;
@@ -1161,6 +1169,7 @@ MITC4Shell :: giveMidplaneIPValue(FloatArray &answer, int gpXY, InternalStateTyp
             mLocal.add(w, localStress);
         }
 
+		if (type == IST_ShellMomentTensor) { mLocal.negated(); } // tension at bottom is positive bending
 		// local to global
 		this->computeGtoLRotationMatrix();
 		StructuralMaterial::transformStressVectorTo(answer, GtoLRotationMatrix, mLocal, false);
@@ -1189,7 +1198,7 @@ MITC4Shell :: giveMidplaneIPValue(FloatArray &answer, int gpXY, InternalStateTyp
         cLocal.at(1) = rotY.dotProduct(hkx);
         cLocal.at(2) = -rotX.dotProduct(hky);
         cLocal.at(6) = rotY.dotProduct(hky) - rotX.dotProduct(hkx);
-
+		cLocal.negated(); // tension at bottom is positive bending
 		StructuralMaterial::transformStrainVectorTo(answer, GtoLRotationMatrix, cLocal, false);
     } else if ( type == IST_ShellStrainTensor ) {
         FloatArray coords;

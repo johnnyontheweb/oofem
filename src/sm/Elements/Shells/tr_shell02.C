@@ -377,6 +377,7 @@ TR_SHELL02 :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
         GaussPoint *plateGP = plate->giveDefaultIntegrationRulePtr()->getIntegrationPoint(gp->giveNumber() - 1);
 
         plate->giveIPValue(answer, plateGP, type, tStep);
+		if (type == IST_ShellMomentTensor || type == IST_CurvatureTensor) { answer.negated(); } // tension at bottom is positive bending
         membrane->giveIPValue(aux, membraneGP, type, tStep);
         answer.add(aux);
         return 1;

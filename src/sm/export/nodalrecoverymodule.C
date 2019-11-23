@@ -182,19 +182,19 @@ namespace oofem {
 				//OOFEM_ERROR("internal error: invalid dofman data");
 			}
 
-#ifdef DEBUG
-			if (type == ISVT_SCALAR || type == ISVT_VECTOR || type == ISVT_TENSOR_S3 || type == ISVT_TENSOR_G) {
-				FloatArray t;
-				this->makeFullTensorForm(t, *val, type);
-				answer[regionNodalNumbers.at(inode)] = t;
-
-			}
-			else {
-#endif
+//#ifdef DEBUG
+//			if (type == ISVT_SCALAR || type == ISVT_VECTOR || type == ISVT_TENSOR_S3 || type == ISVT_TENSOR_G) {
+//				FloatArray t;
+//				this->makeFullTensorForm(t, *val, type);
+//				answer[regionNodalNumbers.at(inode)] = t;
+//
+//			}
+//			else {
+//#endif
 				answer[regionNodalNumbers.at(inode)] = *val;
-#ifdef DEBUG
-			}
-#endif
+//#ifdef DEBUG
+//			}
+//#endif
 
 		}
 
