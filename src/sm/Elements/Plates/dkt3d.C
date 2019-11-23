@@ -209,6 +209,12 @@ DKTPlate3d :: giveCharacteristicTensor(FloatMatrix &answer, CharTensor type, Gau
         answer.at(2, 2) = charVect.at(2);
         answer.at(1, 2) = charVect.at(3);
         answer.at(2, 1) = charVect.at(3);
+
+		// shear contributions
+		answer.at(1, 3) = charVect.at(4);
+		answer.at(3, 1) = charVect.at(4);
+		answer.at(2, 3) = charVect.at(5);
+		answer.at(3, 2) = charVect.at(5);
     } else if ( ( type == LocalStrainTensor ) || ( type == GlobalStrainTensor ) ) {
         //this->computeStrainVector(charVect, gp, tStep);
         charVect = ms->giveStrainVector();
