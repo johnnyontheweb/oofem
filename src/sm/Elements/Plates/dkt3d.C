@@ -202,7 +202,9 @@ DKTPlate3d :: giveCharacteristicTensor(FloatMatrix &answer, CharTensor type, Gau
         answer.at(2, 3) = charVect.at(5);
         answer.at(3, 2) = charVect.at(5);
     } else if ( ( type == LocalMomentumTensor ) || ( type == GlobalMomentumTensor ) ) {
-        //this->computeStressVector(charVect, gp, tStep);
+		//FloatArray strain;
+		//this->computeStrainVector(strain, gp, tStep);
+		//this->computeStressVector(charVect, strain, gp, tStep);
         charVect = ms->giveStressVector();
 
         answer.at(1, 1) = charVect.at(1);

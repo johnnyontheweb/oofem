@@ -72,11 +72,9 @@ TR_SHELL01 :: initializeFrom(InputRecord *ir)
     }
 
 //#if 0
-	int val=-1;
-    IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_Element_nip);
-	// set GPs in plate and membrane?
+	//int val=-1;
+	//IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_Element_nip);
 	
-
     //if ( val != -1 ) {
     //    OOFEM_WARNING("key word NIP is not allowed for element TR_SHELL01");
     //    //return result;
@@ -385,7 +383,10 @@ TR_SHELL01 :: computeVolumeAround(GaussPoint *gp)
 int
 TR_SHELL01 :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep)
 {
-    if ( type == IST_ShellForceTensor || type == IST_ShellStrainTensor ||
+	answer.resize(6);
+	answer.zero();
+
+	if ( type == IST_ShellForceTensor || type == IST_ShellStrainTensor ||
 		type == IST_ShellMomentTensor || type == IST_CurvatureTensor ) {
         FloatArray aux, aux2;
         GaussPoint *membraneGP = membrane->giveDefaultIntegrationRulePtr()->getIntegrationPoint(gp->giveNumber() - 1);
@@ -399,11 +400,15 @@ TR_SHELL01 :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
 		//StructuralMaterial *mat = dynamic_cast< StructuralMaterial * >(this->giveStructuralCrossSection()->giveMaterial(gp));
 		//FloatMatrix rot; this->giveRotationMatrix(rot);
 		//mat->transformStressVectorTo(answer, rot, aux2, false);
+		
+		//// debug
+		//if (this->giveLabel() == 21561) {
+		//	printf("stop");
+		//}
+
 		answer.add(aux2);
         return 1;
 	} else if (type == IST_StressTensor || type == IST_StrainTensor) {
-		answer.resize(6);
-		answer.zero();
 		return 1;
     } else {
         return StructuralElement :: giveIPValue(answer, gp, type, tStep);
