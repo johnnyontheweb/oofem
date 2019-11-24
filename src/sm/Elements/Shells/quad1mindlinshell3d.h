@@ -44,6 +44,7 @@
 //@{
 #define _IFT_Quad1MindlinShell3D_Name "quad1mindlinshell3d"
 #define _IFT_Quad1MindlinShell3D_ReducedIntegration "reducedintegration"
+#define _IFT_TR_Quad1MindlinShell3D_FirstLocalAxis "lcs1"
 //@}
 
 namespace oofem {
@@ -89,7 +90,7 @@ protected:
 public:
     Quad1MindlinShell3D(int n, Domain * d);
     virtual ~Quad1MindlinShell3D();
-
+	FloatArray la1;
     virtual FEInterpolation *giveInterpolation() const;
     virtual FEInterpolation *giveInterpolation(DofIDItem id) const;
 

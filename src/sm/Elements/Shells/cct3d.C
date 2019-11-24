@@ -41,6 +41,7 @@
 #include "gaussintegrationrule.h"
 #include "gausspoint.h"
 #include "classfactory.h"
+#include "angle.h"
 
 #include <cstdlib>
 
@@ -176,15 +177,20 @@ CCTPlate3d :: computeGtoLRotationMatrix()
         // let us normalize
         e3.normalize();
 
-		if (la1.computeNorm() !=0 ) {
-			// custom local axes
-			e1 = la1;
-		}
+		//if (la1.computeNorm() !=0 ) {
+		//	// custom local axes
+		//	e1 = la1;
+		//}
 
         // now from e3' x e1' compute e2'
         e2.beVectorProductOf(e3, e1);
 
-        //
+		// rotate as to have the 1st local axis equal to la1
+		double ang = -Angle::giveAngleIn3Dplane(la1, e1, e3); // radians
+		e1 = Angle::rotate(e1, e3, ang);
+		e2 = Angle::rotate(e2, e3, ang);
+
+        // rot. matrix
         GtoLRotationMatrix.resize(3, 3);
 
         for ( int i = 1; i <= 3; i++ ) {
@@ -245,6 +251,12 @@ CCTPlate3d :: giveCharacteristicTensor(FloatMatrix &answer, CharTensor type, Gau
         answer.at(2, 2) = charVect.at(2);
         answer.at(1, 2) = charVect.at(3);
         answer.at(2, 1) = charVect.at(3);
+
+		// shear forces
+		answer.at(1, 3) = charVect.at(4);
+		answer.at(3, 1) = charVect.at(4);
+		answer.at(2, 3) = charVect.at(5);
+		answer.at(3, 2) = charVect.at(5);
     } else if ( ( type == LocalStrainTensor ) || ( type == GlobalStrainTensor ) ) {
         //this->computeStrainVector(charVect, gp, tStep);
         charVect = ms->giveStrainVector();
@@ -297,7 +309,7 @@ CCTPlate3d :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
         answer.at(4) = 2 * globTensor.at(2, 3); //yz
         answer.at(5) = 2 * globTensor.at(1, 3); //xz
         answer.at(6) = 2 * globTensor.at(1, 2); //xy
-
+		if (type == IST_CurvatureTensor) { answer.negated(); }
         return 1;
     } else if ( type == IST_ShellMomentTensor || type == IST_ShellForceTensor ) {
         if ( type == IST_ShellMomentTensor ) {
@@ -314,7 +326,7 @@ CCTPlate3d :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
         answer.at(4) = globTensor.at(2, 3); //yz
         answer.at(5) = globTensor.at(1, 3); //xz
         answer.at(6) = globTensor.at(1, 2); //xy
-
+		if (type == IST_ShellMomentTensor) { answer.negated(); }
         return 1;
     } else {
         return NLStructuralElement :: giveIPValue(answer, gp, type, tStep);

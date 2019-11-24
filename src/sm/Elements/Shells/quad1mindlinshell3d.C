@@ -48,6 +48,7 @@
 #include "mathfem.h"
 #include "fei2dquadlin.h"
 #include "classfactory.h"
+#include "angle.h"
 
 namespace oofem {
 REGISTER_Element(Quad1MindlinShell3D);
@@ -585,6 +586,13 @@ IRResultType
 Quad1MindlinShell3D :: initializeFrom(InputRecord *ir)
 {
     this->reducedIntegrationFlag = ir->hasField(_IFT_Quad1MindlinShell3D_ReducedIntegration);
+
+	// optional record for 1st local axes
+	la1.resize(3);
+	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
+	//IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_TR_Quad1MindlinShell3D_FirstLocalAxis);
+	this->la1 = ir->hasField(_IFT_TR_Quad1MindlinShell3D_FirstLocalAxis);
+
     return NLStructuralElement :: initializeFrom(ir);
 }
 
@@ -677,6 +685,7 @@ Quad1MindlinShell3D :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalS
         answer.at(4) = 0.0;      // mzy
         answer.at(5) = 0.0;      // mzx
         answer.at(6) = help.at(6); // mxy
+		if (type == IST_ShellMomentTensor || type == IST_CurvatureTensor) { answer.negated(); }
         return 1;
     } else {
         return NLStructuralElement :: giveIPValue(answer, gp, type, tStep);
@@ -763,6 +772,13 @@ Quad1MindlinShell3D :: computeLCS()
     e3.beVectorProductOf(e1, help);
     e3.normalize();
     e2.beVectorProductOf(e3, e1);
+
+	// rotate as to have the 1st local axis equal to la1
+	double ang = -Angle::giveAngleIn3Dplane(la1, e1, e3); // radians
+	e1 = Angle::rotate(e1, e3, ang);
+	e2 = Angle::rotate(e2, e3, ang);
+
+	// rot. matrix
     for ( int i = 1; i <= 3; i++ ) {
         this->lcsMatrix.at(1, i) = e1.at(i);
         this->lcsMatrix.at(2, i) = e2.at(i);
