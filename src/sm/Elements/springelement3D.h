@@ -82,8 +82,8 @@ public:
     virtual void computeMassMatrix(FloatMatrix &answer, TimeStep *tStep)
     { computeLumpedMassMatrix(answer, tStep); }
     virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep);
-    virtual void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
-    { answer.clear(); }
+	virtual void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep);
+    // { answer.clear(); }
 	virtual int giveLocalCoordinateSystem(FloatMatrix &answer);
     virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord = 0);
 

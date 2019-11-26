@@ -239,4 +239,12 @@ void SpringElement3D :: printOutputAt(FILE *File, TimeStep *tStep)
 		fprintf(File, "SpringElement3D %d :%.4e %.4e %.4e %.4e %.4e %.4e\n", this->giveLabel(), this->computeSpringInternalForce(tStep));
 	}
 }
+
+void SpringElement3D :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
+{
+	// computes initial stress matrix of receiver (or geometric stiffness matrix)
+	answer.resize(12, 12);
+	answer.zero();
+}
+
 } // end namespace oofem
