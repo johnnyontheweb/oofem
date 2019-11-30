@@ -85,9 +85,11 @@ namespace oofem {
 		* at the element level for computation efficiency.
 		*/
 		FloatMatrix GtoLRotationMatrix;
-    int nPointsXY, nPointsZ;
-	// macro element number
-	int macroElem;
+		int nPointsXY, nPointsZ;
+		// macro element number
+		int macroElem;
+		double drillCoeff;
+
 	private:
 		//std::auto_ptr<FloatMatrix> NMatrix;
 		std::vector<std::auto_ptr<FloatMatrix>> BMatrices;
@@ -113,6 +115,7 @@ namespace oofem {
 		virtual void NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node, InternalStateType type, TimeStep *tStep);
 
 		virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep);
+		void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord) override;
 
 		// transformation
     bool computeGtoLRotationMatrix(FloatMatrix &answer);
