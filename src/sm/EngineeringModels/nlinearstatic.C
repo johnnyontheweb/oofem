@@ -204,6 +204,9 @@ NonLinearStatic :: initializeFrom(InputRecord *ir)
     if ( ir->hasField(_IFT_NonLinearStatic_updateElasticStiffnessFlag) ) {
       updateElasticStiffnessFlag = true;
     }
+
+	secOrder = false;
+	IR_GIVE_OPTIONAL_FIELD(ir, secOrder, _IFT_NonLinearStatic_secondOrder);
     
 #ifdef __PARALLEL_MODE
     if ( isParallel() ) {
@@ -460,6 +463,11 @@ NonLinearStatic :: proceedStep(int di, TimeStep *tStep)
         }
 
         stiffnessMatrix->buildInternalStructure( this, di, EModelDefaultEquationNumbering() );
+
+		if (secOrder) { 
+			initialStressMatrix.reset(classFactory.createSparseMtrx(sparseMtrxType));
+			initialStressMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
+		};
     }
 
 #if 0
@@ -566,6 +574,23 @@ NonLinearStatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *
 #endif
             this->assemble(*stiffnessMatrix, tStep, TangentAssembler(TangentStiffness),
                            EModelDefaultEquationNumbering(), d);
+			if (secOrder) {
+				// update internal state - nodes ...
+				for (auto &dman : d->giveDofManagers()) {
+					dman->updateYourself(tStep);
+				}
+				// ... and elements
+				for (auto &elem : d->giveElements()) {
+					elem->updateInternalState(tStep);
+					elem->updateYourself(tStep);
+				}
+#ifdef VERBOSE
+				OOFEM_LOG_INFO("Assembling initial stress matrix\n");
+#endif
+				initialStressMatrix->zero();
+				this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain(1));
+				stiffnessMatrix->add(1, *initialStressMatrix); // in 1st step this would be zero
+			}
         } else if ( ( stiffMode == nls_secantStiffness ) || ( stiffMode == nls_secantInitialStiffness && initFlag ) ) {
 #ifdef VERBOSE
             OOFEM_LOG_DEBUG("Assembling secant stiffness matrix\n");

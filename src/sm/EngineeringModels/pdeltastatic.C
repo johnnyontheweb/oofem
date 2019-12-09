@@ -216,6 +216,9 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
                        EModelDefaultEquationNumbering(), this->giveDomain(1) );
 
         initFlag = 0;
+
+		initialStressMatrix.reset(classFactory.createSparseMtrx(sparseMtrxType));
+		initialStressMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
     }
 
 #ifdef VERBOSE
@@ -264,11 +267,11 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 	// norm of previous displ. vector
 	double oldNorm = displacementVector.computeSquaredNorm(); double newNorm = 0;
 	bool escape = false; int maxIter = 0;
-	initialStressMatrix.reset(classFactory.createSparseMtrx(sparseMtrxType)); // stresses are in the model now
-	initialStressMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
+	//initialStressMatrix.reset(classFactory.createSparseMtrx(sparseMtrxType)); // stresses are in the model now
+	//initialStressMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
 
 	do {
-		// PDELTA approx solution without iterations - maximum 10 iterations
+		// PDELTA approx solution with iterations - maximum 10 iterations
 		if (newNorm!=0) oldNorm = newNorm;
 		maxIter += 1;
 		// terminate linear static computation (necessary, in order to compute stresses in elements).

@@ -52,6 +52,7 @@
 #define _IFT_NonLinearStatic_loadBalancingFlag "loadbalancingflag"
 #define _IFT_NonLinearStatic_forceloadBalancingFlag "forceloadbalancingflag"
 #define _IFT_NonLinearStatic_updateElasticStiffnessFlag "updateelasticstiffnessflag"
+#define _IFT_NonLinearStatic_secondOrder "secorder"
 //@}
 
 namespace oofem {
@@ -91,7 +92,7 @@ protected:
     double prevStepLength, currentStepLength;
     FloatArray totalDisplacement,  incrementOfDisplacement;
     FloatArray internalForces;
-
+	std::unique_ptr< SparseMtrx > initialStressMatrix;
     /// A load vector already applied, which does not scales.
     FloatArray initialLoadVector;
     /**
@@ -118,6 +119,8 @@ protected:
     NonLinearStatic_controlType controlMode;
     /// Intrinsic time increment.
     double deltaT;
+	// second order contribution for elements
+	bool secOrder;
 
    /**
      * The following parameter allows to specify how the reference load vector

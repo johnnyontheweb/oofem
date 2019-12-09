@@ -170,6 +170,9 @@ NonLinearDynamic :: initializeFrom(InputRecord *ir)
     MANRMSteps = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, MANRMSteps, _IFT_NRSolver_manrmsteps);
 
+	secOrder = false;
+	IR_GIVE_OPTIONAL_FIELD(ir, secOrder, _IFT_NonLinearDynamic_secondOrder);
+
 #ifdef __PARALLEL_MODE
     if ( isParallel() ) {
         commBuff = new CommunicatorBuff(this->giveNumberOfProcesses(), CBT_static);
@@ -398,6 +401,11 @@ NonLinearDynamic :: proceedStep(int di, TimeStep *tStep)
         effectiveStiffnessMatrix->buildInternalStructure( this, di, EModelDefaultEquationNumbering() );
         massMatrix->buildInternalStructure( this, di, EModelDefaultEquationNumbering() );
 
+		if (secOrder) {
+			initialStressMatrix.reset(classFactory.createSparseMtrx(sparseMtrxType));
+			initialStressMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
+		}
+
         // Assemble mass matrix
         this->assemble( *massMatrix, tStep, MassMatrixAssembler(),
                        EModelDefaultEquationNumbering(), this->giveDomain(di) );
@@ -594,6 +602,23 @@ void NonLinearDynamic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Do
             effectiveStiffnessMatrix->zero();
             this->assemble(*effectiveStiffnessMatrix, tStep, EffectiveTangentAssembler(false, 1 + this->delta * a1,  this->a0 + this->eta * this->a1),
                            EModelDefaultEquationNumbering(), d);
+			if (secOrder) {
+				// update internal state - nodes ...
+				for (auto &dman : d->giveDofManagers()) {
+					dman->updateYourself(tStep);
+				}
+				// ... and elements
+				for (auto &elem : d->giveElements()) {
+					elem->updateInternalState(tStep);
+					elem->updateYourself(tStep);
+				}
+#ifdef VERBOSE
+				OOFEM_LOG_INFO("Assembling initial stress matrix\n");
+#endif
+				initialStressMatrix->zero();
+				this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain(1));
+				effectiveStiffnessMatrix->add(1, *initialStressMatrix); // in 1st step this would be zero
+			}
 #else
             this->assemble(effectiveStiffnessMatrix, tStep, TangentStiffnessMatrix,
                            EModelDefaultEquationNumbering(), d);

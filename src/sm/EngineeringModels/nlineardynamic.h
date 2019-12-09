@@ -53,6 +53,7 @@
 #define _IFT_NonLinearDynamic_beta "beta"
 #define _IFT_NonLinearDynamic_eta "eta"
 #define _IFT_NonLinearDynamic_delta "delta"
+#define _IFT_NonLinearDynamic_secondOrder "secorder"
 //@}
 
 namespace oofem {
@@ -86,7 +87,7 @@ class NonLinearDynamic : public StructuralEngngModel
 {
 protected:
     std :: unique_ptr< SparseMtrx > effectiveStiffnessMatrix, massMatrix;
-
+	std::unique_ptr< SparseMtrx > initialStressMatrix;
     LinSystSolverType solverType;
     SparseMtrxType sparseMtrxType;
 
@@ -110,6 +111,8 @@ protected:
     std :: unique_ptr< SparseNonLinearSystemNM > nMethod;
     /// Intrinsic time increment.
     double deltaT;
+	// second order contribution for elements
+	bool secOrder;
 
 public:
     NonLinearDynamic(int i, EngngModel * _master = NULL);
