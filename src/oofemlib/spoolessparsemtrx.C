@@ -167,7 +167,7 @@ SpoolesSparseMtrx :: assemble(const IntArray &rloc, const IntArray &cloc, const 
     return 1;
 }
 
-void SpoolesSparseMtrx::add(double x, SparseMtrx &m)
+void SpoolesSparseMtrx::add(double x, FloatMatrix &m)
 {
 	int dim1 = m.giveNumberOfRows();
 	int dim2 = m.giveNumberOfColumns();
@@ -176,12 +176,11 @@ void SpoolesSparseMtrx::add(double x, SparseMtrx &m)
 	 for (j = 1; j <= dim2; j++)
 	 {
 		 //if (j > i) {
-			// continue; // symmetric lower triangular
+			// continue; // symmetric lower triangular?
 		 //}
 		 InpMtx_inputRealEntry(this->mtrx, i - 1, j - 1, m.at(i, j));
 	 }
 	}
-	// InpMtx_inputRealMatrix(this->mtrx, dim1, dim2, 0, 0, )
 	this->version++;
 }
 

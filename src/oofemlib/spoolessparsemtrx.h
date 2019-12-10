@@ -95,7 +95,7 @@ public:
     virtual void printYourself() const;
     virtual SparseMtrxType  giveType() const { return SMT_SpoolesMtrx; }
     virtual bool isAsymmetric() const { return this->type == SPOOLES_NONSYMMETRIC; }
-	virtual void add(double x, SparseMtrx &m);
+	virtual void add(double x, FloatMatrix &m);
     // Exposed internals
     InpMtx *giveInpMtrx() { return this->mtrx; }
     int giveValueType() const { return type; }

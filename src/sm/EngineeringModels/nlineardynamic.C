@@ -172,6 +172,10 @@ NonLinearDynamic :: initializeFrom(InputRecord *ir)
 
 	secOrder = false;
 	IR_GIVE_OPTIONAL_FIELD(ir, secOrder, _IFT_NonLinearDynamic_secondOrder);
+	if (secOrder && sparseMtrxType > 1) {
+		sparseMtrxType = SMT_EigenSparse;
+		solverType = ST_EigenLib;
+	}
 
 #ifdef __PARALLEL_MODE
     if ( isParallel() ) {
