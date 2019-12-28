@@ -32,11 +32,12 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/SpringElement3D.h"
+#include "springelement3D.h"
 #include "floatmatrix.h"
 #include "intarray.h"
 #include "floatarray.h"
 #include "classfactory.h"
+#include "node.h"
 
 #ifdef __OOFEG
  #include "oofeggraphiccontext.h"
@@ -245,6 +246,53 @@ void SpringElement3D :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep
 	// computes initial stress matrix of receiver (or geometric stiffness matrix)
 	answer.resize(12, 12);
 	answer.zero();
+
+	// computes initial stress matrix of receiver (or geometric stiffness matrix)
+
+	FloatMatrix stiff;
+	FloatArray endForces;
+
+	double l = this->computeLength();
+	double N;
+
+	answer.resize(6, 6);
+	answer.zero();
+
+	answer.at(2, 2) = 1;
+	answer.at(2, 11) = -1;
+
+	answer.at(3, 3) = 1;
+	answer.at(3, 12) = -1;
+
+	answer.at(11, 2) = -1;
+	answer.at(11, 11) = 1;
+
+	answer.at(12, 3) = -1;
+	answer.at(12, 12) = 1;
+
+	FloatMatrix lcs;
+	this->giveLocalCoordinateSystem(lcs);
+
+	FloatMatrix transf(12, 12);
+	this->computeGtoLRotationMatrix(transf);
+
+	answer.rotatedWith(transf, 'n');
+	// ask end forces in g.c.s
+	this->giveInternalForcesVector(endForces, tStep);
+
+	FloatArray N1, N2;
+	IntArray ind({ 1, 2, 3 });
+	IntArray ind2({ 7, 8, 9 });
+	N1.beSubArrayOf(endForces, ind);
+	N2.beSubArrayOf(endForces, ind2);
+
+	FloatArray lx;
+	lx.beDifferenceOf(*this->giveNode(2)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
+	lx.normalize();
+
+	// sign of N
+	N = (-N1.dotProduct(lx) + N2.dotProduct(lx)) / 2.;
+	answer.times(N / l);
 }
 
 } // end namespace oofem
