@@ -592,7 +592,7 @@ NonLinearStatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *
 				OOFEM_LOG_INFO("Assembling initial stress matrix\n");
 #endif
 				initialStressMatrix->zero();
-				this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain(1));
+				this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), d);
 				stiffnessMatrix->add(1, *initialStressMatrix); // in 1st step this would be zero
 			}
         } else if ( ( stiffMode == nls_secantStiffness ) || ( stiffMode == nls_secantInitialStiffness && initFlag ) ) {

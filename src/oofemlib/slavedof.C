@@ -86,9 +86,11 @@ SlaveDof :: giveNumberOfPrimaryMasterDofs()
     if ( countOfPrimaryMasterDofs > 0 ) {
         return countOfPrimaryMasterDofs;
     }  else
-//    if ( countOfPrimaryMasterDofs == 0 ) {
- //     OOFEM_ERROR("slaveDof is own master");
- //   }
+	// this->giveDofManager()->giveLabel() ' current node
+	// dofManager->giveDomain()->giveDofManager(masterDofMans.at(1))->giveLabel() // master dof for i-th dof
+	if (this->giveDofManager()->giveLabel() == dofManager->giveDomain()->giveDofManager(masterDofMans.at(1))->giveLabel()) {
+      OOFEM_ERROR("slaveDof is own master");
+    }
 
     countOfPrimaryMasterDofs = 0;
 
