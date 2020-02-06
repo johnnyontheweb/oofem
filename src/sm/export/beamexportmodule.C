@@ -83,7 +83,7 @@ namespace oofem {
 	}
 
 	void
-		addComponents(FloatArray &dst, std::pair<FloatArray,FloatArray> &src, double pos, double len, bool momentOnly = false)
+		addComponents(FloatArray &dst, std::pair<FloatArray,FloatArray> &src, double pos, double len, bool bendingMomentOnly = false)
 	{
 		FloatArray &qi = src.first, &qf = src.second;
 		double tot1, tot2, tot3;
@@ -104,13 +104,16 @@ namespace oofem {
 		V3E = V3I-tot3;
 		double pos2 = pos*pos, pos3 = pos2*pos;
 
-		if (!momentOnly) {
+		if (!bendingMomentOnly) {
 			// axial force.
 			dst.at(1) -= (qi.at(1)*pos + (qf.at(1) - qi.at(1)) / 2 / len*pos*pos);
 
 			// shear forces.
 			dst.at(2) -= (qi.at(2)*pos + (qf.at(2) - qi.at(2)) / 2 / len*pos*pos);
 			dst.at(3) -= (qi.at(3)*pos + (qf.at(3) - qi.at(3)) / 2 / len*pos*pos);
+
+			// torsion
+			dst.at(4) -= (qi.at(4)*pos + (qf.at(4) - qi.at(4)) / 2 / len * pos*pos);
 		}
 
 		// moments.
@@ -1048,9 +1051,9 @@ namespace oofem {
 						//btx = (tx_l - tx_0) / l - atx*l;
 						//ctx = tx_0;
 
-						atx = (qf.at(1) - qi.at(1)) / (6 * GJ*l);
-						btx = qi.at(1) / (2 * GJ);
-						ctx = -(6 * GJ*(tx_0 - tx_l) + l_2*(qf.at(1) + 2 * qi.at(1))) / (6 * GJ*l);
+						atx = (qf.at(4) - qi.at(4)) / (6 * GJ*l);
+						btx = qi.at(4) / (2 * GJ);
+						ctx = -(6 * GJ*(tx_0 - tx_l) + l_2*(qf.at(4) + 2 * qi.at(4))) / (6 * GJ*l);
 						dtx = tx_0;
 						
 						calc = true;
