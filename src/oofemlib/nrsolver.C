@@ -264,6 +264,7 @@ NRSolver :: solve(SparseMtrx &k, FloatArray &R, FloatArray *R0,
         } else if ( converged && ( nite >= minIterations ) ) {
             break;
         } else if ( nite >= nsmax ) {
+			status = NM_NoSuccess;
             OOFEM_LOG_DEBUG("Maximum number of iterations reached\n");
             break;
         }

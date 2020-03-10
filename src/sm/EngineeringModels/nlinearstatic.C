@@ -553,6 +553,10 @@ NonLinearStatic :: proceedStep(int di, TimeStep *tStep)
                                       totalDisplacement, incrementOfDisplacement, internalForces,
                                       internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
     }
+
+	if (numMetStatus & NM_NoSuccess) {
+		OOFEM_ERROR("Solver couldn't find equilibrium at step number %5d.%d in %d iterations\n", tStep->giveNumber(), tStep->giveVersion(), currentIterations);
+	}
     ///@todo Martin: ta bort!!!
     //this->updateComponent(tStep, NonLinearLhs, this->giveDomain(di));
     ///@todo Use temporary variables. updateYourself() should set the final values, while proceedStep should be callable multiple times for each step (if necessary). / Mikael
