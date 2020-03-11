@@ -412,10 +412,10 @@ restart:
                 calm_NR_OldMode  = calm_NR_Mode;
                 calm_NR_Mode     = calm_fullNRM;
                 calm_NR_ModeTick = CALM_DEFAULT_NRM_TICKS;
-                goto restart;
+                goto  ;
             } else {
                 status = NM_NoSuccess;
-                OOFEM_WARNING("Convergence not reached after %d iterations", nsmax);
+                OOFEM_ERROR("Convergence not reached after %d restarts and %d iterations", maxRestarts, nsmax);
                 // exit(1);
                 break;
             }
