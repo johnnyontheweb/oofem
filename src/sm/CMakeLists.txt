@@ -131,6 +131,7 @@ set (sm_emodel
     EngineeringModels/staticstructural.C
     EngineeringModels/linearstatic.C
     EngineeringModels/pdeltastatic.C
+    EngineeringModels/pdeltanstatic.C
     EngineeringModels/nlinearstatic.C
     EngineeringModels/nlineardynamic.C
     EngineeringModels/eigenvaluedynamic.C
