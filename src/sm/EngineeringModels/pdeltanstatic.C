@@ -579,7 +579,7 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
 		// initialStressMatrix.reset(stiffnessMatrix->GiveCopy());
 		initialStressMatrix->zero();
 
-		this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain(1));
+		this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain(di));
 		std::unique_ptr< SparseMtrx > Kiter;
 		Kiter.reset(stiffnessMatrix->GiveCopy());
 		Kiter->add(1, *initialStressMatrix);
@@ -667,12 +667,12 @@ PdeltaNstatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *d)
 					elem->updateInternalState(tStep);
 					elem->updateYourself(tStep);
 				}
-#ifdef VERBOSE
-				OOFEM_LOG_INFO("Assembling initial stress matrix\n");
-#endif
-				initialStressMatrix->zero();
-				this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), d);
-				stiffnessMatrix->add(1, *initialStressMatrix); // in 1st step this would be zero
+//#ifdef VERBOSE
+//				OOFEM_LOG_INFO("Assembling initial stress matrix\n");
+//#endif
+//				initialStressMatrix->zero();
+//				this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), d);
+//				stiffnessMatrix->add(1, *initialStressMatrix); // in 1st step this would be zero
 			//}
         } else if ( ( stiffMode == nls_secantStiffness ) || ( stiffMode == nls_secantInitialStiffness && initFlag ) ) {
 #ifdef VERBOSE
