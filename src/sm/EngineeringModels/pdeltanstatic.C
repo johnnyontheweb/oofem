@@ -127,7 +127,7 @@ NumericalMethod *PdeltaNstatic :: giveNumericalMethod(MetaStep *mStep)
     } else {
         OOFEM_ERROR("unsupported controlMode");
     }
-
+	
     return this->nMethod;
 }
 
@@ -299,9 +299,7 @@ TimeStep *PdeltaNstatic :: giveSolutionStepWhenIcApply(bool force)
     if ( !stepWhenIcApply ) {
         int inin = giveNumberOfTimeStepWhenIcApply();
 	//        int nFirst = giveNumberOfFirstStep();
-		//stepWhenIcApply.reset(new TimeStep(inin, this, 0, -deltaT, deltaT, 0));
-		// pdelta - start at first increment
-		stepWhenIcApply.reset(new TimeStep(inin + 1, this, 0, deltaT, deltaT, 0));
+		stepWhenIcApply.reset(new TimeStep(inin, this, 0, -deltaT, deltaT, 0));
     }
 
     return stepWhenIcApply.get();
@@ -338,6 +336,7 @@ TimeStep *PdeltaNstatic :: giveNextStep()
         // first step -> generate initial step
         TimeStep *newStep = giveSolutionStepWhenIcApply();
         currentStep.reset(new TimeStep(*newStep));
+		totalTime += deltaTtmp; // starts with first increment
     }
 
     previousStep = std :: move(currentStep);
@@ -550,33 +549,29 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
 
 
 	// pdelta ----------------------------------------------------------
-#ifdef VERBOSE
-	OOFEM_LOG_INFO("\n\nSolving initial ...\n\n");
-#endif
-	//NM_Status s = 
-	// SOLVER
-	if (initialLoadVector.isNotEmpty()) {
-		numMetStatus = nMethod->solve(*stiffnessMatrix, incrementalLoadVector, &initialLoadVector,
-			totalDisplacement, incrementOfDisplacement, internalForces,
-			internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
-	}
-	else {
-		numMetStatus = nMethod->solve(*stiffnessMatrix, incrementalLoadVector, NULL,
-			totalDisplacement, incrementOfDisplacement, internalForces,
-			internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
-	}
+//#ifdef VERBOSE
+//	OOFEM_LOG_INFO("\n\nSolving initial ...\n\n");
+//#endif
+//	//NM_Status s = 
+//	// SOLVER
+//	if (initialLoadVector.isNotEmpty()) {
+//		numMetStatus = nMethod->solve(*stiffnessMatrix, incrementalLoadVector, &initialLoadVector,
+//			totalDisplacement, incrementOfDisplacement, internalForces,
+//			internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
+//	}
+//	else {
+//		numMetStatus = nMethod->solve(*stiffnessMatrix, incrementalLoadVector, NULL,
+//			totalDisplacement, incrementOfDisplacement, internalForces,
+//			internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
+//	}
 	// norm of previous displ. vector
-	double oldNorm = totalDisplacement.computeSquaredNorm(); double newNorm = 0;
-	bool escape = false; int maxIter = 0;
-	//initialStressMatrix.reset(classFactory.createSparseMtrx(sparseMtrxType)); // stresses are in the model now
-	//initialStressMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
+	//double oldNorm = totalDisplacement.computeSquaredNorm(); double newNorm = 0;
+	//bool escape = false; int maxIter = 0;
 
-	do {
-		// PDELTA approx solution with iterations - maximum 10 iterations
-		if (newNorm != 0) oldNorm = newNorm;
-		maxIter += 1;
-		// terminate linear static computation (necessary, in order to compute stresses in elements).
-		//this->updateInternalState(this->giveCurrentStep()); // not needed for beam - conservatively left (shells?)
+	//do {
+	//	// PDELTA approx solution with iterations - maximum 10 iterations
+	//	if (newNorm != 0) oldNorm = newNorm;
+		//maxIter += 1;
 		this->updateComponent(tStep, NonLinearLhs, this->giveDomain(di));
 #ifdef VERBOSE
 		OOFEM_LOG_INFO("Assembling initial stress matrix\n");
@@ -595,9 +590,9 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
 		//#endif
 
 		// solve again
-#ifdef VERBOSE
-		OOFEM_LOG_INFO("\nSolving iteration %d ...\n", maxIter);
-#endif
+//#ifdef VERBOSE
+//		OOFEM_LOG_INFO("\nSolving iteration %d ...\n", maxIter);
+//#endif
 		// SOLVER
 		if (initialLoadVector.isNotEmpty()) {
 			numMetStatus = nMethod->solve(*Kiter, incrementalLoadVector, &initialLoadVector,
@@ -610,15 +605,16 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
 				internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
 		}
 
-		// check convergence on DISPLACEMENTS: ( u(i)^2 - u(i-1)^2 ) / u(i)^2
-		newNorm = totalDisplacement.computeSquaredNorm();
-		double toll = abs((newNorm - oldNorm) / newNorm);
-		if (toll <= rtolv || maxIter >= 20) escape = true;
-#ifdef VERBOSE
-		OOFEM_LOG_INFO("\nCurrent displ. residual: %.2e \n\n", toll);
-#endif
-		// PDELTA end p-delta stiffness
-	} while (escape == false);
+//		// check convergence on DISPLACEMENTS: ( u(i)^2 - u(i-1)^2 ) / u(i)^2
+//		newNorm = totalDisplacement.computeSquaredNorm();
+//		if (maxIter == 1 && oldNorm == 0) oldNorm = newNorm; // first trial
+//		double toll = abs((newNorm - oldNorm) / newNorm);
+//		if (toll <= rtolv || maxIter >= 20) escape = true;
+//#ifdef VERBOSE
+//		OOFEM_LOG_INFO("\nCurrent displ. residual: %.2e \n\n", toll);
+//#endif
+//		// PDELTA end p-delta stiffness
+//	} while (escape == false);
 
 	// END pdelta ----------------------------------------------------------
 
@@ -661,7 +657,7 @@ PdeltaNstatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *d)
 #endif
             this->assemble(*stiffnessMatrix, tStep, TangentAssembler(TangentStiffness),
                            EModelDefaultEquationNumbering(), d);
-			if (secOrder) {
+			//if (secOrder) {
 				// update internal state - nodes ...
 				for (auto &dman : d->giveDofManagers()) {
 					dman->updateYourself(tStep);
@@ -677,7 +673,7 @@ PdeltaNstatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *d)
 				initialStressMatrix->zero();
 				this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), d);
 				stiffnessMatrix->add(1, *initialStressMatrix); // in 1st step this would be zero
-			}
+			//}
         } else if ( ( stiffMode == nls_secantStiffness ) || ( stiffMode == nls_secantInitialStiffness && initFlag ) ) {
 #ifdef VERBOSE
             OOFEM_LOG_DEBUG("Assembling secant stiffness matrix\n");

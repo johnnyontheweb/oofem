@@ -320,6 +320,7 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 
 		// check convergence on DISPLACEMENTS: ( u(i)^2 - u(i-1)^2 ) / u(i)^2
 		newNorm = displacementVector.computeSquaredNorm();
+		if (maxIter == 1 && oldNorm == 0) oldNorm = newNorm; // first trial
 		double toll = abs((newNorm - oldNorm) / newNorm);
 		if (toll <= rtolv || maxIter >= 20) escape = true;
 #ifdef VERBOSE
