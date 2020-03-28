@@ -396,8 +396,8 @@ MITC4Shell :: computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer)
 void
 MITC4Shell :: computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
 {
-    StructuralCrossSection *scs = dynamic_cast< StructuralCrossSection * >( this->giveCrossSection() );
-    //SimpleCrossSection *cs = dynamic_cast< SimpleCrossSection * >( this->giveCrossSection() );
+    StructuralCrossSection *scs = static_cast< StructuralCrossSection * >( this->giveCrossSection() );
+    //SimpleCrossSection *cs = static_cast< SimpleCrossSection * >( this->giveCrossSection() );
     scs->give3dDegeneratedShellStiffMtrx(answer, rMode, gp, tStep);
 }
 
@@ -1134,7 +1134,7 @@ MITC4Shell :: giveCharacteristicTensor(FloatMatrix &answer, CharTensor type, Gau
     answer.resize(3, 3);
     answer.zero();
     this->computeGtoLRotationMatrix();
-    StructuralMaterial *mat = dynamic_cast< StructuralMaterial * >( this->giveStructuralCrossSection()->giveMaterial(gp) );
+    StructuralMaterial *mat = static_cast< StructuralMaterial * >( this->giveStructuralCrossSection()->giveMaterial(gp) );
 
     if ( ( type == GlobalForceTensor ) ) {
         FloatArray stress, localStress, localStrain;

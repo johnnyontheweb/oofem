@@ -967,3 +967,7 @@ tests/sm/t3d.bmf
 /oofem.dir/RelWithDebInfo/oofem.vcxprojAssemblyReference.cache
 /src/sm/sm.dir/RelWithDebInfo/sm.pdb
 /MinSizeRel/*.in
+/.vs/oofem/v16/.suo
+/.vs/oofem/v16/Browse.VC.db
+/.vs/oofem/v16/Solution.VC.db
+/oofem.dir/MinSizeRel/oofem.vcxprojAssemblyReference.cache

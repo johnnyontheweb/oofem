@@ -93,7 +93,7 @@ void StructuralElement :: computeLoadVector(FloatArray &answer, BodyLoad *load, 
         return;
     }
     // Just a wrapper for the deadweight body load computations:
-    PointLoad *p = dynamic_cast< PointLoad * >(load);
+    PointLoad *p = static_cast< PointLoad * >(load);
     if ( p ) {
         FloatArray lcoords;
         if ( this->computeLocalCoordinates( lcoords, p->giveCoordinates() ) ) {
@@ -304,7 +304,7 @@ StructuralElement :: computePointLoadVectorAt(FloatArray &answer, Load *load, Ti
     FloatArray force, lcoords;
     FloatMatrix T, n;
 
-    PointLoad *pointLoad = dynamic_cast< PointLoad * >(load);
+    PointLoad *pointLoad = static_cast< PointLoad * >(load);
     FloatArray coords = pointLoad->giveCoordinates();
     pointLoad->computeValueAt(force, tStep, coords, mode);
     if ( this->computeLocalCoordinates( lcoords, pointLoad->giveCoordinates() ) ) {
@@ -503,7 +503,8 @@ StructuralElement :: computeResultingIPTemperatureAt(FloatArray &answer, TimeSte
 
       GeneralBoundaryCondition *bc = domain->giveBc(i);
 
-      if (( load = dynamic_cast< StructuralTemperatureLoad * >(bc) )) {
+	  //if ((load = dynamic_cast< StructuralTemperatureLoad * >(bc))) {
+	if ((load = static_cast< StructuralTemperatureLoad * >(bc))) {
 	
 	if  ( bc->giveSetNumber() && bc->isImposed(tStep) ) {
 	  if ( load->giveBCValType() == TemperatureBVT ) {
@@ -555,7 +556,7 @@ StructuralElement :: computeResultingIPEigenstrainAt(FloatArray &answer, TimeSte
 
       GeneralBoundaryCondition *bc = domain->giveBc(i);
 
-      if  (( load = dynamic_cast< StructuralEigenstrainLoad * >(bc) )) {
+      if  (( load = static_cast< StructuralEigenstrainLoad * >(bc) )) {
 	if  ( bc->giveSetNumber() && bc->isImposed(tStep) ) {
 	  if ( load->giveBCValType() == EigenstrainBVT ) {
 	    

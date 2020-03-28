@@ -922,7 +922,7 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
 	//answer.at(4, 10) = -answer.at(4, 4);
 	//answer.at(10, 10) = answer.at(4, 4);
 
-	StructuralMaterial *mat = dynamic_cast<StructuralMaterial *>(this->giveMaterial());
+	StructuralMaterial *mat = static_cast<StructuralMaterial *>(this->giveMaterial());
 
 	FloatMatrix mat3d;
 	double area, G;
@@ -1152,7 +1152,7 @@ Beam3d :: giveInternalForcesVectorAtPoint(FloatArray &answer, TimeStep *tStep, F
         int id = boundaryLoadArray.at(i * 2);
         Load *load = domain->giveLoad(n);
 	BoundaryLoad* bLoad;
-	if ((bLoad = dynamic_cast<BoundaryLoad*> (load))) {
+	if ((bLoad = static_cast<BoundaryLoad*> (load))) {
 	  bcGeomType ltype = load->giveBCGeoType();
 	  if ( ltype == EdgeLoadBGT ) {
             this->computeInternalForcesFromBoundaryEdgeLoadVectorAtPoint(help, bLoad, id,
@@ -1179,10 +1179,10 @@ Beam3d :: giveInternalForcesVectorAtPoint(FloatArray &answer, TimeStep *tStep, F
       BodyLoad *bodyLoad;
       BoundaryLoad *boundaryLoad;
       if (bc->isImposed(tStep)) {
-        if ((bodyLoad = dynamic_cast<BodyLoad*>(bc))) { // body load
+        if ((bodyLoad = static_cast<BodyLoad*>(bc))) { // body load
           this->computeInternalForcesFromBodyLoadVectorAtPoint(help,bodyLoad, tStep, VM_Total, coords, ds); // this one is local
           //answer.subtract(help);
-        } else if ((boundaryLoad = dynamic_cast<BoundaryLoad*>(bc))) {
+        } else if ((boundaryLoad = static_cast<BoundaryLoad*>(bc))) {
           // compute Boundary Edge load vector in GLOBAL CS !!!!!!!
           this->computeInternalForcesFromBoundaryEdgeLoadVectorAtPoint(help, boundaryLoad, (*it).boundaryId,
 								       ExternalForcesVector, VM_Total, tStep, coords, ds, false);
