@@ -850,10 +850,12 @@ MITC4Shell :: computeLocalBaseVectors(FloatArray &e1, FloatArray &e2, FloatArray
     // now from e3' x e1' compute e2'
     e2.beVectorProductOf(e3, e1);
 
-	// rotate as to have the 1st local axis equal to la1
-	ang = -Angle::giveAngleIn3Dplane(la1, e1, e3); // radians
-	e1 = Angle::rotate(e1, e3, ang);
-	e2 = Angle::rotate(e2, e3, ang);
+	if (la1.computeNorm() != 0) {
+		// rotate as to have the 1st local axis equal to la1
+		ang = -Angle::giveAngleIn3Dplane(la1, e1, e3); // radians
+		e1 = Angle::rotate(e1, e3, ang);
+		e2 = Angle::rotate(e2, e3, ang);
+	}
 }
 
 void

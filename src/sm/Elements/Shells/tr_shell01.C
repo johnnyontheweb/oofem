@@ -650,10 +650,11 @@ TR_SHELL01::computeLoadLEToLRotationMatrix(FloatMatrix &answer, int iEdge, Gauss
 	e2.beVectorProductOf(e3, e1);
 
 	// rotate as to have the 1st local axis equal to la1
-	double ang = -Angle::giveAngleIn3Dplane(la1, e1, e3); // radians
-	e1 = Angle::rotate(e1, e3, ang);
-	e2 = Angle::rotate(e2, e3, ang);
-
+	if (la1.computeNorm() != 0) {
+		double ang = -Angle::giveAngleIn3Dplane(la1, e1, e3); // radians
+		e1 = Angle::rotate(e1, e3, ang);
+		e2 = Angle::rotate(e2, e3, ang);
+	}
 	IntArray edgeNodes;
 	((FEI2dTrLin*)(this->giveInterpolation()))->computeLocalEdgeMapping(edgeNodes, iEdge);
 
