@@ -1004,91 +1004,30 @@ MITC4Shell::computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, T
 	// assemble from parent
 	NLStructuralElement::computeStiffnessMatrix(answer, rMode, tStep);
 
-	//FloatArray n;
-	//FloatMatrix drillStiffness;
-	//bool drillCoeffFlag = false;
-	//int num = integrationRulesArray[0]->giveNumberOfIntegrationPoints();
-	//// global variable
-	//drillCoeff = this->giveStructuralCrossSection()->give(CS_DrillingStiffness, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint(0));
-
-	//for (GaussPoint *gp : *integrationRulesArray[0]) {
-	//	double dV = this->computeVolumeAround(gp);
-	//	//double E = this->giveMaterial()->give('E', gp);
-
-	//	// Drilling stiffness is here for improved numerical properties
-	//	if (drillCoeff > 0.) {
-	//		this->interp_lin.evalN(n, gp->giveNaturalCoordinates(), FEIElementGeometryWrapper(this));
-	//		for (int j = 0; j < num; j++) {      // TODO: adapt when evalN is fixed for mitc4
-	//			// n(j >> 1) -= gp->giveWeight() / numberOfGaussPoints;  //    | +1 - (-1) |^3 = 2^3 normalized to 1.
-	//			n(j % nPointsZ) -= gp->giveWeight() / numberOfGaussPoints;
-	//		}
-	//		//drillStiffness.plusDyadSymmUpper(n, 0.0005*E*drillCoeff * dV);
-	//		drillStiffness.plusDyadSymmUpper(n, drillCoeff * dV);
-	//		drillCoeffFlag = true;
-	//	}
-	//}
-
-	//if (drillCoeffFlag) {
-	//	answer.symmetrized();
-	//	answer.assemble(drillStiffness, this->drillOrdering);
-	//}
-
-	//bool drillType = this->giveStructuralCrossSection()->give(CS_DrillingType, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint(0));
-	//if (drillType == 1) {
-
-		//IntArray drillDofs = {
-		//	6, 12, 18, 24
-		//};
-
-	// official version
-		//double relDrillCoeff = this->giveStructuralCrossSection()->give(CS_RelDrillingStiffness, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint(0));
-		//int j = 1;
-		//while (answer.at(j, j) == 0) {
-		//	j++;
-		//}
-		//drillCoeff = answer.at(j, j);
-		//// find the smallest non-zero number on the diagonal
-		//for (int i = j; i <= 24; i++) {
-		//	if (drillCoeff > answer.at(i, i) && answer.at(i, i) != 0) {
-		//		drillCoeff = answer.at(i, i);
-		//	}
-		//}
-		//if (relDrillCoeff == 0.0) {
-		//	relDrillCoeff = 0.001; // default
-		//}
-		//drillCoeff *= relDrillCoeff;
-	// end official version
-
-		// NF mod - use drilling from section input
+	// NF mod - use drilling from section input
 	FloatArray n;
-		drillCoeff = this->giveStructuralCrossSection()->give(CS_DrillingStiffness, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint(0));
+	FloatMatrix drillStiffness;
+	bool drillCoeffFlag = false;
 
-		FloatMatrix drillStiffness;
-		drillStiffness.resize(4, 4);
-		drillStiffness.zero();
-		for (int i = 1; i <= 4; i++) {
-			drillStiffness.at(i, i) = drillCoeff;
+	for (GaussPoint *gp : *integrationRulesArray[0]) {
+		double dV = this->computeVolumeAround(gp);
+		double drillCoeff = this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp);
+
+		// Drilling stiffness is here for improved numerical properties
+		if (drillCoeff > 0.) {
+			this->interp_lin.evalN(n, gp->giveNaturalCoordinates(), FEIVoidCellGeometry());
+			for (int j = 0; j < 4; j++) {
+				n(j) -= 0.25;
+			}
+			drillStiffness.plusDyadSymmUpper(n, drillCoeff * dV);
+			drillCoeffFlag = true;
 		}
-//#if 0
-		////FloatMatrix drillStiffness;
-		//for (auto &gp : *integrationRulesArray[0]) {
-		//	double dV = this->computeVolumeAround(gp);
-		//	// double drillCoeff = this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp);
-		//	double coeff = drillCoeff;
-		//	//if (this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp)> 0)
-		//	//	drillCoeff *= this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp);
+	}
 
-		//	// Drilling stiffness is here for improved numerical properties
-		//	this->interp_lin.evalN(n, gp->giveNaturalCoordinates(), FEIVoidCellGeometry());
-		//	for (int j = 0; j < 4; j++) {
-		//		n[j] -= 0.25;
-		//	}
-		//	drillStiffness.plusDyadSymmUpper(n, coeff * dV);
-		//}
-		//drillStiffness.symmetrized();
-//#endif
-		answer.assemble(drillStiffness, this->drillOrdering); // drillDofs);
-	//}
+	if (drillCoeffFlag) {
+		drillStiffness.symmetrized();
+		answer.assemble(drillStiffness, this->drillOrdering);
+	}
 }
 
 
@@ -1097,47 +1036,33 @@ MITC4Shell::giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int us
 {
 	// This element adds an additional stiffness for the so called drilling dofs.
 	NLStructuralElement::giveInternalForcesVector(answer, tStep, useUpdatedGpRecord);
-	// NF - force drilling
-	//bool drillType = 1; // this->giveStructuralCrossSection()->give(CS_DrillingType, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint(0));
 
-	//if (drillType == 1) {
 	FloatArray tmp; 
-		FloatArray drillUnknowns, drillMoment;
-		//IntArray drillDofs = {
-		//	6, 12, 18, 24
-		//};
-		this->computeVectorOf(VM_Total, tStep, tmp);
-		drillUnknowns.beSubArrayOf(tmp, this->drillOrdering); //  drillDofs);
+	FloatArray n, drillUnknowns, drillMoment;
+	bool drillCoeffFlag = false;
+	this->computeVectorOf(VM_Total, tStep, tmp);
+	drillUnknowns.beSubArrayOf(tmp, this->drillOrdering);
 
-//#if 0
-		//FloatArray n;
-		//for (auto &gp : *integrationRulesArray[0]) {
-		//	double dV = this->computeVolumeAround(gp);
-		//	// double drillCoeff = this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp);
-		//	double coeff = drillCoeff;
-		//	//if (this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp)> 0)
-		//	//	drillCoeff *= this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp);
+    // Drilling stiffness is here for improved numerical properties
+	for (GaussPoint *gp : *integrationRulesArray[0]) {
+		double dV = this->computeVolumeAround(gp);
+		drillCoeff = this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp);
 
-		//	this->interp_lin.evalN(n, gp->giveNaturalCoordinates(), FEIVoidCellGeometry());
-		//	//for (int j = 0; j < 4; j++) {
-		//	//	n[j] -= 0.25;
-		//	//}
-		//	double dtheta = n.dotProduct(drillUnknowns);
-		//	drillMoment.add(coeff * dV * dtheta, n);
-		//}
-//#endif
-
-		FloatMatrix drillStiffness;
-		drillStiffness.resize(4, 4);
-		drillStiffness.zero();
-		for (int i = 1; i <= 4; i++) {
-			drillStiffness.at(i, i) = drillCoeff;
+		// Drilling stiffness is here for improved numerical properties
+		if (drillCoeff > 0.) {
+			this->interp_lin.evalN(n, gp->giveNaturalCoordinates(), FEIVoidCellGeometry());
+			for (int j = 0; j < 4; j++) {
+				n(j) -= 0.25;
+			}
+			double dtheta = n.dotProduct(drillUnknowns);
+			drillMoment.add(drillCoeff * dV * dtheta, n); ///@todo Decide on how to alpha should be defined.
+			drillCoeffFlag = true;
 		}
+	}
 
-		drillMoment.beProductOf(drillStiffness, drillUnknowns);
-
-		answer.assemble(drillMoment, this->drillOrdering); //  drillDofs);
-	//}
+	if (drillCoeffFlag) {
+		answer.assemble(drillMoment, this->drillOrdering);
+	}
 }
 
 
