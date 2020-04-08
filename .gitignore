@@ -971,3 +971,9 @@ tests/sm/t3d.bmf
 /.vs/oofem/v16/Browse.VC.db
 /.vs/oofem/v16/Solution.VC.db
 /oofem.dir/MinSizeRel/oofem.vcxprojAssemblyReference.cache
+/.vs/oofem/v16/ipch/AutoPCH/118399e6092e8a51/NODE2NODELAGRANGIANMULTIPLIERCONTACT.ipch
+/.vs/oofem/v16/ipch/AutoPCH/1df71bc7abea1b2c/NODE2NODELAGRANGIANMULTIPLIERCONTACT.ipch
+/.vs/oofem/v16/ipch/AutoPCH/25764511cbdb3491/MITC4.ipch
+/.vs/oofem/v16/ipch/AutoPCH/3bfe43303294112b/QUAD1PLANESTRAIN.ipch
+/.vs/oofem/v16/ipch/AutoPCH/d285b19c99bb1956/QUAD1PLANESTRAIN.ipch
+/.vs/oofem/v16/ipch/AutoPCH/eab8d484887e963a/FLOATARRAY.ipch

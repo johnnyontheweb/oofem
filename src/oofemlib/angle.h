@@ -52,23 +52,25 @@ namespace oofem {
 
 	static FloatArray rotate(FloatArray vec, FloatArray dir, double theta)
 	{
-		FloatArray res; res.resize(3);
+		FloatArray res(3); //res.resize(3);
 		FloatArray orig; orig.resize(3); orig.zero(); // always around origin
 
 		double x = vec.at(1); double y = vec.at(2); double z = vec.at(3);
+        //if (abs(x) < 1e-7) x = 0; if (abs(y) < 1e-7) y = 0; if (abs(z) < 1e-7) z = 0;
 		double a = orig.at(1); // origin of rot. axis
 		double b = orig.at(2); double c = orig.at(3);
 		double u = dir.at(1); // direction of rot. axis
 		double v = dir.at(2); double w = dir.at(3);
 		double cosTh = cos(theta); double senTh = sin(theta);
+        //if (abs(cosTh) < 1e-7) cosTh = 0; if (abs(senTh) < 1e-7) senTh = 0;
 
-		res.at(1) = (a * (pow(v, pow(2 + w, 2))) - u * (b * v + c * w - u * x - v * y - w * z)) * (1 - cosTh) + x * cosTh + (-c * v + b * w - w * y + v * z) * senTh;
-		res.at(2) = (b * (pow(u, pow(2 + w, 2))) - v * (a * u + c * w - u * x - v * y - w * z)) * (1 - cosTh) + y * cosTh + (c * u - a * w + w * x - u * z) * senTh;
-		res.at(3) = (c * (pow(u, pow(2 + v, 2))) - w * (a * u + b * v - u * x - v * y - w * z)) * (1 - cosTh) + z * cosTh + (-b * u + a * v - v * x + u * y) * senTh;
+		res.at(1) = (a * (pow(v, 2) + pow(w, 2)) - u * (b * v + c * w - u * x - v * y - w * z)) * (1 - cosTh) + x * cosTh + (-c * v + b * w - w * y + v * z) * senTh;
+		res.at(2) = (b * (pow(u, 2) + pow(w, 2)) - v * (a * u + c * w - u * x - v * y - w * z)) * (1 - cosTh) + y * cosTh + (c * u - a * w + w * x - u * z) * senTh;
+		res.at(3) = (c * (pow(u, 2) + pow(v, 2)) - w * (a * u + b * v - u * x - v * y - w * z)) * (1 - cosTh) + z * cosTh + (-b * u + a * v - v * x + u * y) * senTh;
 
 		return res;
 	}
 
 	}; // end class
 } // end namespace oofem
-#endif // clasfactort_h
+#endif
