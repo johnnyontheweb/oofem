@@ -89,7 +89,7 @@ namespace oofem {
 		// macro element number
 		int macroElem;
 		double drillCoeff;
-
+		double ang;
 	private:
 		//std::auto_ptr<FloatMatrix> NMatrix;
 		std::vector<std::auto_ptr<FloatMatrix>> BMatrices;
@@ -101,7 +101,7 @@ namespace oofem {
 		virtual ~MITC4Shell() { }
 
 		FloatArray la1;
-
+		
 		virtual FEInterpolation *giveInterpolation() const;
 		virtual FEInterpolation *giveInterpolation(DofIDItem id) const;
 		virtual int testElementExtension(ElementExtension ext) { return (((ext == Element_EdgeLoadSupport) || (ext == Element_SurfaceLoadSupport)) ? 1 : 0); }

@@ -188,8 +188,7 @@ MITC4Shell ::  giveDirectorVectors(FloatArray &V1, FloatArray &V2, FloatArray &V
 		V2.normalize();
 		V3.normalize();
 		V4.normalize();
-	}
-	else {
+	} else {
 		FloatArray a, b;
 		a.add(*this->giveNode(1)->giveCoordinates());
 		a.add(*this->giveNode(4)->giveCoordinates());
@@ -203,6 +202,9 @@ MITC4Shell ::  giveDirectorVectors(FloatArray &V1, FloatArray &V2, FloatArray &V
 
 		V1.beVectorProductOf(a, b);
 		V1.normalize();
+
+		// should be e3?
+
 		V2 = V1;
 		V3 = V1;
 		V4 = V1;
@@ -849,7 +851,7 @@ MITC4Shell :: computeLocalBaseVectors(FloatArray &e1, FloatArray &e2, FloatArray
     e2.beVectorProductOf(e3, e1);
 
 	// rotate as to have the 1st local axis equal to la1
-	double ang = -Angle::giveAngleIn3Dplane(la1, e1, e3); // radians
+	ang = -Angle::giveAngleIn3Dplane(la1, e1, e3); // radians
 	e1 = Angle::rotate(e1, e3, ang);
 	e2 = Angle::rotate(e2, e3, ang);
 }
@@ -1115,9 +1117,9 @@ MITC4Shell::giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int us
 		//	//	drillCoeff *= this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp);
 
 		//	this->interp_lin.evalN(n, gp->giveNaturalCoordinates(), FEIVoidCellGeometry());
-		//	for (int j = 0; j < 4; j++) {
-		//		n[j] -= 0.25;
-		//	}
+		//	//for (int j = 0; j < 4; j++) {
+		//	//	n[j] -= 0.25;
+		//	//}
 		//	double dtheta = n.dotProduct(drillUnknowns);
 		//	drillMoment.add(coeff * dV * dtheta, n);
 		//}
