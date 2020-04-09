@@ -47,9 +47,12 @@
 #include "load.h"
 #include "mathfem.h"
 #include "classfactory.h"
+#include "fei2dtrlin.h"
 
 namespace oofem {
 REGISTER_Element(TrPlaneStrRot);
+
+IntArray TrPlaneStrRot::drillOrdering = { 3, 6, 9 };
 
 TrPlaneStrRot :: TrPlaneStrRot(int n, Domain *aDomain) :
     TrPlaneStress2d(n, aDomain)
@@ -698,6 +701,72 @@ TrPlaneStrRot :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateTy
     } else {
         return TrPlaneStress2d :: giveIPValue(answer, gp, type, tStep);
     }
+}
+
+
+void
+TrPlaneStrRot :: computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep)
+{
+	NLStructuralElement::computeStiffnessMatrix(answer, rMode, tStep);
+
+	// NF mod - use drilling from section input
+	FloatArray n;
+	FloatMatrix drillStiffness;
+	bool drillCoeffFlag = false;
+
+	for (GaussPoint *gp : *integrationRulesArray[0]) {
+		double dV = this->computeVolumeAround(gp);
+		double drillCoeff = this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp);
+
+		// Drilling stiffness is here for improved numerical properties
+		if (drillCoeff > 0.) {
+			this->interp.evalN(n, gp->giveNaturalCoordinates(), FEIVoidCellGeometry());
+			for (int j = 0; j < 3; j++) {
+				n(j) -= 0.33333;
+			}
+			drillStiffness.plusDyadSymmUpper(n, drillCoeff * dV);
+			drillCoeffFlag = true;
+		}
+	}
+
+	if (drillCoeffFlag) {
+		drillStiffness.symmetrized();
+		answer.assemble(drillStiffness, this->drillOrdering);
+	}
+}
+
+
+void
+TrPlaneStrRot :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord)
+{
+	NLStructuralElement::giveInternalForcesVector(answer, tStep, useUpdatedGpRecord);
+
+	FloatArray tmp;
+	FloatArray n, drillUnknowns, drillMoment;
+	bool drillCoeffFlag = false;
+	this->computeVectorOf(VM_Total, tStep, tmp);
+	drillUnknowns.beSubArrayOf(tmp, this->drillOrdering);
+
+	// Drilling stiffness is here for improved numerical properties
+	for (GaussPoint *gp : *integrationRulesArray[0]) {
+		double dV = this->computeVolumeAround(gp);
+		double drillCoeff = this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp);
+
+		// Drilling stiffness is here for improved numerical properties
+		if (drillCoeff > 0.) {
+			this->interp.evalN(n, gp->giveNaturalCoordinates(), FEIVoidCellGeometry());
+			for (int j = 0; j < 3; j++) {
+				n(j) -= 0.33333;
+			}
+			double dtheta = n.dotProduct(drillUnknowns);
+			drillMoment.add(drillCoeff * dV * dtheta, n); ///@todo Decide on how to alpha should be defined.
+			drillCoeffFlag = true;
+		}
+	}
+
+	if (drillCoeffFlag) {
+		answer.assemble(drillMoment, this->drillOrdering);
+	}
 }
 
 } // end namespace oofem

@@ -59,6 +59,7 @@ class TrPlaneStrRot : public TrPlaneStress2d
 {
 protected:
     int numberOfRotGaussPoints;
+	static IntArray drillOrdering;
 private:
 	std::vector<std::auto_ptr<FloatMatrix>> BMatrices;
 
@@ -100,6 +101,9 @@ public:
     FloatArray GiveDerivativeUY(const FloatArray &lCoords);
     FloatArray GiveDerivativeVY(const FloatArray &lCoords);
     //virtual void computeStrainVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep);
+
+	virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep);
+	virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord);
 
     virtual int testElementExtension(ElementExtension ext) { return 0; }
 };
