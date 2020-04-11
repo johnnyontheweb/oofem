@@ -64,7 +64,7 @@ CCTPlate :: CCTPlate(int n, Domain *aDomain) :
     NodalAveragingRecoveryModelInterface(), SPRNodalRecoveryModelInterface(), ZZErrorEstimatorInterface(this)
 {
     numberOfDofMans = 3;
-    numberOfGaussPoints = 1;
+    numberOfGaussPoints = 4;
     area = 0;
 }
 
@@ -326,7 +326,7 @@ CCTPlate :: initializeFrom(InputRecord *ir)
 		return result;
 	}
 
-    numberOfGaussPoints = 1;
+    numberOfGaussPoints = 4;
 	// optional record for 1st local axes
 	la1.resize(3);
 	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;

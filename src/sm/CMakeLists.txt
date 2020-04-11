@@ -42,6 +42,7 @@ set (sm_element
     Elements/Shells/rershell.C 
     Elements/Shells/tr_shell01.C 
     Elements/Shells/tr_shell02.C 
+    Elements/Shells/tr_shell03.C
     Elements/Shells/cct3d.C
     Elements/Shells/quad1mindlinshell3d.C
     Elements/Shells/shell7base.C

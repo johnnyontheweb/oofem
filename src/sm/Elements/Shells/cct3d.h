@@ -93,7 +93,8 @@ protected:
     virtual int computeLoadGToLRotationMtrx(FloatMatrix &answer);
     virtual void computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode);
 
-    friend class TR_SHELL01;
+	friend class TR_SHELL01;
+	friend class TR_SHELL03;
     /**
      * @name Surface load support
      */
