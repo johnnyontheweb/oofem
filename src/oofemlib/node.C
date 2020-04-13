@@ -123,7 +123,7 @@ IRResultType Node :: initializeFrom(InputRecord *ir)
         IR_GIVE_FIELD(ir, triplets, _IFT_Node_lcs);
         size = triplets.giveSize();
         if ( size != 6 ) {
-            OOFEM_WARNING("lcs in node %d is not properly defined, will be ignored", this->giveNumber() );
+            OOFEM_WARNING("lcs in node %d is not properly defined, will be ignored", this->giveLabel() );
         }
 
         double n1 = 0.0, n2 = 0.0;
