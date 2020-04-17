@@ -45,57 +45,43 @@
 namespace oofem {
 
 NucleationCriterion::NucleationCriterion(Domain *ipDomain):
-mpDomain(ipDomain),
-mpEnrichmentFunc(NULL)
+    mpDomain(ipDomain)
+{ }
+
+NucleationCriterion::~NucleationCriterion() { }
+
+std::vector<std::unique_ptr<EnrichmentItem>> NucleationCriterion::nucleateEnrichmentItems()
 {
+    OOFEM_ERROR("Not implemented.")
 
+    std::vector<std::unique_ptr<EnrichmentItem>> eiList;
+    return eiList;
 }
 
-NucleationCriterion::~NucleationCriterion()
+void NucleationCriterion::initializeFrom(InputRecord &ir) 
 {
-	delete mpEnrichmentFunc;
 }
 
-std::vector<std::unique_ptr<EnrichmentItem>> NucleationCriterion::nucleateEnrichmentItems() {
-	OOFEM_ERROR("Not implemented.")
-
-	std::vector<std::unique_ptr<EnrichmentItem>> eiList;
-	return std::move( eiList );
-}
-
-IRResultType NucleationCriterion::initializeFrom(InputRecord *ir) {
-
-    return IRRT_OK;
-}
-
-int NucleationCriterion::instanciateYourself(DataReader *dr) {
-
-//	printf("Entering NucleationCriterion::instanciateYourself(DataReader *dr)\n");
-
-    IRResultType result; // Required by IR_GIVE_FIELD macro
+int NucleationCriterion::instanciateYourself(DataReader &dr)
+{
     std :: string name;
 
     // Instantiate enrichment function
-    InputRecord *mir = dr->giveInputRecord(DataReader :: IR_crackNucleationRec, 1);
-    result = mir->giveRecordKeywordField(name);
-
-    if ( result != IRRT_OK ) {
-        mir->report_error(this->giveClassName(), __func__, "", result, __FILE__, __LINE__);
-    }
+    auto &mir = dr.giveInputRecord(DataReader :: IR_crackNucleationRec, 1);
+    mir.giveRecordKeywordField(name);
 
     mpEnrichmentFunc = classFactory.createEnrichmentFunction( name.c_str(), 1, mpDomain );
-    if ( mpEnrichmentFunc != NULL ) {
+    if ( mpEnrichmentFunc ) {
         mpEnrichmentFunc->initializeFrom(mir);
     } else {
         OOFEM_ERROR( "failed to create enrichment function (%s)", name.c_str() );
     }
-
-    return IRRT_OK;
+    return 1;
 }
 
 void NucleationCriterion :: appendInputRecords(DynamicDataReader &oDR)
 {
-    DynamicInputRecord *ir = new DynamicInputRecord();
+    auto ir = std::make_unique<DynamicInputRecord>();
 
     ir->setRecordKeywordField( this->giveInputRecordName(), 1 );
 
@@ -107,36 +93,36 @@ void NucleationCriterion :: appendInputRecords(DynamicDataReader &oDR)
 //        eiRec->setField(_IFT_EnrichmentItem_inheritbc);
 //    }
 
-    oDR.insertInputRecord(DataReader :: IR_crackNucleationRec, ir);
+    oDR.insertInputRecord(DataReader :: IR_crackNucleationRec, std::move(ir));
 
 
 //    // Enrichment function
-//    DynamicInputRecord *efRec = new DynamicInputRecord();
+//    auto efRec = std::make_unique<DynamicInputRecord>();
 //    mpEnrichmentFunc->giveInputRecord(* efRec);
-//    oDR.insertInputRecord(DataReader :: IR_enrichFuncRec, efRec);
+//    oDR.insertInputRecord(DataReader :: IR_enrichFuncRec, std::move(efRec));
 //
 //    // Geometry
-//    DynamicInputRecord *geoRec = new DynamicInputRecord();
+//    auto geoRec = std::make_unique<DynamicInputRecord>();
 //    mpBasicGeometry->giveInputRecord(* geoRec);
-//    oDR.insertInputRecord(DataReader :: IR_geoRec, geoRec);
+//    oDR.insertInputRecord(DataReader :: IR_geoRec, std::move(geoRec));
 //
 //
 //    // Enrichment front
 //    if ( mEnrFrontIndex != 0 ) {
-//        DynamicInputRecord *efrRecStart = new DynamicInputRecord();
+//        auto efrRecStart = std::make_unique<DynamicInputRecord>();
 //        mpEnrichmentFrontStart->giveInputRecord(* efrRecStart);
-//        oDR.insertInputRecord(DataReader :: IR_enrichFrontRec, efrRecStart);
+//        oDR.insertInputRecord(DataReader :: IR_enrichFrontRec, std::move(efrRecStart));
 //
-//        DynamicInputRecord *efrRecEnd = new DynamicInputRecord();
+//        auto efrRecEnd = std::make_unique<DynamicInputRecord>();
 //        mpEnrichmentFrontEnd->giveInputRecord(* efrRecEnd);
-//        oDR.insertInputRecord(DataReader :: IR_enrichFrontRec, efrRecEnd);
+//        oDR.insertInputRecord(DataReader :: IR_enrichFrontRec, std::move(efrRecEnd));
 //    }
 //
 //    // Propagation law
 //    if ( mPropLawIndex != 0 ) {
-//        DynamicInputRecord *plRec = new DynamicInputRecord();
+//        auto plRec = std::make_unique<DynamicInputRecord>();
 //        this->mpPropagationLaw->giveInputRecord(* plRec);
-//        oDR.insertInputRecord(DataReader :: IR_propagationLawRec, plRec);
+//        oDR.insertInputRecord(DataReader :: IR_propagationLawRec, std::move(plRec));
 //    }
 }
 

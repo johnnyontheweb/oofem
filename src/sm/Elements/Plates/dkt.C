@@ -32,9 +32,9 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/Plates/dkt.h"
-#include "../sm/Materials/structuralms.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
+#include "sm/Elements/Plates/dkt.h"
+#include "sm/Materials/structuralms.h"
+#include "sm/CrossSections/structuralcrosssection.h"
 #include "fei2dtrlin.h"
 #include "node.h"
 #include "material.h"
@@ -85,7 +85,7 @@ DKTPlate :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize( 1 );
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 5) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 5);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], numberOfGaussPoints, this);
     }
 }
@@ -152,6 +152,7 @@ void
 DKTPlate :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int ui)
 // Returns the [5x9] strain-displacement matrix {B} of the receiver,
 // evaluated at gp.
+// strain components xx, yy, zz, xz, yz
 {
 	answer.resize(5, 9);
 	answer.zero();
@@ -332,14 +333,14 @@ DKTPlate :: computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer)
 void
 DKTPlate :: computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->giveGeneralizedStress_Plate(answer, gp, strain, tStep);
+    answer = this->giveStructuralCrossSection()->giveGeneralizedStress_Plate(strain, gp, tStep);
 }
 
 
 void
 DKTPlate :: computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->give2dPlateStiffMtrx(answer, rMode, gp, tStep);
+    answer = this->giveStructuralCrossSection()->give2dPlateStiffMtrx(rMode, gp, tStep);
 }
 
 
@@ -348,28 +349,26 @@ DKTPlate :: giveNodeCoordinates(double &x1, double &x2, double &x3,
                                 double &y1, double &y2, double &y3,
                                 double &z1, double &z2, double &z3)
 {
-    FloatArray *nc1, *nc2, *nc3;
-    nc1 = this->giveNode(1)->giveCoordinates();
-    nc2 = this->giveNode(2)->giveCoordinates();
-    nc3 = this->giveNode(3)->giveCoordinates();
+    const auto &nc1 = this->giveNode(1)->giveCoordinates();
+    const auto &nc2 = this->giveNode(2)->giveCoordinates();
+    const auto &nc3 = this->giveNode(3)->giveCoordinates();
 
-    x1 = nc1->at(1);
-    x2 = nc2->at(1);
-    x3 = nc3->at(1);
+    x1 = nc1.at(1);
+    x2 = nc2.at(1);
+    x3 = nc3.at(1);
 
-    y1 = nc1->at(2);
-    y2 = nc2->at(2);
-    y3 = nc3->at(2);
+    y1 = nc1.at(2);
+    y2 = nc2.at(2);
+    y3 = nc3.at(2);
 
-    z1 = nc1->at(3);
-    z2 = nc2->at(3);
-    z3 = nc3->at(3);
-
+    z1 = nc1.at(3);
+    z2 = nc2.at(3);
+    z3 = nc3.at(3);
 }
 
 
-IRResultType
-DKTPlate :: initializeFrom(InputRecord *ir)
+void
+DKTPlate :: initializeFrom(InputRecord &ir)
 {
 	IRResultType result = NLStructuralElement::initializeFrom(ir);
 	if (result != IRRT_OK) {
@@ -399,8 +398,8 @@ DKTPlate :: computeMidPlaneNormal(FloatArray &answer, const GaussPoint *gp)
 // returns normal vector to midPlane in GaussPoinr gp of receiver
 {
     FloatArray u, v;
-    u.beDifferenceOf( * this->giveNode(2)->giveCoordinates(), * this->giveNode(1)->giveCoordinates() );
-    v.beDifferenceOf( * this->giveNode(3)->giveCoordinates(), * this->giveNode(1)->giveCoordinates() );
+    u.beDifferenceOf( this->giveNode(2)->giveCoordinates(), this->giveNode(1)->giveCoordinates() );
+    v.beDifferenceOf( this->giveNode(3)->giveCoordinates(), this->giveNode(1)->giveCoordinates() );
 
     answer.beVectorProductOf(u, v);
     answer.normalize();
@@ -531,8 +530,8 @@ DKTPlate :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType ty
         answer.at(1) = 0.0; // nx
         answer.at(2) = 0.0; // ny
         answer.at(3) = 0.0; // nz
-        answer.at(4) = help.at(5); // vyz
-        answer.at(5) = help.at(4); // vxz
+        answer.at(4) = help.at(5); // vyz in answer
+        answer.at(5) = help.at(4); // vxz in answer
         answer.at(6) = 0.0; // vxy
         return 1;
     } else if ( type == IST_ShellMomentTensor || type == IST_CurvatureTensor ) {
@@ -700,22 +699,17 @@ DKTPlate :: computeLoadLEToLRotationMatrix(FloatMatrix &answer, int iEdge, Gauss
     //
     // i.e. f(element local) = T * f(edge local)
     //
-    double dx, dy, length;
-    IntArray edgeNodes;
-    Node *nodeA, *nodeB;
+    const auto &edgeNodes = this->interp_lin.computeLocalEdgeMapping(iEdge);
+
+    auto nodeA = this->giveNode( edgeNodes.at(1) );
+    auto nodeB = this->giveNode( edgeNodes.at(2) );
+
+    double dx = nodeB->giveCoordinate(1) - nodeA->giveCoordinate(1);
+    double dy = nodeB->giveCoordinate(2) - nodeA->giveCoordinate(2);
+    double length = sqrt(dx * dx + dy * dy);
 
     answer.resize(3, 3);
     answer.zero();
-
-    this->interp_lin.computeLocalEdgeMapping(edgeNodes, iEdge);
-
-    nodeA = this->giveNode( edgeNodes.at(1) );
-    nodeB = this->giveNode( edgeNodes.at(2) );
-
-    dx = nodeB->giveCoordinate(1) - nodeA->giveCoordinate(1);
-    dy = nodeB->giveCoordinate(2) - nodeA->giveCoordinate(2);
-    length = sqrt(dx * dx + dy * dy);
-
     answer.at(1, 1) = 1.0;
     answer.at(2, 2) = dx / length;
     answer.at(2, 3) = -dy / length;
@@ -747,14 +741,6 @@ DKTPlate :: giveSurfaceDofMapping(IntArray &answer, int iSurf) const
     }
 }
 
-IntegrationRule *
-DKTPlate :: GetSurfaceIntegrationRule(int approxOrder)
-{
-    IntegrationRule *iRule = new GaussIntegrationRule(1, this, 1, 1);
-    int npoints = iRule->getRequiredNumberOfIntegrationPoints(_Triangle, approxOrder);
-    iRule->SetUpPointsOnTriangle(npoints, _Unknown);
-    return iRule;
-}
 
 double
 DKTPlate :: computeSurfaceVolumeAround(GaussPoint *gp, int iSurf)
@@ -802,7 +788,7 @@ DKTPlate :: computeVertexBendingMoments(FloatMatrix &answer, TimeStep *tStep)
     for ( int i = 1; i <= this->numberOfDofMans; i++ ) {
         vgp->setNaturalCoordinates(coords [ i - 1 ]);
         this->computeStrainVector(eps, vgp, tStep);
-        this->giveStructuralCrossSection()->giveGeneralizedStress_Plate(m, vgp, eps, tStep);
+        m = this->giveStructuralCrossSection()->giveGeneralizedStress_Plate(eps, vgp, tStep);
         answer.setColumn(m, i);
     }
 

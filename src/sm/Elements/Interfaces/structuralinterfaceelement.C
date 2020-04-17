@@ -32,10 +32,10 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/Interfaces/structuralinterfaceelement.h"
-#include "../sm/Materials/InterfaceMaterials/structuralinterfacematerial.h"
-#include "../sm/Materials/InterfaceMaterials/structuralinterfacematerialstatus.h"
-#include "../sm/CrossSections/structuralinterfacecrosssection.h"
+#include "sm/Elements/Interfaces/structuralinterfaceelement.h"
+#include "sm/Materials/InterfaceMaterials/structuralinterfacematerial.h"
+#include "sm/Materials/InterfaceMaterials/structuralinterfacematerialstatus.h"
+#include "sm/CrossSections/structuralinterfacecrosssection.h"
 #include "feinterpol.h"
 #include "domain.h"
 #include "material.h"
@@ -49,16 +49,27 @@
 
 
 namespace oofem {
-StructuralInterfaceElement :: StructuralInterfaceElement(int n, Domain *aDomain) : Element(n, aDomain),
-    interpolation(NULL),
-    nlGeometry(0)
+StructuralInterfaceElement :: StructuralInterfaceElement(int n, Domain *aDomain) : Element(n, aDomain)
 {
 }
 
+int StructuralInterfaceElement :: computeGlobalCoordinates(FloatArray &answer, const FloatArray &lcoords)
+{
+    FloatArray N;
+    FEInterpolation *interp = this->giveInterpolation();
+    interp->evalN( N, lcoords, FEIElementGeometryWrapper(this) );
 
-StructuralInterfaceElement :: ~StructuralInterfaceElement()
-{ }
+    answer.resize(this->giveDofManager(1)->giveCoordinates().giveSize());
+    answer.zero();
 
+    int numNodes = this->giveNumberOfNodes();
+    for ( int i = 1; i <= numNodes/2; i++ ) {
+        const auto &nodeCoord = this->giveDofManager(i)->giveCoordinates();
+        answer.add(N.at(i), nodeCoord );
+    }
+
+    return true;
+}
 
 
 void
@@ -109,7 +120,10 @@ StructuralInterfaceElement :: computeSpatialJump(FloatArray &answer, Integration
     FloatArray u;
 
     if ( !this->isActivated(tStep) ) {
-        answer.resize(3);
+        //match dimensions
+        //answer.resize(3);
+        this->computeNmatrixAt(ip, N);
+        answer.resize(N.giveNumberOfRows());
         answer.zero();
         return;
     }
@@ -127,8 +141,7 @@ StructuralInterfaceElement :: computeSpatialJump(FloatArray &answer, Integration
 
 
 void
-StructuralInterfaceElement :: giveInternalForcesVector(FloatArray &answer,
-                                                       TimeStep *tStep, int useUpdatedGpRecord)
+StructuralInterfaceElement :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord)
 {
     // Computes internal forces
     // if useGpRecord == 1 then data stored in ip->giveStressVector() are used
@@ -139,7 +152,7 @@ StructuralInterfaceElement :: giveInternalForcesVector(FloatArray &answer,
     FloatMatrix N;
     FloatArray u, traction, jump;
 
-    this->computeVectorOf(VM_Total, tStep, u);
+    this->computeVectorOf(VM_Total, tStep, u); //u in GCS (LCS only if defined computeGtoLRotationMatrix() )
     // subtract initial displacements, if defined
     if ( initialDisplacements.giveSize() ) {
         u.subtract(initialDisplacements);
@@ -170,21 +183,28 @@ StructuralInterfaceElement :: giveInternalForcesVector(FloatArray &answer,
 
 
 void
-StructuralInterfaceElement :: computeTraction(FloatArray &traction, IntegrationPoint *ip, FloatArray &jump, TimeStep *tStep)
+StructuralInterfaceElement :: computeTraction(FloatArray &traction, IntegrationPoint *ip, const FloatArray &jump, TimeStep *tStep)
 {
     // Returns the traction in global coordinate system
     FloatMatrix rotationMatGtoL, F;
     this->computeTransformationMatrixAt(ip, rotationMatGtoL);
-    jump.rotatedWith(rotationMatGtoL, 'n');      // transform jump to local coord system
+
+    FloatArray jumpRot = jump;
+    jumpRot.rotatedWith(rotationMatGtoL, 'n');      // transform jump to local coord system
 
     if ( this->nlGeometry == 0 ) {
-        this->giveEngTraction(traction, ip, jump, tStep);
+        this->giveEngTraction(traction, ip, jumpRot, tStep);
     } else if ( this->nlGeometry == 1 ) {
         ///@todo compute F in a proper way
         F.beUnitMatrix();
         F.rotatedWith(rotationMatGtoL, 'n');
-        this->giveFirstPKTraction(traction, ip, jump, F, tStep);
+        this->giveFirstPKTraction(traction, ip, jumpRot, F, tStep);
     }
+
+    StructuralInterfaceMaterialStatus *status = static_cast< StructuralInterfaceMaterialStatus * >( ip->giveMaterialStatus() );
+    FloatArray normal = {rotationMatGtoL.at(2,1), rotationMatGtoL.at(2,2), 0.};
+//    printf("normal: "); normal.printYourself();
+    status->letNormalBe(normal);
 
     traction.rotatedWith(rotationMatGtoL, 't');     // transform traction to global coord system
 }
@@ -256,6 +276,7 @@ StructuralInterfaceElement :: updateInternalState(TimeStep *tStep)
     }
 }
 
+
 int
 StructuralInterfaceElement :: checkConsistency()
 {
@@ -275,10 +296,10 @@ StructuralInterfaceElement :: giveIPValue(FloatArray &answer, IntegrationPoint *
 }
 
 
-IRResultType
-StructuralInterfaceElement :: initializeFrom(InputRecord *ir)
+void
+StructuralInterfaceElement :: initializeFrom(InputRecord &ir)
 {
-    return Element :: initializeFrom(ir);
+    Element :: initializeFrom(ir);
 }
 
 void StructuralInterfaceElement :: giveInputRecord(DynamicInputRecord &input)

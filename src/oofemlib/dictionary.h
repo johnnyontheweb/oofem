@@ -85,12 +85,13 @@ public:
      * @return Reference to value of pair with given key
      */
     double &at(int aKey);
+    double at(int aKey) const;
     /**
      * Checks if dictionary includes given key
      * @param aKey Dictionary key.
      * @return True if receiver contains pair with given key, otherwise false.
      */
-    bool includes(int aKey);
+    bool includes(int aKey) const;
     /// Prints the receiver on screen.
     void printYourself();
     /// Formats itself as string.
@@ -100,16 +101,14 @@ public:
 
     /**
      * Saves the receiver contends (state) to given stream.
-     * @return contextIOResultType value.
      * @exception throws an ContextIOERR exception if error encountered
      */
-    contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void saveContext(DataStream &stream);
     /**
      * Restores the receiver contents (state) from given stream.
-     * @return contextIOResultType value.
      * @exception throws an ContextIOERR exception if error encountered
      */
-    contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void restoreContext(DataStream &stream);
 
     friend std :: ostream &operator << ( std :: ostream & out, const Dictionary & r );
 };

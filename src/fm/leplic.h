@@ -130,18 +130,14 @@ public:
      * Only non-temp internal history variables are stored.
      * @param stream stream where to write data
      * @param mode determines amount of info required in stream (state, definition,...)
-     * @param obj pointer to integration point, which invokes this method
-     * @return contextIOResultType.
      */
-    contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void saveContext(DataStream &stream, ContextMode mode);
     /**
      * Restores context of receiver from given stream.
      * @param stream stream where to read data
      * @param mode determines amount of info required in stream (state, definition,...)
-     * @param obj pointer to integration point, which invokes this method
-     * @return contextIOResultType.
      */
-    contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void restoreContext(DataStream &stream, ContextMode mode);
 };
 
 /**
@@ -170,12 +166,12 @@ public:
         orig_reference_fluid_volume = 0.0;
     }
 
-    virtual void updatePosition(TimeStep *tStep);
-    virtual void updateYourself(TimeStep *tStep) { }
-    virtual void giveMaterialMixtureAt(FloatArray &answer, FloatArray &position);
-    virtual void giveElementMaterialMixture(FloatArray &answer, int ielem);
-    virtual double giveNodalScalarRepresentation(int);
-    virtual double computeCriticalTimeStep(TimeStep *tStep);
+    void updatePosition(TimeStep *tStep) override;
+    void updateYourself(TimeStep *tStep) override { }
+    void giveMaterialMixtureAt(FloatArray &answer, FloatArray &position) override;
+    void giveElementMaterialMixture(FloatArray &answer, int ielem) override;
+    double giveNodalScalarRepresentation(int) override;
+    double computeCriticalTimeStep(TimeStep *tStep) override;
 
     /**
      * Returns updated nodal positions.
@@ -189,11 +185,11 @@ public:
     double giveUpdatedXCoordinate(int num) { return updated_XCoords.at(num); }
     double giveUpdatedYCoordinate(int num) { return updated_YCoords.at(num); }
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
     // identification
-    virtual const char *giveClassName() const { return "LEPlic"; }
+    const char *giveClassName() const override { return "LEPlic"; }
 
 protected:
     void doLagrangianPhase(TimeStep *tStep);

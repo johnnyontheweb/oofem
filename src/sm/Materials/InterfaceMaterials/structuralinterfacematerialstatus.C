@@ -36,25 +36,22 @@
 #include "structuralinterfacematerial.h"
 #include "contextioerr.h"
 
-#include "../sm/Materials/structuralmaterial.h"
+#include "sm/Materials/structuralmaterial.h"
 #include "structuralinterfacematerialstatus.h"
 #include "gausspoint.h"
+
 namespace oofem {
-StructuralInterfaceMaterialStatus :: StructuralInterfaceMaterialStatus(int n, Domain *d, GaussPoint *g) :
-    MaterialStatus(n, d, g), jump(3), traction(3), tempTraction(3), tempJump(3), firstPKTraction(3), tempFirstPKTraction(3), F(3, 3), tempF(3, 3),
-    mNewlyInserted(true)
+
+StructuralInterfaceMaterialStatus :: StructuralInterfaceMaterialStatus(GaussPoint *g) :
+    MaterialStatus(g)
 {
-    this->F.beUnitMatrix();
-    this->tempF.beUnitMatrix();
+    F = eye<3>();
+    tempF = F;
 }
 
 
-StructuralInterfaceMaterialStatus :: ~StructuralInterfaceMaterialStatus() { }
-
-
-void StructuralInterfaceMaterialStatus :: printOutputAt(FILE *file, TimeStep *tStep)
+void StructuralInterfaceMaterialStatus :: printOutputAt(FILE *file, TimeStep *tStep) const
 {
-#if 0
     MaterialStatus :: printOutputAt(file, tStep);
 
     fprintf(file, "  jump ");
@@ -62,17 +59,15 @@ void StructuralInterfaceMaterialStatus :: printOutputAt(FILE *file, TimeStep *tS
         fprintf(file, " %.4e", val );
     }
 
-    fprintf(File, "\n              traction ");
+    fprintf(file, "\n              traction ");
     for ( auto &val : this->traction ) {
-        fprintf( File, " %.4e", val );
+        fprintf(file, " %.4e", val );
     }
     fprintf(file, "\n");
-#endif
 }
 
 
 void StructuralInterfaceMaterialStatus :: updateYourself(TimeStep *tStep)
-// Performs end-of-step updates.
 {
     MaterialStatus :: updateYourself(tStep);
 
@@ -84,27 +79,9 @@ void StructuralInterfaceMaterialStatus :: updateYourself(TimeStep *tStep)
 
 
 void StructuralInterfaceMaterialStatus :: initTempStatus()
-//
-// initialize record at the begining of new load step
-//
 {
     MaterialStatus :: initTempStatus();
 
-    // see if vectors describing reached equilibrium are defined
-    if ( this->giveJump().giveSize() == 0 ) {
-        
-        this->jump.resize( this->giveDomain()->giveNumberOfSpatialDimensions() );
-        //this->jump.resize(3);
-        this->jump.zero();
-    }
-
-    if ( this->giveTraction().giveSize() == 0 ) {
-        this->traction.resize( this->giveDomain()->giveNumberOfSpatialDimensions() );
-        //this->traction.resize(3);
-        this->traction.zero();
-    }
-
-    // reset temp vars.
     this->tempJump            = this->jump;
     this->tempTraction        = this->traction;
     this->tempFirstPKTraction = this->firstPKTraction;
@@ -112,16 +89,13 @@ void StructuralInterfaceMaterialStatus :: initTempStatus()
 }
 
 
-contextIOResultType
-StructuralInterfaceMaterialStatus :: saveContext(DataStream &stream, ContextMode mode, void *obj)
+void
+StructuralInterfaceMaterialStatus :: saveContext(DataStream &stream, ContextMode mode)
 {
 #if 0
+    MaterialStatus :: saveContext(stream, mode);
+
     contextIOResultType iores;
-
-    if ( ( iores = MaterialStatus :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
     if ( ( iores = strainVector.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
@@ -130,20 +104,16 @@ StructuralInterfaceMaterialStatus :: saveContext(DataStream &stream, ContextMode
         THROW_CIOERR(iores);
     }
 #endif
-    return CIO_OK;
 }
 
 
-contextIOResultType
-StructuralInterfaceMaterialStatus :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
+void
+StructuralInterfaceMaterialStatus :: restoreContext(DataStream &stream, ContextMode mode)
 {
 #if 0
+    MaterialStatus :: restoreContext(stream, mode);
+
     contextIOResultType iores;
-
-    if ( ( iores = MaterialStatus :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
     if ( ( iores = strainVector.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
@@ -152,13 +122,11 @@ StructuralInterfaceMaterialStatus :: restoreContext(DataStream &stream, ContextM
         THROW_CIOERR(iores);
     }
 #endif
-    return CIO_OK;
 }
 
 void StructuralInterfaceMaterialStatus :: copyStateVariables(const MaterialStatus &iStatus)
 {
-    MaterialStatus &tmpStat = const_cast< MaterialStatus & >(iStatus);
-    const StructuralInterfaceMaterialStatus &structStatus = dynamic_cast< StructuralInterfaceMaterialStatus & >(tmpStat);
+    const StructuralInterfaceMaterialStatus &structStatus = static_cast< const StructuralInterfaceMaterialStatus & >(iStatus);
 
     jump                    = structStatus.giveJump();
     traction                = structStatus.giveTraction();

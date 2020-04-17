@@ -60,33 +60,30 @@ class BondCEBMaterialStatus : public StructuralInterfaceMaterialStatus
 {
 protected:
     /// Cumulative slip.
-    double kappa;
+    double kappa = 0.;
     /// Non-equilibrated cumulative slip.
-    double tempKappa;
+    double tempKappa = 0.;
 
 public:
     /// Constructor
-    BondCEBMaterialStatus(int n, Domain * d, GaussPoint * g);
-    /// Destructor
-    virtual ~BondCEBMaterialStatus();
+    BondCEBMaterialStatus(GaussPoint * g);
 
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    void printOutputAt(FILE *file, TimeStep *tStep) const override;
 
     /// Returns the last equilibrated cumulative slip.
-    double giveKappa() { return kappa; }
+    double giveKappa() const { return kappa; }
     /// Returns the temporary cumulative slip.
-    double giveTempKappa() { return tempKappa; }
+    double giveTempKappa() const { return tempKappa; }
     /// Sets the temporary cumulative slip to the given value.
     void setTempKappa(double newKappa) { tempKappa = newKappa; }
 
-    // definition
-    virtual const char *giveClassName() const { return "BondCEBMaterialStatus"; }
+    const char *giveClassName() const override { return "BondCEBMaterialStatus"; }
 
-    virtual void initTempStatus();
-    virtual void updateYourself(TimeStep *tStep);
+    void initTempStatus() override;
+    void updateYourself(TimeStep *tStep) override;
 
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 };
 
 
@@ -106,42 +103,39 @@ class BondCEBMaterial : public StructuralInterfaceMaterial
 {
 protected:
     /// Normal elastic stiffness.
-    double kn;
+    double kn = 0.;
     /// Shear elastic stiffness.
-    double ks;
+    double ks = 0.;
     /// Shear strength.
-    double taumax;
+    double taumax = 0.;
     /// Residual shear stress.
-    double tauf;
+    double tauf = 0.;
     /// Characteristic slip values.
-    double s0, s1, s2, s3;
+    double s0 = 0., s1 = 0., s2 = 0., s3 = 0.;
     /// Exponent.
-    double alpha;
+    double alpha = 0.4;
 
 public:
     /// Constructor
     BondCEBMaterial(int n, Domain * d);
-    /// Destructor
-    virtual ~BondCEBMaterial();
 
-    virtual int hasNonLinearBehaviour() { return 1; }
-    virtual bool hasAnalyticalTangentStiffness() const { return true; }
+    bool hasAnalyticalTangentStiffness() const override { return true; }
 
-    virtual const char *giveInputRecordName() const { return _IFT_BondCEBMaterial_Name; }
-    virtual const char *giveClassName() const { return "BondCEBMaterial"; }
+    const char *giveInputRecordName() const override { return _IFT_BondCEBMaterial_Name; }
+    const char *giveClassName() const override { return "BondCEBMaterial"; }
 
-    virtual void giveEngTraction_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &jump, TimeStep *tStep);
-    virtual void give3dStiffnessMatrix_Eng(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep);
+    FloatArrayF<3> giveEngTraction_3d(const FloatArrayF<3> &jump, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<3,3> give3dStiffnessMatrix_Eng(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const { return new BondCEBMaterialStatus(1, domain, gp); }
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new BondCEBMaterialStatus(gp); }
 
 protected:
-    double evaluateBondStress(const double kappa);
- };
+    double evaluateBondStress(const double kappa) const;
+};
 } // end namespace oofem
 #endif // bondceb_h

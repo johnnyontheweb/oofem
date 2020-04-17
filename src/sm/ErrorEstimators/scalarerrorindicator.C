@@ -32,8 +32,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/ErrorEstimators/scalarerrorindicator.h"
-#include "../sm/ErrorEstimators/directerrorindicatorrc.h"
+#include "sm/ErrorEstimators/scalarerrorindicator.h"
+#include "sm/ErrorEstimators/directerrorindicatorrc.h"
 #include "element.h"
 #include "integrationrule.h"
 #include "gausspoint.h"
@@ -89,11 +89,9 @@ ScalarErrorIndicator :: giveElementError(EE_ErrorType type, Element *elem, TimeS
 }
 
 
-IRResultType
-ScalarErrorIndicator :: initializeFrom(InputRecord *ir)
+void
+ScalarErrorIndicator :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
     ErrorEstimator :: initializeFrom(ir);
 
     IR_GIVE_FIELD(ir, indicatorType, _IFT_ScalarErrorIndicator_vartype);
@@ -108,7 +106,7 @@ RemeshingCriteria *
 ScalarErrorIndicator :: giveRemeshingCrit()
 {
     if ( !this->rc ) {
-        this->rc.reset( new DirectErrorIndicatorRC(1, this) );
+        this->rc = std::make_unique<DirectErrorIndicatorRC>(1, this);
     }
 
     return this->rc.get();

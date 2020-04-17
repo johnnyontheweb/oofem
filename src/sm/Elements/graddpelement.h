@@ -36,8 +36,8 @@
 #ifndef graddpelement_h
 #define graddpelement_h
 
-#include "../sm/Elements/structuralelement.h"
-#include "../sm/Elements/nlstructuralelement.h"
+#include "sm/Elements/structuralelement.h"
+#include "sm/Elements/nlstructuralelement.h"
 
 namespace oofem {
 /**
@@ -56,7 +56,7 @@ public:
     GradDpElement();
     virtual ~GradDpElement() { }
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    virtual void initializeFrom(InputRecord &ir);
 
 protected:
     virtual StructuralElement *giveStructuralElement() = 0;

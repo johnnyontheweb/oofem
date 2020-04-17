@@ -150,39 +150,40 @@ double MasterDof :: giveUnknown(ValueModeType mode, TimeStep *tStep)
         return 0.0;
     }
 
-    // first try if IC apply
-    if ( tStep->giveNumber() == dofManager->giveDomain()->giveEngngModel()->giveNumberOfTimeStepWhenIcApply() ) { // step when Ic apply
-        if ( this->hasIcOn(mode) ) {
-            return this->giveIc()->give(mode);
-        } else if ( this->hasBc(tStep) ) {
+    if ( ! dofManager->giveDomain()->giveEngngModel()->newDofHandling() ) {
+        // first try if IC apply
+        if ( tStep->giveNumber() == dofManager->giveDomain()->giveEngngModel()->giveNumberOfTimeStepWhenIcApply() ) { // step when Ic apply
+            if ( this->hasIcOn(mode) ) {
+                return this->giveIc()->give(mode);
+            } else if ( this->hasBc(tStep) ) {
+                return this->giveBcValue(mode, tStep);
+            } else {
+                return 0.;
+            }
+        }
+
+        //  if ( dofManager->giveDomain()->giveEngngModel()->requiresUnknownsDictionaryUpdate() ) {
+        // if this feature is active, engng model must ensure
+        // valid data in unknowns dictionary
+        // the e-model must ensure that bc and ic values are correctly set in unknowns dictionaries
+        // they could not be obtained from bc (which are typically incremental)
+        // directly since dictionaries keep the history.
+
+        //    return ( dofManager->giveDomain()->giveEngngModel()->
+        //         giveUnknownComponent(mode, tStep, dofManager->giveDomain(), this) );
+
+        //         int hash = dofManager->giveDomain()->giveEngngModel()->giveUnknownDictHashIndx(mode, tStep);
+        //         if ( unknowns->includes(hash) ) {
+        //             return unknowns->at(hash);
+        //         } else {
+        //             OOFEM_ERROR(Dof unknowns dictionary does not contain unknown of value mode (%s)", __ValueModeTypeToString(mode));
+        //         }
+        //  }
+
+        if ( !dofManager->giveDomain()->giveEngngModel()->requiresUnknownsDictionaryUpdate() && this->hasBc(tStep) ) {
             return this->giveBcValue(mode, tStep);
-        } else {
-            return 0.;
         }
     }
-
-    //  if ( dofManager->giveDomain()->giveEngngModel()->requiresUnknownsDictionaryUpdate() ) {
-    // if this feature is active, engng model must ensure
-    // valid data in unknowns dictionary
-    // the e-model must ensure that bc and ic values are correctly set in unknowns dictionaries
-    // they could not be obtained from bc (which are typically incremental)
-    // directly since dictionaries keep the history.
-
-    //    return ( dofManager->giveDomain()->giveEngngModel()->
-    //         giveUnknownComponent(mode, tStep, dofManager->giveDomain(), this) );
-
-    //         int hash = dofManager->giveDomain()->giveEngngModel()->giveUnknownDictHashIndx(mode, tStep);
-    //         if ( unknowns->includes(hash) ) {
-    //             return unknowns->at(hash);
-    //         } else {
-    //             OOFEM_ERROR(Dof unknowns dictionary does not contain unknown of value mode (%s)", __ValueModeTypeToString(mode));
-    //         }
-    //  }
-
-    if ( !dofManager->giveDomain()->giveEngngModel()->requiresUnknownsDictionaryUpdate() && this->hasBc(tStep) ) {
-        return this->giveBcValue(mode, tStep);
-    }
-
     return ( dofManager->giveDomain()->giveEngngModel()->
             giveUnknownComponent(mode, tStep, dofManager->giveDomain(), this) );
 }
@@ -295,17 +296,9 @@ void MasterDof :: printYourself()
 }
 
 
-contextIOResultType MasterDof :: saveContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// saves full node context (saves state variables, that completely describe
-// current state)
-//
+void MasterDof :: saveContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-
-    if ( ( iores = Dof :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
+    Dof :: saveContext(stream, mode);
 
     if ( mode & CM_Definition ) {
         if ( !stream.write(bc) ) {
@@ -323,26 +316,14 @@ contextIOResultType MasterDof :: saveContext(DataStream &stream, ContextMode mod
     }
 
     if ( ( mode & CM_UnknownDictState ) || ( dofManager->giveDomain()->giveEngngModel()->requiresUnknownsDictionaryUpdate() ) ) {
-        if ( ( iores = unknowns.saveContext(stream, mode, obj) ) != CIO_OK ) {
-            THROW_CIOERR(iores);
-        }
+        unknowns.saveContext(stream);
     }
-
-    return CIO_OK;
 }
 
 
-contextIOResultType MasterDof :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// restores full node context (saves state variables, that completely describe
-// current state)
-//
+void MasterDof :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-
-    if ( ( iores = Dof :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
+    Dof :: restoreContext(stream, mode);
 
     if ( mode & CM_Definition ) {
         if ( !stream.read(bc) ) {
@@ -361,11 +342,7 @@ contextIOResultType MasterDof :: restoreContext(DataStream &stream, ContextMode 
     }
 
     if ( ( mode & CM_UnknownDictState ) || ( dofManager->giveDomain()->giveEngngModel()->requiresUnknownsDictionaryUpdate() ) ) {
-        if ( ( iores = unknowns.restoreContext(stream, mode, obj) ) != CIO_OK ) {
-            THROW_CIOERR(iores);
-        }
+        unknowns.restoreContext(stream);
     }
-
-    return CIO_OK;
 }
 } // end namespace oofem

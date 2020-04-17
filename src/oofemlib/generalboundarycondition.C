@@ -62,15 +62,12 @@ Function *GeneralBoundaryCondition :: giveTimeFunction()
 }
 
 
-IRResultType
-GeneralBoundaryCondition :: initializeFrom(InputRecord *ir)
+void
+GeneralBoundaryCondition :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;           // Required by IR_GIVE_FIELD macro
-
     IR_GIVE_FIELD(ir, timeFunction, _IFT_GeneralBoundaryCondition_timeFunct);
     if ( timeFunction <= 0 ) {
-        OOFEM_WARNING("bad TimeFunction id");
-        return IRRT_BAD_FORMAT;
+        throw ValueInputException(ir, _IFT_GeneralBoundaryCondition_timeFunct, "Must be over 0");
     }
 
     int val = 0;
@@ -85,8 +82,6 @@ GeneralBoundaryCondition :: initializeFrom(InputRecord *ir)
 
     set = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, set, _IFT_GeneralBoundaryCondition_set);
-
-    return IRRT_OK;
 }
 
 bool GeneralBoundaryCondition :: isImposed(TimeStep *tStep)
@@ -127,28 +122,56 @@ GeneralBoundaryCondition :: giveInputRecord(DynamicInputRecord &input)
     }
 }
 
-contextIOResultType
-GeneralBoundaryCondition :: saveContext(DataStream &stream, ContextMode mode, void *obj)
+void
+GeneralBoundaryCondition :: saveContext(DataStream &stream, ContextMode mode)
 {
+    FEMComponent :: saveContext(stream, mode);
+
     if ( mode & CM_Definition ) {
         if ( !stream.write(timeFunction) ) {
             THROW_CIOERR(CIO_IOERR);
         }
+        if ( !stream.write(valType) ) {
+            THROW_CIOERR(CIO_IOERR);
+        }
+        contextIOResultType iores;
+        if ( ( iores = dofs.storeYourself(stream) ) != CIO_OK ) {
+            THROW_CIOERR(iores);
+        }
+        if ( !stream.write(isImposedTimeFunction) ) {
+          THROW_CIOERR(CIO_IOERR);
+        }
+        if ( !stream.write(set) ) {
+          THROW_CIOERR(CIO_IOERR);
+        }
     }
-
-    return CIO_OK;
 }
 
 
-contextIOResultType
-GeneralBoundaryCondition :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
+void
+GeneralBoundaryCondition :: restoreContext(DataStream &stream, ContextMode mode)
 {
+    FEMComponent :: restoreContext(stream, mode);
+
     if ( mode & CM_Definition ) {
         if ( !stream.read(timeFunction) ) {
             THROW_CIOERR(CIO_IOERR);
         }
+        int _val;
+        if ( !stream.read(_val) ) {
+            THROW_CIOERR(CIO_IOERR);
+        }
+        contextIOResultType iores;
+        valType  = (bcValType) _val;
+        if ( ( iores = dofs.restoreYourself(stream) ) != CIO_OK ) {
+            THROW_CIOERR(iores);
+        }
+        if ( !stream.read(isImposedTimeFunction) ) {
+          THROW_CIOERR(CIO_IOERR);
+        }
+        if ( !stream.read(set) ) {
+          THROW_CIOERR(CIO_IOERR);
+        }
     }
-
-    return CIO_OK;
 }
 } // end namespace oofem

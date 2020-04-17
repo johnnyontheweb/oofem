@@ -39,7 +39,7 @@
 #include "intarray.h"
 #include "floatarray.h"
 #include "floatmatrix.h"
-#include "fluiddynamicmaterial.h"
+#include "fm/Materials/fluiddynamicmaterial.h"
 #include "fluidcrosssection.h"
 #include "dynamicinputrecord.h"
 #include "engngm.h"
@@ -53,26 +53,18 @@
 
 namespace oofem {
 SUPGElement :: SUPGElement(int n, Domain *aDomain) :
-    FMElement(n, aDomain), t_supg(0), t_pspg(0), t_lsic(0)
+    FMElement(n, aDomain)
 { }
 
 
-SUPGElement :: ~SUPGElement()
-// Destructor.
-{ }
-
-IRResultType
-SUPGElement :: initializeFrom(InputRecord *ir)
+void
+SUPGElement :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                   // Required by IR_GIVE_FIELD macro
-
-
+    FMElement :: initializeFrom(ir);
     IR_GIVE_OPTIONAL_FIELD(ir, boundarySides, _IFT_SUPGElement_bsides);
     if ( !boundarySides.isEmpty() ) {
         IR_GIVE_FIELD(ir, boundaryCodes, _IFT_SUPGElement_bcodes);
     }
-
-    return FMElement :: initializeFrom(ir);
 }
 
 
@@ -223,22 +215,6 @@ SUPGElement :: giveCharacteristicVector(FloatArray &answer, CharType mtrx, Value
 }
 
 
-
-
-
-void
-SUPGElement :: computeDeviatoricStress(FloatArray &answer, GaussPoint *gp, TimeStep *tStep)
-{
-    FloatArray eps;
-
-    // compute deviatoric strain
-    this->computeDeviatoricStrain(eps, gp, tStep);
-    // call material to compute stress
-    static_cast< FluidCrossSection * >( this->giveCrossSection() )->giveFluidMaterial()->computeDeviatoricStressVector(answer, gp, eps, tStep);
-}
-
-
-
 void
 SUPGElement :: computeBCLhsTerm_MB(FloatMatrix &answer, TimeStep *tStep)
 {
@@ -350,12 +326,13 @@ SUPGElement :: checkConsistency()
 void
 SUPGElement :: updateInternalState(TimeStep *tStep)
 {
-    FloatArray stress;
+    FloatArray stress, eps;
 
     // force updating strains & stresses
     for ( auto &iRule: integrationRulesArray ) {
-        for ( GaussPoint *gp: *iRule ) {
-            computeDeviatoricStress(stress, gp, tStep);
+        for ( auto &gp: *iRule ) {
+            computeDeviatoricStrain(eps, gp, tStep);
+            computeDeviatoricStress(stress, eps, gp, tStep);
         }
     }
 }

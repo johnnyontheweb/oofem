@@ -9,7 +9,7 @@ drying creep of plane-stress elements in tension
 # element 5: drying creep, staggered problem, p = -1.5 (correct size effect) or quivalently \tilde{p} = 0.6, zero shrinkage
 # element 6: shrinkage
 #
-IncrLinearStatic endOfTimeOfInterest 8.64000E+8 nsteps 25 prescribedTimes 25 0.0001 0.0002 0.0005 0.001 0.002 0.005 0.01 0.02 0.05 0.1 0.2 0.5 1. 2. 5. 10. 20. 50. 100. 200. 500. 1000. 2000. 5000. 10000. nmodules 1
+StaticStructural nsteps 25 prescribedTimes 25 0.0001 0.0002 0.0005 0.001 0.002 0.005 0.01 0.02 0.05 0.1 0.2 0.5 1. 2. 5. 10. 20. 50. 100. 200. 500. 1000. 2000. 5000. 10000. nmodules 1
 #
 errorcheck
 # vtkxml tstep_step 1 domain_all vars 2 1 4 primvars 1 1 
@@ -81,13 +81,13 @@ SimpleCS 4 thick 1.0 material 4
 #
 # MATERIAL
 #
-mps 1 d 0. n 0.2 talpha 12.e-6 referencetemperature 296. mode 0 fc 30. cc 350. w/c 0.5 a/c 6. stiffnessfactor 1.e6  timefactor 1. lambda0 86400. begoftimeofinterest 8.64e-2 endoftimeofinterest 8.64e8 relMatAge 6.048e5 CoupledAnalysisType 2 ksh 0.0 t0 6.048e5 mus 5.787037e-11
+mps 1 d 0. n 0.2 talpha 12.e-6 referencetemperature 296. mode 0 fc 30. cc 350. w/c 0.5 a/c 6. stiffnessfactor 1.e6  timefactor 1. lambda0 86400. begoftimeofinterest 8.64e-2 endoftimeofinterest 8.64e8 relMatAge 6.048e5 CoupledAnalysisType 2 ksh 0.0 mus 5.787037e-11
 #
-mps 2 d 0. n 0.2 talpha 12.e-6 referencetemperature 296. mode 0 fc 30. cc 350. w/c 0.5 a/c 6. stiffnessfactor 1.e6  timefactor 1. lambda0 86400. begoftimeofinterest 8.64e-2 endoftimeofinterest 8.64e8 relMatAge 6.048e5 CoupledAnalysisType 2 ksh 0.0 t0 6.048e5 k3 35. p 1000.
+mps 2 d 0. n 0.2 talpha 12.e-6 referencetemperature 296. mode 0 fc 30. cc 350. w/c 0.5 a/c 6. stiffnessfactor 1.e6  timefactor 1. lambda0 86400. begoftimeofinterest 8.64e-2 endoftimeofinterest 8.64e8 relMatAge 6.048e5 CoupledAnalysisType 2 ksh 0.0 k3 35. p 1000.
 #
-mps 3 d 0. n 0.2 talpha 12.e-6 referencetemperature 296. mode 0 fc 30. cc 350. w/c 0.5 a/c 6. stiffnessfactor 1.e6  timefactor 1. lambda0 86400. begoftimeofinterest 8.64e-2 endoftimeofinterest 8.64e8 relMatAge 6.048e5 CoupledAnalysisType 2 ksh 0.0 t0 6.048e5 mus 2.314815e-15 p -1.5
+mps 3 d 0. n 0.2 talpha 12.e-6 referencetemperature 296. mode 0 fc 30. cc 350. w/c 0.5 a/c 6. stiffnessfactor 1.e6  timefactor 1. lambda0 86400. begoftimeofinterest 8.64e-2 endoftimeofinterest 8.64e8 relMatAge 6.048e5 CoupledAnalysisType 2 ksh 0.0 mus 2.314815e-15 p -1.5
 #
-mps 4 d 0. n 0.2 talpha 12.e-6 referencetemperature 296. mode 0 fc 30. cc 350. w/c 0.5 a/c 6. stiffnessfactor 1.e6  timefactor 1. lambda0 86400. begoftimeofinterest 8.64e-2 endoftimeofinterest 8.64e8 relMatAge 6.048e5 CoupledAnalysisType 2 ksh 0.0025 t0 6.048e5 mus 5.787037e-11
+mps 4 d 0. n 0.2 talpha 12.e-6 referencetemperature 296. mode 0 fc 30. cc 350. w/c 0.5 a/c 6. stiffnessfactor 1.e6  timefactor 1. lambda0 86400. begoftimeofinterest 8.64e-2 endoftimeofinterest 8.64e8 relMatAge 6.048e5 CoupledAnalysisType 2 ksh 0.0025 mus 5.787037e-11
 #
 #
 # BOUNDARY CONDITIONS

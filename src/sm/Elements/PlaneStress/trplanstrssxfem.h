@@ -35,12 +35,15 @@
 #ifndef TRPLANSTRSSXFEM_H_
 #define TRPLANSTRSSXFEM_H_
 
-#include "../sm/Elements/PlaneStress/trplanstrss.h"
-#include "../sm/xfem/xfemstructuralelementinterface.h"
+#include "sm/Elements/PlaneStress/trplanstrss.h"
+#include "sm/xfem/xfemstructuralelementinterface.h"
 #include "vtkxmlexportmodule.h"
 
 
 #define _IFT_TrPlaneStress2dXFEM_Name "trplanestress2dxfem"
+
+#define _IFT_TrPlaneStress2dXFEM_RegCoeff "reg_coeff"
+#define _IFT_TrPlaneStress2dXFEM_RegCoeffTol "reg_coeff_tol"
 
 namespace oofem {
 /**
@@ -50,61 +53,60 @@ namespace oofem {
 class TrPlaneStress2dXFEM : public TrPlaneStress2d, public XfemStructuralElementInterface, public VTKXMLExportModuleElementInterface
 {
 protected:
-    virtual void updateYourself(TimeStep *tStep);
-    virtual void postInitialize();
+    void updateYourself(TimeStep *tStep) override;
+    void postInitialize() override;
 
+    double mRegCoeff, mRegCoeffTol;
 
 public:
-    TrPlaneStress2dXFEM(int n, Domain * d) : TrPlaneStress2d(n, d), XfemStructuralElementInterface(this), VTKXMLExportModuleElementInterface() { numberOfDofMans = 3; }
+    TrPlaneStress2dXFEM(int n, Domain * d) : TrPlaneStress2d(n, d), XfemStructuralElementInterface(this), VTKXMLExportModuleElementInterface() { numberOfDofMans = 3; mRegCoeff = 1.0e-6; mRegCoeffTol = 1.0e-6;}
 
     virtual ~TrPlaneStress2dXFEM();
 
+    int checkConsistency() override;
 
-    virtual int checkConsistency();
+    int testElementExtension(ElementExtension ext) override { return ( ( ext == Element_EdgeLoadSupport ) ? 1 : 0 ); }
 
-    virtual int testElementExtension(ElementExtension ext) { return ( ( ext == Element_EdgeLoadSupport ) ? 1 : 0 ); }
+    Interface *giveInterface(InterfaceType it) override;
 
-    virtual Interface *giveInterface(InterfaceType it);
+    const char *giveInputRecordName() const override { return _IFT_TrPlaneStress2dXFEM_Name; }
+    const char *giveClassName() const override { return "TrPlaneStress2dXFEM"; }
 
-    virtual const char *giveInputRecordName() const { return _IFT_TrPlaneStress2dXFEM_Name; }
-    virtual const char *giveClassName() const { return "TrPlaneStress2dXFEM"; }
+    int computeNumberOfDofs() override;
+    void computeGaussPoints() override;
+    void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer) override;
+    void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int lowerIndx = 1, int upperIndx = ALL_STRAINS) override;
+    void computeBHmatrixAt(GaussPoint *gp, FloatMatrix &answer) override;
+    void giveDofManDofIDMask(int inode, IntArray &answer) const override;
+    void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) override;
+    void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep) override;
+    void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep) override;
 
-    virtual int computeNumberOfDofs();
-    virtual void computeGaussPoints();
-    virtual void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer);
-    virtual void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer,
-                                  int lowerIndx = 1, int upperIndx = ALL_STRAINS);
-    virtual void computeBHmatrixAt(GaussPoint *gp, FloatMatrix &answer);
-    virtual void giveDofManDofIDMask(int inode, IntArray &answer) const;
-    virtual void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *, TimeStep *tStep);
-    virtual void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep);
-    virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep);
+    void computeDeformationGradientVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep) override;
 
-    virtual void computeDeformationGradientVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep);
+    void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord) override;
 
-    virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord);
+    void computeConsistentMassMatrix(FloatMatrix &answer, TimeStep *tStep, double &mass, const double *ipDensity = NULL) override { XfemStructuralElementInterface :: XfemElementInterface_computeConsistentMassMatrix(answer, tStep, mass, ipDensity); }
 
-    virtual void computeConsistentMassMatrix(FloatMatrix &answer, TimeStep *tStep, double &mass, const double *ipDensity = NULL) { XfemStructuralElementInterface :: XfemElementInterface_computeConsistentMassMatrix(answer, tStep, mass, ipDensity); }
-
-        virtual Element_Geometry_Type giveGeometryType() const;
+    Element_Geometry_Type giveGeometryType() const override;
 
 #ifdef __OOFEG
     // TODO: Implement OOFEG functions
-    virtual void drawRawGeometry(oofegGraphicContext &gc, TimeStep *tStep);
+    void drawRawGeometry(oofegGraphicContext &gc, TimeStep *tStep) override;
     //void drawDeformedGeometry(oofegGraphicContext &gc, TimeStep *tStep, UnknownType);
-    virtual void drawScalar(oofegGraphicContext &gc, TimeStep *tStep);
-    //virtual void drawSpecial(oofegGraphicContext &gc, TimeStep *tStep);
+    void drawScalar(oofegGraphicContext &gc, TimeStep *tStep) override;
+    //void drawSpecial(oofegGraphicContext &gc, TimeStep *tStep) override;
 #endif
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual MaterialMode giveMaterialMode();
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    void initializeFrom(InputRecord &ir) override;
+    MaterialMode giveMaterialMode() override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual void computeField(ValueModeType mode, TimeStep *tStep, const FloatArray &lcoords, FloatArray &answer);
-    virtual void giveElementDofIDMask(IntArray &answer) const;
+    void computeField(ValueModeType mode, TimeStep *tStep, const FloatArray &lcoords, FloatArray &answer) override;
+    void giveElementDofIDMask(IntArray &answer) const override;
 
     /// VTK Interface
-    virtual void giveCompositeExportData(std::vector< VTKPiece > &vtkPieces, IntArray &primaryVarsToExport, IntArray &internalVarsToExport, IntArray cellVarsToExport, TimeStep *tStep);
+    void giveCompositeExportData(std::vector< VTKPiece > &vtkPieces, IntArray &primaryVarsToExport, IntArray &internalVarsToExport, IntArray cellVarsToExport, TimeStep *tStep) override;
 
 };
 } /* namespace oofem */

@@ -64,9 +64,9 @@ LinearConstraintBC :: ~LinearConstraintBC()
 }
 
 
-IRResultType LinearConstraintBC :: initializeFrom(InputRecord *ir)
+void LinearConstraintBC :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;
+    ActiveBoundaryCondition :: initializeFrom(ir);
     rhsTf = 0;
 
     IR_GIVE_FIELD(ir, weights, _IFT_LinearConstraintBC_weights);
@@ -74,16 +74,13 @@ IRResultType LinearConstraintBC :: initializeFrom(InputRecord *ir)
     IR_GIVE_FIELD(ir, dofmans, _IFT_LinearConstraintBC_dofmans);
     IR_GIVE_FIELD(ir, dofs, _IFT_LinearConstraintBC_dofs);
     if ( weights.giveSize() != dofmans.giveSize() ) {
-        OOFEM_WARNING("Size mismatch, weights %d and dofmans %d", weights.giveSize(), dofmans.giveSize());
-        return IRRT_BAD_FORMAT;
+        throw ValueInputException(ir, _IFT_LinearConstraintBC_weights, "Size mismatch weights and dofmans");
     }
     IR_GIVE_OPTIONAL_FIELD(ir, weightsTf, _IFT_LinearConstraintBC_weightsfuncs);
     IR_GIVE_OPTIONAL_FIELD(ir, rhsTf, _IFT_LinearConstraintBC_rhsfuncs);
 
     IR_GIVE_FIELD(ir, lhsType, _IFT_LinearConstraintBC_lhstype);
     IR_GIVE_FIELD(ir, rhsType, _IFT_LinearConstraintBC_rhstype);
-
-    return ActiveBoundaryCondition :: initializeFrom(ir);
 }
 
 
@@ -104,7 +101,7 @@ void LinearConstraintBC :: giveLocArray(const UnknownNumberingScheme &r_s,  IntA
 
 void LinearConstraintBC :: assemble(SparseMtrx &answer, TimeStep *tStep,
                                     CharType type, const UnknownNumberingScheme &r_s,
-                                    const UnknownNumberingScheme &c_s)
+                                    const UnknownNumberingScheme &c_s, double scale)
 {
     int size = this->weights.giveSize();
     IntArray lambdaeq(1);
@@ -124,6 +121,8 @@ void LinearConstraintBC :: assemble(SparseMtrx &answer, TimeStep *tStep,
             }
             contrib.at(_i, 1) = this->weights.at(_i) * factor;
         }
+
+        contribt.times(scale);
         contribt.beTranspositionOf(contrib);
 
         answer.assemble(lambdaeq, locr, contribt);
@@ -201,11 +200,11 @@ void LinearConstraintBC :: giveLocationArrays(std :: vector< IntArray > &rows, s
 }
 
 
-contextIOResultType
-LinearConstraintBC :: saveContext(DataStream &stream, ContextMode mode, void *obj)
+void
+LinearConstraintBC :: saveContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
     if ( mode & CM_Definition ) {
+        contextIOResultType iores;
         if ( ( iores = weights.storeYourself(stream) ) != CIO_OK ) {
             THROW_CIOERR(iores);
         }
@@ -232,19 +231,15 @@ LinearConstraintBC :: saveContext(DataStream &stream, ContextMode mode, void *ob
         }
     }
 
-    if ( ( iores = md->saveContext(stream, mode) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    return CIO_OK;
+    md->saveContext(stream, mode);
 }
 
 
-contextIOResultType
-LinearConstraintBC :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
+void
+LinearConstraintBC :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
     if ( mode & CM_Definition ) {
+        contextIOResultType iores;
         if ( ( iores = weights.restoreYourself(stream) ) != CIO_OK ) {
             THROW_CIOERR(iores);
         }
@@ -271,10 +266,6 @@ LinearConstraintBC :: restoreContext(DataStream &stream, ContextMode mode, void 
         }
     }
 
-    if ( ( iores = md->restoreContext(stream, mode) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    return CIO_OK;
+    md->restoreContext(stream, mode);
 }
 } //end of oofem namespace

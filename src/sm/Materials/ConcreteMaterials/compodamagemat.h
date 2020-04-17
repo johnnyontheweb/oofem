@@ -36,9 +36,9 @@
 #define compodamagemat_h
 
 #include "material.h"
-#include "Materials/linearelasticmaterial.h"
-#include "../sm/Materials/structuralmaterial.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Materials/linearelasticmaterial.h"
+#include "sm/Materials/structuralmaterial.h"
+#include "sm/Materials/structuralms.h"
 #include "intarray.h"
 #include "floatarray.h"
 #include "cltypes.h"
@@ -68,15 +68,13 @@ class CompoDamageMatStatus : public StructuralMaterialStatus
 {
 public:
     /// Constructor
-    CompoDamageMatStatus(int n, Domain * d, GaussPoint * g);
-    /// Destructor
-    virtual ~CompoDamageMatStatus();
+    CompoDamageMatStatus(GaussPoint * g);
 
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    void printOutputAt(FILE *file, TimeStep *tStep) const override;
 
-    virtual void initTempStatus();
+    void initTempStatus() override;
 
-    virtual void updateYourself(TimeStep *tStep);
+    void updateYourself(TimeStep *tStep) override;
 
     //tempVal are values used during iteration, Val are equilibrated values, updated after last iteration in previous time step
 
@@ -96,7 +94,7 @@ public:
     FloatArray omega;
 
     /// Iteration in the time step
-    int Iteration;
+    int Iteration = 0;
 
     /// Stress at which damage starts. For uniaxial loading is equal to given maximum stress in the input. The stress is linearly interpolated between increments at IP [6 tension, 6 compression]
     FloatArray initDamageStress;
@@ -111,10 +109,10 @@ public:
     /// Characteristic element length at IP in three perpendicular planes aligned with material orientation
     FloatArray elemCharLength;
 
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj);
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 
-    virtual const char *giveClassName() const { return "CompoDamageMatStatus"; }
+    const char *giveClassName() const override { return "CompoDamageMatStatus"; }
 };
 
 
@@ -141,38 +139,41 @@ class CompoDamageMat : public StructuralMaterial
 public:
     /// Constructor
     CompoDamageMat(int n, Domain * d);
-    /// Destructor
-    virtual ~CompoDamageMat();
 
-    virtual const char *giveClassName() const { return "CompositeDamageMaterial"; }
-    virtual const char *giveInputRecordName() const { return _IFT_CompoDamageMat_Name; }
+    const char *giveClassName() const override { return "CompositeDamageMaterial"; }
+    const char *giveInputRecordName() const override { return _IFT_CompoDamageMat_Name; }
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const { return new CompoDamageMatStatus(1, domain, gp); }
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new CompoDamageMatStatus(gp); }
 
-    virtual void give3dMaterialStiffnessMatrix(FloatMatrix &answer,
-                                               MatResponseMode mmode,
-                                               GaussPoint *gp,
-                                               TimeStep *tStep);
+    FloatMatrixF<6,6> give3dMaterialStiffnessMatrix(MatResponseMode mmode, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual void giveRealStressVector(FloatArray &answer, GaussPoint *gp,
-                                      const FloatArray &, TimeStep *tStep);
+    void giveRealStressVector(FloatArray &answer, GaussPoint *gp,
+                              const FloatArray &, TimeStep *tStep) override;
 
-    virtual void giveRealStressVector_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedE, TimeStep *tStep)
-    { this->giveRealStressVector(answer, gp, reducedE, tStep); }
-    virtual void giveRealStressVector_1d(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedE, TimeStep *tStep)
-    { this->giveRealStressVector(answer, gp, reducedE, tStep); }
+    FloatArrayF<6> giveRealStressVector_3d(const FloatArrayF<6> &strain, GaussPoint *gp, TimeStep *tStep) const override
+    {
+        FloatArray answer;
+        const_cast<CompoDamageMat*>(this)->giveRealStressVector(answer, gp, strain, tStep);
+        return answer;
+    }
+    FloatArrayF<1> giveRealStressVector_1d(const FloatArrayF<1> &strain, GaussPoint *gp, TimeStep *tStep) const override
+    {
+        FloatArray answer;
+        const_cast<CompoDamageMat*>(this)->giveRealStressVector(answer, gp, strain, tStep);
+        return answer;
+    }
 
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 
     /**
      * Optional parameter determining after how many iterations within the time step the damage is calculated.
      * This is important for stress evaluation which is unequilibrated in the beginning.
      * Variables strainAtMaxStress, initDamageStress, maxStrainAtZeroStress are evaluated afterIter.
      */
-    int afterIter;
+    int afterIter = 0;
 
 protected:
     /**
@@ -182,7 +183,7 @@ protected:
      * @param mode Material mode of stiffness matrix (elastic, secant).
      * @param gp Integration point.
      */
-    void giveUnrotated3dMaterialStiffnessMatrix(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp);
+    FloatMatrixF<6,6> giveUnrotated3dMaterialStiffnessMatrix(MatResponseMode mode, GaussPoint *gp) const;
     /**
      * Returns [6x6] rotation matrix in the global coordinate system.
      * The matrix relates local c.s. to global c.s. Local c.s. can be specified with 'mcs' flag defined on element.
@@ -190,7 +191,7 @@ protected:
      * @param gp Integration point.
      * @return 0 if no lcs is defined on element, 1 if defined.
      */
-    int giveMatStiffRotationMatrix(FloatMatrix &answer, GaussPoint *gp);
+    int giveMatStiffRotationMatrix(FloatMatrixF<6,6> &answer, GaussPoint *gp) const;
 
     /// Six stress components of tension components read from the input file.
     FloatArray inputTension;

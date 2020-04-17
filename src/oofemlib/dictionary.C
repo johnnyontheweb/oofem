@@ -66,10 +66,8 @@ Dictionary :: clear()
 int
 Dictionary :: giveSize()
 {
-    Pair *next;
     int size = 0;
-
-    next = first;
+    Pair *next = first;
     while ( next ) {
         size++;
         next = next->giveNext();
@@ -81,7 +79,6 @@ Dictionary :: giveSize()
 Pair *Dictionary :: add(int k, double v)
 // Adds the pair (k,v) to the receiver. Returns this new pair.
 {
-    Pair *newPair;
 
 #  ifdef DEBUG
     if ( this->includes(k) ) {
@@ -90,7 +87,7 @@ Pair *Dictionary :: add(int k, double v)
 
 #  endif
 
-    newPair = new Pair(k, v);
+    Pair *newPair = new Pair(k, v);
     if ( last ) {
         last->append(newPair);
     } else {                              // empty dictionary
@@ -107,9 +104,7 @@ double &Dictionary :: at(int aKey)
 // Returns the value of the pair which key is aKey. If such pair does
 // not exist, creates it and assign value 0.
 {
-    Pair *next, *newPair;
-
-    next = first;
+    Pair *next = first;
     while ( next ) {
         if ( next->giveKey() == aKey ) {
             return next->giveValue();
@@ -118,18 +113,31 @@ double &Dictionary :: at(int aKey)
         next = next->giveNext();
     }
 
-    newPair = this->add(aKey, 0);         // pair does not exist yet
+    Pair *newPair = this->add(aKey, 0);         // pair does not exist yet
     return newPair->giveValue();
 }
 
 
-bool Dictionary :: includes(int aKey)
+double Dictionary :: at(int aKey) const
+{
+    Pair *next = first;
+    while ( next ) {
+        if ( next->giveKey() == aKey ) {
+            return next->giveValue();
+        }
+
+        next = next->giveNext();
+    }
+    OOFEM_ERROR("Requested key missing from dictionary");
+    return 0.;
+}
+
+
+bool Dictionary :: includes(int aKey) const
 // Returns True if the receiver contains a pair which key is aKey, else
 // returns False.
 {
-    Pair *next;
-
-    next = first;
+    Pair *next = first;
     while ( next ) {
         if ( next->giveKey() == aKey ) {
             return true;
@@ -172,11 +180,7 @@ Dictionary :: formatAsString(std :: string &str)
 }
 
 
-contextIOResultType Dictionary :: saveContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// saves full node context (saves state variables, that completely describe
-// current state)
-//
+void Dictionary :: saveContext(DataStream &stream)
 {
     int nitems = 0;
     int key;
@@ -209,17 +213,10 @@ contextIOResultType Dictionary :: saveContext(DataStream &stream, ContextMode mo
 
         next = next->giveNext();
     }
-
-    // return result back
-    return CIO_OK;
 }
 
 
-contextIOResultType Dictionary :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// restores full node context (saves state variables, that completely describe
-// current state)
-//
+void Dictionary :: restoreContext(DataStream &stream)
 {
     int size;
     int key;
@@ -245,8 +242,6 @@ contextIOResultType Dictionary :: restoreContext(DataStream &stream, ContextMode
 
         this->at(key) = value;
     }
-
-    return CIO_OK;
 }
 
 

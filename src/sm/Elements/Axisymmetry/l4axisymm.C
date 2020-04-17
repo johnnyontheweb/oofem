@@ -32,7 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/Axisymmetry/l4axisymm.h"
+#include "sm/Elements/Axisymmetry/l4axisymm.h"
 #include "fei2dquadlin.h"
 #include "node.h"
 #include "gausspoint.h"
@@ -89,15 +89,11 @@ L4Axisymm :: giveInterface(InterfaceType interface)
 }
 
 
-IRResultType
-L4Axisymm :: initializeFrom(InputRecord *ir)
+void
+L4Axisymm :: initializeFrom(InputRecord &ir)
 {
     numberOfGaussPoints = 4;
-    IRResultType result = NLStructuralElement :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
-
+    NLStructuralElement :: initializeFrom(ir);
 
     if ( !( ( numberOfGaussPoints == 1 ) ||
            ( numberOfGaussPoints == 4 ) ||
@@ -107,8 +103,6 @@ L4Axisymm :: initializeFrom(InputRecord *ir)
     }
 
     numberOfFiAndShGaussPoints = 1;
-
-    return IRRT_OK;
 }
 
 

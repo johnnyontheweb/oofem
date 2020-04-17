@@ -48,7 +48,7 @@ LocalGaussianRandomFunction :: ~LocalGaussianRandomFunction()
 { }
 
 void
-LocalGaussianRandomFunction :: evaluate(FloatArray &answer, const std :: map< std :: string, FunctionArgument > &valDict)
+LocalGaussianRandomFunction :: evaluate(FloatArray &answer, const std :: map< std :: string, FunctionArgument > &valDict, GaussPoint *gp, double param)
 {
     answer = FloatArray{evaluateAtTime(0)};
 }
@@ -56,7 +56,7 @@ LocalGaussianRandomFunction :: evaluate(FloatArray &answer, const std :: map< st
 double
 LocalGaussianRandomFunction :: evaluateAtTime(double t)
 {
-    return {normalCdfInverse(ran1(& randomInteger), mean, variance * mean)};
+    return normalCdfInverse(ran1(& randomInteger), mean, variance * mean);
 }
 
 double
@@ -73,11 +73,9 @@ LocalGaussianRandomFunction :: evaluateAccelerationAtTime(double t)
     return 0.;
 }
 
-IRResultType
-LocalGaussianRandomFunction :: initializeFrom(InputRecord *ir)
+void
+LocalGaussianRandomFunction :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                   // Required by IR_GIVE_FIELD macro
-
     IR_GIVE_FIELD(ir, mean, _IFT_LocalGaussianRandomFunction_mean);
     IR_GIVE_FIELD(ir, variance, _IFT_LocalGaussianRandomFunction_variance);
     randomInteger = ( long ) ( -time(NULL) );
@@ -86,8 +84,6 @@ LocalGaussianRandomFunction :: initializeFrom(InputRecord *ir)
     if ( seed ) {
         randomInteger = seed;
     }
-
-    return IRRT_OK;
 }
 
 #define IA 16807

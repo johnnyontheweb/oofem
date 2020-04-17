@@ -38,10 +38,10 @@
 #include "femcmpnn.h"
 #include "dictionary.h"
 #include "material.h"
-#include "Materials/deformationtheorymaterial.h"
-#include "Materials/isolinearelasticmaterial.h"
+#include "sm/Materials/deformationtheorymaterial.h"
+#include "sm/Materials/isolinearelasticmaterial.h"
 #include "floatarray.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Materials/structuralms.h"
 
 ///@name Input fields for Concrete2
 //@{
@@ -93,19 +93,19 @@ protected:
     FloatArray plasticStrainVector; // full form
     FloatArray plasticStrainIncrementVector;
 
-    double tempSCCM, tempEPM, tempSCTM, tempE0PM, tempSRF, tempSEZ;
+    double tempSCCM = 0., tempEPM = 0., tempSCTM = 0., tempE0PM = 0., tempSRF = 0., tempSEZ = 0.;
 
-    double SCCM; ///< Current pressure strength.
-    double EPM;  ///< Max. eff. plastic strain.
-    double SCTM; ///< Current tension strength.
-    double E0PM; ///< Max. vol. plastic strain.
-    double SRF;  ///< current stress in stirrups.
-    double SEZ;  ///< Current strain in transverse (z) direction.
+    double SCCM = 0.; ///< Current pressure strength.
+    double EPM = 0.;  ///< Max. eff. plastic strain.
+    double SCTM = -1.; ///< Current tension strength.
+    double E0PM = 0.; ///< Max. vol. plastic strain.
+    double SRF = 0.;  ///< current stress in stirrups.
+    double SEZ = 0.;  ///< Current strain in transverse (z) direction.
 
 public:
-    Concrete2MaterialStatus(int n, Domain * d, GaussPoint * g);
-    virtual ~Concrete2MaterialStatus();
-    virtual void printOutputAt(FILE *file, TimeStep *tStep)
+    Concrete2MaterialStatus(GaussPoint * g);
+
+    void printOutputAt(FILE *file, TimeStep *tStep) const override
     { StructuralMaterialStatus :: printOutputAt(file, tStep); }
 
     const FloatArray & givePlasticStrainVector() const { return plasticStrainVector; }
@@ -132,15 +132,13 @@ public:
     double &giveMaxVolPlasticStrain()     { return E0PM; }
 
 
-    virtual void initTempStatus();
-    virtual void updateYourself(TimeStep *tStep);
+    void initTempStatus() override;
+    void updateYourself(TimeStep *tStep) override;
 
-    // saves current context(state) into stream
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 
-    // definition
-    virtual const char *giveClassName() const { return "Concrete2MaterialStatus"; }
+    const char *giveClassName() const override { return "Concrete2MaterialStatus"; }
 };
 
 
@@ -152,66 +150,58 @@ public:
 class Concrete2 : public DeformationTheoryMaterial
 {
 private:
-    double SCCC; ///< Pressure strength.
-    double SCCT; ///< Tension strength.
-    double EPP;  ///< Threshold eff. plastic strain for softening in compress.
-    double EPU;  ///< Ultimate eff. pl. strain.
-    double EOPP; ///< Threshold volumetric plastic strain for soft. in tension.
-    double EOPU; ///< Ultimate vol. pl. strain.
+    double SCCC = 0.; ///< Pressure strength.
+    double SCCT = 0.; ///< Tension strength.
+    double EPP = 0.;  ///< Threshold eff. plastic strain for softening in compress.
+    double EPU = 0.;  ///< Ultimate eff. pl. strain.
+    double EOPP = 0.; ///< Threshold volumetric plastic strain for soft. in tension.
+    double EOPU = 0.; ///< Ultimate vol. pl. strain.
     /**
      * Threshold value of the relative shear deformation
      * (psi^2/eef) at which shear is considered in layers. for
      * lower r.s.d. the transverse shear remains elastic decoupled
      * from bending. default value SHEARTOL = 0.01
      */
-    double SHEARTOL;
+    double SHEARTOL = 0.;
 
-    double E, n;
+    double E = 0., n = 0.;
     // stirrups
-    double stirrE, stirrFt, stirrA, stirrTOL, stirrEREF, stirrLAMBDA;
+    double stirrE = 0., stirrFt = 0., stirrA = 0., stirrTOL = 0., stirrEREF = 0., stirrLAMBDA = 0.;
     /// Indicates that plastic flow (not deformation theory) is used in pressure.
-    int IS_PLASTIC_FLOW;
+    int IS_PLASTIC_FLOW = 0;
     /// Determines if state variables should be updated or not (>0 updates).
-    int IFAD;
+    int IFAD = 0;
 
-    LinearElasticMaterial *linearElasticMaterial;
+    IsotropicLinearElasticMaterial linearElasticMaterial;
 
 public:
     Concrete2(int n, Domain * d);
-    virtual ~Concrete2();
 
-    virtual void giveRealStressVector_PlateLayer(FloatArray &answer, GaussPoint *gp,
-                                                 const FloatArray &, TimeStep *tStep);
+    FloatArrayF<5> giveRealStressVector_PlateLayer(const FloatArrayF<5> &strain, GaussPoint *gp,TimeStep *tStep) const override;
 
-    virtual void givePlateLayerStiffMtrx(FloatMatrix &answer,
-                                         MatResponseMode mode,
-                                         GaussPoint *gp,
-                                         TimeStep *tStep);
+    FloatMatrixF<5,5> givePlateLayerStiffMtrx(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const;
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
+
+    double give(int, GaussPoint *gp) const override;
+
+    const char *giveClassName() const override { return "Concrete2"; }
+    const char *giveInputRecordName() const override { return _IFT_Concrete2_Name; }
+    void initializeFrom(InputRecord &ir) override;
 
 protected:
     void dtp3(GaussPoint *gp, FloatArray &e, FloatArray &s, FloatArray &ep,
-              double SCC, double SCT, int *ifplas);
+              double SCC, double SCT, int *ifplas) const;
     void dtp2(GaussPoint *gp, FloatArray &e, FloatArray &s, FloatArray &ep,
-              double SCC, double SCT, int *ifplas);
-    void stirr(double dez, double srf);
+              double SCC, double SCT, int *ifplas) const;
+    void stirr(double dez, double srf) const;
     void strsoft(GaussPoint *gp, double epsult, FloatArray &ep, double &ep1,
-                 double &ep2, double &ep3, double SCC, double SCT, int &ifupd);
+                 double &ep2, double &ep3, double SCC, double SCT, int &ifupd) const;
 
     // two functions used to initialize and updating temporary variables in
     // gp's status. These variables are used to control process, when
     // we try to find equilibrium state.
-    void updateStirrups(GaussPoint *gp, FloatArray &strainIncrement, TimeStep *tStep);
-
-public:
-    virtual double give(int, GaussPoint *gp);
-
-    // identification and auxiliary functions
-    virtual int hasNonLinearBehaviour() { return 1; }
-    virtual const char *giveClassName() const { return "Concrete2"; }
-    virtual const char *giveInputRecordName() const { return _IFT_Concrete2_Name; }
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    void updateStirrups(GaussPoint *gp, FloatArray &strainIncrement, TimeStep *tStep) const;
 };
 } // end namespace oofem
 #endif // concrete2_h

@@ -55,10 +55,10 @@ PythonExpression :: ~PythonExpression()
     Py_DECREF(this->main_dict);
 }
 
-IRResultType
-PythonExpression :: initializeFrom(InputRecord *ir)
+void
+PythonExpression :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;
+    Function :: initializeFrom(ir);
 
     IR_GIVE_FIELD(ir, this->fExpression, _IFT_PythonExpression_f);
     IR_GIVE_OPTIONAL_FIELD(ir, this->dfdtExpression, _IFT_PythonExpression_dfdt);
@@ -73,8 +73,6 @@ PythonExpression :: initializeFrom(InputRecord *ir)
         PyObject *main_module = PyImport_AddModule("__main__");
         this->main_dict = PyModule_GetDict(main_module);
     }
-
-    return Function :: initializeFrom(ir);
 }
 
 
@@ -89,7 +87,7 @@ PythonExpression :: giveInputRecord(DynamicInputRecord &input)
 
 
 PyObject *
-PythonExpression :: getDict(std :: map< std :: string, FunctionArgument > &valDict)
+PythonExpression :: getDict(const std :: map< std :: string, FunctionArgument > &valDict)
 {
     PyObject *local_dict = PyDict_New();
     for ( const auto &named_arg: valDict ) {
@@ -120,10 +118,10 @@ PythonExpression :: getDict(std :: map< std :: string, FunctionArgument > &valDi
 
 
 void
-PythonExpression :: getArray(FloatArray &answer, PyObject *func, std :: map< std :: string, FunctionArgument > &valDict)
+PythonExpression :: getArray(FloatArray &answer, PyObject *func, const std :: map< std :: string, FunctionArgument > &valDict)
 {
     PyObject *local_dict = getDict(valDict);
-    PyObject *dummy = PyEval_EvalCode( ( PyCodeObject * ) func, main_dict, local_dict );
+    PyObject *dummy = PyEval_EvalCode( func, main_dict, local_dict );
     PyObject *ret = PyDict_GetItemString(local_dict, RETURN_VARIABLE);
     if ( PyList_Check(ret) ) {
         int size = PyList_GET_SIZE(ret);
@@ -141,21 +139,21 @@ PythonExpression :: getArray(FloatArray &answer, PyObject *func, std :: map< std
 
 
 void
-PythonExpression :: evaluate(FloatArray &answer, std :: map< std :: string, FunctionArgument > &valDict)
+PythonExpression :: evaluate(FloatArray &answer, const std :: map< std :: string, FunctionArgument > &valDict, GaussPoint *gp, double param)
 {
     this->getArray(answer, this->f, valDict);
 }
 
 
 void
-PythonExpression :: evaluateVelocity(FloatArray &answer, std :: map< std :: string, FunctionArgument > &valDict)
+PythonExpression :: evaluateVelocity(FloatArray &answer, const std :: map< std :: string, FunctionArgument > &valDict)
 {
     this->getArray(answer, this->dfdt, valDict);
 }
 
 
 void
-PythonExpression :: evaluateAcceleration(FloatArray &answer, std :: map< std :: string, FunctionArgument > &valDict)
+PythonExpression :: evaluateAcceleration(FloatArray &answer, const std :: map< std :: string, FunctionArgument > &valDict)
 {
     this->getArray(answer, this->d2fdt2, valDict);
 }
@@ -166,7 +164,7 @@ PythonExpression :: getScalar(PyObject *func, double time)
 {
     PyObject *local_dict = PyDict_New();
     PyDict_SetItemString( local_dict, "t", PyFloat_FromDouble(time) );
-    PyObject *dummy = PyEval_EvalCode( ( PyCodeObject * ) func, main_dict, local_dict );
+    PyObject *dummy = PyEval_EvalCode( func, main_dict, local_dict );
     double val = 0.;
     PyObject *ret = PyDict_GetItemString(local_dict, RETURN_VARIABLE);
     if ( PyFloat_Check(ret) ) {

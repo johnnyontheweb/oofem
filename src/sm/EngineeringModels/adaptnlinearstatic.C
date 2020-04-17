@@ -32,7 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/EngineeringModels/adaptnlinearstatic.h"
+#include "sm/EngineeringModels/adaptnlinearstatic.h"
 #include "mathfem.h"
 #include "verbose.h"
 #include "timer.h"
@@ -43,6 +43,7 @@
 #include "node.h"
 #include "domain.h"
 #include "datareader.h"
+#include "oofemtxtdatareader.h"
 #include "remeshingcrit.h"
 #include "mesherinterface.h"
 #include "dof.h"
@@ -84,11 +85,12 @@ AdaptiveNonLinearStatic :: ~AdaptiveNonLinearStatic()
 { }
 
 
-IRResultType
-AdaptiveNonLinearStatic :: initializeFrom(InputRecord *ir)
+void
+AdaptiveNonLinearStatic :: initializeFrom(InputRecord &ir)
 // input from inputString
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
+    NonLinearStatic :: initializeFrom(ir);
+
     int _val;
 
     int meshPackageId = 0;
@@ -101,14 +103,11 @@ AdaptiveNonLinearStatic :: initializeFrom(InputRecord *ir)
     IR_GIVE_OPTIONAL_FIELD(ir, _val, _IFT_AdaptiveNonLinearStatic_preMappingLoadBalancingFlag);
     preMappingLoadBalancingFlag = _val > 0;
 
-    result = NonLinearStatic :: initializeFrom(ir);
 
     // check if error estimator initioalized
     if (this->defaultErrEstimator == NULL) {
       OOFEM_ERROR ("AdaptiveNonLinearStatic :: initializeFrom: Error estimator not defined [eetype missing]");
     }
-
-    return result;
 }
 
 void
@@ -146,13 +145,11 @@ AdaptiveNonLinearStatic :: solveYourselfAt(TimeStep *tStep)
         this->terminate( this->giveCurrentStep() ); // make output 
 
         // do remeshing
-        MesherInterface *mesher = classFactory.createMesherInterface( meshPackage, this->giveDomain(1) );
+        auto mesher = classFactory.createMesherInterface( meshPackage, this->giveDomain(1) );
 
         Domain *newDomain;
         MesherInterface :: returnCode result = mesher->createMesh(this->giveCurrentStep(), 1,
                                                                   this->giveDomain(1)->giveSerialNumber() + 1, & newDomain);
-
-        delete mesher;
 
         if ( result == MesherInterface :: MI_OK ) {
             this->initFlag = 1;
@@ -253,9 +250,9 @@ AdaptiveNonLinearStatic :: initializeAdaptiveFrom(EngngModel *sourceProblem)
         OOFEM_ERROR("source problem must also be AdaptiveNonlinearStatic.");
     }
 
-    this->currentStep.reset( new TimeStep( * ( sourceProblem->giveCurrentStep() ) ) );
+    this->currentStep = std::make_unique<TimeStep>( * ( sourceProblem->giveCurrentStep() ) );
     if ( sourceProblem->givePreviousStep() ) {
-        this->previousStep.reset( new TimeStep( * ( sourceProblem->givePreviousStep() ) ) );
+        this->previousStep = std::make_unique<TimeStep>( * ( sourceProblem->givePreviousStep() ) );
     }
 
     // map primary unknowns
@@ -353,7 +350,7 @@ AdaptiveNonLinearStatic :: initializeAdaptiveFrom(EngngModel *sourceProblem)
 
 
         if ( initFlag ) {
-            stiffnessMatrix.reset( classFactory.createSparseMtrx(sparseMtrxType) );
+            stiffnessMatrix = classFactory.createSparseMtrx(sparseMtrxType);
             if ( !stiffnessMatrix ) {
                 OOFEM_ERROR("sparse matrix creation failed");
             }
@@ -425,13 +422,9 @@ AdaptiveNonLinearStatic :: initializeAdaptiveFrom(EngngModel *sourceProblem)
 int
 AdaptiveNonLinearStatic :: initializeAdaptive(int tStepNumber)
 {
-    int stepinfo [ 2 ];
-
-    stepinfo [ 0 ] = tStepNumber;
-    stepinfo [ 1 ] = 0;
-
     try {
-        this->restoreContext(NULL, CM_State, ( void * ) stepinfo);
+        FileDataStream stream(this->giveContextFileName(tStepNumber, 0), false);
+        this->restoreContext(stream, CM_State);
     } catch(ContextIOERR & c) {
         c.print();
         exit(1);
@@ -442,12 +435,10 @@ AdaptiveNonLinearStatic :: initializeAdaptive(int tStepNumber)
     int sernum = this->giveDomain(1)->giveSerialNumber();
     OOFEM_LOG_INFO("restoring domain %d.%d\n", 1, sernum + 1);
     Domain *dNew = new Domain(2, sernum + 1, this);
-    DataReader *domainDr = this->GiveDomainDataReader(1, sernum + 1, contextMode_read);
+    OOFEMTXTDataReader domainDr(this->giveDomainFileName(1, sernum + 1));
     if ( !dNew->instanciateYourself(domainDr) ) {
         OOFEM_ERROR("domain Instanciation failed");
     }
-
-    delete domainDr;
 
     // remap solution to new domain
     return this->adaptiveRemap(dNew);
@@ -673,7 +664,7 @@ AdaptiveNonLinearStatic :: adaptiveRemap(Domain *dNew)
 
         if ( initFlag ) {
             if ( !stiffnessMatrix ) {
-                stiffnessMatrix.reset( classFactory.createSparseMtrx(sparseMtrxType) );
+                stiffnessMatrix = classFactory.createSparseMtrx(sparseMtrxType);
                 if ( !stiffnessMatrix ) {
                     OOFEM_ERROR("sparse matrix creation failed");
                 }
@@ -742,73 +733,26 @@ AdaptiveNonLinearStatic :: adaptiveRemap(Domain *dNew)
 }
 
 
-contextIOResultType
-AdaptiveNonLinearStatic :: saveContext(DataStream *stream, ContextMode mode, void *obj)
+void
+AdaptiveNonLinearStatic :: saveContext(DataStream &stream, ContextMode mode)
 {
-    int closeFlag = 0;
+    NonLinearStatic :: saveContext(stream, mode);
+
     contextIOResultType iores;
-    FILE *file = NULL;
-
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, this->giveCurrentStep()->giveNumber(),
-                                    this->giveCurrentStep()->giveVersion(), contextMode_write) ) {
-            THROW_CIOERR(CIO_IOERR); // override
-        }
-
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
-
-    if ( ( iores = NonLinearStatic :: saveContext(stream, mode, obj) ) != CIO_OK ) {
+    if ( ( iores = timeStepLoadLevels.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    if ( ( iores = timeStepLoadLevels.storeYourself(*stream) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete stream;
-        stream = NULL;
-    }                                                       // ensure consistent records
-
-    return CIO_OK;
 }
 
-contextIOResultType
-AdaptiveNonLinearStatic :: restoreContext(DataStream *stream, ContextMode mode, void *obj)
+void
+AdaptiveNonLinearStatic :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    int closeFlag = 0;
-    int istep, iversion;
+    NonLinearStatic :: restoreContext(stream, mode);
+
     contextIOResultType iores;
-    FILE *file = NULL;
-
-    this->resolveCorrespondingStepNumber(istep, iversion, obj);
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, istep, iversion, contextMode_read) ) {
-            THROW_CIOERR(CIO_IOERR); // override
-        }
-
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
-
-    if ( ( iores = NonLinearStatic :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
+    if ( ( iores = timeStepLoadLevels.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    if ( ( iores = timeStepLoadLevels.restoreYourself(*stream) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete stream;
-        stream = NULL;
-    } // ensure consistent records
-
-    return CIO_OK;
 }
 
 
@@ -825,12 +769,8 @@ AdaptiveNonLinearStatic :: assembleInitialLoadVector(FloatArray &loadVector, Flo
                                                      AdaptiveNonLinearStatic *sourceProblem, int domainIndx,
                                                      TimeStep *tStep)
 {
-    IRResultType result;                           // Required by IR_GIVE_FIELD macro
-
     int mStepNum = tStep->giveMetaStepNumber();
     int hasfixed, mode;
-    InputRecord *ir;
-    MetaStep *iMStep;
     FloatArray _incrementalLoadVector, _incrementalLoadVectorOfPrescribed;
     SparseNonLinearSystemNM :: referenceLoadInputModeType rlm;
     //Domain* sourceDomain = sourceProblem->giveDomain(domainIndx);
@@ -845,9 +785,9 @@ AdaptiveNonLinearStatic :: assembleInitialLoadVector(FloatArray &loadVector, Flo
     _incrementalLoadVectorOfPrescribed.zero();
 
     for ( int imstep = 1; imstep < mStepNum; imstep++ ) {
-        iMStep = this->giveMetaStep(imstep);
-        ir = iMStep->giveAttributesRecord();
-        //hasfixed = ir->hasField("fixload");
+        auto iMStep = this->giveMetaStep(imstep);
+        auto &ir = iMStep->giveAttributesRecord();
+        //hasfixed = ir.hasField("fixload");
         hasfixed = 1;
         if ( hasfixed ) {
             // test for control mode
@@ -864,7 +804,7 @@ AdaptiveNonLinearStatic :: assembleInitialLoadVector(FloatArray &loadVector, Flo
             IR_GIVE_OPTIONAL_FIELD(ir, mode, _IFT_AdaptiveNonLinearStatic_controlmode);
 
             // check if displacement control takes place
-            if ( ir->hasField(_IFT_AdaptiveNonLinearStatic_ddm) ) {
+            if ( ir.hasField(_IFT_AdaptiveNonLinearStatic_ddm) ) {
                 OOFEM_ERROR("fixload recovery not supported for direct displacement control");
             }
 
@@ -889,7 +829,7 @@ AdaptiveNonLinearStatic :: assembleInitialLoadVector(FloatArray &loadVector, Flo
                 }
             } else if ( mode == ( int ) nls_indirectControl ) {
                 // bad practise here
-                if ( !ir->hasField(_IFT_NonLinearStatic_donotfixload) ) {
+                if ( !ir.hasField(_IFT_NonLinearStatic_donotfixload) ) {
                     TimeStep *old = new TimeStep(firststep, this, imstep, firststep - 1.0, deltaT, 0);
                     this->assembleIncrementalReferenceLoadVectors(_incrementalLoadVector, _incrementalLoadVectorOfPrescribed,
                                                                   rlm, this->giveDomain(domainIndx), old);
@@ -905,8 +845,8 @@ AdaptiveNonLinearStatic :: assembleInitialLoadVector(FloatArray &loadVector, Flo
     } // end loop over meta-steps
 
     /* if direct control; add to initial load also previous steps in same metestep */
-    iMStep = this->giveMetaStep(mStepNum);
-    ir = iMStep->giveAttributesRecord();
+    auto iMStep = this->giveMetaStep(mStepNum);
+    auto &ir = iMStep->giveAttributesRecord();
     mode = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, mode, _IFT_AdaptiveNonLinearStatic_controlmode);
     int firststep = iMStep->giveFirstStepNumber();
@@ -936,8 +876,6 @@ AdaptiveNonLinearStatic :: assembleInitialLoadVector(FloatArray &loadVector, Flo
  *                           AdaptiveNonLinearStatic* sourceProblem, int domainIndx,
  *                           TimeStep* tStep)
  * {
- * IRResultType result;                              // Required by IR_GIVE_FIELD macro
- *
  * int mStepNum = tStep->giveMetaStepNumber() ;
  * int mode;
  * InputRecord* ir;
@@ -1017,28 +955,28 @@ LoadBalancer *
 AdaptiveNonLinearStatic :: giveLoadBalancer()
 {
     if ( lb ) {
-        return lb;
+        return lb.get();
     }
 
     if ( loadBalancingFlag || preMappingLoadBalancingFlag ) {
         lb = classFactory.createLoadBalancer( "parmetis", this->giveDomain(1) );
-        return lb;
+        return lb.get();
     } else {
-        return NULL;
+        return nullptr;
     }
 }
 LoadBalancerMonitor *
 AdaptiveNonLinearStatic :: giveLoadBalancerMonitor()
 {
     if ( lbm ) {
-        return lbm;
+        return lbm.get();
     }
 
     if ( loadBalancingFlag || preMappingLoadBalancingFlag ) {
         lbm = classFactory.createLoadBalancerMonitor( "wallclock", this);
-        return lbm;
+        return lbm.get();
     } else {
-        return NULL;
+        return nullptr;
     }
 }
 #endif

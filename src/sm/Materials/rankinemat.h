@@ -35,8 +35,8 @@
 #ifndef rankinemat_h
 #define rankinemat_h
 
-#include "../sm/Materials/structuralmaterial.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Materials/structuralmaterial.h"
+#include "sm/Materials/structuralms.h"
 #include "linearelasticmaterial.h"
 #include "dictionary.h"
 #include "floatarray.h"
@@ -86,108 +86,102 @@ class RankineMat : public StructuralMaterial
 {
 protected:
     /// Reference to the basic elastic material.
-    LinearElasticMaterial *linearElasticMaterial;
+    LinearElasticMaterial *linearElasticMaterial = nullptr;
 
     /// Young's modulus.
-    double E;
+    double E = 0.;
 
     /// Poisson's ratio.
-    double nu;
+    double nu = 0.;
 
     /// Initial hardening modulus.
-    double H0;
+    double H0 = 0.;
 
     /// Type of plastic hardening (0=linear, 1=exponential)
-    int plasthardtype;
+    int plasthardtype = 0;
 
     /// Final increment of yield stress (at infinite cumulative plastic strain)
-    double delSigY;
+    double delSigY = 0.;
 
     /// Initial (uniaxial) yield stress.
-    double sig0;
+    double sig0 = 0.;
 
     /// Relative tolerance in yield condition
-    double yieldtol;
+    double yieldtol = 0.;
 
     /// Parameter that controls damage evolution (a=0 turns damage off).
-    double a;
+    double a = 0.;
 
     /// Total strain at peak stress sig0--Used only if plasthardtype=2
-    double ep;
+    double ep = 0.;
 
     /// Exponent in hardening law--Used only if plasthardtype=2
-    double md;
+    double md = 0.;
 
     /// type of damage law (0=exponential, 1=exponential and  damage starts after peak stress sig0)
-    int damlaw;
+    int damlaw = 1;
 
     /// coefficient required when damlaw=1 or 2
-    double param1;
+    double param1 = 0.;
 
     /// coefficient required when  damlaw=1 or 2
-    double param2;
+    double param2 = 0.;
 
     /// coefficient required when damlaw=2
-    double param3;
+    double param3 = 0.;
 
     /// coefficient required when damlaw=2
-    double param4;
+    double param4 = 0.;
 
     /// coefficient required when damlaw=2
-    double param5;
+    double param5 = 0.;
 
 
 public:
     RankineMat(int n, Domain * d);
-    virtual ~RankineMat() { }
 
-    double evalYieldFunction(const FloatArray &sigPrinc, const double kappa);
-    double evalYieldStress(const double kappa);
-    double evalPlasticModulus(const double kappa);
-    void performPlasticityReturn(GaussPoint *gp, const FloatArray &totalStrain);
-    double computeDamage(GaussPoint *gp, TimeStep *tStep);
-    double computeDamageParam(double tempKappa);
-    double computeDamageParamPrime(double tempKappa);
-    virtual void computeCumPlastStrain(double &kappa, GaussPoint *gp, TimeStep *tStep);
+    double evalYieldFunction(const FloatArray &sigPrinc, const double kappa) const;
+    double evalYieldStress(const double kappa) const;
+    double evalPlasticModulus(const double kappa) const;
+    void performPlasticityReturn(GaussPoint *gp, const FloatArray &totalStrain) const;
+    double computeDamage(GaussPoint *gp, TimeStep *tStep) const;
+    double computeDamageParam(double tempKappa) const;
+    double computeDamageParamPrime(double tempKappa) const;
+    virtual double computeCumPlastStrain(GaussPoint *gp, TimeStep *tStep) const;
 
-    virtual int hasMaterialModeCapability(MaterialMode mode);
+    bool hasMaterialModeCapability(MaterialMode mode) const override;
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    void initializeFrom(InputRecord &ir) override;
 
     // identification and auxiliary functions
-    virtual int hasNonLinearBehaviour() { return 1; }
-    virtual const char *giveInputRecordName() const { return _IFT_RankineMat_Name; }
-    virtual const char *giveClassName() const { return "RankineMat"; }
+    const char *giveInputRecordName() const override { return _IFT_RankineMat_Name; }
+    const char *giveClassName() const override { return "RankineMat"; }
 
     /// Returns a reference to the basic elastic material.
     LinearElasticMaterial *giveLinearElasticMaterial() { return linearElasticMaterial; }
 
-    virtual bool isCharacteristicMtrxSymmetric(MatResponseMode rMode) { return ( a == 0. ); }
+    bool isCharacteristicMtrxSymmetric(MatResponseMode rMode) const override { return ( a == 0. ); }
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const;
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
 
-    virtual void giveRealStressVector_PlaneStress(FloatArray &answer, GaussPoint *gp,
-                                                  const FloatArray &reducesStrain, TimeStep *tStep);
-    virtual void  giveRealStressVector_1d(FloatArray &answer, GaussPoint *gp, const FloatArray &totalStrain, TimeStep *tStep);
+    FloatArrayF<3> giveRealStressVector_PlaneStress(const FloatArrayF<3> &reducesStrain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<1> giveRealStressVector_1d(const FloatArrayF<1> &totalStrain, GaussPoint *gp, TimeStep *tStep) const override;
+
+    FloatMatrixF<1,1> give1dStressStiffMtrx(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<3,3> givePlaneStressStiffMtrx(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
+
 protected:
-    virtual void give1dStressStiffMtrx(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void givePlaneStressStiffMtrx(FloatMatrix &answer,
-                                          MatResponseMode mode,
-                                          GaussPoint *gp,
-                                          TimeStep *tStep);
     /**
      * Executive method used by local and gradient version.
      * (with different parameters gprime)
      */
-    void evaluatePlaneStressStiffMtrx(FloatMatrix &answer,
-                                      MatResponseMode mode,
-                                      GaussPoint *gp,
-                                      TimeStep *tStep, double gprime);
+    FloatMatrixF<3,3> evaluatePlaneStressStiffMtrx(MatResponseMode mode, GaussPoint *gp,
+                                                   TimeStep *tStep, double gprime) const;
 
     /// Computes derivatives of final kappa with respect to final strain.
     void computeEta(FloatArray &answer, RankineMatStatus *status);
 
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 };
 
 //=============================================================================
@@ -209,51 +203,50 @@ protected:
     FloatArray tempEffStress;
 
     /// Cumulative plastic strain (initial).
-    double kappa;
+    double kappa = 0.;
 
     /// Cumulative plastic strain (final).
-    double tempKappa;
+    double tempKappa = 0.;
 
     /**
      * Increments of cumulative plastic strain
      * associated with the first and secomnd principal stress
      * (used in the case of vertex return, needed for stiffness)
      */
-    double dKappa1, dKappa2;
+    double dKappa1 = 0., dKappa2 = 0.;
 
     /// Damage (initial).
-    double damage;
+    double damage = 0.;
 
     /// Damage (final).
-    double tempDamage;
+    double tempDamage = 0.;
 
     /// Tangent shear stiffness (needed for tangent matrix).
-    double tanG;
+    double tanG = 0.;
 
 #ifdef keep_track_of_dissipated_energy
     /// Density of total work done by stresses on strain increments.
-    double stressWork;
+    double stressWork = 0.;
     /// Non-equilibrated density of total work done by stresses on strain increments.
-    double tempStressWork;
+    double tempStressWork = 0.;
     /// Density of dissipated work.
-    double dissWork;
+    double dissWork = 0.;
     /// Non-equilibrated density of dissipated work.
-    double tempDissWork;
+    double tempDissWork = 0.;
 #endif
 
 public:
-    RankineMatStatus(int n, Domain * d, GaussPoint * g);
-    virtual ~RankineMatStatus();
+    RankineMatStatus(GaussPoint * g);
 
     const FloatArray & givePlasticStrain() const { return plasticStrain; }
 
-    double giveDamage() { return damage; }
-    double giveTempDamage() { return tempDamage; }
+    double giveDamage() const { return damage; }
+    double giveTempDamage() const { return tempDamage; }
 
-    double giveCumulativePlasticStrain() { return kappa; }
-    double giveTempCumulativePlasticStrain() { return tempKappa; }
+    double giveCumulativePlasticStrain() const { return kappa; }
+    double giveTempCumulativePlasticStrain() const { return tempKappa; }
 
-    double giveDKappa(int i)
+    double giveDKappa(int i) const
     {
         if ( i == 1 ) {
             return dKappa1;
@@ -287,13 +280,13 @@ public:
 
     const FloatArray &givePlasDef() { return plasticStrain; }
 
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    void printOutputAt(FILE *file, TimeStep *tStep) const override;
 
-    virtual void initTempStatus();
-    virtual void updateYourself(TimeStep *tStep);
+    void initTempStatus() override;
+    void updateYourself(TimeStep *tStep) override;
 
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 
 #ifdef keep_track_of_dissipated_energy
     /// Returns the density of total work of stress on strain increments.
@@ -319,7 +312,7 @@ public:
     void computeWork_1d(GaussPoint *gp, double gf);
 #endif
 
-    virtual const char *giveClassName() const { return "RankineMatStatus"; }
+    const char *giveClassName() const override { return "RankineMatStatus"; }
 };
 } // end namespace oofem
 #endif // rankinemat_h

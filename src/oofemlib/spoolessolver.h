@@ -46,6 +46,7 @@ extern "C" {
 
 ///@name Input fields for SpoolesSolver
 //@{
+#define _IFT_SpoolesSolver_Name "spooles"
 #define _IFT_SpoolesSolver_msglvl "msglvl"
 #define _IFT_SpoolesSolver_msgfile "msgfile"
 //@}
@@ -91,15 +92,15 @@ public:
     /**
      * Solves the given linear system by LDL^T factorization.
      */
-    virtual NM_Status solve(SparseMtrx &A, FloatArray &b, FloatArray &x);
+    NM_Status solve(SparseMtrx &A, FloatArray &b, FloatArray &x) override;
 
     /// Initializes receiver from given record.
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    void initializeFrom(InputRecord &ir) override;
 
     // identification
-    virtual const char *giveClassName() const { return "SpoolesSolver"; }
-    virtual LinSystSolverType giveLinSystSolverType() const { return ST_Spooles; }
-    virtual SparseMtrxType giveRecommendedMatrix(bool symmetric) const { return SMT_SpoolesMtrx; }
+    const char *giveClassName() const override { return "SpoolesSolver"; }
+    LinSystSolverType giveLinSystSolverType() const override { return ST_Spooles; }
+    SparseMtrxType giveRecommendedMatrix(bool symmetric) const override { return SMT_SpoolesMtrx; }
 };
 } // end namespace oofem
 #endif // spoolessolver_h

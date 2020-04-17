@@ -71,11 +71,9 @@ LevelSetPCS :: initialize()
 }
 
 
-IRResultType
-LevelSetPCS :: initializeFrom(InputRecord *ir)
+void
+LevelSetPCS :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;
-
     IR_GIVE_OPTIONAL_FIELD(ir, previousLevelSetValues, _IFT_LevelSetPCS_levelSetValues);
     if ( !previousLevelSetValues.giveSize() ) {
         FloatArray refmatpoly_x, refmatpoly_y;
@@ -116,8 +114,6 @@ LevelSetPCS :: initializeFrom(InputRecord *ir)
 
     nsd = 2;
     IR_GIVE_OPTIONAL_FIELD(ir, nsd, _IFT_LevelSetPCS_nsd);
-
-    return IRRT_OK;
 }
 
 
@@ -620,8 +616,8 @@ LevelSetPCS :: FMMReinitialization(FloatArray &dmanValues)
 }
 
 
-contextIOResultType
-LevelSetPCS :: saveContext(DataStream &stream, ContextMode mode, void *obj)
+void
+LevelSetPCS :: saveContext(DataStream &stream, ContextMode mode)
 {
     contextIOResultType iores;
 
@@ -632,13 +628,11 @@ LevelSetPCS :: saveContext(DataStream &stream, ContextMode mode, void *obj)
     if ( ( iores = levelSetValues.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    return CIO_OK;
 }
 
 
-contextIOResultType
-LevelSetPCS :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
+void
+LevelSetPCS :: restoreContext(DataStream &stream, ContextMode mode)
 {
     contextIOResultType iores;
 
@@ -654,7 +648,5 @@ LevelSetPCS :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
 #ifdef LevelSetPCS_CACHE_ELEMENT_VOF
     elemVofLevelSetVersion = 0;
 #endif
-
-    return CIO_OK;
 }
 } // end namespace oofem

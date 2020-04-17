@@ -32,7 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/Shells/tr_shell01.h"
+#include "sm/Elements/Shells/tr_shell01.h"
 #include "../sm/Materials/structuralms.h"
 #include "fei2dtrlin.h"
 #include "contextioerr.h"
@@ -56,20 +56,20 @@ IntArray TR_SHELL01 :: loc_plate = {3, 4, 5, 9, 10, 11, 15, 16, 17};
 IntArray TR_SHELL01 :: loc_membrane = {1, 2, 6, 7, 8, 12, 13, 14, 18};
 
 TR_SHELL01 :: TR_SHELL01(int n, Domain *aDomain) : StructuralElement(n, aDomain), ZZNodalRecoveryModelInterface(this), ZZErrorEstimatorInterface(this), SpatialLocalizerInterface(this),
-    plate(new CCTPlate3d(-1, aDomain)), membrane(new TrPlaneStrRot3d(-1, aDomain))
+    plate(std::make_unique<CCTPlate3d>(-1, aDomain)),
+    membrane(std::make_unique<TrPlaneStrRot3d>(-1, aDomain))
 {
     numberOfDofMans = 3;
 }
 
 
-IRResultType
-TR_SHELL01 :: initializeFrom(InputRecord *ir)
+void
+TR_SHELL01 :: initializeFrom(InputRecord &ir)
 {
     // proc tady neni return = this...   ??? termitovo
-    IRResultType result = StructuralElement :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    StructuralElement :: initializeFrom(ir);
+    plate->initializeFrom(ir);
+    membrane->initializeFrom(ir);
 
 //#if 0
 	//int val=-1;
@@ -115,7 +115,9 @@ TR_SHELL01 :: postInitialize()
     StructuralElement :: postInitialize();
 
     if ( plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints() != membrane->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints() ) {
-        OOFEM_ERROR("incompatible integration rules detected");
+        OOFEM_ERROR("incompatible integration rules detected %d vs %d IPs",
+                plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints(),
+                membrane->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints());
     }
 }
 
@@ -491,43 +493,27 @@ TR_SHELL01 :: printOutputAt(FILE *file, TimeStep *tStep)
 }
 
 
-contextIOResultType
-TR_SHELL01 :: saveContext(DataStream &stream, ContextMode mode, void *obj)
+void
+TR_SHELL01 :: saveContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-    if ( ( iores =  StructuralElement :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    if ( ( iores =  this->plate->saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    if ( ( iores = this->membrane->saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    return iores;
+    StructuralElement :: saveContext(stream, mode);
+    this->plate->saveContext(stream, mode);
+    this->membrane->saveContext(stream, mode);
 }
 
-contextIOResultType
-TR_SHELL01 :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
+void
+TR_SHELL01 :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-    if ( ( iores =  StructuralElement :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    if ( ( iores =   this->plate->restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    if ( ( iores =  this->membrane->restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    return iores;
+    StructuralElement :: restoreContext(stream, mode);
+    this->plate->restoreContext(stream, mode);
+    this->membrane->restoreContext(stream, mode);
 }
 
 IntegrationRule *
 TR_SHELL01 :: ZZErrorEstimatorI_giveIntegrationRule()
 {
     if ( !this->compositeIR ) {
-        this->compositeIR.reset( new GaussIntegrationRule(1, this, 1, 12) );
+        this->compositeIR = std::make_unique<GaussIntegrationRule>(1, this, 1, 12);
         this->compositeIR->SetUpPointsOnTriangle(plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints(), _3dShell);
     }
     return this->compositeIR.get();
@@ -536,7 +522,7 @@ TR_SHELL01 :: ZZErrorEstimatorI_giveIntegrationRule()
 void
 TR_SHELL01 :: ZZErrorEstimatorI_computeLocalStress(FloatArray &answer, FloatArray &sig)
 {
-    // sig is global ShellForceMomentumTensor
+    // sig is global ShellForceMomentTensor
     FloatMatrix globTensor(3, 3);
     const FloatMatrix *GtoLRotationMatrix = plate->computeGtoLRotationMatrix();
     FloatMatrix LtoGRotationMatrix;
@@ -606,9 +592,9 @@ TR_SHELL01 :: SpatialLocalizerI_giveBBox(FloatArray &bb0, FloatArray &bb1)
     FloatArray _c;
 
     for ( int i = 1; i <= this->giveNumberOfNodes(); ++i ) {
-        FloatArray *coordinates = this->giveNode(i)->giveCoordinates();
+        const auto &coordinates = this->giveNode(i)->giveCoordinates();
 
-        _c = * coordinates;
+        _c = coordinates;
         _c.add(gt3);
         if ( i == 1 ) {
             bb0 = bb1 = _c;
@@ -617,7 +603,7 @@ TR_SHELL01 :: SpatialLocalizerI_giveBBox(FloatArray &bb0, FloatArray &bb1)
             bb1.beMaxOf(bb1, _c);
         }
 
-        _c = * coordinates;
+        _c = coordinates;
         _c.subtract(gt3);
         bb0.beMinOf(bb0, _c);
         bb1.beMaxOf(bb1, _c);
@@ -747,7 +733,7 @@ TR_SHELL01 :: drawRawGeometry(oofegGraphicContext &gc, TimeStep *tStep)
         return;
     }
 
-    if ( this->giveMaterial()->isActivated(tStep) ) {
+    if ( this->isActivated(tStep) ) {
         EASValsSetLineWidth(OOFEG_RAW_GEOMETRY_WIDTH);
         EASValsSetColor( gc.getElementColor() );
         EASValsSetEdgeColor( gc.getElementEdgeColor() );
@@ -782,7 +768,7 @@ TR_SHELL01 :: drawDeformedGeometry(oofegGraphicContext &gc, TimeStep *tStep, Unk
         return;
     }
 
-    if ( this->giveMaterial()->isActivated(tStep) ) {
+    if ( this->isActivated(tStep) ) {
         EASValsSetLineWidth(OOFEG_DEFORMED_GEOMETRY_WIDTH);
         EASValsSetColor( gc.getDeformedElementColor() );
         EASValsSetEdgeColor( gc.getElementEdgeColor() );
@@ -817,7 +803,7 @@ TR_SHELL01 :: drawScalar(oofegGraphicContext &gc, TimeStep *tStep)
         return;
     }
 
-    if ( !this->giveMaterial()->isActivated(tStep) ) {
+    if ( !this->isActivated(tStep) ) {
         return;
     }
 

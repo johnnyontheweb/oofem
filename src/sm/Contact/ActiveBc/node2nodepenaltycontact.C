@@ -46,19 +46,17 @@ namespace oofem {
 REGISTER_BoundaryCondition(Node2NodePenaltyContact);
 
 
-IRResultType
-Node2NodePenaltyContact :: initializeFrom(InputRecord *ir)
+void
+Node2NodePenaltyContact :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;
+    ActiveBoundaryCondition :: initializeFrom(ir);
+
     IR_GIVE_FIELD(ir, this->penalty, _IFT_Node2NodePenaltyContact_penalty);
-    this->useTangent = ir->hasField(_IFT_Node2NodePenaltyContact_useTangent);
+    this->useTangent = ir.hasField(_IFT_Node2NodePenaltyContact_useTangent);
 
 
     IR_GIVE_FIELD(ir, this->masterSet, _IFT_Node2NodePenaltyContact_masterSet);
     IR_GIVE_FIELD(ir, this->slaveSet, _IFT_Node2NodePenaltyContact_slaveSet);
-
-
-    return ActiveBoundaryCondition :: initializeFrom(ir);
 }
 
 
@@ -181,9 +179,9 @@ Node2NodePenaltyContact :: computeTangentFromContact(FloatMatrix &answer, Node *
 void
 Node2NodePenaltyContact :: computeGap(double &answer, Node *masterNode, Node *slaveNode, TimeStep *tStep)
 {
-    FloatArray xs, xm, uS, uM;
-    xs = * slaveNode->giveCoordinates();
-    xm = * masterNode->giveCoordinates();
+    FloatArray uS, uM;
+    auto xs = slaveNode->giveCoordinates();
+    auto xm = masterNode->giveCoordinates();
     FloatArray normal = xs - xm;
     double norm = normal.computeNorm();
     if ( norm < 1.0e-8 ) {
@@ -205,10 +203,9 @@ Node2NodePenaltyContact :: computeGap(double &answer, Node *masterNode, Node *sl
 void
 Node2NodePenaltyContact :: computeNormalMatrixAt(FloatArray &answer, Node *masterNode, Node *slaveNode, TimeStep *TimeStep)
 {
-    FloatArray xs, xm;
-    xs = * slaveNode->giveCoordinates();
-    xm = * masterNode->giveCoordinates();
-    FloatArray normal = xs - xm;
+    const auto &xs = slaveNode->giveCoordinates();
+    const auto &xm = masterNode->giveCoordinates();
+    auto normal = xs - xm;
     double norm = normal.computeNorm();
     if ( norm < 1.0e-8 ) {
         OOFEM_ERROR("Couldn't compute normal between master node (num %d) and slave node (num %d), nodes are too close to each other.",

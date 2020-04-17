@@ -37,7 +37,7 @@
 #include "floatarray.h"
 #include "floatmatrix.h"
 #include "gausspoint.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
+#include "sm/CrossSections/structuralcrosssection.h"
 #include "datastream.h"
 #include "contextioerr.h"
 #include "mathfem.h"
@@ -48,55 +48,44 @@ namespace oofem {
 REGISTER_Material( StructuralMaterialSettable );
 
 StructuralMaterialSettable :: StructuralMaterialSettable(int n, Domain *d) :
-    StructuralMaterial(n, d)
-{
-    isoLE = new IsotropicLinearElasticMaterial(n,d);
-}
+    StructuralMaterial(n, d),
+    isoLE(n,d)
+{}
 
-StructuralMaterialSettable :: ~StructuralMaterialSettable()
-{
-    delete isoLE;
-}
-
-IRResultType
-StructuralMaterialSettable :: initializeFrom(InputRecord *ir)
-{
-    //IRResultType result;                // Required by IR_GIVE_FIELD macro
-    StructuralMaterial :: initializeFrom(ir);
-    return isoLE->initializeFrom(ir);
-}
 
 void
-StructuralMaterialSettable :: giveRealStressVector_3d(FloatArray &answer,
-                                                  GaussPoint *gp,
-                                                  const FloatArray &totalStrain,
-                                                  TimeStep *atTime)
+StructuralMaterialSettable :: initializeFrom(InputRecord &ir)
 {
+    StructuralMaterial :: initializeFrom(ir);
+    isoLE.initializeFrom(ir);
+}
 
-    StructuralMaterialStatus *status = static_cast< StructuralMaterialStatus * >( this->giveStatus(gp) );
-    const FloatArray& stressVector = status->giveStressVector();
 
-    status->letTempStrainVectorBe(totalStrain);
+FloatArrayF<6>
+StructuralMaterialSettable :: giveRealStressVector_3d(const FloatArrayF<6> &strain,GaussPoint *gp, 
+                                                      TimeStep *atTime) const
+{
+    auto status = static_cast< StructuralMaterialStatus * >( this->giveStatus(gp) );
+    const auto &stressVector = status->giveStressVector();
+
+    status->letTempStrainVectorBe(strain);
     status->letTempStressVectorBe(stressVector);
-    answer = stressVector;
-    return;
+    return stressVector;
 }
 
 
 // TODO
-void
-StructuralMaterialSettable :: give3dMaterialStiffnessMatrix(FloatMatrix &answer,
-                                                           MatResponseMode mode,
-                                                           GaussPoint *gp,
-                                                           TimeStep *atTime)
+FloatMatrixF<6,6>
+StructuralMaterialSettable :: give3dMaterialStiffnessMatrix(MatResponseMode mode, GaussPoint *gp,
+                                                            TimeStep *atTime) const
 {
-    isoLE->give3dMaterialStiffnessMatrix(answer,mode,gp,atTime);
+    return isoLE.give3dMaterialStiffnessMatrix(mode, gp, atTime);
 }
 
 MaterialStatus *
 StructuralMaterialSettable :: CreateStatus(GaussPoint *gp) const
 {
-    return new StructuralMaterialStatus(1, StructuralMaterial :: giveDomain(), gp);
+    return new StructuralMaterialStatus(gp);
 }
 
 

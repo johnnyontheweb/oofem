@@ -65,34 +65,41 @@ protected:
     bool prescribed;
     int numEqs;
     int numPresEqs;
-    int number;
 
 public:
-    CustomEquationNumbering() : UnknownNumberingScheme(), prescribed(false), numEqs(0), numPresEqs(0) { dofIdArray.resize(0); }
+    CustomEquationNumbering();
 
     IntArray dofIdArray; // should be private
-    virtual bool isDefault() const { return true; }
-    void setDofIdArray(IntArray &array) { this->dofIdArray = array; }
-    void setNumber(int num) { this->number = num; }
-    int getNumber() { return this->number; }
-    
-    virtual int giveDofEquationNumber(Dof *dof) const {
-        DofIDItem id = dof->giveDofID();
-        //printf("asking for num %d \n", (int)id);
-            if ( this->dofIdArray.contains( (int)id ) ) {
-            return prescribed ? dof->__givePrescribedEquationNumber() : dof->__giveEquationNumber();    
-        } else {
-            return 0;  
-        }
-    }
-    
+    bool isDefault() const override { return true; }
+    void setDofIdArray(IntArray array) { this->dofIdArray = std::move(array); }
 
-    virtual int giveRequiredNumberOfDomainEquation() const { return numEqs; }
+    int giveDofEquationNumber(Dof *dof) const override;
+
+    int giveRequiredNumberOfDomainEquation() const override { return numEqs; }
 
     int giveNewEquationNumber() { return ++numEqs; }
     int giveNewPrescribedEquationNumber() { return ++numPresEqs; }
     int giveNumEquations() { return this->numEqs; }
     int giveNumPresEquations() { return this->numPresEqs; }
+};
+
+/**
+ * Support struct to handle all the split up variables used during the solving step.
+ */
+class DofGrouping
+{
+public:
+    std :: vector< std :: unique_ptr< SparseMtrx > > stiffnessMatrixList;
+    std :: vector< FloatArray > fIntList;
+    std :: vector< FloatArray > fExtList;
+
+    std :: vector< IntArray > locArrayList;
+    std :: vector< FloatArray > X;
+    std :: vector< FloatArray > dX;
+    std :: vector< FloatArray > ddX;
+
+    DofGrouping(const std :: vector< CustomEquationNumbering > &numberings, Domain * m);
+    void giveTotalLocationArray(IntArray &locationArray, const UnknownNumberingScheme &s, Domain *d);
 };
 
 /**
@@ -104,39 +111,25 @@ class OOFEM_EXPORT StaggeredSolver : public NRSolver
 private:
     IntArray totalIdList;
     IntArray idPos;
-  
-    // Lists for each dof group
     std :: vector< CustomEquationNumbering > UnknownNumberingSchemeList;
-    std :: vector< std :: unique_ptr< SparseMtrx > > stiffnessMatrixList;
-    std :: vector< FloatArray > fIntList;
-    std :: vector< FloatArray > fExtList;
-    
-    std :: vector< IntArray > locArrayList;
-    std :: vector< FloatArray > ddX;
-    std :: vector< FloatArray > dX;
-    std :: vector< FloatArray > X;
-    
 
-    void giveTotalLocationArray(IntArray &locationArray, const UnknownNumberingScheme &s, Domain *d);
     bool checkConvergenceDofIdArray(FloatArray &RT, FloatArray &F, FloatArray &rhs, FloatArray &ddX, FloatArray &X,
                           double RRT, const FloatArray &internalForcesEBENorm, int nite, bool &errorOutOfRange, TimeStep *tStep, IntArray &dofIdArray);
-
-    void instanciateYourself();
 
 public:
     StaggeredSolver(Domain * d, EngngModel * m);
     virtual ~StaggeredSolver() {}
 
     // Overloaded methods:
-    virtual NM_Status solve(SparseMtrx &k, FloatArray &R, FloatArray *R0, FloatArray *iR,
-                            FloatArray &X, FloatArray &dX, FloatArray &F,
-                            const FloatArray &internalForcesEBENorm, double &l, referenceLoadInputModeType rlm,
-                            int &nite, TimeStep *);
+    NM_Status solve(SparseMtrx &k, FloatArray &R, FloatArray *R0,
+                    FloatArray &X, FloatArray &dX, FloatArray &F,
+                    const FloatArray &internalForcesEBENorm, double &l, referenceLoadInputModeType rlm,
+                    int &nite, TimeStep *) override;
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    
-    virtual const char *giveClassName() const { return "StaggeredSolver"; }
-    virtual const char *giveInputRecordName() const { return _IFT_StaggeredSolver_Name; }
+    void initializeFrom(InputRecord &ir) override;
+
+    const char *giveClassName() const override { return "StaggeredSolver"; }
+    const char *giveInputRecordName() const override { return _IFT_StaggeredSolver_Name; }
 };
 } // end namespace oofem
 #endif // staggeredsolver_h

@@ -35,10 +35,10 @@
 #ifndef truss1d_h
 #define truss1d_h
 
-#include "../sm/Elements/structuralelement.h"
-#include "../sm/ErrorEstimators/directerrorindicatorrc.h"
-#include "../sm/ErrorEstimators/zzerrorestimator.h"
-#include "../sm/ErrorEstimators/huertaerrorestimator.h"
+#include "sm/Elements/nlstructuralelement.h"
+#include "sm/ErrorEstimators/directerrorindicatorrc.h"
+#include "sm/ErrorEstimators/zzerrorestimator.h"
+#include "sm/ErrorEstimators/huertaerrorestimator.h"
 #include "zznodalrecoverymodel.h"
 #include "nodalaveragingrecoverymodel.h"
 #include "spatiallocalizer.h"
@@ -53,70 +53,69 @@ class FEI1dLin;
  * This class implements a two-node truss bar element for one-dimensional
  * analysis.
  */
-class Truss1d : public StructuralElement,
-public ZZNodalRecoveryModelInterface, public NodalAveragingRecoveryModelInterface, public SpatialLocalizerInterface,
-public ZZErrorEstimatorInterface,
-public HuertaErrorEstimatorInterface
+class Truss1d : public NLStructuralElement,
+    public ZZNodalRecoveryModelInterface, public NodalAveragingRecoveryModelInterface, public SpatialLocalizerInterface,
+    public ZZErrorEstimatorInterface,
+    public HuertaErrorEstimatorInterface
 {
 protected:
     static FEI1dLin interp;
 
 public:
-    Truss1d(int n, Domain * d);
+    Truss1d(int n, Domain *d);
     virtual ~Truss1d() { }
 
-    virtual FEInterpolation *giveInterpolation() const;
+    FEInterpolation *giveInterpolation() const override;
 
-    virtual void computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep);
-    virtual void computeMassMatrix(FloatMatrix &answer, TimeStep *tStep)
+    void computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep) override;
+    void computeMassMatrix(FloatMatrix &answer, TimeStep *tStep) override
     { computeLumpedMassMatrix(answer, tStep); }
 
-    virtual int computeNumberOfDofs() { return 2; }
-    virtual void giveDofManDofIDMask(int inode, IntArray &) const;
+    int computeNumberOfDofs() override { return 2; }
+    void giveDofManDofIDMask(int inode, IntArray &) const override;
 
     // characteristic length (for crack band approach)
-    virtual double giveCharacteristicLength(const FloatArray &normalToCrackPlane)
+    double giveCharacteristicLength(const FloatArray &normalToCrackPlane) override
     { return this->computeLength(); }
 
-    virtual double computeVolumeAround(GaussPoint *gp);
-    
-    virtual void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep);
-    virtual void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep);
+    double computeVolumeAround(GaussPoint *gp) override;
 
-    virtual int testElementExtension(ElementExtension ext) { return 0; }
+    void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep) override;
+    void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) override;
 
-    virtual Interface *giveInterface(InterfaceType it);
+    int testElementExtension(ElementExtension ext) override { return 0; }
+
+    Interface *giveInterface(InterfaceType it) override;
 
 #ifdef __OOFEG
-    virtual void drawRawGeometry(oofegGraphicContext &gc, TimeStep *tStep);
-    virtual void drawDeformedGeometry(oofegGraphicContext &gc, TimeStep *tStep, UnknownType);
-    virtual void drawScalar(oofegGraphicContext &gc, TimeStep *tStep);
+    void drawRawGeometry(oofegGraphicContext &gc, TimeStep *tStep) override;
+    void drawDeformedGeometry(oofegGraphicContext & gc, TimeStep * tStep, UnknownType) override;
+    void drawScalar(oofegGraphicContext &gc, TimeStep *tStep) override;
 #endif
 
     // definition & identification
-    virtual const char *giveInputRecordName() const { return _IFT_Truss1d_Name; }
-    virtual const char *giveClassName() const { return "Truss1d"; }
-    virtual MaterialMode giveMaterialMode() { return _1dMat; }
+    const char *giveInputRecordName() const override { return _IFT_Truss1d_Name; }
+    const char *giveClassName() const override { return "Truss1d"; }
+    MaterialMode giveMaterialMode() override { return _1dMat; }
 
     // NodalAveragingRecoveryMInterface
-    virtual void NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,
-                                                            InternalStateType type, TimeStep *tStep);
+    void NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,
+                                                    InternalStateType type, TimeStep *tStep) override;
 
     // HuertaErrorEstimatorInterface
-    virtual void HuertaErrorEstimatorI_setupRefinedElementProblem(RefinedElement *refinedElement, int level, int nodeId,
-                                                                  IntArray &localNodeIdArray, IntArray &globalNodeIdArray,
-                                                                  HuertaErrorEstimatorInterface :: SetupMode sMode, TimeStep *tStep,
-                                                                  int &localNodeId, int &localElemId, int &localBcId,
-                                                                  IntArray &controlNode, IntArray &controlDof,
-                                                                  HuertaErrorEstimator :: AnalysisMode aMode);
-    virtual void HuertaErrorEstimatorI_computeNmatrixAt(GaussPoint *gp, FloatMatrix &answer);
+    void HuertaErrorEstimatorI_setupRefinedElementProblem(RefinedElement *refinedElement, int level, int nodeId,
+                                                          IntArray &localNodeIdArray, IntArray &globalNodeIdArray,
+                                                          HuertaErrorEstimatorInterface :: SetupMode sMode, TimeStep *tStep,
+                                                          int &localNodeId, int &localElemId, int &localBcId,
+                                                          IntArray &controlNode, IntArray &controlDof,
+                                                          HuertaErrorEstimator :: AnalysisMode aMode) override;
+    void HuertaErrorEstimatorI_computeNmatrixAt(GaussPoint *gp, FloatMatrix &answer) override;
 
 protected:
-    virtual void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int = 1, int = ALL_STRAINS);
-    virtual void computeBHmatrixAt(GaussPoint *gp, FloatMatrix &answer);
-    virtual void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer);
-    virtual void computeGaussPoints();
-
+    void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int = 1, int = ALL_STRAINS) override;
+    void computeBHmatrixAt(GaussPoint *gp, FloatMatrix &answer) override; ///@todo BH is just used in nlstructuralelement
+    void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer) override;
+    void computeGaussPoints() override;
 };
 } // end namespace oofem
 #endif // truss1d_h

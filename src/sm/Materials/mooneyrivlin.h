@@ -35,8 +35,8 @@
 #ifndef mooneyrivlinmaterial_h
 #define mooneyrivlinmaterial_h
 
-#include "../sm/Materials/structuralmaterial.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Materials/structuralmaterial.h"
+#include "sm/Materials/structuralms.h"
 
 ///@name Input fields for MooneyRivlinMaterial
 //@{
@@ -70,35 +70,33 @@ namespace oofem {
 class MooneyRivlinMaterial : public StructuralMaterial
 {
 protected:
-    // Material parameters
-    double C1;
-    double C2;
-    double K;
-
+    double C1 = 0.;
+    double C2 = 0.;
+    double K = 0.;
 
 public:
     MooneyRivlinMaterial(int n, Domain *d);
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual void give3dMaterialStiffnessMatrix(FloatMatrix &answer,
-                                               MatResponseMode mode, GaussPoint *gp,
-                                               TimeStep *tStep) { OOFEM_ERROR("not implemented, this material is designed for large strains only"); }
-
-
-    virtual void givePlaneStrainStiffMtrx_dPdF(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void give3dMaterialStiffnessMatrix_dPdF(FloatMatrix &answer,
-                                                    MatResponseMode mode,
-                                                    GaussPoint *gp, TimeStep *tStep);
+    FloatMatrixF<6,6> give3dMaterialStiffnessMatrix(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override
+    { OOFEM_ERROR("not implemented, this material is designed for large strains only"); }
 
 
-    virtual void giveRealStressVector_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep) { OOFEM_ERROR("not implemented, this material is designed for large strains only"); }
-    virtual void giveFirstPKStressVector_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &vF, TimeStep *tStep);
-    void giveFirstPKStressVector_PlaneStrain(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedvF, TimeStep *tStep);
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const;
+    FloatMatrixF<5,5> givePlaneStrainStiffMtrx_dPdF(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<9,9> give3dMaterialStiffnessMatrix_dPdF(MatResponseMode mode, GaussPoint *gp,
+                                                         TimeStep *tStep) const override;
 
-    virtual const char *giveInputRecordName() const { return _IFT_MooneyRivlinMaterial_Name; }
-    virtual const char *giveClassName() const { return "MooneyRivlinMaterial"; }
+    FloatArrayF<6> giveRealStressVector_3d(const FloatArrayF<6> &strain, GaussPoint *gp, TimeStep *tStep) const override
+    {
+        OOFEM_ERROR("not implemented, this material is designed for large strains only");
+        return zeros<6>();
+    }
+    FloatArrayF<9> giveFirstPKStressVector_3d(const FloatArrayF<9> &vF, GaussPoint *gp, TimeStep *tStep) const override;
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
+
+    const char *giveInputRecordName() const override { return _IFT_MooneyRivlinMaterial_Name; }
+    const char *giveClassName() const override { return "MooneyRivlinMaterial"; }
 };
 
 } // end namespace oofem

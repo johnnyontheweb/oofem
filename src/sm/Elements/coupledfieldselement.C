@@ -34,10 +34,10 @@
  */
 
 #if 1
-#include "../sm/Elements/coupledfieldselement.h"
-#include "../sm/Materials/structuralms.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
-#include "../sm/Elements/nlstructuralelement.h"
+#include "sm/Elements/coupledfieldselement.h"
+#include "sm/Materials/structuralms.h"
+#include "sm/CrossSections/structuralcrosssection.h"
+#include "sm/Elements/nlstructuralelement.h"
 #include "node.h"
 #include "material.h"
 #include "gausspoint.h"
@@ -53,10 +53,8 @@
 
 namespace oofem {
 CoupledFieldsElement :: CoupledFieldsElement(int i, Domain *aDomain) : NLStructuralElement(i, aDomain)
-// Constructor.
 {
     nlGeo = 0;
-
 }
 
 
@@ -65,12 +63,11 @@ CoupledFieldsElement :: computeLocationArrayOfDofIDs(const IntArray &dofIdArray,
 {
     // Routine to extract compute the location array an element given an dofid array.
     answer.resize(0);
-    
+
     int k = 0;
     for ( int i = 1; i <= numberOfDofMans; i++ ) {
         DofManager *dMan = this->giveDofManager(i);        
         for (int j = 1; j <= dofIdArray.giveSize(); j++ ) {   
-            
             if ( dMan->hasDofID( (DofIDItem) dofIdArray.at(j) ) ) {
                 Dof *d = dMan->giveDofWithID( dofIdArray.at(j) );
                 answer.followedBy( k + d->giveNumber() );
@@ -87,14 +84,12 @@ CoupledFieldsElement :: computeVectorOfDofIDs(const IntArray &dofIdArray, ValueM
 {
     // Routine to extract the solution vector for an element given an dofid array.
     // Size will be numberOfDofs and if a certain dofId does not exist a zero is used as value. 
-    
     answer.resize( numberOfDofMans * dofIdArray.giveSize() ); // equal number of nodes for all fields
     answer.zero();
     int k = 1;
     for ( int i = 1; i <= numberOfDofMans; i++ ) {
         DofManager *dMan = this->giveDofManager(i);        
         for (int j = 1; j <= dofIdArray.giveSize(); j++ ) {   
-            
             if ( dMan->hasDofID( (DofIDItem) dofIdArray.at(j) ) ) {
                 Dof *d = dMan->giveDofWithID( dofIdArray.at(j) );
                 answer.at(k) = d->giveUnknown(valueMode, stepN);
@@ -136,13 +131,9 @@ CoupledFieldsElement :: giveInternalForcesVectorGen(FloatArray &answer, TimeStep
                 BS.beTProductOf(B, BStress);
                 answer.add(dV, BS);
             }
-
-            
         }
     }
 }
-
-
 
 
 void
@@ -184,11 +175,9 @@ CoupledFieldsElement :: computeStiffnessMatrixGen(FloatMatrix &answer, MatRespon
                 answer.plusProductSymmUpper(B, DB, dV);
             } else {
                 answer.plusProductUnsym(B, DB, dV);
-            }    
+            }
         }
-
     }
-
 
     if ( matStiffSymmFlag ) {
         answer.symmetrized();
@@ -197,13 +186,10 @@ CoupledFieldsElement :: computeStiffnessMatrixGen(FloatMatrix &answer, MatRespon
 
 
 
-IRResultType
-CoupledFieldsElement :: initializeFrom(InputRecord *ir)
+void
+CoupledFieldsElement :: initializeFrom(InputRecord &ir)
 {
-    //IRResultType result;                // Required by IR_GIVE_FIELD macro
     //nlGeo = 0;
-
-    return IRRT_OK;
 }
 
 

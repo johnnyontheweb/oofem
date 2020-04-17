@@ -35,7 +35,7 @@
 #ifndef deidynamic_h
 #define deidynamic_h
 
-#include "../sm/EngineeringModels/structengngmodel.h"
+#include "sm/EngineeringModels/structengngmodel.h"
 
 ///@name Input fields for DEIDynamic
 //@{
@@ -80,26 +80,26 @@ protected:
     double dumpingCoef, deltaT;
 
 public:
-    DEIDynamic(int i, EngngModel * _master = NULL) : StructuralEngngModel(i, _master), massMatrix(), loadVector(),
+    DEIDynamic(int i, EngngModel *master = nullptr) : StructuralEngngModel(i, master), massMatrix(), loadVector(),
         nextDisplacementVector(), displacementVector(), velocityVector(), accelerationVector() {
         ndomains = 1;
     }
     virtual ~DEIDynamic();
 
-    virtual void solveYourselfAt(TimeStep *tStep);
+    void solveYourselfAt(TimeStep *tStep) override;
 
-    virtual double giveUnknownComponent(ValueModeType type, TimeStep *tStep, Domain *d, Dof *dof);
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual TimeStep *giveNextStep();
-    virtual NumericalMethod *giveNumericalMethod(MetaStep *mStep);
+    double giveUnknownComponent(ValueModeType type, TimeStep *tStep, Domain *d, Dof *dof) override;
+    void initializeFrom(InputRecord &ir) override;
+    TimeStep *giveNextStep() override;
+    NumericalMethod *giveNumericalMethod(MetaStep *mStep) override;
 
-    virtual void printDofOutputAt(FILE *stream, Dof *iDof, TimeStep *tStep);
+    void printDofOutputAt(FILE *stream, Dof *iDof, TimeStep *tStep) override;
 
     // identification
-    virtual const char *giveClassName() const { return "DEIDynamic"; }
-    virtual const char *giveInputRecordName() const { return _IFT_DEIDynamic_Name; }
-    virtual fMode giveFormulation() { return TL; }
-    virtual int giveNumberOfFirstStep(bool force = false) { return 0; }
+    const char *giveClassName() const override { return "DEIDynamic"; }
+    const char *giveInputRecordName() const { return _IFT_DEIDynamic_Name; }
+    fMode giveFormulation() override { return TL; }
+    int giveNumberOfFirstStep(bool force = false) override { return 0; }
 };
 } // end namespace oofem
 #endif // deidynamic_h

@@ -56,15 +56,15 @@ DynamicRelaxationSolver :: DynamicRelaxationSolver(Domain *d, EngngModel *m) : N
 }
 
 
-IRResultType
-DynamicRelaxationSolver :: initializeFrom(InputRecord *ir)
+void
+DynamicRelaxationSolver :: initializeFrom(InputRecord &ir)
 {
-    return NRSolver :: initializeFrom(ir);
+    NRSolver :: initializeFrom(ir);
 }
 
 
 NM_Status
-DynamicRelaxationSolver :: solve(SparseMtrx &k, FloatArray &R, FloatArray *R0, FloatArray *iR,
+DynamicRelaxationSolver :: solve(SparseMtrx &k, FloatArray &R, FloatArray *R0,
                   FloatArray &X, FloatArray &dX, FloatArray &F,
                   const FloatArray &internalForcesEBENorm, double &l, referenceLoadInputModeType rlm,
                   int &nite, TimeStep *tStep)

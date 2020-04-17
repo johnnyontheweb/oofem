@@ -73,7 +73,6 @@ void IntermediateConvectionDiffusionAssembler :: vectorFromElement(FloatArray &v
 void PrescribedVelocityRhsAssembler :: vectorFromElement(FloatArray &vec, Element &element, TimeStep *tStep, ValueModeType mode) const
 {
     static_cast< CBSElement & >( element ).computePrescribedTermsI(vec, tStep);
-    
 }
 
 void DensityPrescribedTractionPressureAssembler :: vectorFromElement(FloatArray &vec, Element &element, TimeStep *tStep, ValueModeType mode) const
@@ -92,7 +91,6 @@ void DensityRhsAssembler :: vectorFromElement(FloatArray &vec, Element &element,
 void CorrectionRhsAssembler :: vectorFromElement(FloatArray &vec, Element &element, TimeStep *tStep, ValueModeType mode) const
 {
     static_cast< CBSElement & >( element ).computeCorrectionRhs(vec, tStep);
-    
 }
 
 void PressureLhsAssembler :: matrixFromElement(FloatMatrix &answer, Element &element, TimeStep *tStep) const
@@ -108,15 +106,14 @@ void PressureLhsAssembler :: locationFromElement(IntArray& loc, Element& element
 
 
 CBS :: CBS(int i, EngngModel* _master) : FluidModel ( i, _master ),
-    PressureField ( this, 1, FT_Pressure, 1 ),
-    VelocityField ( this, 1, FT_Velocity, 1 ),
-    vnum ( false ), vnumPrescribed ( true ), pnum ( false ), pnumPrescribed ( true )
+    pressureField ( this, 1, FT_Pressure, 1 ),
+    velocityField ( this, 1, FT_Velocity, 1 ),
+    initFlag(1), consistentMassFlag(1),
+    vnum ( false ), vnumPrescribed ( true ), pnum ( false ), pnumPrescribed ( true ),
+    equationScalingFlag(false),
+    lscale(1.0), uscale(1.0), dscale(1.0), Re(1.0)
 {
-    initFlag = 1;
     ndomains = 1;
-    consistentMassFlag = 0;
-    equationScalingFlag = false;
-    lscale = uscale = dscale = 1.0;
 }
 
 CBS :: ~CBS()
@@ -126,7 +123,7 @@ CBS :: ~CBS()
 NumericalMethod *CBS :: giveNumericalMethod(MetaStep *mStep)
 {
     if ( !nMethod ) {
-        nMethod.reset( classFactory.createSparseLinSolver(solverType, this->giveDomain(1), this) );
+        nMethod = classFactory.createSparseLinSolver(solverType, this->giveDomain(1), this);
         if ( !nMethod ) {
             OOFEM_ERROR("linear solver creation failed for lstype %d", solverType);
         }
@@ -134,11 +131,10 @@ NumericalMethod *CBS :: giveNumericalMethod(MetaStep *mStep)
     return nMethod.get();
 }
 
-IRResultType
-CBS :: initializeFrom(InputRecord *ir)
+void
+CBS :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
+    EngngModel :: initializeFrom(ir);
     int val = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_EngngModel_lstype);
     solverType = ( LinSystSolverType ) val;
@@ -175,36 +171,25 @@ CBS :: initializeFrom(InputRecord *ir)
     val = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_CBS_miflag);
     if ( val ) {
-        this->materialInterface.reset( new LEPlic( 1, this->giveDomain(1) ) );
+        this->materialInterface = std::make_unique<LEPlic>( 1, this->giveDomain(1) );
         // export velocity field
         FieldManager *fm = this->giveContext()->giveFieldManager();
         IntArray mask = {V_u, V_v, V_w};
 
-        //std::shared_ptr<Field> _velocityField = make_shared<MaskedPrimaryField>(FT_Velocity, &this->VelocityField, mask);
-        std :: shared_ptr< Field > _velocityField( new MaskedPrimaryField ( FT_Velocity, &this->VelocityField, mask ) );
+        std::shared_ptr<Field> _velocityField = std::make_shared<MaskedPrimaryField>(FT_Velocity, &this->velocityField, mask);
         fm->registerField(_velocityField, FT_Velocity);
     }
     //</RESTRICTED_SECTION>
-
-    return EngngModel :: initializeFrom(ir);
 }
 
 
 double
 CBS :: giveUnknownComponent(ValueModeType mode, TimeStep *tStep, Domain *d, Dof *dof)
-// returns unknown quantity like displacement, velocity of dof
 {
-#ifdef DEBUG
-    if ( dof->__giveEquationNumber() == 0 ) {
-        OOFEM_ERROR("invalid equation number");
-    }
-
-#endif
-
     if ( dof->giveDofID() == P_f ) { // pressures
-        return PressureField.giveUnknownValue(dof, mode, tStep);
+        return pressureField.giveUnknownValue(dof, mode, tStep);
     } else { // velocities
-        return VelocityField.giveUnknownValue(dof, mode, tStep);
+        return velocityField.giveUnknownValue(dof, mode, tStep);
     }
 }
 
@@ -238,16 +223,15 @@ CBS :: giveTractionPressure(Dof *dof)
 TimeStep *
 CBS :: giveSolutionStepWhenIcApply(bool force)
 {
-  if ( master && (!force)) {
-    return master->giveSolutionStepWhenIcApply();
-  } else {
-    if ( !stepWhenIcApply ) {
-        stepWhenIcApply.reset( new TimeStep(giveNumberOfTimeStepWhenIcApply(), this, 0,
-                                       0.0, deltaT, 0) );
-    }
+    if ( master && (!force)) {
+        return master->giveSolutionStepWhenIcApply();
+    } else {
+        if ( !stepWhenIcApply ) {
+            stepWhenIcApply = std::make_unique<TimeStep>(giveNumberOfTimeStepWhenIcApply(), this, 0, 0.0, deltaT, 0);
+        }
 
-    return stepWhenIcApply.get();
-  }
+        return stepWhenIcApply.get();
+    }
 }
 
 TimeStep *
@@ -256,7 +240,7 @@ CBS :: giveNextStep()
     double dt = deltaT;
     if ( !currentStep ) {
         // first step -> generate initial step
-        currentStep.reset( new TimeStep( *giveSolutionStepWhenIcApply() ) );
+        currentStep = std::make_unique<TimeStep>( *giveSolutionStepWhenIcApply() );
     }
 
     previousStep = std :: move(currentStep);
@@ -271,7 +255,7 @@ CBS :: giveNextStep()
     dt = max(dt, minDeltaT);
     dt /= this->giveVariableScale(VST_Time);
 
-    currentStep.reset( new TimeStep(*previousStep, dt) );
+    currentStep = std::make_unique<TimeStep>(*previousStep, dt);
 
     OOFEM_LOG_INFO( "SolutionStep %d : t = %e, dt = %e\n", currentStep->giveNumber(),
                     currentStep->giveTargetTime() * this->giveVariableScale(VST_Time), dt * this->giveVariableScale(VST_Time) );
@@ -287,8 +271,6 @@ CBS :: solveYourselfAt(TimeStep *tStep)
     int presneq_prescribed = this->giveNumberOfDomainEquations(1, pnumPrescribed);
     double deltaT = tStep->giveTimeIncrement();
 
-    FloatArray rhs(momneq);
-
     if ( initFlag ) {
         deltaAuxVelocity.resize(momneq);
 
@@ -299,7 +281,7 @@ CBS :: solveYourselfAt(TimeStep *tStep)
                                          pnumPrescribed, this->giveDomain(1) );
 
 
-        lhs.reset( classFactory.createSparseMtrx(sparseMtrxType) );
+        lhs = classFactory.createSparseMtrx(sparseMtrxType);
         if ( !lhs ) {
             OOFEM_ERROR("sparse matrix creation failed");
         }
@@ -311,7 +293,7 @@ CBS :: solveYourselfAt(TimeStep *tStep)
         lhs->times(deltaT * theta1 * theta2);
 
         if ( consistentMassFlag ) {
-            mss.reset( classFactory.createSparseMtrx(sparseMtrxType) );
+            mss = classFactory.createSparseMtrx(sparseMtrxType);
             if ( !mss ) {
                 OOFEM_ERROR("sparse matrix creation failed");
             }
@@ -360,17 +342,23 @@ CBS :: solveYourselfAt(TimeStep *tStep)
         this->applyIC(stepWhenIcApply);
     }
 
-    VelocityField.advanceSolution(tStep);
-    PressureField.advanceSolution(tStep);
-    FloatArray *velocityVector = VelocityField.giveSolutionVector(tStep);
-    FloatArray *prevVelocityVector = VelocityField.giveSolutionVector( tStep->givePreviousStep() );
-    FloatArray *pressureVector = PressureField.giveSolutionVector(tStep);
-    FloatArray *prevPressureVector = PressureField.giveSolutionVector( tStep->givePreviousStep() );
+    velocityField.advanceSolution(tStep);
+    pressureField.advanceSolution(tStep);
+    //this->velocityField.applyBoundaryCondition(tStep);
+    //this->pressureField.applyBoundaryCondition(tStep);
 
-    velocityVector->resize(momneq);
-    pressureVector->resize(presneq);
+    FloatArray velocityVector;
+    FloatArray pressureVector;
+    FloatArray prevVelocityVector;
+    FloatArray prevPressureVector;
+
+    this->velocityField.initialize(VM_Total, tStep->givePreviousStep(), prevVelocityVector, this->vnum );
+    this->pressureField.initialize(VM_Total, tStep->givePreviousStep(), prevPressureVector, this->pnum );
+    this->velocityField.update(VM_Total, tStep, prevVelocityVector, this->vnum );
+    this->pressureField.update(VM_Total, tStep, prevPressureVector, this->pnum );
 
     /* STEP 1 - calculates auxiliary velocities*/
+    FloatArray rhs(momneq);
     rhs.zero();
     // Depends on old v:
     this->assembleVectorFromElements( rhs, tStep, IntermediateConvectionDiffusionAssembler(), VM_Total, vnum, this->giveDomain(1) );
@@ -398,36 +386,38 @@ CBS :: solveYourselfAt(TimeStep *tStep)
     }
 
     // DensityRhsVelocityTerms needs this: Current velocity without correction;
-    * velocityVector = * prevVelocityVector;
-    velocityVector->add(this->theta1, deltaAuxVelocity);
+    velocityVector = prevVelocityVector;
+    velocityVector.add(this->theta1, deltaAuxVelocity);
+    this->velocityField.update(VM_Total, tStep, velocityVector, this->vnum );
 
     // Depends on old V + deltaAuxV * theta1 and p:
     rhs.resize(presneq);
     rhs.zero();
-    this->assembleVectorFromElements( rhs, tStep, DensityRhsAssembler(), VM_Total,
-                                     pnum, this->giveDomain(1) );
+    this->assembleVectorFromElements( rhs, tStep, DensityRhsAssembler(), VM_Total, pnum, this->giveDomain(1) );
     this->giveNumericalMethod( this->giveCurrentMetaStep() );
-    nMethod->solve(*lhs, rhs, *pressureVector);
-    pressureVector->times(this->theta2);
-    pressureVector->add(* prevPressureVector);
+    nMethod->solve(*lhs, rhs, pressureVector);
+    pressureVector.times(this->theta2);
+    pressureVector.add(prevPressureVector);
+    this->pressureField.update(VM_Total, tStep, pressureVector, this->pnum );
 
     /* STEP 3 - velocity correction step */
     rhs.resize(momneq);
     rhs.zero();
     // Depends on p:
-    this->assembleVectorFromElements( rhs, tStep, CorrectionRhsAssembler(), VM_Total,
-                                     vnum, this->giveDomain(1) );
+    this->assembleVectorFromElements( rhs, tStep, CorrectionRhsAssembler(), VM_Total, vnum, this->giveDomain(1) );
     if ( consistentMassFlag ) {
         rhs.times(deltaT);
         //this->assembleVectorFromElements(rhs, tStep, PrescribedRhsAssembler(), VM_Incremental, vnum, this->giveDomain(1));
-        nMethod->solve(*mss, rhs, *velocityVector);
-        velocityVector->add(deltaAuxVelocity);
-        velocityVector->add(* prevVelocityVector);
+        nMethod->solve(*mss, rhs, velocityVector);
+        velocityVector.add(deltaAuxVelocity);
+        velocityVector.add(prevVelocityVector);
     } else {
         for ( int i = 1; i <= momneq; i++ ) {
-            velocityVector->at(i) = prevVelocityVector->at(i) + deltaAuxVelocity.at(i) + deltaT *rhs.at(i) / mm.at(i);
+            velocityVector.at(i) = prevVelocityVector.at(i) + deltaAuxVelocity.at(i) + deltaT *rhs.at(i) / mm.at(i);
         }
     }
+    this->velocityField.update(VM_Total, tStep, velocityVector, this->vnum );
+    this->updateInternalState(tStep);
 
     // update solution state counter
     tStep->incrementStateCounter();
@@ -449,10 +439,16 @@ CBS :: solveYourselfAt(TimeStep *tStep)
 }
 
 
+int
+CBS :: giveUnknownDictHashIndx(ValueModeType mode, TimeStep *tStep)
+{
+    return tStep->giveNumber() % 2;
+}
+
+
 void
 CBS :: updateYourself(TimeStep *tStep)
 {
-    this->updateInternalState(tStep);
     EngngModel :: updateYourself(tStep);
     //<RESTRICTED_SECTION>
     if ( materialInterface ) {
@@ -468,12 +464,6 @@ void
 CBS :: updateInternalState(TimeStep *tStep)
 {
     for ( auto &domain: domainList ) {
-        if ( requiresUnknownsDictionaryUpdate() ) {
-            for ( auto &dman : domain->giveDofManagers() ) {
-                this->updateDofUnknownsDictionary(dman.get(), tStep);
-            }
-        }
-
         for ( auto &elem : domain->giveElements() ) {
             elem->updateInternalState(tStep);
         }
@@ -481,98 +471,27 @@ CBS :: updateInternalState(TimeStep *tStep)
 }
 
 
-contextIOResultType
-CBS :: saveContext(DataStream *stream, ContextMode mode, void *obj)
-//
-// saves state variable - displacement vector
-//
+void
+CBS :: saveContext(DataStream &stream, ContextMode mode)
 {
+    EngngModel :: saveContext(stream, mode);
+
     contextIOResultType iores;
-    int closeFlag = 0;
-    FILE *file = NULL;
-
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, this->giveCurrentStep()->giveNumber(),
-                                    this->giveCurrentStep()->giveVersion(), contextMode_write) ) {
-            THROW_CIOERR(CIO_IOERR); // override
-        }
-
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
-
-    if ( ( iores = EngngModel :: saveContext(stream, mode) ) != CIO_OK ) {
+    if ( ( iores = prescribedTractionPressure.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    if ( ( iores = PressureField.saveContext(*stream, mode) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( ( iores = VelocityField.saveContext(*stream, mode) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( ( iores = prescribedTractionPressure.storeYourself(*stream) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete stream;
-        stream = NULL;
-    } // ensure consistent records
-
-    return CIO_OK;
 }
 
 
-contextIOResultType
-CBS :: restoreContext(DataStream *stream, ContextMode mode, void *obj)
-//
-// restore state variable - displacement vector
-//
+void
+CBS :: restoreContext(DataStream &stream, ContextMode mode)
 {
+    EngngModel :: restoreContext(stream, mode);
+
     contextIOResultType iores;
-    int closeFlag = 0;
-    int istep, iversion;
-    FILE *file = NULL;
-
-    this->resolveCorrespondingStepNumber(istep, iversion, obj);
-
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, istep, iversion, contextMode_read) ) {
-            THROW_CIOERR(CIO_IOERR); // override
-        }
-
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
-
-    if ( ( iores = EngngModel :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
+    if ( ( iores = prescribedTractionPressure.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    if ( ( iores = PressureField.restoreContext(*stream, mode) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( ( iores = VelocityField.restoreContext(*stream, mode) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( ( iores = prescribedTractionPressure.restoreYourself(*stream) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete stream;
-        stream = NULL;
-    } // ensure consistent records
-
-    return CIO_OK;
 }
 
 
@@ -639,7 +558,7 @@ CBS :: printDofOutputAt(FILE *stream, Dof *iDof, TimeStep *tStep)
     double pscale = ( dscale * uscale * uscale );
 
     DofIDItem type = iDof->giveDofID();
-    if ( ( type == V_u ) || ( type == V_v ) || ( type == V_w ) ) {
+    if ( type == V_u || type == V_v || type == V_w ) {
         iDof->printSingleOutputAt(stream, tStep, 'd', VM_Total, uscale);
     } else if ( type == P_f ) {
         iDof->printSingleOutputAt(stream, tStep, 'd', VM_Total, pscale);
@@ -652,47 +571,14 @@ CBS :: printDofOutputAt(FILE *stream, Dof *iDof, TimeStep *tStep)
 void
 CBS :: applyIC(TimeStep *stepWhenIcApply)
 {
-    Domain *domain = this->giveDomain(1);
-    int mbneq = this->giveNumberOfDomainEquations(1, vnum);
-    int pdneq = this->giveNumberOfDomainEquations(1, pnum);
-    FloatArray *velocityVector, *pressureVector;
-
 #ifdef VERBOSE
     OOFEM_LOG_INFO("Applying initial conditions\n");
 #endif
-
-    VelocityField.advanceSolution(stepWhenIcApply);
-    velocityVector = VelocityField.giveSolutionVector(stepWhenIcApply);
-    velocityVector->resize(mbneq);
-    velocityVector->zero();
-
-    PressureField.advanceSolution(stepWhenIcApply);
-    pressureVector = PressureField.giveSolutionVector(stepWhenIcApply);
-    pressureVector->resize(pdneq);
-    pressureVector->zero();
-
-    for ( auto &node : domain->giveDofManagers() ) {
-        for ( Dof *iDof: *node ) {
-            // ask for initial values obtained from
-            // bc (boundary conditions) and ic (initial conditions)
-            if ( !iDof->isPrimaryDof() ) {
-                continue;
-            }
-
-            int jj = iDof->__giveEquationNumber();
-            if ( jj ) {
-                DofIDItem type = iDof->giveDofID();
-                if ( ( type == V_u ) || ( type == V_v ) || ( type == V_w ) ) {
-                    velocityVector->at(jj) = iDof->giveUnknown(VM_Total, stepWhenIcApply);
-                } else {
-                    pressureVector->at(jj) = iDof->giveUnknown(VM_Total, stepWhenIcApply);
-                }
-            }
-        }
-    }
+    velocityField.applyDefaultInitialCondition();
+    pressureField.applyDefaultInitialCondition();
 
     // update element state according to given ic
-    for ( auto &elem : domain->giveElements() ) {
+    for ( auto &elem : this->giveDomain(1)->giveElements() ) {
         CBSElement *element = static_cast< CBSElement * >( elem.get() );
         element->updateInternalState(stepWhenIcApply);
         element->updateYourself(stepWhenIcApply);
@@ -703,7 +589,7 @@ CBS :: applyIC(TimeStep *stepWhenIcApply)
 int
 CBS :: giveNewEquationNumber(int domain, DofIDItem id)
 {
-    if ( ( id == V_u ) || ( id == V_v ) || ( id == V_w ) ) {
+    if ( id == V_u || id == V_v || id == V_w ) {
         return this->vnum.askNewEquationNumber();
     } else if ( id == P_f ) {
         return this->pnum.askNewEquationNumber();
@@ -718,7 +604,7 @@ CBS :: giveNewEquationNumber(int domain, DofIDItem id)
 int
 CBS :: giveNewPrescribedEquationNumber(int domain, DofIDItem id)
 {
-    if ( ( id == V_u ) || ( id == V_v ) || ( id == V_w ) ) {
+    if ( id == V_u || id == V_v || id == V_w ) {
         return this->vnumPrescribed.askNewEquationNumber();
     } else if ( id == P_f ) {
         return this->pnumPrescribed.askNewEquationNumber();

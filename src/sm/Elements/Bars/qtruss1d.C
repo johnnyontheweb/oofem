@@ -32,7 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/Bars/qtruss1d.h"
+#include "sm/Elements/Bars/qtruss1d.h"
 #include "fei1dquad.h"
 #include "crosssection.h"
 #include "gausspoint.h"
@@ -40,7 +40,7 @@
 #include "floatmatrix.h"
 #include "floatarray.h"
 #include "intarray.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
+#include "sm/CrossSections/structuralcrosssection.h"
 #include "mathfem.h"
 #include "classfactory.h"
 
@@ -59,10 +59,10 @@ QTruss1d :: QTruss1d(int n, Domain *aDomain) : NLStructuralElement(n, aDomain)
 }
 
 
-IRResultType
-QTruss1d :: initializeFrom(InputRecord *ir)
+void
+QTruss1d :: initializeFrom(InputRecord &ir)
 {
-    return StructuralElement :: initializeFrom(ir);
+    StructuralElement :: initializeFrom(ir);
 }
 
 void
@@ -81,7 +81,13 @@ QTruss1d :: computeGlobalCoordinates(FloatArray &answer, const FloatArray &lcoor
 void
 QTruss1d :: computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->giveRealStress_1d(answer, gp, strain, tStep);
+    answer = this->giveStructuralCrossSection()->giveRealStress_1d(strain, gp, tStep);
+}
+
+void
+QTruss1d :: computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
+{
+    answer = this->giveStructuralCrossSection()->giveStiffnessMatrix_1d(rMode, gp, tStep);
 }
 
 double
@@ -100,7 +106,7 @@ void QTruss1d :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize( 1 );
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 3) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 3);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], numberOfGaussPoints, this);
     }
 }

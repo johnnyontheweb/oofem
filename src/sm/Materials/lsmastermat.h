@@ -35,9 +35,9 @@
 #ifndef lsmastermat_h
 #define lsmastermat_h
 
-#include "../sm/Materials/structuralmaterial.h"
-#include "../sm/Materials/structuralms.h"
-#include "Materials/linearelasticmaterial.h"
+#include "sm/Materials/structuralmaterial.h"
+#include "sm/Materials/structuralms.h"
+#include "sm/Materials/linearelasticmaterial.h"
 #include "dictionary.h"
 #include "floatarray.h"
 #include "floatmatrix.h"
@@ -64,44 +64,40 @@ class LargeStrainMasterMaterial : public StructuralMaterial
 {
 protected:
     /// Reference to the basic elastic material.
-    LinearElasticMaterial *linearElasticMaterial;
+    LinearElasticMaterial *linearElasticMaterial = nullptr;
 
     /// 'slave' material model number.
-    int slaveMat;
+    int slaveMat = 0;
     /// Specifies the strain tensor.
-    double m;
-
+    double m = 0.;
 
 public:
     LargeStrainMasterMaterial(int n, Domain *d);
-    virtual ~LargeStrainMasterMaterial();
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual int hasNonLinearBehaviour() { return 1; }
-    virtual const char *giveInputRecordName() const { return _IFT_LargeStrainMasterMaterial_Name; }
-    virtual const char *giveClassName() const { return "LargeStrainMasterMaterial"; }
+    const char *giveInputRecordName() const override { return _IFT_LargeStrainMasterMaterial_Name; }
+    const char *giveClassName() const override { return "LargeStrainMasterMaterial"; }
 
     LinearElasticMaterial *giveLinearElasticMaterial() { return linearElasticMaterial; }
 
-    virtual bool isCharacteristicMtrxSymmetric(MatResponseMode rMode) { return false; }
+    bool isCharacteristicMtrxSymmetric(MatResponseMode rMode) const override { return false; }
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const;
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
 
-    virtual void give3dMaterialStiffnessMatrix_dPdF(FloatMatrix & answer,
-                                                    MatResponseMode,
-                                                    GaussPoint * gp,
-                                                    TimeStep * tStep);
+    FloatMatrixF<9,9> give3dMaterialStiffnessMatrix_dPdF(MatResponseMode,
+                                            GaussPoint * gp,
+                                            TimeStep * tStep) const override;
 
-    virtual void giveRealStressVector_3d(FloatArray &answer, GaussPoint *, const FloatArray &, TimeStep *)
-    { OOFEM_ERROR("not implemented, this material is designed for large strains only"); }
-    virtual void giveFirstPKStressVector_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &vF, TimeStep *tStep);
+    FloatArrayF<6> giveRealStressVector_3d(const FloatArrayF<6> &, GaussPoint *, TimeStep *) const override
+    { OOFEM_ERROR("not implemented, this material is designed for large strains only"); return zeros<6>(); }
+    FloatArrayF<9> giveFirstPKStressVector_3d(const FloatArrayF<9> &vF, GaussPoint *gp, TimeStep *tStep) const override;
 
     /// transformation matrices
-    void constructTransformationMatrix(FloatMatrix &answer, const FloatMatrix &eigenVectors);
-    void constructL1L2TransformationMatrices(FloatMatrix &answer1, FloatMatrix &answer2, const FloatArray &eigenValues, FloatArray &stress, double E1, double E2, double E3);
+    FloatMatrixF<6,6> constructTransformationMatrix(const FloatMatrixF<3,3> &eigenVectors) const;
+    std::pair<FloatMatrixF<6,6>, FloatMatrixF<6,6>> constructL1L2TransformationMatrices(const FloatArrayF<3> &eigenValues, const FloatArrayF<6> &stress, double E1, double E2, double E3) const;
 
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 };
 
 //=============================================================================
@@ -110,33 +106,30 @@ public:
 class LargeStrainMasterMaterialStatus : public StructuralMaterialStatus
 {
 protected:
-    FloatMatrix Pmatrix, TLmatrix, transformationMatrix;
-    int slaveMat;
+    FloatMatrixF<6,6> Pmatrix = eye<6>();
+    FloatMatrixF<6,6> TLmatrix, transformationMatrix;
+    Domain *domain = nullptr;
+    int slaveMat = 0.;
 
 public:
-    LargeStrainMasterMaterialStatus(int n, Domain *d, GaussPoint *g, int s);
-    virtual ~LargeStrainMasterMaterialStatus();
+    LargeStrainMasterMaterialStatus(GaussPoint *g, Domain *d, int s);
 
+    const FloatMatrixF<6,6> &givePmatrix() const { return Pmatrix; }
+    const FloatMatrixF<6,6> &giveTLmatrix() const { return TLmatrix; }
+    const FloatMatrixF<6,6> &giveTransformationMatrix() const { return transformationMatrix; }
 
-    const FloatMatrix &givePmatrix() { return Pmatrix; }
-    const FloatMatrix &giveTLmatrix() { return TLmatrix; }
-    const FloatMatrix &giveTransformationMatrix() { return transformationMatrix; }
+    void setPmatrix(const FloatMatrixF<6,6> &values) { Pmatrix = values; }
+    void setTLmatrix(const FloatMatrixF<6,6> &values) { TLmatrix = values; }
+    void setTransformationMatrix(const FloatMatrixF<6,6> &values) { transformationMatrix = values; }
 
-    void setPmatrix(const FloatMatrix &values) { Pmatrix = values; }
-    void setTLmatrix(const FloatMatrix &values) { TLmatrix = values; }
-    void setTransformationMatrix(const FloatMatrix &values) { transformationMatrix = values; }
+    void printOutputAt(FILE *file, TimeStep *tStep) const override;
+    void initTempStatus() override;
+    void updateYourself(TimeStep *) override;
 
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 
-    virtual void initTempStatus();
-
-    virtual void updateYourself(TimeStep *);
-
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-
-    virtual const char *giveClassName() const { return "LargeStrainMasterMaterialStatus"; }
+    const char *giveClassName() const override { return "LargeStrainMasterMaterialStatus"; }
 };
 } // end namespace oofem
 #endif // misesmat_h

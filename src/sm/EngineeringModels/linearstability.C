@@ -35,7 +35,7 @@
 // please activate or de-activate next line
 //#define LIN_STAB_COMPATIBILITY_MODE
 
-#include "../sm/EngineeringModels/linearstability.h"
+#include "sm/EngineeringModels/linearstability.h"
 #include "timestep.h"
 #include "element.h"
 #include "contextioerr.h"
@@ -48,6 +48,8 @@
 #include "dofmanager.h"
 #include "dof.h"
 #include "unknownnumberingscheme.h"
+#include "eigenvectorprimaryfield.h"
+
 
 #ifdef __OOFEG
  #include "oofeggraphiccontext.h"
@@ -56,10 +58,20 @@
 namespace oofem {
 REGISTER_EngngModel(LinearStability);
 
+LinearStability :: LinearStability(int i, EngngModel *master) : StructuralEngngModel(i, master),
+    numberOfRequiredEigenValues(1),
+    rtolv(1e-6),
+    solverType(GES_SubspaceIt)
+{
+    numberOfSteps = 1;
+    ndomains = 1;
+}
+
+
 NumericalMethod *LinearStability :: giveNumericalMethod(MetaStep *mStep)
 {
     if ( !nMethod ) {
-        nMethod.reset( classFactory.createGeneralizedEigenValueSolver(solverType, this->giveDomain(1), this) );
+        nMethod = classFactory.createGeneralizedEigenValueSolver(solverType, this->giveDomain(1), this);
         if ( !nMethod ) {
             OOFEM_ERROR("solver creation failed");
         }
@@ -67,6 +79,7 @@ NumericalMethod *LinearStability :: giveNumericalMethod(MetaStep *mStep)
 
     return nMethod.get();
 }
+
 
 SparseLinearSystemNM *LinearStability :: giveNumericalMethodForLinStaticProblem(TimeStep *tStep)
 {
@@ -80,33 +93,28 @@ SparseLinearSystemNM *LinearStability :: giveNumericalMethodForLinStaticProblem(
     return nMethodLS.get();
 }
 
-IRResultType
-LinearStability :: initializeFrom(InputRecord *ir)
-{
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
 
+void
+LinearStability :: initializeFrom(InputRecord &ir)
+{
     //StructuralEngngModel::instanciateFrom(ir);
     IR_GIVE_FIELD(ir, numberOfRequiredEigenValues, _IFT_LinearStability_nroot);
     // numberOfSteps set artifficially to numberOfRequiredEigenValues
     // in order to allow
     // use restoreContext function for different eigenValues
     numberOfSteps = numberOfRequiredEigenValues;
+    this->field = std::make_unique<EigenVectorPrimaryField>(this, 1, FT_Displacements, numberOfRequiredEigenValues + 1); // +1 for eq. solution
 
     IR_GIVE_FIELD(ir, rtolv, _IFT_LinearStability_rtolv);
     if ( rtolv < 1.e-12 ) {
         rtolv =  1.e-12;
-    }
-
-    if ( rtolv > 0.01 ) {
+    } else if ( rtolv > 0.01 ) {
         rtolv =  0.01;
     }
 
     int val = 1; // inverseit
     IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_LinearStability_stype);
     solverType = ( GenEigvalSolverType ) val;
-
-	sparseMtrxType= SparseMtrxType::SMT_Skyline; //Default Skyline
-	linStype = LinSystSolverType::ST_Direct;
 
 	if (solverType == GenEigvalSolverType::GES_Eigen){
 		sparseMtrxType = SparseMtrxType::SMT_EigenSparse; // linStype = ST_Spooles;
@@ -115,27 +123,33 @@ LinearStability :: initializeFrom(InputRecord *ir)
 
     nMetaSteps = 0;
 
-    return IRRT_OK;
+    suppressOutput = ir.hasField(_IFT_EngngModel_suppressOutput);
+
+    if (suppressOutput) {
+        printf("Suppressing output.\n");
+    } else {
+        if ( ( outputStream = fopen(this->dataOutputFileName.c_str(), "w") ) == NULL ) {
+            OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str());
+        }
+
+        fprintf(outputStream, "%s", PRG_HEADER);
+        fprintf(outputStream, "\nStarting analysis on: %s\n", ctime(& this->startTime) );
+        fprintf(outputStream, "%s\n", simulationDescription.c_str());
+    }
+}
+
+
+int LinearStability :: giveUnknownDictHashIndx(ValueModeType mode, TimeStep *tStep)
+{
+    return tStep->giveNumber() % (this->numberOfRequiredEigenValues + 1); // +1 for eq. solution 
 }
 
 
 double LinearStability :: giveUnknownComponent(ValueModeType mode, TimeStep *tStep, Domain *d, Dof *dof)
-// returns unknown quantity like displacement, eigen value.
 {
-    int eq = dof->__giveEquationNumber();
-#ifdef DEBUG
-    if ( eq == 0 ) {
-        OOFEM_ERROR("invalid equation number");
-    }
-#endif
+    return field->giveUnknownValue(dof, mode, tStep);
+}
 
-    int activeVector = ( int ) tStep->giveTargetTime();
-    switch ( mode ) {
-	case VM_Incremental:
-    case VM_Total: // EigenVector
-        if ( activeVector ) {
-            return eigVec.at(eq, activeVector);
-        }
 
         return displacementVector.at(eq);
 	case VM_Velocity:
@@ -160,10 +174,11 @@ TimeStep *LinearStability :: giveNextStep()
     }
 
     previousStep = std :: move(currentStep);
-    currentStep.reset( new TimeStep(istep, this, 1, 0., 0., counter) );
+    currentStep = std::make_unique<TimeStep>(istep, this, 1, 0., 0., counter);
 
     return currentStep.get();
 }
+
 
 void LinearStability :: solveYourself()
 {
@@ -178,35 +193,24 @@ void LinearStability :: solveYourself()
 
 void LinearStability :: solveYourselfAt(TimeStep *tStep)
 {
-    //
+    tStep->setNumber(0);
+    tStep->setTime(0.0);
+
     // creates system of governing eq's and solves them at given time step
-    //
     this->giveNumericalMethod( this->giveMetaStep( tStep->giveMetaStepNumber() ) );
     this->giveNumericalMethodForLinStaticProblem(tStep);
 
     // first assemble problem at current time step
-
-    if ( tStep->giveNumber() == 1 ) {
+    if ( !stiffnessMatrix ) {
         //
         // first step - solve linear static problem
         //
 		stiffnessMatrix.reset(classFactory.createSparseMtrx(sparseMtrxType));
         stiffnessMatrix->buildInternalStructure( this, 1, EModelDefaultEquationNumbering() );
-
-        //
-        // allocate space for displacement Vector
-        //
-        displacementVector.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ) );
-        //
-        // allocate space for load vector
-        //
-        loadVector.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ) );
     }
 
 #ifndef LIN_STAB_COMPATIBILITY_MODE
- #ifdef VERBOSE
     OOFEM_LOG_INFO("Assembling stiffness matrix\n");
- #endif
     stiffnessMatrix->zero();
     this->assemble( *stiffnessMatrix, tStep, TangentAssembler(TangentStiffness),
                    EModelDefaultEquationNumbering(), this->giveDomain(1) );
@@ -214,49 +218,40 @@ void LinearStability :: solveYourselfAt(TimeStep *tStep)
 
 #ifdef VERBOSE
     OOFEM_LOG_INFO("Assembling load\n");
-#endif
-
-    displacementVector.zero();
-    loadVector.zero();
+    int neq = this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() );
+    FloatArray displacementVector(neq), loadVector(neq);
 
     // Internal forces first, negated;
-    this->assembleVector( loadVector, tStep, InternalForceAssembler(), VM_Total,
-                         EModelDefaultEquationNumbering(), this->giveDomain(1) );
+    field->update(VM_Total, tStep, displacementVector, EModelDefaultEquationNumbering());
+    this->assembleVector( loadVector, tStep, InternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(1) );
     loadVector.negated();
 
-    this->assembleVector( loadVector, tStep, ExternalForceAssembler(), VM_Total,
-                         EModelDefaultEquationNumbering(), this->giveDomain(1) );
+    this->assembleVector( loadVector, tStep, ExternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(1) );
     this->updateSharedDofManagers(loadVector, EModelDefaultEquationNumbering(), ReactionExchangeTag);
 
-    //
-    // call numerical model to solve problem
-    //
-#ifdef VERBOSE
     OOFEM_LOG_INFO("Solving linear static problem\n");
-#endif
-
     nMethodLS->solve(*stiffnessMatrix, loadVector, displacementVector);
+    // Initial displacements are stored at position 0; this is a bit of a hack. In the future, a cleaner approach of handling fields could be suitable,
+    // but currently, it all converges down to the same giveUnknownComponent, so this is the easisest approach.
+    field->update(VM_Total, tStep, displacementVector, EModelDefaultEquationNumbering());
     // terminate linear static computation (necessary, in order to compute stresses in elements).
-    this->terminateLinStatic( this->giveCurrentStep() );
-    /*
-     * Normal forces already known, proceed with linear stability
-     */
+    // Recompute for updated state:
+    this->assembleVector( loadVector, tStep, InternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(1) );
+    this->terminateLinStatic( tStep );
 
+    // Normal forces already known, proceed with linear stability
     stiffnessMatrix->zero();
     if ( !initialStressMatrix ) {
-        initialStressMatrix.reset( stiffnessMatrix->GiveCopy() );
+        initialStressMatrix = stiffnessMatrix->clone();
     } else {
         initialStressMatrix->zero();
     }
 
-#ifdef VERBOSE
     OOFEM_LOG_INFO("Assembling stiffness matrix\n");
-#endif
     this->assemble( *stiffnessMatrix, tStep, TangentAssembler(TangentStiffness),
                    EModelDefaultEquationNumbering(), this->giveDomain(1) );
-#ifdef VERBOSE
+
     OOFEM_LOG_INFO("Assembling initial stress matrix\n");
-#endif
     this->assemble( *initialStressMatrix, tStep, InitialStressMatrixAssembler(),
                    EModelDefaultEquationNumbering(), this->giveDomain(1) );
     initialStressMatrix->times(-1.0);
@@ -268,31 +263,24 @@ void LinearStability :: solveYourselfAt(TimeStep *tStep)
     //  stiffnessMatrix->printYourself();
     //  initialStressMatrix->printYourself();
 
-    //
-    // create resulting objects eigVec and eigVal
-    //
-    eigVec.resize(this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ), numberOfRequiredEigenValues);
+    FloatMatrix eigVec(neq, numberOfRequiredEigenValues);
     eigVal.resize(numberOfRequiredEigenValues);
-    eigVec.zero();
     eigVal.zero();
 
-    //
-    // call numerical model to solve arised problem
-    //
-#ifdef VERBOSE
     OOFEM_LOG_INFO("Solving ...\n");
-#endif
-
 #ifdef DEBUG
 	//stiffnessMatrix->writeToFile("K.dat");
 	//initialStressMatrix->writeToFile("M.dat");
 #endif
 
     nMethod->solve(*stiffnessMatrix, *initialStressMatrix, eigVal, eigVec, rtolv, numberOfRequiredEigenValues);
+    this->field->updateAll(eigVec, EModelDefaultEquationNumbering());
 }
+
 
 void LinearStability :: updateYourself(TimeStep *tStep)
 { }
+
 
 void
 LinearStability :: terminateLinStatic(TimeStep *tStep)
@@ -316,9 +304,8 @@ LinearStability :: terminateLinStatic(TimeStep *tStep)
     }
 
 #  ifdef VERBOSE
-    VERBOSE_PRINT0("Updated nodes & sides ", domain->giveNumberOfDofManagers())
+    VERBOSE_PRINT0("Updated nodes ", domain->giveNumberOfDofManagers())
 #  endif
-
 
     for ( auto &elem : domain->giveElements() ) {
         elem->updateInternalState(tStep);
@@ -362,18 +349,36 @@ void LinearStability :: terminate(TimeStep *tStep)
         if ( ( i % 5 ) == 0 ) {
             fprintf(outputStream, "\n");
         }
+
+        exportModuleManager.doOutput(&step);
     }
 
     fprintf(outputStream, "\n\n");
 
     int nnodes = domain->giveNumberOfDofManagers();
 
-	for (int i = 1; i <= eigVal.giveSize(); i++) { // numberOfRequiredEigenValues
-        fprintf(outputStream, "\nOutput for eigen value no.  %.3e \n", ( double ) i);
-        fprintf( outputStream,
-                "Printing eigen vector no. %d, corresponding eigen value is %15.8e\n\n",
-                i, eigVal.at(i) );
-        tStep->setTime( ( double ) i );
+    fprintf(file, "\nLinear Stability:");
+    fprintf(file, "\nEigen Values are:\n-----------------\n");
+
+    for ( int i = 1; i <= numberOfRequiredEigenValues; i++ ) {
+        fprintf(file, "%15.8e ", eigVal.at(i) );
+        if ( ( i % 5 ) == 0 ) {
+            fprintf(file, "\n");
+        }
+    }
+
+    fprintf(file, "\n\n");
+
+    for ( int i = 0; i <= numberOfRequiredEigenValues; i++ ) {
+        TimeStep step = *tStep;
+        step.setTime( ( double ) i );
+        step.setNumber(i);
+
+        if ( i == 0 ) {
+            fprintf(file, "\nLinear solution\n\n");
+        } else {
+            fprintf(file, "\nEigen vector no. %d, corresponding eigen value is %15.8e\n\n", i, eigVal.at(i));
+        }
 
         if ( this->requiresUnknownsDictionaryUpdate() ) {
             for ( auto &dman : domain->giveDofManagers() ) {
@@ -382,13 +387,9 @@ void LinearStability :: terminate(TimeStep *tStep)
         }
 		
         for ( auto &dman : domain->giveDofManagers() ) {
-            dman->updateYourself(tStep);
-            dman->printOutputAt(outputStream, tStep);
+            dman->updateYourself(&step);
+            dman->printOutputAt(file, &step);
         }
-
-        tStep->setNumber(i);
-        exportModuleManager->doOutput(tStep);
-    }
 
 #  ifdef VERBOSE
     VERBOSE_PRINT0("Updated nodes & sides ", nnodes)
@@ -399,111 +400,43 @@ void LinearStability :: terminate(TimeStep *tStep)
 }
 
 
-contextIOResultType LinearStability :: saveContext(DataStream *stream, ContextMode mode, void *obj)
+void LinearStability :: setActiveVector(int activeVector)
 //
 // saves state variable - displacement vector
 //
 {
-    contextIOResultType iores;
-    int closeFlag = 0;
-    FILE *file = NULL;
-
-    OOFEM_LOG_INFO("Storing context \n");
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, this->giveCurrentStep()->giveNumber(),
-                                    this->giveCurrentStep()->giveVersion(), contextMode_write) ) {
-            THROW_CIOERR(CIO_IOERR); // override
-        }
-
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
-
-    if ( ( iores = StructuralEngngModel :: saveContext(stream, mode) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( ( iores = displacementVector.storeYourself(*stream) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( ( iores = eigVal.storeYourself(*stream) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( ( iores = eigVec.storeYourself(*stream) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete stream;
-        stream = NULL;
-    }                                                        // ensure consistent records
-
-    return CIO_OK;
+    this->giveCurrentStep()->setTime( ( double ) activeVector );
+    this->giveCurrentStep()->setNumber( ( double ) activeVector );
 }
 
 
+void LinearStability :: saveContext(DataStream &stream, ContextMode mode)
+{
+    StructuralEngngModel :: saveContext(stream, mode);
 
-contextIOResultType LinearStability :: restoreContext(DataStream *stream, ContextMode mode, void *obj)
+    field->saveContext(stream);
+
+    contextIOResultType iores;
+    if ( ( iores = eigVal.storeYourself(stream) ) != CIO_OK ) {
+        THROW_CIOERR(iores);
+    }
+}
+
+
+void LinearStability :: restoreContext(DataStream &stream, ContextMode mode)
 //
 // restore state variable - displacement vector
 //
 {
-    int activeVector, version;
-    int istep = 1, iversion = 1;
-    int closeFlag = 0;
+    StructuralEngngModel :: restoreContext(stream, mode);
+
+    field->restoreContext(stream);
+
     contextIOResultType iores;
-    FILE *file = NULL;
-
-    this->resolveCorrespondingStepNumber(activeVector, version, obj);
-    if ( eigVal.isEmpty() ) { // not restored before
-        if ( stream == NULL ) {
-            if ( !this->giveContextFile(& file, istep, iversion, contextMode_read) ) {
-                THROW_CIOERR(CIO_IOERR); // override
-            }
-
-            stream = new FileDataStream(file);
-            closeFlag = 1;
-        }
-
-        if ( ( iores = StructuralEngngModel :: restoreContext(stream, mode, ( void * ) & istep) ) != CIO_OK ) {
-            THROW_CIOERR(iores);
-        }
-
-        if ( ( iores = displacementVector.restoreYourself(*stream) ) != CIO_OK ) {
-            THROW_CIOERR(iores);
-        }
-
-        if ( ( iores = eigVal.restoreYourself(*stream) ) != CIO_OK ) {
-            THROW_CIOERR(iores);
-        }
-
-        if ( ( iores = eigVec.restoreYourself(*stream) ) != CIO_OK ) {
-            THROW_CIOERR(iores);
-        }
-
-        if ( closeFlag ) {
-            fclose(file);
-            delete stream;
-            stream = NULL;
-        }                                                    // ensure consistent records
+    if ( ( iores = eigVal.restoreYourself(stream) ) != CIO_OK ) {
+        THROW_CIOERR(iores);
     }
-
-    //  if (istep > numberOfRequiredEigenValues) istep = numberOfRequiredEigenValues ;
-    //  printf( "Restoring - corresponding index is %d, EigenValue is %lf\n",
-    //     istep,eigVal.at(istep));
-    //  setActiveVector (istep);
-    if ( activeVector > numberOfRequiredEigenValues ) {
-        activeVector = numberOfRequiredEigenValues;
-    }
-
-    OOFEM_LOG_INFO( "Restoring - corresponding index is %d, EigenValue is %f\n",
-                   activeVector, eigVal.at(activeVector) );
-    this->giveCurrentStep()->setTime( ( double ) activeVector );
-
-    return CIO_OK;
 }
+
 
 } // end namespace oofem

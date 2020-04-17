@@ -45,10 +45,10 @@ class FEMComponent;
 class DynamicInputRecord;
 
 /// Helper function for creating a dynamic input record for a node
-OOFEM_EXPORT DynamicInputRecord *CreateNodeIR(int i, InputFieldType nodeType, FloatArray coord);
+OOFEM_EXPORT std::unique_ptr<DynamicInputRecord> CreateNodeIR(int i, InputFieldType nodeType, FloatArray coord);
 
 /// Helper function for creating elements (with optional cross-section number).
-OOFEM_EXPORT DynamicInputRecord *CreateElementIR(int i, InputFieldType elementType, IntArray nodes, int cs = 0);
+OOFEM_EXPORT std::unique_ptr<DynamicInputRecord> CreateElementIR(int i, InputFieldType elementType, IntArray nodes, int cs = 0);
 
 /**
  * Class representing the a dynamic Input Record.
@@ -62,7 +62,6 @@ protected:
     std :: string recordKeyword;
     int recordNumber;
 
-    // Record representation.
     std :: set< std :: string >emptyRecord; ///< Fields without values
     std :: map< std :: string, int >intRecord;
     std :: map< std :: string, double >doubleRecord;
@@ -88,27 +87,28 @@ public:
     /// Assignment operator.
     DynamicInputRecord &operator = ( const DynamicInputRecord & );
 
-    virtual InputRecord *GiveCopy() { return new DynamicInputRecord(*this); }
-    virtual void finish(bool wrn = true);
+    std::unique_ptr<InputRecord> clone() const override { return std::make_unique<DynamicInputRecord>(*this); }
+    void finish(bool wrn = true) override;
 
-    virtual std :: string giveRecordAsString() const;
+    std :: string giveRecordAsString() const override;
 
-    virtual IRResultType giveRecordKeywordField(std :: string &answer, int &value);
-    virtual IRResultType giveRecordKeywordField(std :: string &answer);
-    virtual IRResultType giveField(int &answer, InputFieldType id);
-    virtual IRResultType giveField(double &answer, InputFieldType id);
-    virtual IRResultType giveField(bool &answer, InputFieldType id);
-    virtual IRResultType giveField(std :: string &answer, InputFieldType id);
-    virtual IRResultType giveField(FloatArray &answer, InputFieldType id);
-    virtual IRResultType giveField(IntArray &answer, InputFieldType id);
-    virtual IRResultType giveField(FloatMatrix &answer, InputFieldType id);
-    virtual IRResultType giveField(std :: vector< std :: string > &answer, InputFieldType id);
-    virtual IRResultType giveField(Dictionary &answer, InputFieldType id);
-    virtual IRResultType giveField(std :: list< Range > &answer, InputFieldType id);
-    virtual IRResultType giveField(ScalarFunction &function, InputFieldType id);
+    void giveRecordKeywordField(std :: string &answer, int &value) override;
+    void giveRecordKeywordField(std :: string &answer) override;
+    void giveField(int &answer, InputFieldType id) override;
+    void giveField(double &answer, InputFieldType id) override;
+    void giveField(bool &answer, InputFieldType id) override;
+    void giveField(std :: string &answer, InputFieldType id) override;
+    void giveField(FloatArray &answer, InputFieldType id) override;
+    void giveField(IntArray &answer, InputFieldType id) override;
+    void giveField(FloatMatrix &answer, InputFieldType id) override;
+    void giveField(std :: vector< std :: string > &answer, InputFieldType id) override;
+    void giveField(Dictionary &answer, InputFieldType id) override;
+    void giveField(std :: list< Range > &answer, InputFieldType id) override;
+    void giveField(ScalarFunction &function, InputFieldType id) override;
 
-    virtual bool hasField(InputFieldType id);
-    virtual void printYourself();
+    bool hasField(InputFieldType id) override;
+    void printYourself() override;
+
     // Setters, unique for the dynamic input record
     void setRecordKeywordField(std :: string keyword, int number);
     void setRecordKeywordNumber(int number);
@@ -127,9 +127,6 @@ public:
     void setField(InputFieldType id);
     /// Removes given field from record.
     void unsetField(InputFieldType id);
-
-    virtual void report_error(const char *_class, const char *proc, InputFieldType id,
-                              IRResultType result, const char *file, int line);
 };
 } // end namespace oofem
 #endif // dynamicinputrecord_h

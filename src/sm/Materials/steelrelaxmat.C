@@ -45,29 +45,12 @@
 namespace oofem {
 REGISTER_Material(SteelRelaxMat);
 
-// constructor
 SteelRelaxMat :: SteelRelaxMat(int n, Domain *d) : StructuralMaterial(n, d)
-{
-    E = 0.;
-    k1 = 0.;
-    k2 = 0.;
-    rho1000 = 0.;
-    mu = 0.;
-    timeFactor = 0.;
-    //stiffnessFactor = 1.e6;
-    //    prestress = 0.;
-}
-
-// destructor
-SteelRelaxMat :: ~SteelRelaxMat()
 {}
 
 
-int
-SteelRelaxMat :: hasMaterialModeCapability(MaterialMode mode)
-//
-// returns whether the receiver supports the given mode
-//
+bool
+SteelRelaxMat :: hasMaterialModeCapability(MaterialMode mode) const
 {
     return mode == _1dMat;
 }
@@ -75,16 +58,10 @@ SteelRelaxMat :: hasMaterialModeCapability(MaterialMode mode)
 
 
 // reads the model parameters from the input file
-IRResultType
-SteelRelaxMat :: initializeFrom(InputRecord *ir)
+void
+SteelRelaxMat :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                 // required by IR_GIVE_FIELD macro
-
-    result = StructuralMaterial :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
-
+    StructuralMaterial :: initializeFrom(ir);
 
     IR_GIVE_FIELD(ir, this->E, _IFT_SteelRelaxMat_E); // Young's modulus
 
@@ -136,16 +113,13 @@ SteelRelaxMat :: initializeFrom(InputRecord *ir)
     //this->tolerance =  1. / this->stiffnessFactor;
     this->tolerance =  1. / 1.e6;
     IR_GIVE_OPTIONAL_FIELD(ir, this->tolerance, _IFT_SteelRelaxMat_tolerance);
-
-
-    return IRRT_OK;
 }
 
 // creates a new material status  corresponding to this class
 MaterialStatus *
 SteelRelaxMat :: CreateStatus(GaussPoint *gp) const
 {
-    return new SteelRelaxMatStatus(1, this->giveDomain(), gp);
+    return new SteelRelaxMatStatus(gp);
 }
 
 void
@@ -247,20 +221,17 @@ SteelRelaxMat :: giveRealStressVector(FloatArray &answer,
 }
 
 
-void
-SteelRelaxMat :: give1dStressStiffMtrx(FloatMatrix &answer,
-                                       MatResponseMode mode,
+FloatMatrixF<1,1>
+SteelRelaxMat :: give1dStressStiffMtrx(MatResponseMode mode,
                                        GaussPoint *gp,
-                                       TimeStep *tStep)
+                                       TimeStep *tStep) const
 {
-    answer.resize(1, 1);
-    answer.zero();
     if ( this->isActivated(tStep) ) {
-        answer.at(1, 1) = this->E;
+        return {this->E};
+    } else {
+        return {0.};
     }
 }
-
-
 
 
 void
@@ -277,8 +248,6 @@ SteelRelaxMat :: giveStressDependentPartOfStrainVector(FloatArray &answer, Gauss
 
     answer = temperatureFreeStrain;
     answer.subtract(relaxationStrain);
-
-    return;
 }
 
 
@@ -385,8 +354,7 @@ SteelRelaxMat :: computeStressRelaxationStrainVector(FloatArray &answer, GaussPo
         temperFreeStrainIncrement.subtract( status->giveStrainVector() ); // result = delta eps tot
 
         // epsilon temperature increment
-        FloatArray deltaEpsTemperature;
-        this->computeStressIndependentStrainVector(deltaEpsTemperature, gp, tStep, VM_Incremental);
+        auto deltaEpsTemperature = this->computeStressIndependentStrainVector(gp, tStep, VM_Incremental);
 
         temperFreeStrainIncrement.subtract(deltaEpsTemperature); // results = delta epsilon stress
 
@@ -472,17 +440,13 @@ SteelRelaxMat :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateTy
 
 //=============================================================================
 
-SteelRelaxMatStatus :: SteelRelaxMatStatus(int n, Domain *d, GaussPoint *g) : StructuralMaterialStatus(n, d, g)
+SteelRelaxMatStatus :: SteelRelaxMatStatus(GaussPoint *g) : StructuralMaterialStatus(g)
 {
-    relaxIntVariable = tempRelaxIntVariable = 0.;
-    prestress = 0.;
 }
 
-SteelRelaxMatStatus :: ~SteelRelaxMatStatus()
-{ }
 
 void
-SteelRelaxMatStatus :: printOutputAt(FILE *file, TimeStep *tStep)
+SteelRelaxMatStatus :: printOutputAt(FILE *file, TimeStep *tStep) const
 {
     StructuralMaterialStatus :: printOutputAt(file, tStep);
 
@@ -515,49 +479,32 @@ SteelRelaxMatStatus :: updateYourself(TimeStep *tStep)
 }
 
 
-// saves full information stored in this status
-// temporary variables are NOT stored
-contextIOResultType
-SteelRelaxMatStatus :: saveContext(DataStream &stream, ContextMode mode, void *obj)
+void
+SteelRelaxMatStatus :: saveContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
+    StructuralMaterialStatus :: saveContext(stream, mode);
 
-    // save parent class status
-    if ( ( iores = StructuralMaterialStatus :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    // write raw data
     if ( !stream.write(relaxIntVariable) ) {
-        return CIO_IOERR;
+        THROW_CIOERR(CIO_IOERR);
     }
 
     if ( !stream.write(prestress) ) {
-        return CIO_IOERR;
+        THROW_CIOERR(CIO_IOERR);
     }
-
-    return CIO_OK;
 }
 
 
-
-contextIOResultType
-SteelRelaxMatStatus :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// restores full information stored in stream to this Status
-//
+void
+SteelRelaxMatStatus :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-
-    // read parent class status
-    if ( ( iores = StructuralMaterialStatus :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
+    StructuralMaterialStatus :: restoreContext(stream, mode);
 
     if ( !stream.read(relaxIntVariable) ) {
-        return CIO_IOERR;
+        THROW_CIOERR(CIO_IOERR);
     }
 
-    return CIO_OK; // return succes
+    if ( !stream.read(prestress) ) {
+        THROW_CIOERR(CIO_IOERR);
+    }
 }
 } // end namespace oofem

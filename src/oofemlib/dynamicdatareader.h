@@ -36,7 +36,7 @@
 #define dynamicdatareader_h
 
 #include "datareader.h"
-#include <list>
+#include <vector>
 #include <memory>
 
 namespace oofem {
@@ -53,14 +53,15 @@ class InputRecord;
 class OOFEM_EXPORT DynamicDataReader : public DataReader
 {
 protected:
+    std :: string name;
     /// Keeps track of the current position in the list
-    std :: list< std :: unique_ptr< InputRecord > > :: iterator it;
+    std :: vector< std :: unique_ptr< InputRecord > > :: iterator it;
     /// All record types will be appended to this list, no split in terms of InputRecordType is implemented yet.
-    std :: list< std :: unique_ptr< InputRecord > >recordList;
+    std :: vector< std :: unique_ptr< InputRecord > >recordList;
 
 public:
     /// Constructor.
-    DynamicDataReader();
+    DynamicDataReader(std :: string name);
     virtual ~DynamicDataReader();
 
     DynamicDataReader(const DynamicDataReader& src) = delete;
@@ -72,7 +73,7 @@ public:
      * @param type Currently ignored, but left here for consistency with giveInputRecord
      * @param record New record to be added at the end. New input records have to be added in the same order as the text input files do it.
      */
-    void insertInputRecord(InputRecordType type, InputRecord *record);
+    void insertInputRecord(InputRecordType type, std::unique_ptr<InputRecord> record);
 
     /**
      * Sets the output file name. Used for writing input files.
@@ -83,10 +84,10 @@ public:
      */
     void setDescription(const std :: string &description) { this->description = description; }
 
-    virtual InputRecord *giveInputRecord(InputRecordType, int recordId);
-    virtual bool peakNext(const std :: string &keyword);
-    virtual void finish();
-    virtual const char *giveDataSourceName() const { return ""; }
+    InputRecord &giveInputRecord(InputRecordType, int recordId) override;
+    bool peakNext(const std :: string &keyword) override;
+    void finish() override;
+    std :: string giveReferenceName() const override { return name; }
 
     /**
      * Writes all input records to file.

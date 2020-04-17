@@ -35,12 +35,14 @@
 #ifndef ortholinearelasticmaterial_h
 #define ortholinearelasticmaterial_h
 
-#include "Materials/linearelasticmaterial.h"
+#include "sm/Materials/linearelasticmaterial.h"
 #include "dictionary.h"
 #include "floatarray.h"
 #include "floatmatrix.h"
 #include "matconst.h"
 #include "element.h"
+
+#include <memory>
 
 ///@name Input fields for OrthotropicLinearElasticMaterial
 //@{
@@ -101,52 +103,31 @@ class OrthotropicLinearElasticMaterial : public LinearElasticMaterial
 {
 protected:
     CS_type cs_type;
-    FloatMatrix *localCoordinateSystem;
-    FloatArray *helpPlaneNormal;
+    FloatMatrixF<3,3> localCoordinateSystem;
+    FloatArrayF<3> helpPlaneNormal;
     // in localCoordinateSystem the unity vectors are stored
     // COLUMWISE (this is exception, but allows faster numerical
     // implementation)
 
 public:
 
-    OrthotropicLinearElasticMaterial(int n, Domain * d) : LinearElasticMaterial(n, d)
-    {
-        localCoordinateSystem = NULL;
-        helpPlaneNormal = NULL;
-        cs_type = unknownCS;
-    }
-    virtual ~OrthotropicLinearElasticMaterial()
-    {
-        if ( localCoordinateSystem ) {
-            delete localCoordinateSystem;
-        }
+    OrthotropicLinearElasticMaterial(int n, Domain * d) : LinearElasticMaterial(n, d),
+        cs_type(unknownCS)
+    { }
 
-        if ( helpPlaneNormal ) {
-            delete helpPlaneNormal;
-        }
-    }
+    FloatArrayF<6> giveThermalDilatationVector(GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual void giveThermalDilatationVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep);
+    const char *giveInputRecordName() const override { return _IFT_OrthotropicLinearElasticMaterial_Name; }
+    const char *giveClassName() const override { return "OrthotropicLinearElasticMaterial"; }
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
+    double give(int aProperty, GaussPoint *gp) const override;
 
-    // identification and auxiliary functions
-    virtual const char *giveInputRecordName() const { return _IFT_OrthotropicLinearElasticMaterial_Name; }
-    virtual const char *giveClassName() const { return "OrthotropicLinearElasticMaterial"; }
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    void giveInputRecord(DynamicInputRecord &input);
-    virtual double give(int aProperty, GaussPoint *gp);
-
-    virtual void give3dMaterialStiffnessMatrix(FloatMatrix &answer,
-                                               MatResponseMode mode, GaussPoint *gp,
-                                               TimeStep *tStep);
-
-    /// Computes local 3d stiffness matrix of the receiver.
-    virtual void give3dLocalMaterialStiffnessMatrix(FloatMatrix &answer,
-                                                    MatResponseMode mode, GaussPoint *gp,
-                                                    TimeStep *tStep);
+    FloatMatrixF<6,6> give3dMaterialStiffnessMatrix(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
 
 protected:
-    void giveTensorRotationMatrix(FloatMatrix &answer, GaussPoint *gp);
-    void giveRotationMatrix(FloatMatrix &answer, GaussPoint *gp);
+    FloatMatrixF<3,3> giveTensorRotationMatrix(GaussPoint *gp) const;
+    FloatMatrixF<6,6> giveRotationMatrix(GaussPoint *gp) const;
 
     friend class CrossSection;
 };

@@ -45,7 +45,7 @@
 #include "domain.h"
 #include "mathfem.h"
 #include "engngm.h"
-#include "fluiddynamicmaterial.h"
+#include "fm/Materials/fluiddynamicmaterial.h"
 #include "fluidcrosssection.h"
 #include "load.h"
 #include "timestep.h"
@@ -76,9 +76,6 @@ TR1_2D_SUPG :: TR1_2D_SUPG(int n, Domain *aDomain) :
     numberOfDofMans  = 3;
 }
 
-TR1_2D_SUPG :: ~TR1_2D_SUPG()
-{ }
-
 int
 TR1_2D_SUPG :: computeNumberOfDofs()
 {
@@ -94,10 +91,10 @@ TR1_2D_SUPG :: giveDofManDofIDMask(int inode, IntArray &answer) const
 FEInterpolation *
 TR1_2D_SUPG :: giveInterpolation() const { return & interp; }
 
-IRResultType
-TR1_2D_SUPG :: initializeFrom(InputRecord *ir)
+void
+TR1_2D_SUPG :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;               // Required by IR_GIVE_FIELD macro
+    SUPGElement :: initializeFrom(ir);
 
     this->vof = 0.0;
     IR_GIVE_OPTIONAL_FIELD(ir, vof, _IFT_Tr1SUPG_pvof);
@@ -110,12 +107,8 @@ TR1_2D_SUPG :: initializeFrom(InputRecord *ir)
         this->temp_vof = this->vof;
     }
 
-    result = SUPGElement :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+
     this->initGeometry();
-    return IRRT_OK;
 }
 
 
@@ -137,7 +130,7 @@ TR1_2D_SUPG :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize(1);
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 3) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 3);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], 1, this);
     }
 }
@@ -322,19 +315,18 @@ TR1_2D_SUPG :: computeAdvectionDerivativeTerm_MB(FloatMatrix &answer, TimeStep *
 void
 TR1_2D_SUPG :: computeDiffusionTerm_MB(FloatArray &answer, TimeStep *tStep)
 {
-    answer.resize(6);
-    answer.zero();
-    FloatArray u, eps(3), stress;
     double Re = static_cast< FluidModel * >( domain->giveEngngModel() )->giveReynoldsNumber();
 
+    FloatArray u;
     this->computeVectorOfVelocities(VM_Total, tStep, u);
 
-    eps.at(1) = ( b [ 0 ] * u.at(1) + b [ 1 ] * u.at(3) + b [ 2 ] * u.at(5) );
-    eps.at(2) = ( c [ 0 ] * u.at(2) + c [ 1 ] * u.at(4) + c [ 2 ] * u.at(6) );
-    eps.at(3) = ( b [ 0 ] * u.at(2) + b [ 1 ] * u.at(4) + b [ 2 ] * u.at(6) + c [ 0 ] * u.at(1) + c [ 1 ] * u.at(3) + c [ 2 ] * u.at(5) );
-    static_cast< FluidCrossSection * >( this->giveCrossSection() )->giveFluidMaterial()->computeDeviatoricStressVector(
-        stress, integrationRulesArray [ 0 ]->getIntegrationPoint(0), eps, tStep);
-    stress.times(1. / Re);
+    FloatArrayF<3> eps = {
+        b [ 0 ] * u.at(1) + b [ 1 ] * u.at(3) + b [ 2 ] * u.at(5),
+        c [ 0 ] * u.at(2) + c [ 1 ] * u.at(4) + c [ 2 ] * u.at(6),
+        b [ 0 ] * u.at(2) + b [ 1 ] * u.at(4) + b [ 2 ] * u.at(6) + c [ 0 ] * u.at(1) + c [ 1 ] * u.at(3) + c [ 2 ] * u.at(5),
+    };
+    auto stress = (1. / Re) * static_cast< FluidCrossSection * >( this->giveCrossSection() )->giveFluidMaterial()->computeDeviatoricStress2D(
+        eps, integrationRulesArray [ 0 ]->getIntegrationPoint(0), tStep);
 
     // \int dNu/dxj \Tau_ij
     answer.resize(6);
@@ -372,8 +364,8 @@ TR1_2D_SUPG :: computeDiffusionDerivativeTerm_MB(FloatMatrix &answer, MatRespons
     _b.at(3, 5) = c [ 2 ];
     _b.at(3, 6) = b [ 2 ];
 
-    static_cast< FluidCrossSection * >( this->giveCrossSection() )->giveFluidMaterial()->giveDeviatoricStiffnessMatrix(
-        _d, mode, integrationRulesArray [ 0 ]->getIntegrationPoint(0), tStep);
+    _d = static_cast< FluidCrossSection * >( this->giveCrossSection() )->giveFluidMaterial()->computeTangent2D(
+        mode, integrationRulesArray [ 0 ]->getIntegrationPoint(0), tStep);
     _db.beProductOf(_d, _b);
     answer.resize(6, 6);
     answer.zero();
@@ -1986,46 +1978,17 @@ TR1_2D_SUPG :: printOutputAt(FILE *file, TimeStep *tStep)
 }
 
 
-
-contextIOResultType TR1_2D_SUPG :: saveContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// saves full element context (saves state variables, that completely describe
-// current state)
-//
+void TR1_2D_SUPG :: saveContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-
-    if ( ( iores = SUPGElement :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( ( iores = LEPlicElementInterface :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    return CIO_OK;
+    SUPGElement :: saveContext(stream, mode);
+    LEPlicElementInterface :: saveContext(stream, mode);
 }
 
 
-
-contextIOResultType TR1_2D_SUPG :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// restores full element context (saves state variables, that completely describe
-// current state)
-//
+void TR1_2D_SUPG :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-
-    if ( ( iores = SUPGElement :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( ( iores = LEPlicElementInterface :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-
-    return CIO_OK;
+    SUPGElement :: restoreContext(stream, mode);
+    LEPlicElementInterface :: restoreContext(stream, mode);
 }
 
 
@@ -2119,12 +2082,12 @@ TR1_2D_SUPG :: LS_PCS_computeS(LevelSetPCS *ls, TimeStep *tStep)
             int prev_node = ( si > 1 ) ? si - 1 : 3;
             int next_node = ( si < 3 ) ? si + 1 : 1;
 
-            //double l = this->giveNode(si)->giveCoordinates()->distance(this->giveNode(next_node)->giveCoordinates());
+            //double l = distance( *this->giveNode(si)->giveCoordinates(), *this->giveNode(next_node)->giveCoordinates() );
             double t = fi.at(si) / ( fi.at(si) - fi.at(next_node) );
             x2 = x1 + t * ( this->giveNode(next_node)->giveCoordinate(1) - x1 );
             y2 = y1 + t * ( this->giveNode(next_node)->giveCoordinate(2) - y1 );
 
-            //l = this->giveNode(si)->giveCoordinates()->distance(this->giveNode(prev_node)->giveCoordinates());
+            //l = distance( this->giveNode(si)->giveCoordinates(), *this->giveNode(prev_node)->giveCoordinates() );
             t = fi.at(si) / ( fi.at(si) - fi.at(prev_node) );
             x3 = x1 + t * ( this->giveNode(prev_node)->giveCoordinate(1) - x1 );
             y3 = y1 + t * ( this->giveNode(prev_node)->giveCoordinate(2) - y1 );
@@ -2260,6 +2223,19 @@ void
 TR1_2D_SUPG :: giveLocalPressureDofMap(IntArray &map)
 {
     map = {3, 6, 9};
+}
+
+
+void
+TR1_2D_SUPG :: computeDeviatoricStress(FloatArray &answer, const FloatArray &eps, GaussPoint *gp, TimeStep *tStep)
+{
+    answer = static_cast< FluidCrossSection * >( this->giveCrossSection() )->giveFluidMaterial()->computeDeviatoricStress2D(eps, gp, tStep);
+}
+
+void
+TR1_2D_SUPG :: computeTangent(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep)
+{
+    answer = static_cast< FluidCrossSection * >( this->giveCrossSection() )->giveFluidMaterial()->computeTangent2D(mode, gp, tStep);
 }
 
 

@@ -43,6 +43,9 @@
 //@{
 #define _IFT_XfemStructureManager_Name "xfemstructuremanager"
 #define _IFT_XfemStructureManager_splitCracks "splitcracks"
+#define _IFT_XfemStructureManager_nonstandardCZ "nonstandardcz"
+#define _IFT_XfemStructureManager_minCrackLength "mincracklength"
+#define _IFT_XfemStructureManager_crackMergeTol "crackmergetol"
 //@}
 
 namespace oofem {
@@ -63,19 +66,31 @@ public:
     virtual ~XfemStructureManager();
 
     /// Initializes receiver according to object description stored in input record.
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual int instanciateYourself(DataReader *dr);
-    virtual const char *giveClassName() const { return "XfemStructureManager"; }
-    virtual const char *giveInputRecordName() const { return _IFT_XfemStructureManager_Name; }
+    int instanciateYourself(DataReader &dr) override;
+    const char *giveClassName() const override { return "XfemStructureManager"; }
+    const char *giveInputRecordName() const override { return _IFT_XfemStructureManager_Name; }
+
+    void propagateFronts(bool &oAnyFronHasPropagated) override;
 
     /**
      * Update enrichment items (level sets).
      */
-    virtual void updateYourself(TimeStep *tStep);
+    void updateYourself(TimeStep *tStep) override;
 
     void splitCracks();
+
+    void removeShortCracks();
+
+    bool tipsHaveOppositeDirection(EnrichmentFront *iEf1, EnrichmentFront *iEf2);
+    void mergeCloseCracks();
+
+    bool giveUseNonStdCz() const { return mNonstandardCz; }
+
+    /// Compute the total length of all cracks in the domain.
+    double computeTotalCrackLength();
 
 protected:
 
@@ -83,6 +98,21 @@ protected:
      * If cracks should be splitted at intersections as a pre-processing step.
      */
     bool mSplitCracks;
+
+    /**
+     * If a non-standard cohesive zone formulation should be used.
+     */
+    bool mNonstandardCz;
+
+    /**
+     * Cracks shorter than this length are automatically removed.
+     */
+    double mMinCrackLength;
+
+    /**
+     * Cracks with tips closer than this distance are automatically merged.
+     */
+    double mCrackMergeTol;
 
     /**
      * Evaluator for material forces.

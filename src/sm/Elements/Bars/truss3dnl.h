@@ -32,44 +32,51 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef truss3dnl_h
-#define truss3dnl_h
+#ifndef SRC_SM_XFEM_NUCLEATIONCRITERIA_NCPRINCIPALSTRESS_H_
+#define SRC_SM_XFEM_NUCLEATIONCRITERIA_NCPRINCIPALSTRESS_H_
 
-#include "../sm/Elements/Bars/truss3d.h"
+#define _IFT_NCPrincipalStress_Name "ncprincipalstress"
+#define _IFT_NCPrincipalStress_StressThreshold "stressthreshold"
+#define _IFT_NCPrincipalStress_InitialCrackLength "initialcracklength"
+#define _IFT_NCPrincipalStress_MatForceRadius "matforceradius"
+#define _IFT_NCPrincipalStress_IncrementLength "incrementlength"
+#define _IFT_NCPrincipalStress_CrackPropThreshold "crackpropthreshold"
 
-#define _IFT_Truss3dnl_Name "truss3dnl"
+#include "xfem/nucleationcriterion.h"
 
-
-#define _IFT_Truss3dnl_initialStretch "initstretch"
+#include <memory>
 
 namespace oofem {
-/**
- * This class implements a nonlinear two-node truss bar element for three-dimensional
- * analysis.
- */
-class Truss3dnl : public Truss3d
+
+class NCPrincipalStress : public NucleationCriterion
 {
-protected:
-  double initialStretch;
 public:
-    Truss3dnl(int n, Domain * d);
-    virtual ~Truss3dnl() { }
+    NCPrincipalStress(Domain *ipDomain);
+    virtual ~NCPrincipalStress();
 
-    // definition & identification
-    virtual const char *giveInputRecordName() const { return _IFT_Truss3dnl_Name; }
-    virtual const char *giveClassName() const { return "Truss3dnl"; }
+    std::vector<std::unique_ptr<EnrichmentItem>> nucleateEnrichmentItems() override;
 
-    IRResultType initializeFrom(InputRecord *ir);
-    virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep);
-    virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord = 0);
+    void initializeFrom(InputRecord &ir) override;
+
+    void appendInputRecords(DynamicDataReader &oDR) override;
+
+    const char *giveClassName() const override { return "NCPrincipalStress"; }
+    const char *giveInputRecordName() const override {return _IFT_NCPrincipalStress_Name;};
 
 protected:
+    double mStressThreshold;
+    double mInitialCrackLength;
+    double mMatForceRadius;
+    double mIncrementLength;
+    double mCrackPropThreshold;
 
-    void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, TimeStep *tStep, bool lin = false);
-    void computeBlMatrixAt(GaussPoint *gp, FloatMatrix &answer);
-    void computeBnlMatrixAt(GaussPoint *gp, FloatMatrix &answer, TimeStep *tStep, bool lin = false);
-    void computeInitialStressStiffness(FloatMatrix &answer, GaussPoint *gp, TimeStep *tStep);
+    /// If the initiated crack should cut exactly one element.
+    bool mCutOneEl;
 
+    /// Index of the cross section that the nucleation criterion applies to.
+    int mCrossSectionInd;
 };
-} // end namespace oofem
-#endif // truss3dnl_h
+
+} /* namespace oofem */
+
+#endif /* SRC_SM_XFEM_NUCLEATIONCRITERIA_NCPRINCIPALSTRESS_H_ */

@@ -60,8 +60,8 @@ enum InterfaceType {
     EIPrimaryFieldInterfaceType,
 
     NonlocalMaterialStatusExtensionInterfaceType,
-    GradDpMaterialExtensionInterfaceType,
-    GradDpMaterialStatusExtensionInterfaceType,
+    GradientDamageMaterialExtensionInterfaceType,
+    GradientDamageMaterialStatusExtensionInterfaceType,
 
     NonlocalMaterialExtensionInterfaceType,
     NonlocalMaterialStiffnessInterfaceType,
@@ -79,7 +79,11 @@ enum InterfaceType {
     FailureModuleElementInterfaceType,
 
     Beam3dSubsoilElementInterfaceType,
-    Beam3dSubsoilMaterialInterfaceType
+    Beam3dSubsoilMaterialInterfaceType,
+
+    QCMaterialExtensionInterfaceType,
+
+    MixedPressureMaterialExtensionInterfaceType
 };
 } // end namespace oofem
 #endif // interfacetype_h

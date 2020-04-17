@@ -38,6 +38,8 @@
 #include "nodalrecoverymodel.h"
 #include "interface.h"
 
+#define _IFT_ZZNodalRecoveryModel_Name "zz"
+
 namespace oofem {
 class GaussPoint;
 class ZZNodalRecoveryModelInterface;
@@ -70,9 +72,9 @@ public:
     /// Destructor.
     virtual ~ZZNodalRecoveryModel();
 
-    virtual int recoverValues(Set elementSet, InternalStateType type, TimeStep *tStep);
+    int recoverValues(Set elementSet, InternalStateType type, TimeStep *tStep) override;
 
-    virtual const char *giveClassName() const { return "ZZNodalRecoveryModel"; }
+    const char *giveClassName() const override { return "ZZNodalRecoveryModel"; }
 
 private:
     /**

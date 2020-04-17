@@ -49,12 +49,7 @@ SmoothedNodalInternalVariableField :: SmoothedNodalInternalVariableField(Interna
     this->domain = d;
 }
 
-SmoothedNodalInternalVariableField :: ~SmoothedNodalInternalVariableField()
-{
-    if ( smoother ) {
-        delete smoother;
-    }
-}
+SmoothedNodalInternalVariableField :: ~SmoothedNodalInternalVariableField() { }
 
 int
 SmoothedNodalInternalVariableField :: evaluateAt(FloatArray &answer, const FloatArray &coords, ValueModeType mode, TimeStep *tStep)
@@ -99,25 +94,19 @@ SmoothedNodalInternalVariableField :: evaluateAt(FloatArray &answer, const Float
 int
 SmoothedNodalInternalVariableField :: evaluateAt(FloatArray &answer, DofManager *dman, ValueModeType mode, TimeStep *tStep)
 {
-    if ( dman->hasCoordinates() ) {
-        const FloatArray *val;
-        int result = this->smoother->giveNodalVector( val, dman->giveNumber() );
-        answer = * val;
-        return ( result == 1 );
-    } else {
-        return 1; // failed -> dman without coordinates
-    }
+    const FloatArray *val;
+    int result = this->smoother->giveNodalVector( val, dman->giveNumber() );
+    answer = * val;
+    return ( result == 1 );
 }
 
-contextIOResultType
-SmoothedNodalInternalVariableField :: saveContext(DataStream &stream, ContextMode mode)
+void
+SmoothedNodalInternalVariableField :: saveContext(DataStream &stream)
 {
-    return CIO_OK;
 }
 
-contextIOResultType
-SmoothedNodalInternalVariableField :: restoreContext(DataStream &stream, ContextMode mode)
+void
+SmoothedNodalInternalVariableField :: restoreContext(DataStream &stream)
 {
-    return CIO_OK;
 }
 } // end namespace oofem

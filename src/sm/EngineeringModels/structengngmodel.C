@@ -32,10 +32,10 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/EngineeringModels/structengngmodel.h"
-#include "../sm/Elements/structuralelement.h"
-#include "../sm/Elements/structuralelementevaluator.h"
-#include "../sm/Elements/Interfaces/structuralinterfaceelement.h"
+#include "sm/EngineeringModels/structengngmodel.h"
+#include "sm/Elements/structuralelement.h"
+#include "sm/Elements/structuralelementevaluator.h"
+#include "sm/Elements/Interfaces/structuralinterfaceelement.h"
 #include "dofmanager.h"
 #include "dof.h"
 #include "element.h"
@@ -45,8 +45,8 @@
 #include "assemblercallback.h"
 #include "unknownnumberingscheme.h"
 
-#include "../sm/Materials/structuralmaterial.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
+#include "sm/Materials/structuralmaterial.h"
+#include "sm/CrossSections/structuralcrosssection.h"
 
 namespace oofem {
 
@@ -62,18 +62,14 @@ void LinearizedDilationForceAssembler :: vectorFromElement(FloatArray &vec, Elem
 
     vec.clear();
     for ( auto &gp : *selem.giveDefaultIntegrationRulePtr() ) {
-        FloatMatrix B;
-        FloatArray epsilonTemperature;
-        
-        double dV = selem.computeVolumeAround(gp);
-        selem.computeBmatrixAt(gp, B);
-
         /// @todo Problematic: Needs direct access to material model. Should do without (can be easily done by adding lots of code, but I'm searching for a simple, general, implementation) / Mikael
-        static_cast< StructuralMaterial *>( selem.giveStructuralCrossSection()->giveMaterial(gp) )->computeStressIndependentStrainVector(epsilonTemperature, gp, tStep, VM_Incremental);
+        auto epsilonTemperature = static_cast< StructuralMaterial *>( selem.giveStructuralCrossSection()->giveMaterial(gp) )->computeStressIndependentStrainVector(gp, tStep, VM_Incremental);
 
         if ( epsilonTemperature.giveSize() > 0 ) {
+            FloatMatrix D, B;
             FloatArray s;
-            FloatMatrix D;
+            double dV = selem.computeVolumeAround(gp);
+            selem.computeBmatrixAt(gp, B);
             selem.computeConstitutiveMatrixAt(D, ElasticStiffness, gp, tStep);
             s.beProductOf(D, epsilonTemperature);
             vec.plusProduct(B, s, dV);
@@ -145,6 +141,44 @@ void StructuralEngngModel :: terminate(TimeStep *tStep){
 }
 
 void
+StructuralEngngModel :: buildReactionTable(IntArray &restrDofMans, IntArray &restrDofs,
+                                           IntArray &eqn, TimeStep *tStep, int di)
+{
+    // determine number of restrained dofs
+    Domain *domain = this->giveDomain(di);
+    int numRestrDofs = this->giveNumberOfDomainEquations( di, EModelDefaultPrescribedEquationNumbering() );
+    int ndofMan = domain->giveNumberOfDofManagers();
+    int rindex, count = 0;
+
+    // initialize corresponding dofManagers and dofs for each restrained dof
+    restrDofMans.resize(numRestrDofs);
+    restrDofs.resize(numRestrDofs);
+    eqn.resize(numRestrDofs);
+
+    for ( int i = 1; i <= ndofMan; i++ ) {
+        DofManager *inode = domain->giveDofManager(i);
+        for ( Dof *jdof: *inode ) {
+            if ( jdof->isPrimaryDof() && ( jdof->hasBc(tStep) ) ) { // skip slave dofs
+                rindex = jdof->__givePrescribedEquationNumber();
+                if ( rindex ) {
+                    count++;
+                    restrDofMans.at(count) = i;
+                    restrDofs.at(count) = jdof->giveDofID();
+                    eqn.at(count) = rindex;
+                } else {
+                    // NullDof has no equation number and no prescribed equation number
+                    //_error("No prescribed equation number assigned to supported DOF");
+                }
+            }
+        }
+    }
+    // Trim to size.
+    restrDofMans.resizeWithValues(count);
+    restrDofs.resizeWithValues(count);
+    eqn.resizeWithValues(count);
+}
+
+void
 StructuralEngngModel :: computeReaction(FloatArray &answer, TimeStep *tStep, int di)
 {
     FloatArray contribution;
@@ -177,17 +211,17 @@ StructuralEngngModel :: computeExternalLoadReactionContribution(FloatArray &reac
 
 
 void
-StructuralEngngModel :: giveInternalForces(FloatArray &answer, bool normFlag, int di, TimeStep *tStep)
+StructuralEngngModel :: updateInternalRHS(FloatArray &answer, TimeStep *tStep, Domain *d, FloatArray *eNorm)
 {
-    // Simply assembles contributions from each element in domain
-    Domain *domain = this->giveDomain(di);
+#ifdef VERBOSE
+    OOFEM_LOG_DEBUG("Updating internal forces\n");
+#endif
     // Update solution state counter
     tStep->incrementStateCounter();
 
-    answer.resize( this->giveNumberOfDomainEquations( di, EModelDefaultEquationNumbering() ) );
+    answer.resize( this->giveNumberOfDomainEquations( d->giveNumber(), EModelDefaultEquationNumbering() ) );
     answer.zero();
-    this->assembleVector(answer, tStep, InternalForceAssembler(), VM_Total,
-                         EModelDefaultEquationNumbering(), domain, normFlag ? & this->internalForcesEBENorm : NULL);
+    this->assembleVector(answer, tStep, InternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), d, eNorm);
 
     // Redistributes answer so that every process have the full values on all shared equations
     this->updateSharedDofManagers(answer, EModelDefaultEquationNumbering(), InternalForcesExchangeTag);

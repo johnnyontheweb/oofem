@@ -67,18 +67,17 @@ protected:
      * Stabilization coefficients, updated for each solution step
      * in updateStabilizationCoeffs()
      */
-    double t_supg, t_pspg, t_lsic;
+    double t_supg = 0., t_pspg = 0., t_lsic = 0.;
 
 public:
     SUPGElement(int n, Domain * aDomain);
-    virtual ~SUPGElement();
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual void giveCharacteristicMatrix(FloatMatrix &answer, CharType type, TimeStep *tStep);
-    virtual void giveCharacteristicVector(FloatArray &answer, CharType type, ValueModeType mode, TimeStep *tStep);
-    virtual void updateStabilizationCoeffs(TimeStep *tStep) { }
+    void giveCharacteristicMatrix(FloatMatrix &answer, CharType type, TimeStep *tStep) override;
+    void giveCharacteristicVector(FloatArray &answer, CharType type, ValueModeType mode, TimeStep *tStep) override;
+    void updateStabilizationCoeffs(TimeStep *tStep) override { }
     virtual void updateElementForNewInterfacePosition(TimeStep *tStep) { }
 
     /**
@@ -197,12 +196,12 @@ public:
     virtual double computeCriticalTimeStep(TimeStep *tStep) = 0;
 
     // time step termination
-    virtual void updateInternalState(TimeStep *tStep);
-    virtual int checkConsistency();
+    void updateInternalState(TimeStep *tStep) override;
+    int checkConsistency() override;
 
 #ifdef __OOFEG
     int giveInternalStateAtNode(FloatArray &answer, InternalStateType type, InternalStateMode mode,
-                                int node, TimeStep *tStep);
+                                int node, TimeStep *tStep) override;
 #endif
 
     virtual void giveLocalVelocityDofMap(IntArray &map) { }
@@ -210,7 +209,8 @@ public:
 
 protected:
     virtual void computeDeviatoricStrain(FloatArray &answer, GaussPoint *gp, TimeStep *tStep) = 0;
-    virtual void computeDeviatoricStress(FloatArray &answer, GaussPoint *gp, TimeStep *tStep);
+    virtual void computeDeviatoricStress(FloatArray &answer, const FloatArray &eps, GaussPoint *gp, TimeStep *tStep) = 0;
+    virtual void computeTangent(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) = 0;
 };
 } // end namespace oofem
 #endif // supgelement_h

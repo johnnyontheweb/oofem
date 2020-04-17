@@ -54,8 +54,8 @@
 #include "function.h"
 
 #include "timestep.h"
-// #include "../sm/Elements/tet21ghostsolid.h"
-#include "../sm/Elements/nlstructuralelement.h"
+// #include "sm/Elements/tet21ghostsolid.h"
+#include "sm/Elements/nlstructuralelement.h"
 
 namespace oofem {
 REGISTER_BoundaryCondition(WeakPeriodicBoundaryCondition);
@@ -70,15 +70,10 @@ WeakPeriodicBoundaryCondition :: ~WeakPeriodicBoundaryCondition()
 {
 }
 
-IRResultType
-WeakPeriodicBoundaryCondition :: initializeFrom(InputRecord *ir)
+void
+WeakPeriodicBoundaryCondition :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;
-
-    result = ActiveBoundaryCondition :: initializeFrom(ir);     ///@todo Carl, remove this line and use elementsidespositive/negative instead.
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    ActiveBoundaryCondition :: initializeFrom(ir);     ///@todo Carl, remove this line and use elementsidespositive/negative instead.
 
     orderOfPolygon = 2;
     IR_GIVE_OPTIONAL_FIELD(ir, orderOfPolygon, _IFT_WeakPeriodicBoundaryCondition_order);
@@ -91,13 +86,7 @@ WeakPeriodicBoundaryCondition :: initializeFrom(InputRecord *ir)
     IR_GIVE_OPTIONAL_FIELD(ir, dofids, _IFT_WeakPeriodicBoundaryCondition_dofids);
     ndofids = dofids.giveSize();
 
-    ngp = -1;        // Pressure as default
-    IR_GIVE_OPTIONAL_FIELD(ir, ngp, _IFT_WeakPeriodicBoundaryCondition_ngp);
-    if ( ngp != -1 ) {
-        OOFEM_WARNING("ngp isn't being used anymore! see how the interpolator constructs the integration rule automatically.");
-        return IRRT_BAD_FORMAT;
-    }
-
+    ngp = -1;        // ngp is deprecated
 
     nlgeo = false;
     IR_GIVE_OPTIONAL_FIELD(ir, nlgeo, _IFT_WeakPeriodicBoundaryCondition_nlgeo );
@@ -151,8 +140,6 @@ WeakPeriodicBoundaryCondition :: initializeFrom(InputRecord *ir)
         gamma_ids.followedBy(dofid);
         gammaDman->appendDof( new MasterDof( gammaDman.get(), ( DofIDItem )dofid ) );
     }
-
-    return IRRT_OK;
 }
 
 void WeakPeriodicBoundaryCondition :: computeOrthogonalBasis()
@@ -250,7 +237,7 @@ void WeakPeriodicBoundaryCondition :: giveEdgeNormal(FloatArray &answer, int ele
     }
 
     Element *thisElement = this->domain->giveElement(element);
-    FEInterpolation *interpolation = thisElement->giveInterpolation( ( DofIDItem ) dofids(0) );
+    FEInterpolation *interpolation = thisElement->giveInterpolation( ( DofIDItem ) dofids[0] );
 
     interpolation->boundaryEvalNormal( answer, side, xi, FEIElementGeometryWrapper(thisElement) );
 }
@@ -394,7 +381,7 @@ WeakPeriodicBoundaryCondition :: computeDeformationGradient(FloatMatrix &answer,
 
     FloatArray F, u;
     FloatMatrix dNdx, BH, Fmatrix, Finv;
-    FEInterpolation *interpolation = e->giveInterpolation( ( DofIDItem ) dofids(0) );
+    FEInterpolation *interpolation = e->giveInterpolation( ( DofIDItem ) dofids[0] );
 
     // Fetch displacements
     e->computeVectorOf({1, 2, 3}, VM_Total, tStep, u);
@@ -436,14 +423,13 @@ void WeakPeriodicBoundaryCondition :: computeElementTangent(FloatMatrix &B, Elem
     OOFEM_ERROR("Function obsolete");
 
     FloatArray gcoords;
-    IntArray bnodes;
 
     FEInterpolation *geoInterpolation = e->giveInterpolation();
 
     // Use correct interpolation for the dofid on which the condition is applied
-    FEInterpolation *interpolation = e->giveInterpolation( ( DofIDItem ) dofids(0) );
+    FEInterpolation *interpolation = e->giveInterpolation( ( DofIDItem ) dofids[0] );
 
-    interpolation->boundaryGiveNodes(bnodes, boundary);
+    auto bnodes = interpolation->boundaryGiveNodes(boundary);
 
     B.resize(bnodes.giveSize(), ndof);
     B.zero();
@@ -488,7 +474,7 @@ void WeakPeriodicBoundaryCondition :: computeElementTangent(FloatMatrix &B, Elem
     }
 }
 
-void WeakPeriodicBoundaryCondition :: assemble(SparseMtrx &answer, TimeStep *tStep, CharType type, const UnknownNumberingScheme &r_s, const UnknownNumberingScheme &c_s)
+void WeakPeriodicBoundaryCondition :: assemble(SparseMtrx &answer, TimeStep *tStep, CharType type, const UnknownNumberingScheme &r_s, const UnknownNumberingScheme &c_s, double scale)
 {
     if ( type != TangentStiffnessMatrix && type != StiffnessMatrix ) {
         return;
@@ -515,12 +501,10 @@ void WeakPeriodicBoundaryCondition :: assemble(SparseMtrx &answer, TimeStep *tSt
             IntArray r_sideLoc, c_sideLoc;
 
             // Find dofs for this element which should be periodic
-            IntArray bNodes;
-
-            FEInterpolation *interpolation = thisElement->giveInterpolation( ( DofIDItem ) dofids(0) );
+            FEInterpolation *interpolation = thisElement->giveInterpolation( ( DofIDItem ) dofids[0] );
             FEInterpolation *geoInterpolation = thisElement->giveInterpolation();
 
-            interpolation->boundaryGiveNodes( bNodes, side [ thisSide ].at(ielement) );
+            auto bNodes = interpolation->boundaryGiveNodes(side [ thisSide ].at(ielement));
 
             thisElement->giveBoundaryLocationArray(r_sideLoc, bNodes, dofids, r_s);
             thisElement->giveBoundaryLocationArray(c_sideLoc, bNodes, dofids, c_s);
@@ -530,8 +514,8 @@ void WeakPeriodicBoundaryCondition :: assemble(SparseMtrx &answer, TimeStep *tSt
 
             std :: unique_ptr< IntegrationRule >iRule(geoInterpolation->giveBoundaryIntegrationRule(orderOfPolygon, boundary));
 
-            for ( GaussPoint *gp: *iRule ) {
-                FloatArray lcoords = gp->giveNaturalCoordinates();
+            for ( auto &gp: *iRule ) {
+                auto const &lcoords = gp->giveNaturalCoordinates();
                 FloatArray N, gcoords;
 
                 geoInterpolation->boundaryLocal2Global( gcoords, boundary, lcoords, FEIElementGeometryWrapper(thisElement));
@@ -584,7 +568,7 @@ void WeakPeriodicBoundaryCondition :: assemble(SparseMtrx &answer, TimeStep *tSt
 
             }
 
-            B.times(normalSign);
+            B.times(normalSign * scale);
             BT.beTranspositionOf(B);
 
             answer.assemble(r_sideLoc, c_loc, B);
@@ -696,12 +680,10 @@ WeakPeriodicBoundaryCondition :: giveInternalForcesVector(FloatArray &answer, Ti
             int boundary = side [ thisSide ].at(ielement);
 
             // Find dofs for this element which should be periodic
-            IntArray bNodes;
-
-            FEInterpolation *interpolation = thisElement->giveInterpolation( ( DofIDItem ) dofids(0) );
+            FEInterpolation *interpolation = thisElement->giveInterpolation( ( DofIDItem ) dofids[0] );
             FEInterpolation *geoInterpolation = thisElement->giveInterpolation();
 
-            interpolation->boundaryGiveNodes( bNodes, boundary );
+            auto bNodes = interpolation->boundaryGiveNodes(boundary);
 
             thisElement->giveBoundaryLocationArray(sideLocation, bNodes, dofids, s, &masterDofIDs);
             thisElement->computeBoundaryVectorOf(bNodes, dofids, VM_Total, tStep, a);
@@ -827,7 +809,7 @@ WeakPeriodicBoundaryCondition :: giveExternalForcesVector(FloatArray &answer, Ti
 
             std :: unique_ptr< IntegrationRule >iRule(geoInterpolation->giveBoundaryIntegrationRule(orderOfPolygon, side [ thisSide ].at(ielement) ));
 
-            for ( GaussPoint *gp: *iRule ) {
+            for ( auto gp: *iRule ) {
 
                 FloatArray gcoords;
                 FloatArray lcoords = gp->giveNaturalCoordinates();
@@ -837,12 +819,12 @@ WeakPeriodicBoundaryCondition :: giveExternalForcesVector(FloatArray &answer, Ti
                 // Compute Jacobian
                 double detJ = fabs( geoInterpolation->boundaryGiveTransformationJacobian( side [ thisSide ].at(ielement), lcoords, FEIElementGeometryWrapper(thisElement) ) );
 
-                for (int j=0; j<ndof; j++) {
+                for ( int j = 0; j < ndof; j++ ) {
                     FloatArray coord;
 
-                    double fVal = computeBaseFunctionValue(j, gcoords );
+                    double fVal = computeBaseFunctionValue(j, gcoords);
 
-                    temp.at(j+1)=temp.at(j+1) + normalSign*this->g.dotProduct(gcoords)*fVal*gp->giveWeight()*detJ;
+                    temp.at(j+1) += normalSign*this->g.dotProduct(gcoords)*fVal*gp->giveWeight()*detJ;
                 }
             }
         }
@@ -851,8 +833,7 @@ WeakPeriodicBoundaryCondition :: giveExternalForcesVector(FloatArray &answer, Ti
     answer.assemble(temp, gammaLoc);
 
     // Finally, compute value of loadtimefunction
-    double factor;
-    factor = this->giveTimeFunction()->evaluate(tStep, mode);
+    double factor = this->giveTimeFunction()->evaluate(tStep, mode);
     answer.times(factor);
 }
 

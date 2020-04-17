@@ -38,6 +38,7 @@
 #include "oofemcfg.h"
 #include "contextioresulttype.h"
 #include "contextmode.h"
+#include "error.h"
 
 #include <initializer_list>
 #include <vector>
@@ -47,6 +48,7 @@ namespace oofem {
 class IntArray;
 class FloatMatrix;
 class DataStream;
+template<std::size_t N> class FloatArrayF;
 
 /**
  * Class representing vector of real numbers. This array can grow or shrink to
@@ -104,8 +106,14 @@ public:
     FloatArray(FloatArray &&src) : values(std::move(src.values)) { }
     /// Initializer list constructor.
     inline FloatArray(std :: initializer_list< double >list) : values(list) { }
+    /// Wrapper to direct assignment from iterator pairs
+    template< class InputIt >
+    FloatArray( InputIt first, InputIt last ) : values(first, last) { }
+    /// Wrapper to direct assignment from iterator pairs
+    template< std::size_t N >
+    inline FloatArray( const FloatArrayF<N> &src ) : values(src.begin(), src.end()) { }
     /// Destructor.
-    virtual ~FloatArray() {};
+    virtual ~FloatArray() {}
 
     /// Assignment operator
     FloatArray &operator = (const FloatArray &src) { values = src.values; return *this; }
@@ -113,9 +121,12 @@ public:
     FloatArray &operator = (FloatArray &&src) { values = std::move(src.values); return *this; }
     /// Assignment operator.
     inline FloatArray &operator = (std :: initializer_list< double >list) { values = list; return *this; }
+    /// Assign from fixed size array
+    template< std::size_t N >
+    inline FloatArray &operator = (const FloatArrayF<N> &src) { values.assign(src.begin(), src.end()); return *this; }
 
     /// Add one element
-    void push_back(const double &iVal) {values.push_back(iVal);}
+    void push_back(double iVal) { values.push_back(iVal); }
 
     /// Returns true if no element is NAN or infinite
     bool isFinite() const;
@@ -125,56 +136,69 @@ public:
      * position of the receiver. Provides 1-based indexing access.
      * @param i Position of coefficient in array.
      */
-#ifdef DEBUG
-    double &at(int i);
-#else
-    inline double &at(int i) { return values [ i - 1 ]; }
+    inline double &at(int i)
+    {
+#ifndef NDEBUG
+        this->checkBounds( i );
 #endif
+        return values [ i - 1 ];
+    }
     /**
      * Coefficient access function. Returns l-value of coefficient at given
      * position of the receiver. Provides 1-based indexing access.
      * @param i Position of coefficient in array.
      */
-#ifdef DEBUG
-    double at(int i) const;
-#else
-    inline double at(int i) const { return values [ i - 1 ]; }
+    inline double at(int i) const
+    {
+#ifndef NDEBUG
+        this->checkBounds( i );
 #endif
+        return values [ i - 1 ];
+    }
 
     /**
      * Coefficient access function. Returns value of coefficient at given
      * position of the receiver. Provides 0-based indexing access.
      * @param i Position of coefficient in array.
      */
-#ifdef DEBUG
-    double &operator() (int i);
-    double &operator[] (int i);
-#else
-    inline double &operator() (int i) {
-        return values [ i ];
-    };
-    inline double &operator[] (int i) {
-        return values [ i ];
-    };
+    inline double &operator() (int i) { return this->operator[](i); }
+    inline double &operator[] (int i)
+    {
+#ifndef NDEBUG
+        if ( i >= this->giveSize() ) {
+            OOFEM_ERROR( "array error on index : %d >= %d", i, this->giveSize() );
+        }
 #endif
+        return values [ i ];
+    }
     /**
      * Coefficient access function. Returns value of coefficient at given
      * position of the receiver. Provides 0-based indexing access.
      * @param i Position of coefficient in array.
      */
-#ifdef DEBUG
-    const double &operator() (int i) const;
-    const double &operator[] (int i) const;
-#else
-    inline const double &operator() (int i) const { return values [ i ]; }
-    inline const double &operator[] (int i) const { return values [ i ]; }
+    inline const double &operator() (int i) const { return this->operator[](i); } 
+    inline const double &operator[] (int i) const { 
+#ifndef NDEBUG
+        if ( i >= this->giveSize() ) {
+            OOFEM_ERROR( "array error on index : %d >= %d", i, this->giveSize() );
+        }
 #endif
-    /** Checks size of receiver towards requested bounds.
+        return values [ i ];
+    }
+    /**
+     * Checks size of receiver towards requested bounds.
      * Current implementation will call exit(1), if dimension
      * mismatch found.
      * @param i Required size of receiver.
      */
-    void checkBounds(int i) const;
+    void checkBounds(int i) const
+    {
+        if ( i <= 0 ) {
+            OOFEM_ERROR("array error on index : %d <= 0", i);
+        } else if ( i > this->giveSize() ) {
+            OOFEM_ERROR("array error on index : %d > %d", i, this->giveSize());
+        }
+    }
     /**
      * Checks size of receiver towards values stored in loc array.
      * Expands the receiver if loc points to coefficients beyond the size of receiver.
@@ -508,7 +532,7 @@ public:
     FloatArray &operator = ( const double & );
     //@}
 
-#ifdef BOOST_PYTHON
+#ifdef _BOOSTPYTHON_BINDINGS
     void __setitem__(int i, double val) { this->values[i] = val; }
     double __getitem__(int i) { return this->values[i]; }
     void beCopyOf(const FloatArray &src) { this->operator = ( src ); }
@@ -529,7 +553,14 @@ FloatArray &operator += ( FloatArray & x, const FloatArray & y );
 FloatArray &operator -= ( FloatArray & x, const FloatArray & y );
 
 double norm(const FloatArray &x);
+double norm_square(const FloatArray &x);
 double dot(const FloatArray &x, const FloatArray &y);
+double distance(const FloatArray &x, const FloatArray &y);
+double distance_square(const FloatArray &x, const FloatArray &y);
+bool isfinite(const FloatArray &x);
+bool iszero(const FloatArray &x);
+double sum(const FloatArray & x);
+double product(const FloatArray & x);
 //@}
 } // end namespace oofem
 #endif // floatarray_h

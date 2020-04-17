@@ -55,6 +55,9 @@
 #include "contextioresulttype.h"
 #include "metastep.h"
 #include "parallelcontext.h"
+#include "exportmodulemanager.h"
+#include "initmodulemanager.h"
+#include "monitormanager.h"
 
 #ifdef __PARALLEL_MODE
  #include "parallel.h"
@@ -249,9 +252,11 @@ protected:
     int contextOutputStep;
 
     /// Export module manager.
-    ExportModuleManager *exportModuleManager;
+    ExportModuleManager exportModuleManager;
     /// Initialization module manager.
-    InitModuleManager *initModuleManager;
+    InitModuleManager initModuleManager;
+    /// Monitor manager.
+    MonitorManager monitorManager;
 
     /// Domain mode.
     problemMode pMode;
@@ -272,7 +277,7 @@ protected:
     /// Type of non linear formulation (total or updated formulation).
     enum fMode nonLinFormulation;
     /// Error estimator. Useful for adaptivity, or simply printing errors output.
-    ErrorEstimator *defaultErrEstimator;
+    std::unique_ptr<ErrorEstimator> defaultErrEstimator;
 
     /// Domain rank in a group of collaborating processes (0..groupSize-1).
     int rank;
@@ -291,8 +296,8 @@ protected:
     /**@name Load balancing attributes */
     //@{
     /// Load Balancer.
-    LoadBalancer *lb;
-    LoadBalancerMonitor *lbm;
+    std::unique_ptr<LoadBalancer> lb;
+    std::unique_ptr<LoadBalancerMonitor> lbm;
     /// If set to true, load balancing is active.
     bool loadBalancingFlag;
     /// Debug flag forcing load balancing after first step.
@@ -339,9 +344,9 @@ public:
     int giveNumberOfDomains() { return (int)domainList.size(); }
 
     /** Service for accessing ErrorEstimator corresponding to particular domain */
-    virtual ErrorEstimator *giveDomainErrorEstimator(int n) { return defaultErrEstimator; }
+    virtual ErrorEstimator *giveDomainErrorEstimator(int n) { return defaultErrEstimator.get(); }
     /** Returns material interface representation for given domain */
-    virtual MaterialInterface *giveMaterialInterface(int n) { return NULL; }
+    virtual MaterialInterface *giveMaterialInterface(int n) { return nullptr; }
     void setNumberOfEquations(int id, int neq) {
         numberOfEquations = neq;
         domainNeqs.at(id) = neq;
@@ -458,7 +463,7 @@ public:
     /**
      * Saves context of given solution step, if required (determined using this->giveContextOutputMode() method).
      */
-    void saveStepContext(TimeStep *tStep);
+    void saveStepContext(TimeStep *tStep, ContextMode mode);
     /**
      * Updates internal state after finishing time step. (for example total values may be
      * updated according to previously solved increments). Then element values are also updated
@@ -515,7 +520,8 @@ public:
 
     /// Only relevant for eigen value analysis. Otherwise returns zero.
     virtual double giveEigenValue(int eigNum) { return 0.0; }
-
+    /// Only relevant for eigen value  analysis. Otherwise does noting.
+    virtual void setActiveVector(int i) { }
     /**
      * Exchanges necessary remote DofManagers data.
      * @todo The name and description of this function is misleading, the function really just accumulates the total values for shared "equations".
@@ -598,7 +604,7 @@ public:
      * Prints header, opens the outFileName, instanciate itself the receiver using
      * using virtual initializeFrom service and instanciates all problem domains.
      */
-    virtual int instanciateYourself(DataReader *dr, InputRecord *ir, const char *outFileName, const char *desc);
+    virtual int instanciateYourself(DataReader &dr, InputRecord &ir, const char *outFileName, const char *desc);
     /**
      * Initialization of the receiver state (opening the default output stream, empty domain creation,
      * initialization of parallel context, etc)
@@ -611,13 +617,13 @@ public:
      * InitString can be imagined as data record in component database
      * belonging to receiver. Receiver may use value-name extracting functions
      * to extract particular field from record.*/
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    virtual void initializeFrom(InputRecord &ir);
     /// Instanciate problem domains by calling their instanciateYourself() service
-    int instanciateDomains(DataReader *dr);
+    int instanciateDomains(DataReader &dr);
     /// Instanciate problem meta steps by calling their instanciateYourself() service
-    int instanciateMetaSteps(DataReader *dr);
+    int instanciateMetaSteps(DataReader &dr);
     /// Instanciate default metastep, if nmsteps is zero
-    virtual int instanciateDefaultMetaStep(InputRecord *ir);
+    virtual int instanciateDefaultMetaStep(InputRecord &ir);
 
     /**
      * Update receiver attributes according to step metaStep attributes.
@@ -640,20 +646,11 @@ public:
      * but also same function is invoked for all DofManagers and Elements in associated
      * domain. Note that by storing element context also contexts of all associated
      * integration points (and material statuses) are stored.
-     * Stored context is associated with current time step. One time step can have only
-     * one associated context. Multiple call to saveContext within same time step
-     * override previously saved context for this step.
-     * By default the stream parameter is used to store data and is not closed.
-     * If stream is NULL, new file descriptor is created and this must be also closed at the end.
-     * @param stream Context stream. If NULL then new file descriptor will be opened and closed
-     * at the end else the stream given as parameter will be used and not closed at the end.
+     * @param stream Context stream.
      * @param mode Determines amount of info in stream.
-     * @param obj Void pointer to an int array containing two values:time step number and
-     * version of a context file to be restored.
-     * @return contextIOResultType.
      * @exception ContextIOERR If error encountered.
      */
-    virtual contextIOResultType saveContext(DataStream *stream, ContextMode mode, void *obj = NULL);
+    virtual void saveContext(DataStream &stream, ContextMode mode);
     /**
      * Restores the state of model from output stream. Restores not only the receiver state,
      * but also same function is invoked for all DofManagers and Elements in associated
@@ -666,12 +663,9 @@ public:
      * context.
      * @param stream Context file.
      * @param mode Determines amount of info in stream.
-     * @param obj Void pointer to an int array containing two values:time step number and
-     * version of a context file to be restored.
-     * @return contextIOResultType.
      * @exception ContextIOERR exception if error encountered.
      */
-    virtual contextIOResultType restoreContext(DataStream *stream, ContextMode mode, void *obj = NULL);
+    virtual void restoreContext(DataStream &stream, ContextMode mode);
     /**
      * Updates domain links after the domains of receiver have changed. Used mainly after
      * restoring context - the domains may change and this service is then used
@@ -679,7 +673,6 @@ public:
      * like error estimators, solvers, etc, having domains as attributes.
      */
     virtual void updateDomainLinks();
-    void resolveCorrespondingStepNumber(int &, int &, void *obj);
     /// Returns current meta step.
     MetaStep *giveCurrentMetaStep();
     /** Returns current time step.
@@ -758,9 +751,9 @@ public:
     /// Returns the time step number, when initial conditions should apply.
     int giveNumberOfTimeStepWhenIcApply() { return 0; }
     /// Returns reference to receiver's numerical method.
-    virtual NumericalMethod *giveNumericalMethod(MetaStep *mStep) { return NULL; }
+    virtual NumericalMethod *giveNumericalMethod(MetaStep *mStep) { return nullptr; }
     /// Returns receiver's export module manager.
-    ExportModuleManager *giveExportModuleManager() { return exportModuleManager; }
+    ExportModuleManager *giveExportModuleManager() { return &exportModuleManager; }
     /// Returns reference to receiver timer (EngngModelTimer).
     EngngModelTimer *giveTimer() { return & timer; }
 
@@ -781,36 +774,45 @@ public:
      */
     virtual int giveNewPrescribedEquationNumber(int domain, DofIDItem) { return ++domainPrescribedNeqs.at(domain); }
     /**
-     * Assigns context file-descriptor for given step number to stream.
-     * Returns nonzero on success.
-     * @param contextFile Assigned file descriptor.
+     * Returns the filename for the context file for the given step and version
      * @param tStepNumber Solution step number to store/restore.
      * @param stepVersion Version of step.
-     * @param cmode Determines the i/o mode of context file.
-     * @param errLevel Determines the amount of warning messages if errors are encountered, level 0 no warnings reported.
      */
-    int giveContextFile(FILE **contextFile, int tStepNumber, int stepVersion,
-                        ContextFileMode cmode, int errLevel = 1);
-    /** Returns true if context file for given step and version is available */
-    bool testContextFile(int tStepNumber, int stepVersion);
+    std :: string giveContextFileName(int tStepNumber, int stepVersion) const;
     /**
-     * Creates new DataReader for given domain.
-     * Returns nonzero on success.
+     * Returns the filename for the given domain (used by adaptivity and restore)
      * @param domainNum Domain number.
      * @param domainSerNum Domain serial number.
-     * @param cmode Determines the i/o mode of context file.
      */
-    DataReader *GiveDomainDataReader(int domainNum, int domainSerNum, ContextFileMode cmode);
+    std :: string giveDomainFileName(int domainNum, int domainSerNum) const;
+    virtual void updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *d);
     /**
-     * Updates components mapped to numerical method if necessary during solution process.
-     * Some numerical methods may require updating
-     * mapped components during solution process (e.g., updating of tangent stiffness
-     * when using updated Newton-Raphson method).
+     * Updates the solution (guess) according to the new values.
+     * Callback for nonlinear solvers (e.g. Newton-Raphson), and are called before new internal forces are computed.
+     * @param solutionVector New solution.
      * @param tStep Time when component is updated.
-     * @param cmpn Numerical component to update.
      * @param d Domain.
      */
-    virtual void updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *d);
+    virtual void updateSolution(FloatArray &solutionVector, TimeStep *tStep, Domain *d);
+    /**
+     * Updates the solution (guess) according to the new values.
+     * Callback for nonlinear solvers (e.g. Newton-Raphson).
+     * @param solutionVector New solution.
+     * @param tStep Time when component is updated.
+     * @param d Domain.
+     * @param eNorm Optional per-element norm (for normalization).
+     */
+    virtual void updateInternalRHS(FloatArray &answer, TimeStep *tStep, Domain *d, FloatArray *eNorm);
+    /**
+     * Updates the solution (guess) according to the new values.
+     * Callback for nonlinear solvers (e.g. Newton-Raphson).
+     * @note For performance, the matrix should keep it's non-zero structure between calls, 
+     * so the caller should make sure *not* to clear the matrix object before called. 
+     * @param solutionVector New solution.
+     * @param tStep Time when component is updated.
+     * @param d Domain.
+     */
+    virtual void updateMatrix(SparseMtrx &mat, TimeStep *tStep, Domain *d);
     /**
      * Initializes solution of new time step. Default implementation
      * resets all internal history variables (in integration points of elements)
@@ -879,7 +881,13 @@ public:
      * actual one to avoid storage of complete history.
      */
     virtual int giveUnknownDictHashIndx(ValueModeType mode, TimeStep *tStep) { return 0; }
-
+    /**
+     * Temporary method for allowing code to seamlessly convert from the old to new way of handling DOF values.
+     * (the new way expects the field to store all values, regardless of if they are computed, from BC, or IC.)
+     * This is used by MasterDof
+     * @todo When all models have converted to using a field, this should be removed.
+     */
+    virtual bool newDofHandling() { return false; }
     /**
      * Returns the parallel context corresponding to given domain (n) and unknown type
      * Default implementation returns i-th context from parallelContextList.
@@ -1028,7 +1036,23 @@ public:
      * (gaussPoint::printOutputAt).
      */
     virtual void printOutputAt(FILE *file, TimeStep *tStep);
-
+    virtual void printOutputAt(FILE *file, TimeStep *tStep, const IntArray &nodeSets, const IntArray &elementSets);
+    /**
+     * Outputs all nodes in the given set.
+     * @param file Output stream.
+     * @param domain Domain.
+     * @param tStep Time step.
+     * @param setNum Set number. If zero, outputs all elements.
+     */
+    void outputNodes(FILE *file, Domain &domain, TimeStep *tStep, int setNum);
+    /**
+     * Outputs all elements in the given set.
+     * @param file Output stream.
+     * @param domain Domain.
+     * @param tStep Time step.
+     * @param setNum Set number. If zero, outputs all elements.
+     */
+    void outputElements(FILE *file, Domain &domain, TimeStep *tStep, int setNum);
 
     // input / output
     /// Prints state of receiver. Useful for debugging.
@@ -1113,6 +1137,9 @@ public:
     void initParallel();
     /// Returns reference to itself -> required by communicator.h
     EngngModel *giveEngngModel() { return this; }
+    virtual bool isElementActivated( int elemNum ) { return true; }
+    virtual bool isElementActivated( Element *e ) { return true; }
+
 
 #ifdef __OOFEG
     virtual void drawYourself(oofegGraphicContext &gc);

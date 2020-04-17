@@ -36,10 +36,11 @@
 #include "inputrecord.h"
 #include "error.h"
 
+#include <memory>
 #include <fstream>
 
 namespace oofem {
-DynamicDataReader :: DynamicDataReader() : DataReader()
+DynamicDataReader :: DynamicDataReader(std :: string name) : DataReader(), name(std :: move(name))
 {
     this->it = recordList.end();
 }
@@ -49,13 +50,14 @@ DynamicDataReader :: ~DynamicDataReader()
 }
 
 void
-DynamicDataReader :: insertInputRecord(InputRecordType type, InputRecord *record)
+DynamicDataReader :: insertInputRecord(InputRecordType type, std::unique_ptr<InputRecord> record)
 {
     // Should care about the record type, but its a hassle.
-    this->recordList.emplace_back(record);
+    this->recordList.push_back(std::move(record));
+    this->it = recordList.end();
 }
 
-InputRecord *
+InputRecord &
 DynamicDataReader :: giveInputRecord(InputRecordType typeId, int recordId)
 {
     // Ignores recordId in favor of having a dynamic list (just incremental access). typeId could be supported, but its a hassle.
@@ -65,7 +67,7 @@ DynamicDataReader :: giveInputRecord(InputRecordType typeId, int recordId)
     } else {
         ++this->it;
     }
-    return this->it->get();
+    return **(this->it);
 }
 
 bool

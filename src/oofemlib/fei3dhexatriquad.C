@@ -35,13 +35,62 @@
 #include "fei3dhexatriquad.h"
 #include "intarray.h"
 #include "floatarray.h"
+#include "floatarrayf.h"
 #include "floatmatrix.h"
+#include "floatmatrixf.h"
 #include "gaussintegrationrule.h"
 
 namespace oofem {
+
+FloatArrayF<27>
+FEI3dHexaTriQuad :: evalN(const FloatArrayF<3> &lcoords)
+{
+    //auto [u, v, w] = lcoords;
+    double u = lcoords[0];
+    double v = lcoords[1];
+    double w = lcoords[2];
+
+    std::array<double, 3> a = {0.5 * ( u - 1.0 ) * u, 0.5 * ( u + 1.0 ) * u, 1.0 - u * u};
+    std::array<double, 3> b = {0.5 * ( v - 1.0 ) * v, 0.5 * ( v + 1.0 ) * v, 1.0 - v * v};
+    std::array<double, 3> c = {0.5 * ( w - 1.0 ) * w, 0.5 * ( w + 1.0 ) * w, 1.0 - w * w};
+
+    return {
+        a [ 0 ] * b [ 0 ] * c [ 1 ],
+        a [ 0 ] * b [ 1 ] * c [ 1 ],
+        a [ 1 ] * b [ 1 ] * c [ 1 ],
+        a [ 1 ] * b [ 0 ] * c [ 1 ],
+        a [ 0 ] * b [ 0 ] * c [ 0 ],
+        a [ 0 ] * b [ 1 ] * c [ 0 ],
+        a [ 1 ] * b [ 1 ] * c [ 0 ],
+        a [ 1 ] * b [ 0 ] * c [ 0 ],
+        a [ 0 ] * b [ 2 ] * c [ 1 ],
+        a [ 2 ] * b [ 1 ] * c [ 1 ],
+        a [ 1 ] * b [ 2 ] * c [ 1 ],
+        a [ 2 ] * b [ 0 ] * c [ 1 ],
+        a [ 0 ] * b [ 2 ] * c [ 0 ],
+        a [ 2 ] * b [ 1 ] * c [ 0 ],
+        a [ 1 ] * b [ 2 ] * c [ 0 ],
+        a [ 2 ] * b [ 0 ] * c [ 0 ],
+        a [ 0 ] * b [ 0 ] * c [ 2 ],
+        a [ 0 ] * b [ 1 ] * c [ 2 ],
+        a [ 1 ] * b [ 1 ] * c [ 2 ],
+        a [ 1 ] * b [ 0 ] * c [ 2 ],
+        a [ 2 ] * b [ 2 ] * c [ 1 ],
+        a [ 0 ] * b [ 2 ] * c [ 2 ],
+        a [ 2 ] * b [ 2 ] * c [ 0 ],
+        a [ 2 ] * b [ 1 ] * c [ 2 ],
+        a [ 1 ] * b [ 2 ] * c [ 2 ],
+        a [ 2 ] * b [ 0 ] * c [ 2 ],
+        a [ 2 ] * b [ 2 ] * c [ 2 ]
+    };
+}
+
 void
 FEI3dHexaTriQuad :: evalN(FloatArray &answer, const FloatArray &lcoords, const FEICellGeometry &cellgeo)
 {
+#if 0
+    answer = evalN(lcoords);
+#else
     double u = lcoords.at(1);
     double v = lcoords.at(2);
     double w = lcoords.at(3);
@@ -93,6 +142,7 @@ FEI3dHexaTriQuad :: evalN(FloatArray &answer, const FloatArray &lcoords, const F
     answer.at(23) = a [ 0 ] * b [ 2 ] * c [ 2 ];
     answer.at(25) = a [ 1 ] * b [ 2 ] * c [ 2 ];
     answer.at(27) = a [ 2 ] * b [ 2 ] * c [ 2 ];
+#endif
 }
 
 
@@ -128,7 +178,6 @@ FEI3dHexaTriQuad :: surfaceEvalN(FloatArray &answer, int isurf, const FloatArray
 double
 FEI3dHexaTriQuad :: surfaceEvalNormal(FloatArray &answer, int isurf, const FloatArray &lcoords, const FEICellGeometry &cellgeo)
 {
-    IntArray snodes;
     FloatArray e1, e2, dNdu(9), dNdv(9);
 
     double u = lcoords.at(1);
@@ -173,10 +222,10 @@ FEI3dHexaTriQuad :: surfaceEvalNormal(FloatArray &answer, int isurf, const Float
     dNdv.at(6) = a [ 1 ] * db [ 2 ];
     dNdv.at(9) = a [ 2 ] * db [ 2 ];
 
-    this->computeLocalSurfaceMapping(snodes, isurf);
+    const auto &snodes = this->computeLocalSurfaceMapping(isurf);
     for ( int i = 1; i <= 9; ++i ) {
-        e1.add( dNdu.at(i), * cellgeo.giveVertexCoordinates( snodes.at(i) ) );
-        e2.add( dNdv.at(i), * cellgeo.giveVertexCoordinates( snodes.at(i) ) );
+        e1.add( dNdu.at(i), cellgeo.giveVertexCoordinates( snodes.at(i) ) );
+        e2.add( dNdv.at(i), cellgeo.giveVertexCoordinates( snodes.at(i) ) );
     }
 
     answer.beVectorProductOf(e1, e2);
@@ -184,30 +233,81 @@ FEI3dHexaTriQuad :: surfaceEvalNormal(FloatArray &answer, int isurf, const Float
 }
 
 
-void
-FEI3dHexaTriQuad :: computeLocalSurfaceMapping(IntArray &nodes, int isurf)
+IntArray
+FEI3dHexaTriQuad :: computeLocalSurfaceMapping(int isurf) const
 {
     if ( isurf == 1 ) {
-        nodes = { 2, 1, 4, 3,  9, 12, 11, 10, 21};
+        return { 2, 1, 4, 3,  9, 12, 11, 10, 21};
     } else if ( isurf == 2 ) {
-        nodes = { 5, 6, 7, 8, 13, 14, 15, 16, 22};
+        return { 5, 6, 7, 8, 13, 14, 15, 16, 22};
     } else if ( isurf == 3 ) {
-        nodes = { 1, 2, 6, 5,  9, 18, 13, 17, 23};
+        return { 1, 2, 6, 5,  9, 18, 13, 17, 23};
     } else if ( isurf == 4 ) {
-        nodes = { 2, 3, 7, 6, 10, 19, 14, 18, 24};
+        return { 2, 3, 7, 6, 10, 19, 14, 18, 24};
     } else if ( isurf == 5 ) {
-        nodes = { 3, 4, 8, 7, 11, 20, 15, 19, 25};
+        return { 3, 4, 8, 7, 11, 20, 15, 19, 25};
     } else if ( isurf == 6 ) {
-        nodes = { 4, 1, 5, 8, 12, 17, 16, 20, 26};
+        return { 4, 1, 5, 8, 12, 17, 16, 20, 26};
     } else {
-        OOFEM_ERROR("wrong surface number (%d)", isurf);
+        throw std::range_error("invalid surface number");
     }
 }
 
 
-void
-FEI3dHexaTriQuad :: giveLocalDerivative(FloatMatrix &dN, const FloatArray &lcoords)
+FloatMatrixF<3,27>
+FEI3dHexaTriQuad :: evaldNdxi(const FloatArrayF<3> &lcoords)
 {
+    //auto [u, v, w] = lcoords;
+    double u = lcoords[0];
+    double v = lcoords[1];
+    double w = lcoords[2];
+
+    std::array<double, 3> a = {0.5 * ( u - 1.0 ) * u, 0.5 * ( u + 1.0 ) * u, 1.0 - u * u};
+    std::array<double, 3> b = {0.5 * ( v - 1.0 ) * v, 0.5 * ( v + 1.0 ) * v, 1.0 - v * v};
+    std::array<double, 3> c = {0.5 * ( w - 1.0 ) * w, 0.5 * ( w + 1.0 ) * w, 1.0 - w * w};
+
+    std::array<double, 3> da = {-0.5 + u, 0.5 + u, -2.0 * u};
+    std::array<double, 3> db = {-0.5 + v, 0.5 + v, -2.0 * v};
+    std::array<double, 3> dc = {-0.5 + w, 0.5 + w, -2.0 * w};
+
+    return {
+        da [ 0 ] * b [ 0 ] * c [ 1 ], a [ 0 ] * db [ 0 ] * c [ 1 ], a [ 0 ] * b [ 0 ] * dc [ 1 ],
+        da [ 0 ] * b [ 1 ] * c [ 1 ], a [ 0 ] * db [ 1 ] * c [ 1 ], a [ 0 ] * b [ 1 ] * dc [ 1 ],
+        da [ 1 ] * b [ 1 ] * c [ 1 ], a [ 1 ] * db [ 1 ] * c [ 1 ], a [ 1 ] * b [ 1 ] * dc [ 1 ],
+        da [ 1 ] * b [ 0 ] * c [ 1 ], a [ 1 ] * db [ 0 ] * c [ 1 ], a [ 1 ] * b [ 0 ] * dc [ 1 ],
+        da [ 0 ] * b [ 0 ] * c [ 0 ], a [ 0 ] * db [ 0 ] * c [ 0 ], a [ 0 ] * b [ 0 ] * dc [ 0 ],
+        da [ 0 ] * b [ 1 ] * c [ 0 ], a [ 0 ] * db [ 1 ] * c [ 0 ], a [ 0 ] * b [ 1 ] * dc [ 0 ],
+        da [ 1 ] * b [ 1 ] * c [ 0 ], a [ 1 ] * db [ 1 ] * c [ 0 ], a [ 1 ] * b [ 1 ] * dc [ 0 ],
+        da [ 1 ] * b [ 0 ] * c [ 0 ], a [ 1 ] * db [ 0 ] * c [ 0 ], a [ 1 ] * b [ 0 ] * dc [ 0 ],
+        da [ 0 ] * b [ 2 ] * c [ 1 ], a [ 0 ] * db [ 2 ] * c [ 1 ], a [ 0 ] * b [ 2 ] * dc [ 1 ],
+        da [ 2 ] * b [ 1 ] * c [ 1 ], a [ 2 ] * db [ 1 ] * c [ 1 ], a [ 2 ] * b [ 1 ] * dc [ 1 ],
+        da [ 1 ] * b [ 2 ] * c [ 1 ], a [ 1 ] * db [ 2 ] * c [ 1 ], a [ 1 ] * b [ 2 ] * dc [ 1 ],
+        da [ 2 ] * b [ 0 ] * c [ 1 ], a [ 2 ] * db [ 0 ] * c [ 1 ], a [ 2 ] * b [ 0 ] * dc [ 1 ],
+        da [ 0 ] * b [ 2 ] * c [ 0 ], a [ 0 ] * db [ 2 ] * c [ 0 ], a [ 0 ] * b [ 2 ] * dc [ 0 ],
+        da [ 2 ] * b [ 1 ] * c [ 0 ], a [ 2 ] * db [ 1 ] * c [ 0 ], a [ 2 ] * b [ 1 ] * dc [ 0 ],
+        da [ 1 ] * b [ 2 ] * c [ 0 ], a [ 1 ] * db [ 2 ] * c [ 0 ], a [ 1 ] * b [ 2 ] * dc [ 0 ],
+        da [ 2 ] * b [ 0 ] * c [ 0 ], a [ 2 ] * db [ 0 ] * c [ 0 ], a [ 2 ] * b [ 0 ] * dc [ 0 ],
+        da [ 0 ] * b [ 0 ] * c [ 2 ], a [ 0 ] * db [ 0 ] * c [ 2 ], a [ 0 ] * b [ 0 ] * dc [ 2 ],
+        da [ 0 ] * b [ 1 ] * c [ 2 ], a [ 0 ] * db [ 1 ] * c [ 2 ], a [ 0 ] * b [ 1 ] * dc [ 2 ],
+        da [ 1 ] * b [ 1 ] * c [ 2 ], a [ 1 ] * db [ 1 ] * c [ 2 ], a [ 1 ] * b [ 1 ] * dc [ 2 ],
+        da [ 1 ] * b [ 0 ] * c [ 2 ], a [ 1 ] * db [ 0 ] * c [ 2 ], a [ 1 ] * b [ 0 ] * dc [ 2 ],
+        da [ 2 ] * b [ 2 ] * c [ 1 ], a [ 2 ] * db [ 2 ] * c [ 1 ], a [ 2 ] * b [ 2 ] * dc [ 1 ],
+        da [ 2 ] * b [ 2 ] * c [ 0 ], a [ 2 ] * db [ 2 ] * c [ 0 ], a [ 2 ] * b [ 2 ] * dc [ 0 ],
+        da [ 0 ] * b [ 2 ] * c [ 2 ], a [ 0 ] * db [ 2 ] * c [ 2 ], a [ 0 ] * b [ 2 ] * dc [ 2 ],
+        da [ 2 ] * b [ 1 ] * c [ 2 ], a [ 2 ] * db [ 1 ] * c [ 2 ], a [ 2 ] * b [ 1 ] * dc [ 2 ],
+        da [ 1 ] * b [ 2 ] * c [ 2 ], a [ 1 ] * db [ 2 ] * c [ 2 ], a [ 1 ] * b [ 2 ] * dc [ 2 ],
+        da [ 2 ] * b [ 0 ] * c [ 2 ], a [ 2 ] * db [ 0 ] * c [ 2 ], a [ 2 ] * b [ 0 ] * dc [ 2 ],
+        da [ 2 ] * b [ 2 ] * c [ 2 ], a [ 2 ] * db [ 2 ] * c [ 2 ], a [ 2 ] * b [ 2 ] * dc [ 2 ],
+    };
+}
+
+
+void
+FEI3dHexaTriQuad :: evaldNdxi(FloatMatrix &dN, const FloatArray &lcoords, const FEICellGeometry &cellgeo)
+{
+#if 0
+    dN = evaldNdxi(lcoords);
+#else
     double u, v, w;
     u = lcoords.at(1);
     v = lcoords.at(2);
@@ -347,24 +447,45 @@ FEI3dHexaTriQuad :: giveLocalDerivative(FloatMatrix &dN, const FloatArray &lcoor
     dN.at(23, 3) = a [ 0 ] * b [ 2 ] * dc [ 2 ];
     dN.at(25, 3) = a [ 1 ] * b [ 2 ] * dc [ 2 ];
     dN.at(27, 3) = a [ 2 ] * b [ 2 ] * dc [ 2 ];
+#endif
 }
 
+
+std::pair<double, FloatMatrixF<3,27>>
+FEI3dHexaTriQuad :: evaldNdx(const FloatArrayF<3> &lcoords, const FEICellGeometry &cellgeo)
+{
+    auto dNduvw = evaldNdxi(lcoords);
+    FloatMatrixF<3,27> coords;
+    for ( int i = 0; i < 27; i++ ) {
+        ///@todo cellgeo should give a FloatArrayF<3>, this will add a "costly" construction now:
+        coords.setColumn(cellgeo.giveVertexCoordinates(i+1), i);
+    }
+    auto jacT = dotT(dNduvw, coords);
+    return {det(jacT), dot(inv(jacT), dNduvw)};
+}
+
+double
+FEI3dHexaTriQuad :: evaldNdx(FloatMatrix &answer, const FloatArray &lcoords, const FEICellGeometry &cellgeo)
+{
+    auto tmp = evaldNdx(lcoords, cellgeo);
+    answer = transpose(tmp.second);
+    return tmp.first;
+}
 
 double
 FEI3dHexaTriQuad :: evalNXIntegral(int iSurf, const FEICellGeometry &cellgeo)
 {
-    IntArray fNodes;
-    this->computeLocalSurfaceMapping(fNodes, iSurf);
+    const auto &fNodes = this->computeLocalSurfaceMapping(iSurf);
 
-    const FloatArray &c1 = * cellgeo.giveVertexCoordinates( fNodes.at(1) );
-    const FloatArray &c2 = * cellgeo.giveVertexCoordinates( fNodes.at(2) );
-    const FloatArray &c3 = * cellgeo.giveVertexCoordinates( fNodes.at(3) );
-    const FloatArray &c4 = * cellgeo.giveVertexCoordinates( fNodes.at(4) );
-    const FloatArray &c5 = * cellgeo.giveVertexCoordinates( fNodes.at(5) );
-    const FloatArray &c6 = * cellgeo.giveVertexCoordinates( fNodes.at(6) );
-    const FloatArray &c7 = * cellgeo.giveVertexCoordinates( fNodes.at(7) );
-    const FloatArray &c8 = * cellgeo.giveVertexCoordinates( fNodes.at(8) );
-    const FloatArray &c9 = * cellgeo.giveVertexCoordinates( fNodes.at(9) );
+    const auto &c1 = cellgeo.giveVertexCoordinates( fNodes.at(1) );
+    const auto &c2 = cellgeo.giveVertexCoordinates( fNodes.at(2) );
+    const auto &c3 = cellgeo.giveVertexCoordinates( fNodes.at(3) );
+    const auto &c4 = cellgeo.giveVertexCoordinates( fNodes.at(4) );
+    const auto &c5 = cellgeo.giveVertexCoordinates( fNodes.at(5) );
+    const auto &c6 = cellgeo.giveVertexCoordinates( fNodes.at(6) );
+    const auto &c7 = cellgeo.giveVertexCoordinates( fNodes.at(7) );
+    const auto &c8 = cellgeo.giveVertexCoordinates( fNodes.at(8) );
+    const auto &c9 = cellgeo.giveVertexCoordinates( fNodes.at(9) );
 
     // Generated with Mathematica (rather unwieldy expression, tried to simplify it as good as possible, but it could probably be better)
     return (
@@ -460,23 +581,23 @@ FEI3dHexaTriQuad :: evalNXIntegral(int iSurf, const FEICellGeometry &cellgeo)
                ) / 300.0;
 }
 
-IntegrationRule *
+std::unique_ptr<IntegrationRule>
 FEI3dHexaTriQuad :: giveIntegrationRule(int order)
 {
-    IntegrationRule *iRule = new GaussIntegrationRule(1, NULL);
+    auto iRule = std::make_unique<GaussIntegrationRule>(1, nullptr);
     ///@todo Verify: Is +15 correct for dealing with "detJ"? If it is, perhaps we shouldn't go for exact integration since it is likely overkill.
     int points = iRule->getRequiredNumberOfIntegrationPoints(_Cube, order + 15);
     iRule->SetUpPointsOnCube(points, _Unknown);
-    return iRule;
+    return std::move(iRule);
 }
 
-IntegrationRule *
+std::unique_ptr<IntegrationRule>
 FEI3dHexaTriQuad :: giveBoundaryIntegrationRule(int order, int boundary)
 {
-    IntegrationRule *iRule = new GaussIntegrationRule(1, NULL);
+    auto iRule = std::make_unique<GaussIntegrationRule>(1, nullptr);
     ///@todo Verify: Is +6 correct for dealing with "detJ" on this surface?
     int points = iRule->getRequiredNumberOfIntegrationPoints(_Square, order + 6);
     iRule->SetUpPointsOnSquare(points, _Unknown);
-    return iRule;
+    return std::move(iRule);
 }
 } // end namespace oofem

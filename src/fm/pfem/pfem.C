@@ -54,6 +54,7 @@
 #include "load.h"
 #include "pfemparticle.h"
 #include "octreelocalizert.h" //changed from "octreelocalizer.h"
+#include "octreelocalizertutil.h" 
 #include "spatiallocalizer.h"
 #include "classfactory.h"
 #include "mathfem.h"
@@ -211,11 +212,9 @@ PFEM :: forceEquationNumbering(int id)
 
 
 
-IRResultType
-PFEM :: initializeFrom(InputRecord *ir)
+void
+PFEM :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                            // Required by IR_GIVE_FIELD macro
-
     EngngModel :: initializeFrom(ir);
     int val = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_EngngModel_lstype);
@@ -253,8 +252,6 @@ PFEM :: initializeFrom(InputRecord *ir)
     IR_GIVE_FIELD(ir, associatedMaterial, _IFT_PFEM_associatedMaterial);
     IR_GIVE_FIELD(ir, associatedCrossSection, _IFT_PFEM_associatedCrossSection);
     IR_GIVE_FIELD(ir, associatedPressureBC, _IFT_PFEM_pressureBC);
-
-    return IRRT_OK;
 }
 
 
@@ -294,7 +291,7 @@ TimeStep *
 PFEM :: giveSolutionStepWhenIcApply()
 {
     if ( !stepWhenIcApply ) {
-        stepWhenIcApply.reset( new TimeStep(giveNumberOfTimeStepWhenIcApply(), this, 0, 0.0, deltaT, 0) );
+        stepWhenIcApply = std::make_unique<TimeStep>(giveNumberOfTimeStepWhenIcApply(), this, 0, 0.0, deltaT, 0);
     }
 
     return stepWhenIcApply.get();
@@ -349,7 +346,7 @@ PFEM :: giveNextStep()
 
     if ( !currentStep ) {
         // first step -> generate initial step
-        currentStep.reset( new TimeStep( * giveSolutionStepWhenIcApply() ) );
+        currentStep = std::make_unique<TimeStep>( * giveSolutionStepWhenIcApply() );
     } else {
         istep = currentStep->giveNumber() + 1;
         counter = currentStep->giveSolutionStateCounter() + 1;
@@ -377,7 +374,7 @@ PFEM :: giveNextStep()
 
     totalTime = previousStep->giveTargetTime() + ndt;
 
-    currentStep.reset( new TimeStep(istep, this, 1, totalTime, ndt, counter) );
+    currentStep = std::make_unique<TimeStep>(istep, this, 1, totalTime, ndt, counter);
     // time and dt variables are set eq to 0 for staics - has no meaning
 
     OOFEM_LOG_INFO( "SolutionStep %d : t = %e, dt = %e\n", istep, totalTime * this->giveVariableScale(VST_Time), ndt * this->giveVariableScale(VST_Time) );
@@ -706,90 +703,22 @@ PFEM :: updateDofUnknownsDictionaryVelocities(DofManager *inode, TimeStep *tStep
 
 
 // NOT ACTIVE
-contextIOResultType
-PFEM :: saveContext(DataStream *stream, ContextMode mode, void *obj)
-//
-// saves state variable - displacement vector
-//
+void
+PFEM :: saveContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-    int closeFlag = 0;
-    FILE *file = NULL;
-
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, this->giveCurrentStep()->giveNumber(),
-                                    this->giveCurrentStep()->giveVersion(), contextMode_write) ) {
-            THROW_CIOERR(CIO_IOERR);                             // override
-        }
-
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
-
-    if ( ( iores = EngngModel :: saveContext(stream, mode) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( ( iores = PressureField.saveContext(* stream, mode) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( ( iores = VelocityField.saveContext(* stream, mode) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete stream;
-        stream = NULL;
-    }
-
-    return CIO_OK;
+    EngngModel :: saveContext(stream, mode);
+    PressureField.saveContext(stream, mode);
+    VelocityField.saveContext(stream, mode);
 }
 
 
 // NOT ACTIVE
-contextIOResultType
-PFEM :: restoreContext(DataStream *stream, ContextMode mode, void *obj)
-//
-// restore state variable - displacement vector
-//
+void
+PFEM :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-    int closeFlag = 0;
-    int istep, iversion;
-    FILE *file = NULL;
-
-    this->resolveCorrespondingStepNumber(istep, iversion, obj);
-
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, istep, iversion, contextMode_read) ) {
-            THROW_CIOERR(CIO_IOERR);                     // override
-        }
-
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
-
-    if ( ( iores = EngngModel :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( ( iores = PressureField.restoreContext(* stream, mode) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( ( iores = VelocityField.restoreContext(* stream, mode) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete stream;
-        stream = NULL;
-    }
-
-    return CIO_OK;
+    EngngModel :: restoreContext(stream, mode);
+    PressureField.restoreContext(stream, mode);
+    VelocityField.restoreContext(stream, mode);
 }
 
 
@@ -962,9 +891,9 @@ PFEM :: deactivateTooCloseParticles()
             PFEMParticle *particle2 = dynamic_cast< PFEMParticle * >( element->giveNode(2) );
             PFEMParticle *particle3 = dynamic_cast< PFEMParticle * >( element->giveNode(3) );
 
-            double l12 = particle1->giveCoordinates()->distance( particle2->giveCoordinates() );
-            double l23 = particle2->giveCoordinates()->distance( particle3->giveCoordinates() );
-            double l31 = particle3->giveCoordinates()->distance( particle1->giveCoordinates() );
+            double l12 = distance( *particle1->giveCoordinates(), *particle2->giveCoordinates() );
+            double l23 = distance( *particle2->giveCoordinates(), *particle3->giveCoordinates() );
+            double l31 = distance( *particle3->giveCoordinates(), *particle1->giveCoordinates() );
 
             double maxLength = max( l12, max(l23, l31) );
             double minLength = min( l12, min(l23, l31) );

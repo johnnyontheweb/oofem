@@ -107,7 +107,7 @@ ScalarFunction::setMultiplierReference(int val)
 
 
 double
-ScalarFunction :: eval(std :: map< std :: string, FunctionArgument >valDict, Domain *d, GaussPoint *gp, double param) const
+ScalarFunction :: eval(const std :: map< std :: string, FunctionArgument >valDict, Domain *d, GaussPoint *gp, double param) const
 {
     if ( this->dvType == DV_ValueType ) {
         return this->dValue;

@@ -35,8 +35,8 @@
 #ifndef hyperelasticmaterial_h
 #define hyperelasticmaterial_h
 
-#include "../sm/Materials/structuralmaterial.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Materials/structuralmaterial.h"
+#include "sm/Materials/structuralms.h"
 
 ///@name Input fields for HyperElasticMaterial
 //@{
@@ -53,26 +53,22 @@ namespace oofem {
 class HyperElasticMaterial : public StructuralMaterial
 {
 protected:
-    double K; ///< Bulk modulus.
-    double G; ///< Shear modulus.
+    double K = 0.; ///< Bulk modulus.
+    double G = 0.; ///< Shear modulus.
 
 public:
     HyperElasticMaterial(int n, Domain * d);
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual void give3dMaterialStiffnessMatrix(FloatMatrix &answer,
-                                               MatResponseMode mode, GaussPoint *gp,
-                                               TimeStep *tStep);
+    FloatMatrixF<6,6> give3dMaterialStiffnessMatrix(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
 
+    FloatArrayF<6> giveRealStressVector_3d(const FloatArrayF<6> &strain, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual void giveRealStressVector_3d(FloatArray &answer, GaussPoint *gp,
-                                         const FloatArray &reducedStrain, TimeStep *tStep);
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const;
-
-    virtual const char *giveInputRecordName() const { return _IFT_HyperElasticMaterial_Name; }
-    virtual const char *giveClassName() const { return "HyperElasticMaterial"; }
+    const char *giveInputRecordName() const override { return _IFT_HyperElasticMaterial_Name; }
+    const char *giveClassName() const override { return "HyperElasticMaterial"; }
 };
 } // end namespace oofem
 #endif

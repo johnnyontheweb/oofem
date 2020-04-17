@@ -32,9 +32,9 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "Elements/3D/qwedge.h"
-#include "Materials/structuralms.h"
-#include "CrossSections/structuralcrosssection.h"
+#include "sm/Elements/3D/qwedge.h"
+#include "sm/Materials/structuralms.h"
+#include "sm/CrossSections/structuralcrosssection.h"
 #include "fei3dwedgequad.h"
 #include "node.h"
 #include "material.h"
@@ -61,12 +61,12 @@ QWedge :: QWedge(int n, Domain *aDomain) : Structural3DElement(n, aDomain), ZZNo
 }
 
 
-IRResultType
-QWedge :: initializeFrom(InputRecord *ir)
+void
+QWedge :: initializeFrom(InputRecord &ir)
 {
     numberOfGaussPoints = 9;
 
-    return Structural3DElement :: initializeFrom(ir);
+    Structural3DElement :: initializeFrom(ir);
 }
 
 FEInterpolation *

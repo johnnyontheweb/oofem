@@ -43,7 +43,7 @@
 #include "floatarray.h"
 #include "intarray.h"
 #include "mathfem.h"
-#include "fluiddynamicmaterial.h"
+#include "fm/Materials/fluiddynamicmaterial.h"
 #include "fluidcrosssection.h"
 #include "timestep.h"
 #include "contextioerr.h"
@@ -65,14 +65,9 @@ FEI2dTrLin TR21_2D_SUPG :: pressureInterpolation(1, 2);
 
 TR21_2D_SUPG :: TR21_2D_SUPG(int n, Domain *aDomain) :
     SUPGElement2(n, aDomain), ZZNodalRecoveryModelInterface(this)
-    // Constructor.
 {
     numberOfDofMans  = 6;
 }
-
-TR21_2D_SUPG :: ~TR21_2D_SUPG()
-// Destructor
-{ }
 
 FEInterpolation *
 TR21_2D_SUPG :: giveInterpolation() const
@@ -113,20 +108,34 @@ TR21_2D_SUPG :: computeGaussPoints()
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize(3);
 
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 3) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 3);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], 3, this);
 
         //seven point Gauss integration
-        integrationRulesArray [ 1 ].reset( new GaussIntegrationRule(2, this, 1, 3) );
+        integrationRulesArray [ 1 ] = std::make_unique<GaussIntegrationRule>(2, this, 1, 3);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 1 ], 7, this);
 
-        integrationRulesArray [ 2 ].reset( new GaussIntegrationRule(3, this, 1, 3) );
+        integrationRulesArray [ 2 ] = std::make_unique<GaussIntegrationRule>(3, this, 1, 3);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 2 ], 13, this);
 
 
-        //integrationRulesArray [ 3 ] = new GaussIntegrationRule(4, this, 1, 3);
+        //integrationRulesArray [ 3 ] = std::make_unique<GaussIntegrationRule>(4, this, 1, 3);
         //this->giveCrossSection()->setupIntegrationPoints( *integrationRulesArray[3], 27, this );
     }
+}
+
+
+void
+TR21_2D_SUPG :: computeDeviatoricStress(FloatArray &answer, const FloatArray &eps, GaussPoint *gp, TimeStep *tStep)
+{
+    answer = static_cast< FluidCrossSection * >( this->giveCrossSection() )->giveFluidMaterial()->computeDeviatoricStress2D(eps, gp, tStep);
+}
+
+
+void
+TR21_2D_SUPG :: computeTangent(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep)
+{
+    answer = static_cast< FluidCrossSection * >( this->giveCrossSection() )->giveFluidMaterial()->computeTangent2D(mode, gp, tStep);
 }
 
 
@@ -236,16 +245,14 @@ TR21_2D_SUPG :: computeGradPMatrix(FloatMatrix &answer, GaussPoint *gp)
 void
 TR21_2D_SUPG :: computeDivTauMatrix(FloatMatrix &answer, GaussPoint *gp, TimeStep *tStep)
 {
-    FloatMatrix D, d2n;
-
-    answer.resize(2, 12);
-    answer.zero();
-
+    FloatMatrix d2n;
 
     this->velocityInterpolation.evald2Ndx2( d2n, gp->giveNaturalCoordinates(), FEIElementGeometryWrapper(this) );
 
-    static_cast< FluidCrossSection * >( this->giveCrossSection() )->giveFluidMaterial()->giveDeviatoricStiffnessMatrix(D, TangentStiffness, integrationRulesArray [ 0 ]->getIntegrationPoint(0), tStep);
+    auto D = static_cast< FluidCrossSection * >( this->giveCrossSection() )->giveFluidMaterial()->computeTangent2D(TangentStiffness, integrationRulesArray [ 0 ]->getIntegrationPoint(0), tStep);
 
+    answer.resize(2, 12);
+    answer.zero();
     for ( int i = 1; i <= 6; i++ ) {
         answer.at(1, 2 * i - 1) = D.at(1, 1) * d2n.at(i, 1) + D.at(1, 3) * d2n.at(i, 3) + D.at(3, 1) * d2n.at(i, 3) + D.at(3, 3) * d2n.at(i, 2);
         answer.at(1, 2 * i)     = D.at(1, 2) * d2n.at(i, 3) + D.at(1, 3) * d2n.at(i, 1) + D.at(3, 2) * d2n.at(i, 2) + D.at(3, 3) * d2n.at(i, 3);
@@ -1056,11 +1063,10 @@ TR21_2D_SUPG :: computeIntersection(int iedge, FloatArray &intcoords, FloatArray
 {
     FloatArray Coeff(3), helplcoords(3);
     double fi1, fi2, fi3, r1, r11, r12;
-    IntArray edge(3);
     intcoords.resize(2);
     intcoords.zero();
 
-    this->velocityInterpolation.computeLocalEdgeMapping(edge, iedge);
+    const auto &edge = this->velocityInterpolation.computeLocalEdgeMapping(iedge);
     fi1 = fi.at( edge.at(1) );
     fi2 = fi.at( edge.at(2) );
     fi3 = fi.at( edge.at(3) );
@@ -1187,9 +1193,7 @@ void
 TR21_2D_SUPG :: computeCoordsOfEdge(FloatArray &answer, int iedge)
 
 {
-    IntArray edge;
-
-    velocityInterpolation.computeLocalEdgeMapping(edge, iedge);
+    const auto &edge = velocityInterpolation.computeLocalEdgeMapping(iedge);
 
     answer.at(1) = this->giveNode( edge.at(1) )->giveCoordinate(1);
     answer.at(2) = this->giveNode( edge.at(1) )->giveCoordinate(2);
@@ -1343,36 +1347,14 @@ TR21_2D_SUPG :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateTyp
     return SUPGElement2 :: giveIPValue(answer, gp, type, tStep);
 }
 
-contextIOResultType TR21_2D_SUPG :: saveContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// saves full element context (saves state variables, that completely describe
-// current state)
-//
+void TR21_2D_SUPG :: saveContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-
-    if ( ( iores = SUPGElement :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    return CIO_OK;
+    SUPGElement :: saveContext(stream, mode);
 }
 
-
-
-contextIOResultType TR21_2D_SUPG :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// restores full element context (saves state variables, that completely describe
-// current state)
-//
+void TR21_2D_SUPG :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-
-    if ( ( iores = SUPGElement :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    return CIO_OK;
+    SUPGElement :: restoreContext(stream, mode);
 }
 
 

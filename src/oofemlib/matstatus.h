@@ -86,15 +86,11 @@ class OOFEM_EXPORT MaterialStatus : public IntegrationPointStatus
 public:
     /**
      * Constructor.
-     * @param n Receiver's number.
-     * @param d Domain to which new status belongs.
      * @param g Associated integration point.
      */
-    MaterialStatus(int n, Domain * d, GaussPoint * g) : IntegrationPointStatus(n, d, g) { }
-    /// Destructor.
-    virtual ~MaterialStatus() { }
+    MaterialStatus(GaussPoint * g) : IntegrationPointStatus(g) { }
     /// Print receiver's output to given stream.
-    virtual void printOutputAt(FILE *file, TimeStep *tStep) { }
+    void printOutputAt(FILE *file, TimeStep *tStep) const override { }
 
     /**
      * Initializes the temporary internal variables, describing the current state according to
@@ -105,7 +101,7 @@ public:
      * Update equilibrium history variables according to temp-variables.
      * Invoked, after new equilibrium state has been reached.
      */
-    virtual void updateYourself(TimeStep *) { }
+    void updateYourself(TimeStep *) override { }
     /**
      * Returns the value of material model property stored in receiving status.
      * This is typically used when random variation of some material property is considered,
@@ -119,25 +115,6 @@ public:
      * in this case the individual values are to be stored in status (they are no longer material constants)
      */
     virtual void setMaterialProperty(int propID, double value) { }
-
-    /**
-     * Allows to set the value of a specific variable, identified by varID.
-     * The meaning of varID is defined in each specific implementation
-     * of the method depending on the material model.
-     * This method can be used to set the initial values of internal
-     * variables, stresses, etc., which have been previously determined
-     * by another simulation (e.g. of the manufacturing process).
-     */
-    virtual void setStatusVariable(int varID, double value) { }
-    /**
-     * Restores consistency of the status, i.e., computes or corrects
-     * the values of certain status variables such that the state is admissible.
-     * For instance, if the initial values of some internal variables
-     * are read from a file, other internal variables are adjusted accordingly.
-     */
-    virtual void restoreConsistency() { }
-
-    virtual IRResultType initializeFrom(InputRecord *ir) { return IRRT_OK; }
 };
 } // end namespace oofem
 #endif // matstatus_h

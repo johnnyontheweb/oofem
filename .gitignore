@@ -14,9 +14,13 @@ debug/
 *.vtu
 *.pvd
 *.out.*
+*.out-gp*
 t3d.bmf*
 perf.data*
 *.orig
+*.out-gp*
+*.vtk
+*_out.*
 
 # documentation aux-files.
 *.aux

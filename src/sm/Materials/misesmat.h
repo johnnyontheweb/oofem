@@ -35,9 +35,9 @@
 #ifndef misesmat_h
 #define misesmat_h
 
-#include "../sm/Materials/structuralmaterial.h"
-#include "../sm/Materials/structuralms.h"
-#include "Materials/linearelasticmaterial.h"
+#include "sm/Materials/structuralmaterial.h"
+#include "sm/Materials/structuralms.h"
+#include "sm/Materials/isolinearelasticmaterial.h"
 #include "dictionary.h"
 #include "floatarray.h"
 #include "floatmatrix.h"
@@ -50,6 +50,7 @@
 #define _IFT_MisesMat_h "h"
 #define _IFT_MisesMat_omega_crit "omega_crit"
 #define _IFT_MisesMat_a "a"
+#define _IFT_MisesMat_yieldTol "yieldtol"
 //@}
 
 namespace oofem {
@@ -65,82 +66,79 @@ class Domain;
  * by implementation - here we use the radial return, which
  * is the most efficient algorithm for this specific model.
  * Also, an extension to large strain will be available.
- * 
- * The model also exemplifies how to implement non-3d material modes, in this case 1D, 
+ *
+ * The model also exemplifies how to implement non-3d material modes, in this case 1D,
  * by overloading the default implementations that iterates over the 3D method.
  */
 class MisesMat : public StructuralMaterial
 {
 protected:
     /// Reference to the basic elastic material.
-    LinearElasticMaterial *linearElasticMaterial;
+    IsotropicLinearElasticMaterial linearElasticMaterial;
 
     /// Elastic shear modulus.
-    double G;
+    double G = 0.;
 
     /// Elastic bulk modulus.
-    double K;
+    double K = 0.;
 
     /// Hardening modulus.
-    double H;
+    double H = 0.;
 
     /// Initial (uniaxial) yield stress.
     ScalarFunction sig0;
 
-    double omega_crit;
-    double a;
+    /// critical(maximal) damage.
+    double omega_crit = 0.;
+    /// exponent in damage function.
+    double a = 0.;
+
+    /// tolerance for the yield function in RRM algorithm.
+    double yieldTol = 0.;
 
 public:
-    MisesMat(int n, Domain * d);
-    virtual ~MisesMat();
+    MisesMat(int n, Domain *d);
 
-    void performPlasticityReturn(GaussPoint *gp, const FloatArray &totalStrain, TimeStep *tStep);
-    double computeDamage(GaussPoint *gp, TimeStep *tStep);
-    double computeDamageParam(double tempKappa);
-    double computeDamageParamPrime(double tempKappa);
-    virtual void computeCumPlastStrain(double &kappa, GaussPoint *gp, TimeStep *tStep);
+    void performPlasticityReturn(const FloatArray &totalStrain, GaussPoint *gp, TimeStep *tStep) const;
+    void performPlasticityReturn_PlaneStress(const FloatArrayF<3> &totalStrain, GaussPoint *gp, TimeStep *tStep) const;
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    double computeYieldStress(double kappa, GaussPoint *gp, TimeStep *tStep) const;
+    double computeYieldStressPrime(double kappa) const;
 
-    virtual int hasNonLinearBehaviour() { return 1; }
-    virtual bool isCharacteristicMtrxSymmetric(MatResponseMode rMode) { return false; }
+    double computeDamage(GaussPoint *gp, TimeStep *tStep) const;
+    double computeDamageParam(double tempKappa) const;
+    double computeDamageParamPrime(double tempKappa) const;
+    virtual double computeCumPlastStrain(GaussPoint *gp, TimeStep *tStep) const;
 
-    virtual const char *giveInputRecordName() const { return _IFT_MisesMat_Name; }
-    virtual const char *giveClassName() const { return "MisesMat"; }
+    void initializeFrom(InputRecord &ir) override;
 
-    /// Returns a reference to the basic elastic material.
-    LinearElasticMaterial *giveLinearElasticMaterial() { return linearElasticMaterial; }
+    bool isCharacteristicMtrxSymmetric(MatResponseMode rMode) const override { return false; }
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const;
+    const char *giveInputRecordName() const override { return _IFT_MisesMat_Name; }
+    const char *giveClassName() const override { return "MisesMat"; }
 
-    virtual void give3dMaterialStiffnessMatrix(FloatMatrix &answer,
-                                               MatResponseMode mode,
-                                               GaussPoint *gp,
-                                               TimeStep *tStep);
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
 
-    virtual void give1dStressStiffMtrx(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep); 
-    virtual void give3dMaterialStiffnessMatrix_dPdF(FloatMatrix &answer,
-                                                    MatResponseMode mode,
-                                                    GaussPoint *gp,
-                                                    TimeStep *tStep);
+    FloatMatrixF<6,6> give3dMaterialStiffnessMatrix(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual void giveRealStressVector_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedE, TimeStep *tStep);
-    virtual void giveRealStressVector_1d(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedE, TimeStep *tStep);
+    FloatMatrixF<3,3> givePlaneStressStiffMtrx(MatResponseMode mmode, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual void giveFirstPKStressVector_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &vF, TimeStep *tStep);
+    FloatMatrixF<1,1> give1dStressStiffMtrx(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual double give(int aProperty, GaussPoint *gp, TimeStep *tStep);
-    double giveTemperature(GaussPoint *gp, TimeStep *tStep);
+    FloatArrayF<6> giveRealStressVector_3d(const FloatArrayF<6> &strain, GaussPoint *gp, TimeStep *tStep) const override;
+
+    FloatArrayF<3> giveRealStressVector_PlaneStress(const FloatArrayF<3> &totalStrain, GaussPoint *gp,TimeStep *tStep) const override;
+
+    FloatArrayF<1> giveRealStressVector_1d(const FloatArrayF<1> &reducedE, GaussPoint *gp, TimeStep *tStep) const override;
+
+    double give(int aProperty, GaussPoint *gp, TimeStep *tStep) const;
+    double giveTemperature(GaussPoint *gp, TimeStep *tStep) const;
 
 protected:
     void computeGLPlasticStrain(const FloatMatrix &F, FloatMatrix &Ep, FloatMatrix b, double J);
 
-    virtual void give3dLSMaterialStiffnessMatrix(FloatMatrix &answer,
-                                                 MatResponseMode mode,
-                                                 GaussPoint *gp,
-                                                 TimeStep *tStep);
 
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 };
 
 //=============================================================================
@@ -158,50 +156,42 @@ protected:
     /// Deviatoric trial stress - needed for tangent stiffness.
     FloatArray trialStressD;
 
-    /**************************************************/
-    double trialStressV;
-    /**************************************************/
+    /// volumetric trial stress - needed for tangent stiffness.
+    double trialStressV = 0.;
 
     FloatArray effStress;
     FloatArray tempEffStress;
 
     /// Cumulative plastic strain (initial).
-    double kappa;
+    double kappa = 0.;
 
     /// Cumulative plastic strain (final).
-    double tempKappa;
+    double tempKappa = 0.;
 
-    /************************/
-    double tempDamage, damage;
-    /******************************/
+    /// damage variable (initial).
+    double damage = 0.;
 
-    /// Left Cauchy-Green deformation gradient (initial).
-    FloatMatrix leftCauchyGreen;
-    /// Left Cauchy-Green deformation gradient (final).
-    FloatMatrix tempLeftCauchyGreen;
+    /// damage variable (final).
+    double tempDamage = 0.;
+
 
 public:
-    MisesMatStatus(int n, Domain * d, GaussPoint * g);
-    virtual ~MisesMatStatus();
+    MisesMatStatus(GaussPoint *g);
 
-    const FloatArray &givePlasticStrain() { return plasticStrain; }
+    const FloatArray &givePlasticStrain() const { return plasticStrain; }
 
-    const FloatArray &giveTrialStressDev() { return trialStressD; }
+    const FloatArray &giveTrialStressDev() const { return trialStressD; }
 
-    /*******************************************/
-    double giveTrialStressVol() { return trialStressV; }
-    /*******************************************/
-    double giveDamage() { return damage; }
-    double giveTempDamage() { return tempDamage; }
+    double giveTrialStressVol() const { return trialStressV; }
 
-    double giveCumulativePlasticStrain() { return kappa; }
-    double giveTempCumulativePlasticStrain() { return tempKappa; }
+    double giveDamage() const { return damage; }
+    double giveTempDamage() const { return tempDamage; }
 
-    const FloatMatrix & giveTempLeftCauchyGreen() { return tempLeftCauchyGreen; }
-    const FloatMatrix & giveLeftCauchyGreen() { return leftCauchyGreen; }
+    double giveCumulativePlasticStrain() const { return kappa; }
+    double giveTempCumulativePlasticStrain() const { return tempKappa; }
 
-    const FloatArray & giveTempEffectiveStress() { return tempEffStress; }
-    const FloatArray & giveEffectiveStress() { return effStress; }
+    const FloatArray &giveTempEffectiveStress() const { return tempEffStress; }
+    const FloatArray &giveEffectiveStress() const { return effStress; }
 
     void letTempPlasticStrainBe(const FloatArray &values) { tempPlasticStrain = values; }
     const FloatArray &getTempPlasticStrain() const { return tempPlasticStrain; }
@@ -215,26 +205,25 @@ public:
 
     void setTrialStressVol(double value) { trialStressV = value; }
 
-    void setTempCumulativePlasticStrain(double value) { tempKappa = value; }
-    /****************************************/
-    void setTempDamage(double value) { tempDamage = value; }
-    /************************************************/
 
-    void letTempLeftCauchyGreenBe(const FloatMatrix &values) { tempLeftCauchyGreen = values; }
-    void letLeftCauchyGreenBe(const FloatMatrix &values) { leftCauchyGreen = values; }
+
+
+    void setTempCumulativePlasticStrain(double value) { tempKappa = value; }
+
+    void setTempDamage(double value) { tempDamage = value; }
 
     const FloatArray &givePlasDef() { return plasticStrain; }
 
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    void printOutputAt(FILE *file, TimeStep *tStep) const override;
 
-    virtual void initTempStatus();
+    void initTempStatus() override;
 
-    virtual void updateYourself(TimeStep *tStep);
+    void updateYourself(TimeStep *tStep) override;
 
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 
-    virtual const char *giveClassName() const { return "MisesMatStatus"; }
+    const char *giveClassName() const override { return "MisesMatStatus"; }
 };
 } // end namespace oofem
 #endif // misesmat_h

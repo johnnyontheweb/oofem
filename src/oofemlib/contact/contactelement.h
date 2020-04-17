@@ -75,40 +75,34 @@ class IntegrationRule;
 class OOFEM_EXPORT ContactElement
 {
 private:
-    ContactDefinition *cDef;
-    
-    std :: vector< ContactElement *> slaveObjectList; // remove?
-    
-    IntArray dofIdArray;
-    
+    //std::unique_ptr<ContactDefinition> cDef;
+    std :: vector< std::unique_ptr<ContactElement> > slaveObjectList; // remove?
 
-    
+    IntArray dofIdArray;
+
 protected:
     bool inContact;
 public:
-    IntegrationRule *integrationRule;
+    std::unique_ptr<IntegrationRule> integrationRule;
     /// Constructor.
     ContactElement();
     /// Destructor.
     virtual ~ContactElement(){};
 
     virtual void setupIntegrationPoints(){};
-    
-    
-    ContactElement *giveSlave(const int num) { return slaveObjectList[num-1]; }
+
+    ContactElement *giveSlave(const int num) { return slaveObjectList[num-1].get(); }
     int giveNumberOfSlaves() { return (int)slaveObjectList.size(); }
-    virtual int instanciateYourself(DataReader *dr){ return 1; }
+    virtual int instanciateYourself(DataReader &dr){ return 1; }
     //virtual const char *giveClassName() const { return "ContactDefinition"; }
     bool isInContact() { return inContact; }
     virtual void giveDofManagersToAppendTo(IntArray &answer) { answer.clear(); }
-    
-    
-    virtual void computeContactForces(FloatArray &answer, TimeStep *tStep, CharType type, ValueModeType mode,
+
+    virtual void computeContactForces(FloatArray &answer, TimeStep *tStep, ValueModeType mode,
                                 const UnknownNumberingScheme &s, Domain *domain, FloatArray *eNorms) = 0;   
-    
-    virtual void computeContactTangent(FloatMatrix &answer, CharType type, TimeStep *tStep) = 0;
-    
-    
+
+    virtual void computeContactTangent(FloatMatrix &answer, TimeStep *tStep) = 0;
+
     virtual void giveLocationArray(IntArray &answer, const UnknownNumberingScheme &s) = 0;
     // set the dof id array if the contact element has its own dofs (Lagrange multipliers)
     virtual void setDofIdArray(IntArray &array){ this->dofIdArray = array; }
@@ -137,7 +131,7 @@ public:
     Node2NodeContact(DofManager *master, DofManager *slave);
     /// Destructor.
     virtual ~Node2NodeContact(){};
-    virtual int instanciateYourself(DataReader *dr);
+    virtual int instanciateYourself(DataReader &dr);
     virtual void setupIntegrationPoints();
     
     virtual void computeGap(FloatArray &answer, TimeStep *tStep);
@@ -178,7 +172,7 @@ public:
     Node2NodeContactL(DofManager *master, DofManager *slave);
     /// Destructor.
     virtual ~Node2NodeContactL(){};
-    //virtual int instanciateYourself(DataReader *dr);
+    //virtual int instanciateYourself(DataReader &dr);
     virtual void giveDofManagersToAppendTo(IntArray &answer); 
     virtual void computeContactTractionAt(GaussPoint *gp, FloatArray &t, FloatArray &gap, TimeStep *tStep);
     

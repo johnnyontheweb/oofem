@@ -51,11 +51,11 @@ Node2NodeLagrangianMultiplierContact :: Node2NodeLagrangianMultiplierContact(int
 {}
 
 
-IRResultType
-Node2NodeLagrangianMultiplierContact :: initializeFrom(InputRecord *ir)
+void
+Node2NodeLagrangianMultiplierContact :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;
-    this->useTangent = ir->hasField(_IFT_Node2NodeLagrangianMultiplierContact_useTangent);
+    ActiveBoundaryCondition :: initializeFrom(ir);
+    this->useTangent = ir.hasField(_IFT_Node2NodeLagrangianMultiplierContact_useTangent);
     IR_GIVE_FIELD(ir, this->masterSet, _IFT_Node2NodeLagrangianMultiplierContact_masterSet);
     IR_GIVE_FIELD(ir, this->slaveSet, _IFT_Node2NodeLagrangianMultiplierContact_slaveSet);
 
@@ -64,8 +64,6 @@ Node2NodeLagrangianMultiplierContact :: initializeFrom(InputRecord *ir)
         lmdm.push_back(std :: unique_ptr< Node >(new Node(0, domain) ) );
         lmdm.at(pos)->appendDof(new MasterDof(this->lmdm.at(pos).get(), ( DofIDItem ) ( this->giveDomain()->giveNextFreeDofID() ) ) );
     }
-
-    return ActiveBoundaryCondition :: initializeFrom(ir);
 }
 
 
@@ -186,9 +184,9 @@ Node2NodeLagrangianMultiplierContact :: computeTangentFromContact(FloatMatrix &a
 void
 Node2NodeLagrangianMultiplierContact :: computeGap(double &answer, Node *masterNode, Node *slaveNode, TimeStep *tStep)
 {
-    FloatArray xs, xm, uS, uM;
-    xs = * slaveNode->giveCoordinates();
-    xm = * masterNode->giveCoordinates();
+    FloatArray uS, uM;
+    auto xs = slaveNode->giveCoordinates();
+    auto xm = masterNode->giveCoordinates();
     FloatArray normal = xs - xm;
     double norm = normal.computeNorm();
     if ( norm < 1.0e-8 ) {
@@ -209,10 +207,9 @@ Node2NodeLagrangianMultiplierContact :: computeGap(double &answer, Node *masterN
 void
 Node2NodeLagrangianMultiplierContact :: computeNormalMatrixAt(FloatArray &answer, Node *masterNode, Node *slaveNode, TimeStep *TimeStep)
 {
-    FloatArray xs, xm;
-    xs = * slaveNode->giveCoordinates();
-    xm = * masterNode->giveCoordinates();
-    FloatArray normal = xs - xm;
+    const auto &xs = slaveNode->giveCoordinates();
+    const auto &xm = masterNode->giveCoordinates();
+    auto normal = xs - xm;
     double norm = normal.computeNorm();
     if ( norm < 1.0e-8 ) {
         OOFEM_ERROR("Couldn't compute normal between master node (num %d) and slave node (num %d), nodes are too close to each other.", masterNode->giveGlobalNumber(), slaveNode->giveGlobalNumber() );

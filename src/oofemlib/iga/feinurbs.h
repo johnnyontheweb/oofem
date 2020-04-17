@@ -40,26 +40,35 @@
 #include "floatmatrix.h"
 #include "mathfem.h"
 
+///@name Input fields for NURBSInterpolation
+//@{
+#define _IFT_NURBSInterpolation_weights "weights"
+//@}
+
 namespace oofem {
 /**
  * Interpolation class for NURBS.
  */
 class OOFEM_EXPORT NURBSInterpolation : public BSplineInterpolation
 {
+protected:
+    FloatArray weights;
+
 public:
     NURBSInterpolation(int nsd) : BSplineInterpolation(nsd) { }
-    virtual ~NURBSInterpolation();
 
-    virtual void evalN(FloatArray &answer, const FloatArray &lcoords, const FEICellGeometry &cellgeo);
-    virtual double evaldNdx(FloatMatrix &answer, const FloatArray &lcoords, const FEICellGeometry &cellgeo);
-    virtual void local2global(FloatArray &answer, const FloatArray &lcoords, const FEICellGeometry &cellgeo);
-    virtual int  global2local(FloatArray &answer, const FloatArray &lcoords, const FEICellGeometry &cellgeo) {
+    void initializeFrom(InputRecord &ir) override;
+
+    void evalN(FloatArray &answer, const FloatArray &lcoords, const FEICellGeometry &cellgeo) override;
+    double evaldNdx(FloatMatrix &answer, const FloatArray &lcoords, const FEICellGeometry &cellgeo) override;
+    void local2global(FloatArray &answer, const FloatArray &lcoords, const FEICellGeometry &cellgeo) override;
+    int global2local(FloatArray &answer, const FloatArray &lcoords, const FEICellGeometry &cellgeo) override {
         OOFEM_ERROR("Not yet implemented.");
         return 0;
     }
-    virtual void giveJacobianMatrixAt(FloatMatrix &jacobianMatrix, const FloatArray &lcoords, const FEICellGeometry &cellgeo);
+    void giveJacobianMatrixAt(FloatMatrix &jacobianMatrix, const FloatArray &lcoords, const FEICellGeometry &cellgeo) override;
 
-    virtual const char *giveClassName() const { return "NURBSInterpolation"; }
+    const char *giveClassName() const { return "NURBSInterpolation"; }
 };
 } // end namespace oofem
 #endif // feinurbs_h

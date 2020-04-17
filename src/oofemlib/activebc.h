@@ -72,18 +72,15 @@ public:
     /// Destructor.
     virtual ~ActiveBoundaryCondition() { }
 
-    IRResultType initializeFrom(InputRecord *ir)
+    void initializeFrom(InputRecord &ir) override
     {
         GeneralBoundaryCondition :: initializeFrom(ir);
 
-        IRResultType result;
         IntArray tempA, tempB, tempC;
         IR_GIVE_OPTIONAL_FIELD(ir, tempB, _IFT_ActiveBoundaryCondition_elementSides);
         for ( int i = 0; i < tempB.giveSize() / 2; ++i ) {
-            this->addElementSide( tempB(i * 2), tempB(i * 2 + 1) );
+            this->addElementSide( tempB[i * 2], tempB[i * 2 + 1] );
         }
-
-        return IRRT_OK;
     }
 
     ///  @name Methods supporting classical input files.
@@ -104,9 +101,10 @@ public:
      * @param type Type of matrix to assemble.
      * @param r_s Row numbering scheme.
      * @param c_s Column numbering scheme.
+     * @param scale Scaling factor.
      */
     virtual void assemble(SparseMtrx &answer, TimeStep *tStep,
-                          CharType type, const UnknownNumberingScheme &r_s, const UnknownNumberingScheme &c_s) { }
+                          CharType type, const UnknownNumberingScheme &r_s, const UnknownNumberingScheme &c_s, double scale = 1.0) { }
 
     /**
      * Assembles B.C. contributions to specified vector.
@@ -115,12 +113,12 @@ public:
      * @param type Type of matrix to assemble.
      * @param mode Mode of value.
      * @param s Numbering scheme.
-     * @param eNorms Norms for each dofid (optional).
+     * @param eNorms Norms for each dofid.
      * @return Equivalent of the sum of the element norm (squared) of assembled vector.
      */
     virtual void assembleVector(FloatArray &answer, TimeStep *tStep,
                                 CharType type, ValueModeType mode,
-                                const UnknownNumberingScheme &s, FloatArray *eNorms = NULL) { }
+                                const UnknownNumberingScheme &s, FloatArray *eNorms=nullptr) { }
 
     /**
      * Gives a list of location arrays that will be assembled.
@@ -182,7 +180,7 @@ public:
     virtual Dof *giveMasterDof(ActiveDof *dof, int mdof)
     {
         OOFEM_ERROR("Not supported by bc.");
-        return NULL;
+        return nullptr;
     }
     virtual void computeDofTransformation(ActiveDof *dof, FloatArray &masterContribs)
     {

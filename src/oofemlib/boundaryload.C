@@ -39,6 +39,8 @@
 #include "dynamicinputrecord.h"
 #include "valuemodetype.h"
 #include "domain.h"
+#include "datastream.h"
+#include "contextioerr.h"
 
 namespace oofem {
 
@@ -88,15 +90,10 @@ BoundaryLoad :: computeValueAt(FloatArray &answer, TimeStep *tStep, const FloatA
 }
 
 
-IRResultType
-BoundaryLoad :: initializeFrom(InputRecord *ir)
+void
+BoundaryLoad :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
-    result = Load :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    Load :: initializeFrom(ir);
 
     int dummy;
     IR_GIVE_OPTIONAL_FIELD(ir, dummy, "ndofs");
@@ -116,8 +113,6 @@ BoundaryLoad :: initializeFrom(InputRecord *ir)
 
     temperOffset = 273.15;
     IR_GIVE_OPTIONAL_FIELD(ir, temperOffset, _IFT_BoundaryLoad_temperOffset);
-    
-    return IRRT_OK;
 }
 
 
@@ -166,5 +161,52 @@ BoundaryLoad :: giveTemperOffset(void)
     return this->temperOffset;
 }
 
+void
+BoundaryLoad :: saveContext(DataStream &stream, ContextMode mode)
+{
+    Load :: saveContext(stream, mode);
+
+    if ( mode & CM_Definition ) {
+        if ( !stream.write(lType) ) {
+          THROW_CIOERR(CIO_IOERR);
+        }
+        if ( !stream.write(coordSystemType) ) {
+          THROW_CIOERR(CIO_IOERR);
+        }
+        propertyDictionary.saveContext(stream);
+        propertyTimeFunctDictionary.saveContext(stream);
+
+        if ( !stream.write(temperOffset) ) {
+          THROW_CIOERR(CIO_IOERR);
+        }
+    }
+}
+
+
+void
+BoundaryLoad :: restoreContext(DataStream &stream, ContextMode mode)
+{
+    Load :: restoreContext(stream, mode);
+
+    if ( mode & CM_Definition ) {
+        int _val;
+        if ( !stream.read(_val) ) {
+          THROW_CIOERR(CIO_IOERR);
+        }
+        lType = (bcType) _val;
+
+        if ( !stream.read(_val) ) {
+          THROW_CIOERR(CIO_IOERR);
+        }
+        coordSystemType = (CoordSystType) _val;
+
+        propertyDictionary.restoreContext(stream);
+        propertyTimeFunctDictionary.restoreContext(stream);
+
+        if ( !stream.read(temperOffset) ) {
+          THROW_CIOERR(CIO_IOERR);
+        }
+    }
+}
 
 } // end namespace oofem

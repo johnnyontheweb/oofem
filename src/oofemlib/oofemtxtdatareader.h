@@ -65,14 +65,20 @@ public:
     OOFEMTXTDataReader(const OOFEMTXTDataReader & x);
     virtual ~OOFEMTXTDataReader();
 
-    virtual InputRecord *giveInputRecord(InputRecordType, int recordId);
-    virtual bool peakNext(const std :: string &keyword);
-    virtual void finish();
-    virtual const char *giveDataSourceName() const { return dataSourceName.c_str(); }
+    InputRecord &giveInputRecord(InputRecordType, int recordId) override;
+    bool peakNext(const std :: string &keyword) override;
+    void finish() override;
+    std :: string giveReferenceName() const override { return dataSourceName; }
 
 protected:
-    bool giveLineFromInput(std :: istream &stream, int &lineNum, std :: string &line);
-    bool giveRawLineFromInput(std :: istream &stream, int &lineNum, std :: string &line);
+
+    /**
+     * Reads one line from inputStream
+     * Parts within quotations have case preserved.
+     */
+    bool giveLineFromInput(std :: ifstream &stream, int &lineNum, std :: string &line);
+    /// Reads one line from stream.
+    bool giveRawLineFromInput(std :: ifstream &stream, int &lineNum, std :: string &line);
 };
 } // end namespace oofem
 #endif // oofemtxtdatareader_h

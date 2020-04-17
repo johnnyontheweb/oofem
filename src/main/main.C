@@ -35,7 +35,7 @@
 //  MAIN
 //  Solves finite element problems.
 //
-#ifdef __PYTHON_MODULE
+#ifdef _PYTHON_EXTENSION
  #include <Python.h>
 #endif
 
@@ -43,6 +43,7 @@
 #include "oofemcfg.h"
 
 #include "oofemtxtdatareader.h"
+#include "datastream.h"
 #include "util.h"
 #include "error.h"
 #include "logger.h"
@@ -59,6 +60,10 @@
 
 #ifdef __SLEPC_MODULE
  #include <slepceps.h>
+#endif
+
+#ifdef _OPENMP
+#include <omp.h>
 #endif
 
 #ifdef __OOFEG
@@ -82,14 +87,8 @@
 
 using namespace oofem;
 
-void freeStoreError()
-// This function is called whenever operator "new" is unable to allocate memory.
-{
-    OOFEM_FATAL("free store exhausted");
-}
-
 // debug
-void oofem_debug(EngngModel *emodel);
+void oofem_debug(EngngModel &emodel);
 
 void oofem_print_help();
 void oofem_print_version();
@@ -111,11 +110,24 @@ void SignalHandler(int signal)
 }
 #endif
 
-int main(int argc, char *argv[])
-{
-#ifndef _MSC_VER
-    std :: set_new_handler(freeStoreError);   // prevents memory overflow
+// Handler for uncaught exceptions
+void exception_handler() {
+    try {
+        auto eptr = std::current_exception();
+        if (eptr) {
+            std::rethrow_exception(eptr);
+        }
+    } catch(const std::exception& e) {
+        fprintf(stderr, "Caught exception: %s\n", e.what());
+#ifdef __GNUC__
+        print_stacktrace();
 #endif
+        exit(1);
+    }
+}int main(int argc, char *argv[])
+{
+    // Stack trace on uncaught exceptions;
+    std::set_terminate( exception_handler );
 
 #ifdef MEMSTR
 	typedef void(*SignalHandlerPointer)(int);
@@ -133,7 +145,6 @@ int main(int argc, char *argv[])
          inputFileFlag = false, outputFileFlag = false, errOutputFileFlag = false;
     std :: stringstream inputFileName, outputFileName, errOutputFileName;
     std :: vector< const char * >modulesArgs;
-    EngngModel *problem = 0;
 
     int rank = 0;
 
@@ -141,6 +152,7 @@ int main(int argc, char *argv[])
  #ifdef __USE_MPI
     MPI_Init(& argc, & argv);
     MPI_Comm_rank(MPI_COMM_WORLD, & rank);
+    oofem_logger.setComm(MPI_COMM_WORLD);
  #endif
 #endif
 
@@ -174,8 +186,7 @@ int main(int argc, char *argv[])
                 if ( i + 1 < argc ) {
                     i++;
                     restartFlag = true;
-                    restartStepInfo [ 0 ] = strtol(argv [ i ], NULL, 10);
-                    restartStepInfo [ 1 ] = 0;
+                    restartStep = strtol(argv [ i ], NULL, 10);
                 }
             } else if ( strcmp(argv [ i ], "-rn") == 0 ) {
                 renumberFlag = true;
@@ -210,6 +221,17 @@ int main(int argc, char *argv[])
                 parallelFlag = true;
 #else
                 fprintf(stderr, "\nCan't use -p, not compiled with parallel support\a\n\n");
+                exit(EXIT_FAILURE);
+#endif
+            } else if ( strcmp(argv [i], "-t") == 0) {
+#ifdef _OPENMP
+                if ( i + 1 < argc ) {
+                    i++;
+                    int numberOfThreads = strtol(argv [ i ], NULL, 10);
+                    omp_set_num_threads (numberOfThreads);
+                }
+#else
+                fprintf(stderr, "\nCan't use -t, not compiled with OpenMP support\a\n\n");
                 exit(EXIT_FAILURE);
 #endif
             } else { // Arguments not handled by OOFEM is to be passed to PETSc
@@ -252,7 +274,7 @@ int main(int argc, char *argv[])
     SlepcInitialize(& modulesArgc, & modulesArgv, PETSC_NULL, PETSC_NULL);
 #endif
 
-#ifdef __PYTHON_MODULE
+#ifdef _PYTHON_EXTENSION
     Py_Initialize();
     // Adding . to the system path allows us to run Python functions stored in the working directory.
     PyRun_SimpleString("import sys");
@@ -276,8 +298,8 @@ int main(int argc, char *argv[])
     // print header to redirected output
     OOFEM_LOG_FORCED(PRG_HEADER_SM);
 
-    OOFEMTXTDataReader dr( inputFileName.str ( ).c_str() );
-    problem = :: InstanciateProblem(& dr, _processor, contextFlag, NULL, parallelFlag);
+    OOFEMTXTDataReader dr( inputFileName.str() );
+    auto problem = :: InstanciateProblem(dr, _processor, contextFlag, NULL, parallelFlag);
     dr.finish();
     if ( !problem ) {
         OOFEM_LOG_ERROR("Couldn't instanciate problem, exiting");
@@ -293,27 +315,31 @@ int main(int argc, char *argv[])
 
     if ( restartFlag ) {
         try {
-            problem->restoreContext(NULL, CM_State | CM_Definition, ( void * ) restartStepInfo);
-        } catch(ContextIOERR & c) {
+            FileDataStream stream(problem->giveContextFileName(restartStep, 0), false);
+            problem->restoreContext(stream, CM_State | CM_Definition);
+        } catch ( const FileDataStream::CantOpen & e ) {
+            printf("%s", e.what());
+            exit(1);
+        } catch ( ContextIOERR & c ) {
             c.print();
             exit(1);
         }
         problem->initStepIncrements();
     } else if ( adaptiveRestartFlag ) {
         problem->initializeAdaptive(adaptiveRestartFlag);
-        problem->saveContext(NULL, CM_State | CM_Definition);
+        problem->saveStepContext(problem->giveCurrentStep(),CM_State);
         // exit (1);
     }
 
     if ( debugFlag ) {
-        oofem_debug(problem);
+        oofem_debug(*problem);
     }
 
 
     try {
         problem->solveYourself();
     } catch(OOFEM_Terminate & c) {
-        delete problem;
+        problem = nullptr;
 
         oofem_finalize_modules();
 
@@ -327,7 +353,7 @@ int main(int argc, char *argv[])
     }
 #endif
     oofem_logger.printStatistics();
-    delete problem;
+    problem = nullptr;
 
     oofem_finalize_modules();
 
@@ -382,7 +408,7 @@ void oofem_finalize_modules()
     MPI_Finalize();
 #endif
 
-#ifdef __PYTHON_MODULE
+#ifdef _PYTHON_EXTENSION
     Py_Finalize();
 #endif
 }
@@ -390,10 +416,10 @@ void oofem_finalize_modules()
 //#include "loadbalancer.h"
 //#include "xfem/iga.h"
 
-void oofem_debug(EngngModel *emodel)
+void oofem_debug(EngngModel &emodel)
 {
     //FloatMatrix k;
-    //((BsplinePlaneStressElement*)emodel.giveDomain(1)->giveElement(1))->giveCharacteristicMatrix(k, TangentStiffnessMatrix, NULL);
+    //((BsplinePlaneStressElement*)emodel.giveDomain(1)->giveElement(1))->giveCharacteristicMatrix(k, StiffnessMatrix, NULL);
 
 #ifdef __PARALLEL_MODE
     //LoadBalancer* lb = emodel.giveDomain(1)->giveLoadBalancer();

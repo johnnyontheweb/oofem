@@ -38,9 +38,13 @@
 #include "matstatus.h"
 #include "interface.h"
 #include "intarray.h"
+#include "grid.h"
+#include "mathfem.h"
 #include "dynamicinputrecord.h"
+
 #include <list>
 #include <memory>
+
 ///@name Input fields for NonlocalMaterialExtensionInterface
 //@{
 #define _IFT_NonlocalMaterialExtensionInterface_regionmap "regionmap"
@@ -55,7 +59,13 @@
 #define _IFT_NonlocalMaterialExtensionInterface_beta "beta"
 #define _IFT_NonlocalMaterialExtensionInterface_zeta "zeta"
 #define _IFT_NonlocalMaterialExtensionInterface_px "px"
-
+#define _IFT_NonlocalMaterialExtensionInterface_averagingtype "averagingtype"
+#define _IFT_NonlocalMaterialExtensionInterface_exp "exp"
+#define _IFT_NonlocalMaterialExtensionInterface_rf "rf"
+#define _IFT_NonlocalMaterialExtensionInterface_gridsize "gridsize"
+#define _IFT_NonlocalMaterialExtensionInterface_initdiag "initdiag"
+#define _IFT_NonlocalMaterialExtensionInterface_order "order"
+#define _IFT_NonlocalMaterialExtensionInterface_centdiff "centdiff"
 //@}
 
 namespace oofem {
@@ -91,9 +101,11 @@ class OOFEM_EXPORT NonlocalMaterialStatusExtensionInterface : public Interface
 {
 protected:
     /// List containing localIntegrationRecord values.
-    std :: list< localIntegrationRecord >integrationDomainList;
-    /// Nonlocal volume of corresponding integration point.
+    std :: vector< localIntegrationRecord >integrationDomainList;
+    /// Nonlocal volume around the corresponding integration point.
     double integrationScale;
+    /// Local volume around the corresponding integration point.
+    double volumeAround;
 
 public:
     /**
@@ -109,11 +121,15 @@ public:
      * references to integration points and their weights that influence the nonlocal average in
      * receiver's associated integration point.
      */
-    std :: list< localIntegrationRecord > *giveIntegrationDomainList() { return & integrationDomainList; }
+    std :: vector< localIntegrationRecord > *giveIntegrationDomainList() { return & integrationDomainList; }
     /// Returns associated integration scale.
     double giveIntegrationScale() { return integrationScale; }
     /// Sets associated integration scale.
     void setIntegrationScale(double val) { integrationScale = val; }
+    /// Returns associated volume.
+    double giveVolumeAround() { return volumeAround; }
+    /// Sets associated integration scale.
+    void setVolumeAround(double val) { volumeAround = val; }
     /// clears the integration list of receiver
     void clear() { integrationDomainList.clear(); }
 };
@@ -155,27 +171,36 @@ protected:
      *
      * StateCounterType lastUpdatedStateCounter;
      */
-    Domain *domain;
+    Domain *domain = nullptr;
     /// Map indicating regions to skip (region - cross section model).
     IntArray regionMap;
     /// Flag indicating whether to keep nonlocal interaction tables of integration points cached.
-    bool permanentNonlocTableFlag;
+    bool permanentNonlocTableFlag = false;
     /// Type characterizing the nonlocal weight function.
     enum WeightFunctionType { WFT_Unknown, WFT_Bell, WFT_Gauss, WFT_Green, WFT_Uniform, WFT_UniformOverElement, WFT_Green_21 };
     /// Parameter specifying the type of nonlocal weight function.
     WeightFunctionType weightFun;
+    /// Grid on which the eikonal equation will be solved (used by eikonal nonlocal models)
+    int gridSize = 0;
+    std::unique_ptr<Grid> grid;
+    /// Auxiliary matrix to store minimum distances of grid points from Gauss points
+    std::unique_ptr<FloatMatrix> minDist2;
+    /// Optional parameters setting details of the fast marching method
+    double initDiag = 0.;
+    int order = 0;
+    int centDiff = 0;
 
     /**
      * Characteristic length of the nonlocal model
      * (its interpretation depends on the type of weight function).
      */
-    double cl;
+    mutable double cl = 0.;
 
     /// Support radius.
-    double suprad;
+    mutable double suprad = 0.;
 
     /// For "undernonlocal" or "overnonlocal" formulation.
-    double mm;
+    double mm = 0.;
 
     /// Type characterizing the scaling approach.
     enum ScalingType { ST_Unknown, ST_Standard, ST_Noscaling, ST_Borino };
@@ -193,7 +218,7 @@ protected:
      * Is different to cl when a Stress-based or a Distance-based
      * nonlocal variation is applied
      */
-    double cl0;
+    double cl0 = 0.;
     /// Type characterizing the Nonlocal variation
     enum NlVariationType { NLVT_Standard, NLVT_DistanceBasedLinear, NLVT_StressBased, NLVT_DistanceBasedExponential };
     ///Parameter specifying the type of nonlocal variation.
@@ -203,7 +228,7 @@ protected:
      * gives its minimum allowed value. It is used when a Stress-based
      * or a Distance-based nonlocal variation is applied
      */
-    double beta;
+    double beta = 0.;
     /**
      * Parameter used when Distance-based nonlocal variation is applied
      * When it is multiplied with the interaction radius cl gives the maxinmum
@@ -211,7 +236,7 @@ protected:
      * from the boundary is larger than this value the interaction radius cl is set
      * to cl0
      */
-    double zeta;
+    double zeta = 0.;
 
     /**
      * Parameter specifying the periodic shift in x-direction. Typically it is zero.
@@ -220,7 +245,16 @@ protected:
      * but also if the source point shifted by -px or +px satisfies this condition.
      * This is useful if the mesh represents a periodic cell.
      */
-    double px;
+    double px = 0.;
+
+    // Parameters used by models with evolving characteristic length.
+
+    /// Final value of interaction radius, for a model with evolving characteristic length.
+    double Rf = 0.;
+    /// Parameter used as an exponent by models with evolving characteristic length.
+    double exponent = 0.;
+    /// Parameter specifying how the weight function should be adjusted due to damage.
+    int averType = 0;
 
 public:
     /**
@@ -247,7 +281,7 @@ public:
      * last modification time mark is kept.
      * @see Element::updateBeforeNonlocalAverage
      */
-    void updateDomainBeforeNonlocAverage(TimeStep *tStep);
+    void updateDomainBeforeNonlocAverage(TimeStep *tStep) const;
 
     /**
      * Builds list of integration points which take part in nonlocal average in given integration point.
@@ -257,7 +291,7 @@ public:
      * influencing integration points would be wasting of space and should be cleared after averaging has
      * been finished in integration point. The endIPNonlocalAverage method will ensure this.
      */
-    void buildNonlocalPointTable(GaussPoint *gp);
+    void buildNonlocalPointTable(GaussPoint *gp) const;
 
     /**
      * Rebuild list of integration points which take part
@@ -266,7 +300,34 @@ public:
      * a <em>complete</em> list of elements contributing to receiver. If equal to NULL
      * existing list is cleared and  buildNonlocalPointTable service is invoked.
      */
-    void rebuildNonlocalPointTable(GaussPoint *gp, IntArray *contributingElems);
+    void rebuildNonlocalPointTable(GaussPoint *gp, IntArray *contributingElems) const;
+
+    /**
+     * Recompute the nonlocal interaction weights based on the current solution (e.g., on the damage field).
+     * This method is used e.g. by eikonal nonlocal damage models.
+     */
+    void modifyNonlocalWeightFunctionAround(GaussPoint *gp) const;
+    void modifyNonlocalWeightFunction_1D_Around(GaussPoint *gp) const;
+
+    /**
+     * Provide the current value of the variable that affects nonlocal interaction (e.g., of damage)
+     * This method is used e.g. by eikonal nonlocal damage models.
+     */
+    virtual double giveNonlocalMetricModifierAt(GaussPoint *gp) const { return 1.; }
+
+    /**
+     * Compute the factor that specifies how the interaction length should be modified,
+     * based on the current solution (e.g., on the damage field).
+     * This method is used e.g. by eikonal nonlocal damage models.
+     */
+    double computeDistanceModifier(double damage) const;
+
+    /**
+     * Compute the modified interaction length based on the current solution (e.g., on the damage field).
+     * This method is used e.g. by eikonal nonlocal damage models.
+     */
+    double computeModifiedLength(double length, double dam1, double dam2) const;
+
     /**
      * Returns integration list corresponding to given integration point.
      * Contains localIntegrationRecord structures, containing
@@ -274,7 +335,7 @@ public:
      * receiver's associated integration point.
      * Rebuilds the IP list by calling  buildNonlocalPointTable if not available.
      */
-    std :: list< localIntegrationRecord > *giveIPIntegrationList(GaussPoint *gp);
+    std :: vector< localIntegrationRecord > *giveIPIntegrationList(GaussPoint *gp) const;
 
     /**
      * Evaluates the basic nonlocal weight function for a given distance
@@ -283,7 +344,7 @@ public:
      * @param distance Distance between interacting points.
      * @return Value of weight function.
      */
-    virtual double computeWeightFunction(double distance);
+    virtual double computeWeightFunction(double distance) const;
 
     /**
      * Evaluates the basic nonlocal weight function for two points
@@ -293,13 +354,13 @@ public:
      * @param coord Coordinates of receiver point.
      * @return Value of weight function.
      */
-    virtual double computeWeightFunction(const FloatArray &src, const FloatArray &coord);
+    virtual double computeWeightFunction(const FloatArray &src, const FloatArray &coord) const;
 
     /**
      * Provides the integral of the weight function
      * over the contributing volume in 1, 2 or 3D.
      */
-    double giveIntegralOfWeightFunction(const int spatial_dimension);
+    double giveIntegralOfWeightFunction(const int spatial_dimension) const;
 
 
     /// Determines the maximum value of the nonlocal weight function.
@@ -309,7 +370,7 @@ public:
      * Determines the number of material regions of domain.
      * In the current implementation the region is associated with cross section model.
      */
-    int giveNumberOfRegions();
+    int giveNumberOfRegions() const;
     /*
      * Returns the region id of given element
      * @param element pointer to element which region id is requested.
@@ -320,17 +381,17 @@ public:
      * Determines, whether receiver has bounded weighting function (limited support).
      * @return True if weighting function bounded, zero otherwise.
      */
-    virtual int hasBoundedSupport() { return 1; }
+    virtual int hasBoundedSupport() const { return 1; }
     /**
      * Determines the width (radius) of limited support of weighting function.
      * i.e., the distance at which the interaction weight becomes zero.
      */
-    virtual double evaluateSupportRadius();
+    virtual double evaluateSupportRadius() const;
 
     /// Returns reference to domain.
     Domain *giveDomain() { return this->domain; }
 
-    IRResultType initializeFrom(InputRecord *ir);
+    void initializeFrom(InputRecord &ir);
     /**
      * Stores receiver in an input record
      * @param input Input record to be filled in.
@@ -349,7 +410,7 @@ public:
      * This can save significant memory, since nonlocal tables are not stored, but every time computed when needed,
      * but on the other hand computational time may significantly grow.
      */
-    void endIPNonlocalAverage(GaussPoint *gp);
+    void endIPNonlocalAverage(GaussPoint *gp) const;
 
 protected:
     /*
@@ -362,7 +423,7 @@ protected:
      */
     //bool isBarrierActivated (const FloatArray& c1, const FloatArray& c2) const;
 
-    void applyBarrierConstraints(const FloatArray &gpCoords, const FloatArray &jGpCoords, double &weight);
+    void applyBarrierConstraints(const FloatArray &gpCoords, const FloatArray &jGpCoords, double &weight) const;
 
     /**
      * Manipulates weight on integration point in the element.
@@ -372,7 +433,7 @@ protected:
      * @param gp Pointer to the GP owing the PointTable.
      * @param jGp Pointer to GP in the PointTable.
      */
-    void manipulateWeight(double &weight, GaussPoint *gp, GaussPoint *jGp);
+    void manipulateWeight(double &weight, GaussPoint *gp, GaussPoint *jGp) const;
 
     /**
      * Provides the distance based interaction radius
@@ -382,7 +443,11 @@ protected:
      * @param gpCoords The Gauss points' coordinates, whose interaction radius is calculated based on the distance-based averaging approach.
      * @return New interaction radius based on the Distance of the Gauss Point from Nonlocal Boundaries.
      */
-    double giveDistanceBasedInteractionRadius(const FloatArray &gpCoords);
+    double giveDistanceBasedInteractionRadius(const FloatArray &gpCoords) const;
+
+    int mapToGridPoint(double x, double x0) const { return 1 + gridSize + ( int ) ceil(gridSize * ( x - x0 ) / suprad - 0.5); }
+    double mapToGridCoord(double x, double x0) const { return 1. + gridSize + gridSize * ( x - x0 ) / suprad; }
+    double dist2FromGridNode(double x, double y, int j, int i) const { return ( ( x - j ) * ( x - j ) + ( y - i ) * ( y - i ) ); }
 };
 } // end namespace oofem
 #endif // nonlocalmaterialext_h

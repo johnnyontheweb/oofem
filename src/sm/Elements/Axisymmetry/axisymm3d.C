@@ -32,7 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "Elements/Axisymmetry/axisymm3d.h"
+#include "sm/Elements/Axisymmetry/axisymm3d.h"
 #include "fei2dtrlin.h"
 #include "node.h"
 #include "gausspoint.h"
@@ -106,24 +106,17 @@ Axisymm3d :: giveArea()
 }
 
 
-IRResultType
-Axisymm3d :: initializeFrom(InputRecord *ir)
+void
+Axisymm3d :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
     numberOfGaussPoints = 1;
-    result = StructuralElement :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    StructuralElement :: initializeFrom(ir);
 
     if ( !( ( numberOfGaussPoints == 1 ) ||
            ( numberOfGaussPoints == 4 ) ||
            ( numberOfGaussPoints == 7 ) ) ) {
         numberOfGaussPoints = 1;
     }
-
-    return IRRT_OK;
 }
 
 

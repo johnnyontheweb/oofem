@@ -32,7 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/EngineeringModels/incrementallinearstatic.h"
+#include "sm/EngineeringModels/incrementallinearstatic.h"
 #include "timestep.h"
 #include "dof.h"
 #include "domain.h"
@@ -76,7 +76,7 @@ NumericalMethod *IncrementalLinearStatic :: giveNumericalMethod(MetaStep *mStep)
 
 {
     if ( !nMethod ) {
-        nMethod.reset( classFactory.createSparseLinSolver(solverType, this->giveDomain(1), this) );
+        nMethod = classFactory.createSparseLinSolver(solverType, this->giveDomain(1), this);
         if ( !nMethod ) {
             OOFEM_ERROR("linear solver creation failed for lstype %d", solverType);
         }
@@ -86,10 +86,8 @@ NumericalMethod *IncrementalLinearStatic :: giveNumericalMethod(MetaStep *mStep)
 }
 
 
-IRResultType IncrementalLinearStatic :: initializeFrom(InputRecord *ir)
+void IncrementalLinearStatic :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;
-
     IR_GIVE_OPTIONAL_FIELD(ir, discreteTimes, _IFT_IncrementalLinearStatic_prescribedtimes);
     if ( discreteTimes.giveSize() > 0 ) {
         numberOfSteps = discreteTimes.giveSize();
@@ -112,8 +110,24 @@ IRResultType IncrementalLinearStatic :: initializeFrom(InputRecord *ir)
     IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_EngngModel_smtype);
     sparseMtrxType = ( SparseMtrxType ) val;
 
+
+    suppressOutput = ir.hasField(_IFT_EngngModel_suppressOutput);
+
+    if(suppressOutput) {
+    	printf("Suppressing output.\n");
+    }
+    else {
+
+		if ( ( outputStream = fopen(this->dataOutputFileName.c_str(), "w") ) == NULL ) {
+			OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str());
+		}
+
+		fprintf(outputStream, "%s", PRG_HEADER);
+		fprintf(outputStream, "\nStarting analysis on: %s\n", ctime(& this->startTime) );
+		fprintf(outputStream, "%s\n", simulationDescription.c_str());
+	}
+
     //StructuralEngngModel::initializeFrom (ir);
-    return IRRT_OK;
 }
 
 
@@ -135,12 +149,12 @@ double IncrementalLinearStatic :: giveDiscreteTime(int iStep)
 TimeStep *IncrementalLinearStatic :: giveNextStep()
 {
     if ( !currentStep ) {
-        currentStep.reset( new TimeStep(giveNumberOfTimeStepWhenIcApply(), this, 0, 0.,  this->giveDiscreteTime(1), 0) );
+        currentStep = std::make_unique<TimeStep>(giveNumberOfTimeStepWhenIcApply(), this, 0, 0.,  this->giveDiscreteTime(1), 0);
     }
 
     previousStep = std :: move(currentStep);
     double dt = this->giveDiscreteTime(previousStep->giveNumber()+1) - previousStep->giveTargetTime();
-    currentStep.reset( new TimeStep(*previousStep, dt) );
+    currentStep = std::make_unique<TimeStep>(*previousStep, dt);
     return currentStep.get();
 }
 
@@ -278,7 +292,7 @@ void IncrementalLinearStatic :: solveYourselfAt(TimeStep *tStep)
 #ifdef VERBOSE
     OOFEM_LOG_INFO("Assembling stiffness matrix\n");
 #endif
-    stiffnessMatrix.reset( classFactory.createSparseMtrx(sparseMtrxType) );
+    stiffnessMatrix = classFactory.createSparseMtrx(sparseMtrxType);
     if ( !stiffnessMatrix ) {
         OOFEM_ERROR("sparse matrix creation failed");
     }
@@ -348,69 +362,14 @@ void IncrementalLinearStatic :: updateDofUnknownsDictionary(DofManager *inode, T
 }
 
 
-void IncrementalLinearStatic :: terminate(TimeStep *tStep)
+void IncrementalLinearStatic :: saveContext(DataStream &stream, ContextMode mode)
 {
-    StructuralEngngModel :: terminate(tStep);
-    this->printReactionForces(tStep, 1);
-    fflush( this->giveOutputStream() );
+    StructuralEngngModel :: saveContext(stream, mode);
 }
 
 
-contextIOResultType IncrementalLinearStatic :: saveContext(DataStream *stream, ContextMode mode, void *obj)
+void IncrementalLinearStatic :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    int closeFlag = 0;
-    contextIOResultType iores;
-    FILE *file = NULL;
-
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, this->giveCurrentStep()->giveNumber(),
-                                    this->giveCurrentStep()->giveVersion(), contextMode_write) ) {
-            THROW_CIOERR(CIO_IOERR);
-        }
-
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
-
-    if ( ( iores = StructuralEngngModel :: saveContext(stream, mode) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete stream;
-        stream = NULL;
-    } // ensure consistent records
-
-    return CIO_OK;
-}
-
-
-contextIOResultType IncrementalLinearStatic :: restoreContext(DataStream *stream, ContextMode mode, void *obj)
-{
-    int closeFlag = 0, istep, iversion;
-    contextIOResultType iores;
-    FILE *file = NULL;
-    this->resolveCorrespondingStepNumber(istep, iversion, obj);
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, istep, iversion, contextMode_read) ) {
-            THROW_CIOERR(CIO_IOERR);
-        }
-
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
-
-    if ( ( iores = StructuralEngngModel :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete stream;
-        stream = NULL;
-    } // ensure consistent records
-
-    return CIO_OK;
+    StructuralEngngModel :: restoreContext(stream, mode);
 }
 } // end namespace oofem

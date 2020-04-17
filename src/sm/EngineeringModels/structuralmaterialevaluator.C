@@ -37,8 +37,8 @@
 #include "timestep.h"
 #include "domain.h"
 #include "gausspoint.h"
-#include "../sm/Materials/structuralmaterial.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Materials/structuralmaterial.h"
+#include "sm/Materials/structuralms.h"
 #include "function.h"
 #include "classfactory.h"
 
@@ -55,10 +55,8 @@ StructuralMaterialEvaluator :: StructuralMaterialEvaluator(int i, EngngModel *_m
 StructuralMaterialEvaluator :: ~StructuralMaterialEvaluator()
 { }
 
-IRResultType StructuralMaterialEvaluator :: initializeFrom(InputRecord *ir)
+void StructuralMaterialEvaluator :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;
-
     this->deltaT = 1.0;
     IR_GIVE_OPTIONAL_FIELD(ir, this->deltaT, _IFT_StructuralMaterialEvaluator_deltat);
     IR_GIVE_FIELD(ir, this->numberOfSteps, _IFT_StructuralMaterialEvaluator_numberOfTimeSteps);
@@ -67,6 +65,7 @@ IRResultType StructuralMaterialEvaluator :: initializeFrom(InputRecord *ir)
 
     IR_GIVE_FIELD(ir, this->cmpntFunctions, _IFT_StructuralMaterialEvaluator_componentFunctions);
     IR_GIVE_FIELD(ir, this->sControl, _IFT_StructuralMaterialEvaluator_stressControl);
+    this->keepTangent = ir.hasField(_IFT_StructuralMaterialEvaluator_keepTangent);
 
     tolerance = 1.0;
     if ( this->sControl.giveSize() > 0 ) {
@@ -81,8 +80,6 @@ IRResultType StructuralMaterialEvaluator :: initializeFrom(InputRecord *ir)
             eControl.followedBy(i);
         }
     }
-
-    return IRRT_OK;
 }
 
 
@@ -95,7 +92,7 @@ void StructuralMaterialEvaluator :: solveYourself()
     gps.clear();
     gps.reserve(d->giveNumberOfMaterialModels());
     for ( int i = 1; i <= d->giveNumberOfMaterialModels(); i++ ) {
-        std :: unique_ptr< GaussPoint > gp(new GaussPoint(nullptr, i, FloatArray(0), 1, mode));
+        std :: unique_ptr< GaussPoint > gp = std::make_unique<GaussPoint>(nullptr, i, FloatArray(0), 1, mode);
         gps.emplace_back( std :: move(gp) );
         // Initialize the strain vector;
         StructuralMaterialStatus *status = static_cast< StructuralMaterialStatus * >( d->giveMaterial(i)->giveStatus( gps[i-1].get() ) );
@@ -137,6 +134,14 @@ void StructuralMaterialEvaluator :: solveYourself()
 
             for ( int iter = 1; iter < maxiter; iter++ ) {
                 mat->giveRealStressVector_3d(stress, gp, strain, tStep);
+                FloatArray strain2;
+                tangent.solveForRhs(stress, strain2);
+                strain2.printYourself("# thermal expansion");
+                break;
+#endif
+
+                strain.printYourself("Macro strain guess");
+                stress = mat->giveRealStressVector_3d(strain, gp, tStep);
                 for ( int j = 1; j <= sControl.giveSize(); ++j ) {
                     res.at(j) = stressC.at(j) - stress.at( sControl.at(j) );
                 }
@@ -144,7 +149,10 @@ void StructuralMaterialEvaluator :: solveYourself()
                 OOFEM_LOG_RELEVANT( "Time step: %d, Material %d, Iteration: %d,  Residual = %e\n", istep, imat, iter, res.computeNorm() );
                 if ( res.computeNorm() <= tolerance ) {
                     break;
-                }
+                } else {
+                    if ( tangent.giveNumberOfRows() == 0 || !keepTangent ) {
+                        tangent = mat->give3dMaterialStiffnessMatrix(TangentStiffness, gp, tStep);
+                    }
 
                 mat->give3dMaterialStiffnessMatrix(tangent, TangentStiffness, gp, tStep);
                 if ( res.giveSize() > 0 ) {
@@ -218,11 +226,11 @@ TimeStep *StructuralMaterialEvaluator :: giveNextStep()
 {
     if ( !currentStep ) {
         // first step -> generate initial step
-        //currentStep.reset( new TimeStep(*giveSolutionStepWhenIcApply()) );
-        currentStep.reset( new TimeStep(giveNumberOfTimeStepWhenIcApply(), this, 1, 0., this->deltaT, 0) );
+        //currentStep = std::make_unique<TimeStep>(*giveSolutionStepWhenIcApply());
+        currentStep = std::make_unique<TimeStep>(giveNumberOfTimeStepWhenIcApply(), this, 1, 0., this->deltaT, 0);
     }
     previousStep = std :: move(currentStep);
-    currentStep.reset( new TimeStep(*previousStep, this->deltaT) );
+    currentStep = std::make_unique<TimeStep>(*previousStep, this->deltaT);
 
     return currentStep.get();
 }

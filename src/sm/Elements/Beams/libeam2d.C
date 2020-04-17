@@ -32,8 +32,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/Beams/libeam2d.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Elements/Beams/libeam2d.h"
+#include "sm/Materials/structuralms.h"
 #include "fei2dlinelin.h"
 #include "node.h"
 #include "material.h"
@@ -111,7 +111,7 @@ LIBeam2d :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize( 1 );
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 2) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 2);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], 1, this);
     }
 }
@@ -120,14 +120,14 @@ LIBeam2d :: computeGaussPoints()
 void
 LIBeam2d :: computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->give2dBeamStiffMtrx(answer, rMode, gp, tStep);
+    answer = this->giveStructuralCrossSection()->give2dBeamStiffMtrx(rMode, gp, tStep);
 }
 
 
 void
 LIBeam2d :: computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->giveGeneralizedStress_Beam2d(answer, gp, strain, tStep);
+    answer = this->giveStructuralCrossSection()->giveGeneralizedStress_Beam2d(strain, gp, tStep);
 }
 
 
@@ -316,10 +316,10 @@ LIBeam2d :: givePitch()
 }
 
 
-IRResultType
-LIBeam2d :: initializeFrom(InputRecord *ir)
+void
+LIBeam2d :: initializeFrom(InputRecord &ir)
 {
-    return StructuralElement :: initializeFrom(ir);
+    StructuralElement :: initializeFrom(ir);
 }
 
 

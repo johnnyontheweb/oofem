@@ -45,21 +45,15 @@
 namespace oofem {
 REGISTER_Material(Concrete2);
 
-Concrete2 :: Concrete2(int n, Domain *d) : DeformationTheoryMaterial(n, d)
-{
-    linearElasticMaterial = new IsotropicLinearElasticMaterial(n, d);
-}
+Concrete2 :: Concrete2(int n, Domain *d) : DeformationTheoryMaterial(n, d),
+    linearElasticMaterial(n, d)
+{ }
 
 
-Concrete2 :: ~Concrete2()
+void
+Concrete2 :: initializeFrom(InputRecord &ir)
 {
-    delete linearElasticMaterial;
-}
-
-IRResultType
-Concrete2 :: initializeFrom(InputRecord *ir)
-{
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
+    Material :: initializeFrom(ir);
 
     IR_GIVE_FIELD(ir, E, _IFT_Concrete2_e);
     IR_GIVE_FIELD(ir, n, _IFT_Concrete2_n);
@@ -81,21 +75,15 @@ Concrete2 :: initializeFrom(InputRecord *ir)
     IR_GIVE_FIELD(ir, stirrEREF, _IFT_Concrete2_stirr_eref);
     IR_GIVE_FIELD(ir, stirrLAMBDA, _IFT_Concrete2_stirr_lambda);
 
-    result = this->linearElasticMaterial->initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
-    return Material :: initializeFrom(ir);
+    this->linearElasticMaterial.initializeFrom(ir);
 }
 
 
 double
-Concrete2 :: give(int aProperty, GaussPoint *gp)
+Concrete2 :: give(int aProperty, GaussPoint *gp) const
 // Returns the value of the property aProperty (e.g. the Young's modulus
 // 'E') of the receiver.
 {
-    double value;
-
     switch ( aProperty ) {
     case c2_SCCC:
         return this->SCCC;
@@ -150,21 +138,18 @@ Concrete2 :: give(int aProperty, GaussPoint *gp)
 
     default:
         if ( propertyDictionary.includes(aProperty) ) {
-            value = propertyDictionary.at(aProperty);
-            return value;
+            return propertyDictionary.at(aProperty);
         } else {
-            return this->linearElasticMaterial->give(aProperty, gp);
+            return this->linearElasticMaterial.give(aProperty, gp);
             // error ("give: property not defined");
         }
     }
 }
 
 
-void
-Concrete2 :: giveRealStressVector_PlateLayer(FloatArray &answer,
-                                             GaussPoint *gp,
-                                             const FloatArray &totalStrain,
-                                             TimeStep *tStep)
+FloatArrayF<5>
+Concrete2 :: giveRealStressVector_PlateLayer(const FloatArrayF<5> &totalStrain,
+                                             GaussPoint *gp, TimeStep *tStep) const
 //
 // returns total stress vector of receiver according to
 // previous level of stress and current
@@ -324,8 +309,9 @@ Concrete2 :: giveRealStressVector_PlateLayer(FloatArray &answer,
         //   plasticStrain->negated()->add (status->givePlasticStrainVector());
         //      status->givePlasticStrainIncrementVector()-> add(plasticStrain);
 
+        FloatArray answer;
         StructuralMaterial :: giveReducedSymVectorForm( answer, currentStress, gp->giveMaterialMode() );
-        return;
+        return answer;
     }
 
     //
@@ -646,13 +632,15 @@ label18:
     //plasticStrain->negated()->add (status->givePlasticStrainVector());
     //status->givePlasticStrainIncrementVector()-> add(plasticStrain);
 
+    FloatArray answer;
     StructuralMaterial :: giveFullSymVectorForm( answer, currentStress, gp->giveMaterialMode() );
+    return answer;
 }
 
 
 void
 Concrete2 :: dtp3(GaussPoint *gp, FloatArray &e, FloatArray &s, FloatArray &ep,
-                  double SCC, double SCT, int *ifplas)
+                  double SCC, double SCT, int *ifplas) const
 //
 // DEFORMATION THEORY OF PLASTICITY, PRNCIPAL STRESSES
 // CONDITION OF PLASTICITY.
@@ -855,7 +843,7 @@ Concrete2 :: dtp3(GaussPoint *gp, FloatArray &e, FloatArray &s, FloatArray &ep,
 
 void
 Concrete2 :: dtp2(GaussPoint *gp, FloatArray &e, FloatArray &s, FloatArray &ep,
-                  double SCC, double SCT, int *ifplas)
+                  double SCC, double SCT, int *ifplas) const
 //
 // DEFORMATION THEORY OF PLASTICITY, PRNCIPAL STRESSES
 // CONDITION OF PLASTICITY. - PLANE STRESS
@@ -1003,7 +991,7 @@ Concrete2 :: dtp2(GaussPoint *gp, FloatArray &e, FloatArray &s, FloatArray &ep,
 
 void
 Concrete2 :: strsoft(GaussPoint *gp, double epsult, FloatArray &ep, double &ep1, double &ep2, double &ep3,
-                     double SCC, double SCT, int &ifupd)
+                     double SCC, double SCT, int &ifupd) const
 // material constant of concrete
 // stored in this.propertyDictionary
 //
@@ -1168,7 +1156,7 @@ label14:
 
 
 void
-Concrete2 :: updateStirrups(GaussPoint *gp, FloatArray &strainIncrement, TimeStep *tStep)
+Concrete2 :: updateStirrups(GaussPoint *gp, FloatArray &strainIncrement, TimeStep *tStep) const
 // stirr (double dez, double srf)
 //
 //
@@ -1227,11 +1215,10 @@ Concrete2 :: updateStirrups(GaussPoint *gp, FloatArray &strainIncrement, TimeSte
 
 
 
-void
-Concrete2 :: givePlateLayerStiffMtrx(FloatMatrix &answer,
-                                     MatResponseMode rMode,
+FloatMatrixF<5,5>
+Concrete2 :: givePlateLayerStiffMtrx(MatResponseMode rMode,
                                      GaussPoint *gp,
-                                     TimeStep *tStep)
+                                     TimeStep *tStep) const
 //
 // This material is currently unable compute material stiffness
 // so it uses slave material (linearElasticMaterial ) to perform this work
@@ -1240,53 +1227,28 @@ Concrete2 :: givePlateLayerStiffMtrx(FloatMatrix &answer,
 //
 {
     // error ("givePlateLayerStiffMtrx: unable to compute");
-    linearElasticMaterial->givePlateLayerStiffMtrx(answer, rMode, gp, tStep);
+    return linearElasticMaterial.givePlateLayerStiffMtrx( rMode, gp, tStep);
 }
 
 
 MaterialStatus *
 Concrete2 :: CreateStatus(GaussPoint *gp) const
-/*
- * creates new  material status  corresponding to this class
- */
 {
-    Concrete2MaterialStatus *status;
-
-    status = new Concrete2MaterialStatus(1, this->giveDomain(), gp);
-    return status;
+    return new Concrete2MaterialStatus(gp);
 }
 
 
 
-Concrete2MaterialStatus :: Concrete2MaterialStatus(int n, Domain *d, GaussPoint *g) :
-    StructuralMaterialStatus(n, d, g), plasticStrainVector(), plasticStrainIncrementVector()
-    //
-    // constructor
-    //
+Concrete2MaterialStatus :: Concrete2MaterialStatus(GaussPoint *g) :
+    StructuralMaterialStatus(g)
 {
-    SCCM = EPM = E0PM = SRF = SEZ = 0.0;
-    SCTM = -1.0;     // init status if SCTM < 0.;
 }
 
 
-
-Concrete2MaterialStatus :: ~Concrete2MaterialStatus()
-//
-// DEstructor
-//
-{ }
-
-contextIOResultType
-Concrete2MaterialStatus :: saveContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// saves full information stored in this Status
-//
+void
+Concrete2MaterialStatus :: saveContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-
-    if ( ( iores = StructuralMaterialStatus :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
+    StructuralMaterialStatus :: saveContext(stream, mode);
 
     // write a raw data
     if ( !stream.write(SCCM) ) {
@@ -1313,26 +1275,19 @@ Concrete2MaterialStatus :: saveContext(DataStream &stream, ContextMode mode, voi
         THROW_CIOERR(CIO_IOERR);
     }
 
+    contextIOResultType iores;
     if ( ( iores = plasticStrainVector.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    // return result back
-    return CIO_OK;
 }
 
 
-contextIOResultType
-Concrete2MaterialStatus :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// restore state variables from stream
-//
+void
+Concrete2MaterialStatus :: restoreContext(DataStream &stream, ContextMode mode)
 {
     contextIOResultType iores;
 
-    if ( ( iores = StructuralMaterialStatus :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
+    StructuralMaterialStatus :: restoreContext(stream, mode);
 
     // read raw data
     if ( !stream.read(SCCM) ) {
@@ -1362,11 +1317,7 @@ Concrete2MaterialStatus :: restoreContext(DataStream &stream, ContextMode mode, 
     if ( ( iores = plasticStrainVector.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    // return result back
-    return CIO_OK;
 }
-
 
 
 void

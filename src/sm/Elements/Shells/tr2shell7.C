@@ -32,8 +32,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/Shells/tr2shell7.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Elements/Shells/tr2shell7.h"
+#include "sm/Materials/structuralms.h"
 #include "node.h"
 #include "load.h"
 #include "mathfem.h"
@@ -179,7 +179,7 @@ Tr2Shell7 :: computeAreaAround(GaussPoint *gp, double xi)
     lcoords.at(1) = gp->giveNaturalCoordinate(1);
     lcoords.at(2) = gp->giveNaturalCoordinate(2);
     lcoords.at(3) = xi;
-    this->evalInitialCovarBaseVectorsAt(lcoords, Gcov);
+    Gcov = this->evalInitialCovarBaseVectorsAt(lcoords);
     G1.beColumnOf(Gcov, 1);
     G2.beColumnOf(Gcov, 2);
     temp.beVectorProductOf(G1, G2);
@@ -192,12 +192,9 @@ Tr2Shell7 :: computeAreaAround(GaussPoint *gp, double xi)
 double
 Tr2Shell7 :: computeVolumeAroundLayer(GaussPoint *gp, int layer)
 {
-    double detJ;
-    FloatMatrix Gcov;
-    FloatArray lcoords;
-    lcoords = gp->giveNaturalCoordinates();
-    this->evalInitialCovarBaseVectorsAt(lcoords, Gcov);
-    detJ = Gcov.giveDeterminant() * 0.5 * this->layeredCS->giveLayerThickness(layer);
+    const auto &lcoords = gp->giveNaturalCoordinates();
+    auto Gcov = this->evalInitialCovarBaseVectorsAt(lcoords);
+    double detJ = det(Gcov) * 0.5 * this->layeredCS->giveLayerThickness(layer);
     return detJ *gp->giveWeight();
 }
 

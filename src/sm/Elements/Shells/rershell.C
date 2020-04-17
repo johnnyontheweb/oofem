@@ -32,8 +32,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/Shells/rershell.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
+#include "sm/Elements/Shells/rershell.h"
+#include "sm/CrossSections/structuralcrosssection.h"
 #include "node.h"
 #include "material.h"
 #include "crosssection.h"
@@ -91,15 +91,15 @@ RerShell :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int ui
     FloatArray b(3), c(3), nodeCoords;
     double x1, x2, x3, y1, y2, y3, area;
 
-    this->giveLocalCoordinates( nodeCoords, * ( this->giveNode(1)->giveCoordinates() ) );
+    this->giveLocalCoordinates( nodeCoords, this->giveNode(1)->giveCoordinates() );
     x1 = nodeCoords.at(1);
     y1 = nodeCoords.at(2);
 
-    this->giveLocalCoordinates( nodeCoords, * ( this->giveNode(2)->giveCoordinates() ) );
+    this->giveLocalCoordinates( nodeCoords, this->giveNode(2)->giveCoordinates() );
     x2 = nodeCoords.at(1);
     y2 = nodeCoords.at(2);
 
-    this->giveLocalCoordinates( nodeCoords, * ( this->giveNode(3)->giveCoordinates() ) );
+    this->giveLocalCoordinates( nodeCoords, this->giveNode(3)->giveCoordinates() );
     x3 = nodeCoords.at(1);
     y3 = nodeCoords.at(2);
 
@@ -165,7 +165,7 @@ RerShell :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize( 1 );
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 8) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 8);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], numberOfGaussPoints, this);
     }
 }
@@ -183,15 +183,15 @@ RerShell :: computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer)
     l2 = iLocCoord.at(2);
     l3 = 1.0 - l1 - l2;
 
-    this->giveLocalCoordinates( nodeCoords, * ( this->giveNode(1)->giveCoordinates() ) );
+    this->giveLocalCoordinates( nodeCoords, this->giveNode(1)->giveCoordinates() );
     x1 = nodeCoords.at(1);
     y1 = nodeCoords.at(2);
 
-    this->giveLocalCoordinates( nodeCoords, * ( this->giveNode(2)->giveCoordinates() ) );
+    this->giveLocalCoordinates( nodeCoords, this->giveNode(2)->giveCoordinates() );
     x2 = nodeCoords.at(1);
     y2 = nodeCoords.at(2);
 
-    this->giveLocalCoordinates( nodeCoords, * ( this->giveNode(3)->giveCoordinates() ) );
+    this->giveLocalCoordinates( nodeCoords, this->giveNode(3)->giveCoordinates() );
     x3 = nodeCoords.at(1);
     y3 = nodeCoords.at(2);
 
@@ -255,15 +255,15 @@ RerShell :: giveArea()
 
     double x1, x2, x3, y1, y2, y3;
 
-    this->giveLocalCoordinates( nodeCoords, * ( this->giveNode(1)->giveCoordinates() ) );
+    this->giveLocalCoordinates( nodeCoords, this->giveNode(1)->giveCoordinates() );
     x1 = nodeCoords.at(1);
     y1 = nodeCoords.at(2);
 
-    this->giveLocalCoordinates( nodeCoords, * ( this->giveNode(2)->giveCoordinates() ) );
+    this->giveLocalCoordinates( nodeCoords, this->giveNode(2)->giveCoordinates() );
     x2 = nodeCoords.at(1);
     y2 = nodeCoords.at(2);
 
-    this->giveLocalCoordinates( nodeCoords, * ( this->giveNode(3)->giveCoordinates() ) );
+    this->giveLocalCoordinates( nodeCoords, this->giveNode(3)->giveCoordinates() );
     x3 = nodeCoords.at(1);
     y3 = nodeCoords.at(2);
 
@@ -271,33 +271,28 @@ RerShell :: giveArea()
 }
 
 
-IRResultType
-RerShell :: initializeFrom(InputRecord *ir)
+void
+RerShell :: initializeFrom(InputRecord &ir)
 {
     numberOfGaussPoints = 1;
-    IRResultType result = StructuralElement :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    StructuralElement :: initializeFrom(ir);
 
     if ( numberOfGaussPoints != 1 ) {
         numberOfGaussPoints = 1;
     }
-
-    return IRRT_OK;
 }
 
 
 void
 RerShell :: computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->give3dShellStiffMtrx(answer, rMode, gp, tStep);
+    answer = this->giveStructuralCrossSection()->give3dShellStiffMtrx(rMode, gp, tStep);
 }
 
 void
 RerShell :: computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->giveGeneralizedStress_Shell(answer, gp, strain, tStep);
+    answer = this->giveStructuralCrossSection()->giveGeneralizedStress_Shell(strain, gp, tStep);
 }
 
 void
@@ -398,24 +393,24 @@ RerShell :: computeLocalCoordinates(FloatArray &answer, const FloatArray &coords
 
     //rotate the input point Coordinate System into the element CS
     FloatArray inputCoords_ElCS;
-    this->giveLocalCoordinates( inputCoords_ElCS, const_cast< FloatArray & >(coords) );
+    this->giveLocalCoordinates( inputCoords_ElCS, coords );
 
     //Nodes are defined in the global CS, so they also need to be rotated into the element CS, therefore get the node points and
     //rotate them into the element CS
     FloatArray nodeCoords;
     double x1, x2, x3, y1, y2, y3, z1, z2, z3;
 
-    this->giveLocalCoordinates( nodeCoords, * ( this->giveNode(1)->giveCoordinates() ) );
+    this->giveLocalCoordinates( nodeCoords, this->giveNode(1)->giveCoordinates() );
     x1 = nodeCoords.at(1);
     y1 = nodeCoords.at(2);
     z1 = nodeCoords.at(3);
 
-    this->giveLocalCoordinates( nodeCoords, * ( this->giveNode(2)->giveCoordinates() ) );
+    this->giveLocalCoordinates( nodeCoords, this->giveNode(2)->giveCoordinates() );
     x2 = nodeCoords.at(1);
     y2 = nodeCoords.at(2);
     z2 = nodeCoords.at(3);
 
-    this->giveLocalCoordinates( nodeCoords, * ( this->giveNode(3)->giveCoordinates() ) );
+    this->giveLocalCoordinates( nodeCoords, this->giveNode(3)->giveCoordinates() );
     x3 = nodeCoords.at(1);
     y3 = nodeCoords.at(2);
     z3 = nodeCoords.at(3);
@@ -498,16 +493,9 @@ RerShell :: computeGtoLRotationMatrix(FloatMatrix &answer)
 
 void
 RerShell :: giveLocalCoordinates(FloatArray &answer, const FloatArray &global)
-//
-// Returns global coordinates given in global vector
-// transformed into local coordinate system of the
-// receiver
-//
 {
-    // test the parameter
     if ( global.giveSize() != 3 ) {
         OOFEM_ERROR("cannot transform coordinates- size mismatch");
-        exit(1);
     }
 
     // first ensure that receiver's GtoLRotationMatrix[3,3]
@@ -539,7 +527,7 @@ RerShell :: giveCharacteristicTensor(FloatMatrix &answer, CharTensor type, Gauss
         answer.at(3, 1) = stress.at(7);
         answer.at(2, 3) = stress.at(8);
         answer.at(3, 2) = stress.at(8);
-    } else if ( ( type == LocalMomentumTensor ) || ( type == GlobalMomentumTensor ) ) {
+    } else if ( ( type == LocalMomentTensor ) || ( type == GlobalMomentTensor ) ) {
         FloatArray stress, strain;
         this->computeStrainVector(strain, gp, tStep);
         this->computeStressVector(stress, strain, gp, tStep);
@@ -571,7 +559,7 @@ RerShell :: giveCharacteristicTensor(FloatMatrix &answer, CharTensor type, Gauss
         exit(1);
     }
 
-    if ( ( type == GlobalForceTensor ) || ( type == GlobalMomentumTensor ) ||
+    if ( ( type == GlobalForceTensor ) || ( type == GlobalMomentTensor ) ||
         ( type == GlobalStrainTensor ) || ( type == GlobalCurvatureTensor ) ) {
         this->computeGtoLRotationMatrix();
         answer.rotatedWith(GtoLRotationMatrix);
@@ -690,7 +678,7 @@ RerShell :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType ty
         return 1;
     } else if ( type == IST_ShellMomentTensor || type == IST_ShellForceTensor ) {
         if ( type == IST_ShellMomentTensor ) {
-            cht = GlobalMomentumTensor;
+            cht = GlobalMomentTensor;
         } else {
             cht = GlobalForceTensor;
         }

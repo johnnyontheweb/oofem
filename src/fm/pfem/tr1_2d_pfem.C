@@ -116,13 +116,12 @@ TR1_2D_PFEM ::   giveElementDofIDMask(IntArray &answer) const
 }
 
 
-IRResultType
-TR1_2D_PFEM :: initializeFrom(InputRecord *ir)
+void
+TR1_2D_PFEM :: initializeFrom(InputRecord &ir)
 {
-    IRResultType ret = this->PFEMElement :: initializeFrom(ir);
+    PFEMElement :: initializeFrom(ir);
 
     this->computeGaussPoints();
-    return ret;
 }
 
 void
@@ -131,7 +130,7 @@ TR1_2D_PFEM :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize(1);
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 3) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 3);
         integrationRulesArray [ 0 ]->setUpIntegrationPoints(_Triangle, 3, _2dFlow);
     }
 }
@@ -405,56 +404,17 @@ TR1_2D_PFEM :: computeCriticalTimeStep(TimeStep *tStep)
 }
 
 
-
-
-void
-TR1_2D_PFEM :: updateYourself(TimeStep *tStep)
+void TR1_2D_PFEM :: saveContext(DataStream &stream, ContextMode mode)
 {
-    PFEMElement :: updateYourself(tStep);
+    PFEMElement2d :: saveContext(stream, mode);
 }
 
 
-void
-TR1_2D_PFEM :: printOutputAt(FILE *file, TimeStep *stepN)
-// Performs end-of-step operations.
+void TR1_2D_PFEM :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    PFEMElement :: printOutputAt(file, stepN);
+    PFEMElement2d :: restoreContext(stream, mode);
 }
 
-
-
-contextIOResultType TR1_2D_PFEM :: saveContext(DataStream *stream, ContextMode mode, void *obj)
-//
-// saves full element context (saves state variables, that completely describe
-// current state)
-//
-{
-    contextIOResultType iores;
-
-    if ( ( iores = PFEMElement :: saveContext(* stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    return CIO_OK;
-}
-
-
-
-contextIOResultType TR1_2D_PFEM :: restoreContext(DataStream *stream, ContextMode mode, void *obj)
-//
-// restores full element context (saves state variables, that completely describe
-// current state)
-//
-{
-    contextIOResultType iores;
-
-    if ( ( iores = PFEMElement :: restoreContext(* stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-
-    return CIO_OK;
-}
 
 double
 TR1_2D_PFEM :: computeVolumeAround(GaussPoint *gp)

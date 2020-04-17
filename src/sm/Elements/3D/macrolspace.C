@@ -32,10 +32,10 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/3D/macrolspace.h"
-#include "../sm/Materials/micromaterial.h"
-#include "../sm/EngineeringModels/structengngmodel.h"
-#include "../sm/Elements/3D/lspace.h"
+#include "sm/Elements/3D/macrolspace.h"
+#include "sm/Materials/micromaterial.h"
+#include "sm/EngineeringModels/structengngmodel.h"
+#include "sm/Elements/3D/lspace.h"
 #include "fei3dhexalin.h"
 #include "constantfunction.h"
 #include "domain.h"
@@ -49,8 +49,6 @@ REGISTER_Element(MacroLSpace);
 //derived from linear brick element
 MacroLSpace :: MacroLSpace(int n, Domain *aDomain) : LSpace(n, aDomain)
 {
-    this->microMasterNodes.clear();
-    this->microBoundaryNodes.clear();
     this->firstCall = true;
     microMaterial = NULL;
     microDomain = NULL;
@@ -62,15 +60,14 @@ MacroLSpace :: MacroLSpace(int n, Domain *aDomain) : LSpace(n, aDomain)
 MacroLSpace :: ~MacroLSpace() { }
 
 
-IRResultType MacroLSpace :: initializeFrom(InputRecord *ir)
+void MacroLSpace :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;              // Required by IR_GIVE_FIELD macro
+    LSpace :: initializeFrom(ir);;
 
     IR_GIVE_FIELD(ir, this->microMasterNodes, _IFT_MacroLspace_microMasterNodes);
 
     if ( this->microMasterNodes.giveSize() != 8 ) {
-        OOFEM_WARNING("Need 8 master nodes from the microproblem defined on macroLspace element");
-        return IRRT_BAD_FORMAT;
+        throw ValueInputException(ir, _IFT_MacroLspace_microMasterNodes, "Need 8 master nodes from the microproblem defined on macroLspace element");
     }
 
     IR_GIVE_FIELD(ir, this->microBoundaryNodes, _IFT_MacroLspace_microBoundaryNodes);
@@ -78,7 +75,7 @@ IRResultType MacroLSpace :: initializeFrom(InputRecord *ir)
     microBoundaryDofManager.resize( 3 * microBoundaryNodes.giveSize() );
 
 #if 0
-    if ( ir->hasField(_IFT_MacroLspace_stiffMatrxFileName) ) {
+    if ( ir.hasField(_IFT_MacroLspace_stiffMatrxFileName) ) {
         IR_GIVE_OPTIONAL_FIELD(ir, this->stiffMatrxFileName, _IFT_MacroLspace_stiffMatrxFileName);
         if ( fopen(this->stiffMatrxFileName, "r") != NULL ) { //if the file exist
             stiffMatrxFile = fopen(this->stiffMatrxFileName, "r");
@@ -91,7 +88,6 @@ IRResultType MacroLSpace :: initializeFrom(InputRecord *ir)
         }
     }
 #endif
-    return LSpace :: initializeFrom(ir);;
 }
 
 
@@ -134,7 +130,7 @@ void MacroLSpace :: computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode 
     this->microEngngModel->giveCurrentStep()->setTimeIncrement(0.); //no time increment
     this->microEngngModel->initMetaStepAttributes( microEngngModel->giveCurrentMetaStep() ); //updates numerical method
 
-    OOFEM_LOG_INFO( "\n** Assembling %s stiffness matrix of microproblem %p on macroElement %d, micTimeStep %d, micTime %f\n", __MatResponseModeToString(rMode), this->microMaterial->problemMicro, this->giveNumber(), this->microEngngModel->giveCurrentStep()->giveNumber(), this->microEngngModel->giveCurrentStep()->giveTargetTime() );
+    OOFEM_LOG_INFO( "\n** Assembling %s stiffness matrix of microproblem on macroElement %d, micTimeStep %d, micTime %f\n", __MatResponseModeToString(rMode), this->giveNumber(), this->microEngngModel->giveCurrentStep()->giveNumber(), this->microEngngModel->giveCurrentStep()->giveTargetTime() );
 
     //this->microEngngModel->solveYourselfAt( microEngngModel->giveCurrentStep() );
     //this->microEngngModel->terminate( microEngngModel->giveCurrentStep() );
@@ -154,8 +150,6 @@ void MacroLSpace :: computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode 
 //assign values to DOF on the boundary according to definition on macrolspace and actual displacement stage
 void MacroLSpace :: changeMicroBoundaryConditions(TimeStep *tStep)
 {
-    GeneralBoundaryCondition *GeneralBoundaryCond;
-    Function *timeFunct;
     DynamicInputRecord ir_func, ir_bc;
     FloatArray n(8), answer, localCoords;
     double displ;
@@ -177,11 +171,12 @@ void MacroLSpace :: changeMicroBoundaryConditions(TimeStep *tStep)
 
     ir_func.setRecordKeywordField("constantfunction", 1);
     ir_func.setField(1.0, _IFT_ConstantFunction_f);
-    if ( ( timeFunct = classFactory.createFunction("constantfunction", 1, microDomain) ) == NULL ) {
+    auto timeFunct = classFactory.createFunction("constantfunction", 1, microDomain);
+    if ( !timeFunct ) {
         OOFEM_ERROR("Couldn't create constant time function");
     }
-    timeFunct->initializeFrom(& ir_func);
-    microDomain->setFunction(1, timeFunct);
+    timeFunct->initializeFrom(ir_func);
+    microDomain->setFunction(1, std::move(timeFunct));
 
 
     /*assign to each boundary node the form "bc 3 # # #", set 0s on free nodes
@@ -193,7 +188,7 @@ void MacroLSpace :: changeMicroBoundaryConditions(TimeStep *tStep)
     counter = 1;
     for ( auto &DofMan : microDomain->giveDofManagers() ) { //go through all nodes on microDomain
         if ( microBoundaryNodes.contains( DofMan->giveGlobalNumber() ) ) { //if the node number is on boundary
-            this->evalInterpolation( n, microMaterial->microMasterCoords, * DofMan->giveCoordinates() );
+            this->evalInterpolation( n, microMaterial->microMasterCoords, DofMan->giveCoordinates() );
             //n.printYourself();
 
             for ( Dof *dof: *DofMan ) {
@@ -204,15 +199,16 @@ void MacroLSpace :: changeMicroBoundaryConditions(TimeStep *tStep)
                 ir_bc.setRecordKeywordField("boundarycondition", counter);
                 ir_bc.setField(1, _IFT_GeneralBoundaryCondition_timeFunct);
                 ir_bc.setField(displ, _IFT_BoundaryCondition_PrescribedValue);
-                if ( ( GeneralBoundaryCond = classFactory.createBoundaryCondition("boundarycondition", counter, microDomain) ) == NULL ) {
+                auto bc = classFactory.createBoundaryCondition("boundarycondition", counter, microDomain);
+                if ( !bc ) {
                     OOFEM_ERROR("Couldn't create boundary condition.");
                 }
-                GeneralBoundaryCond->initializeFrom(& ir_bc);
-                microDomain->setBoundaryCondition(counter, GeneralBoundaryCond);
+                bc->initializeFrom(ir_bc);
+                microDomain->setBoundaryCondition(counter, std::move(bc));
                 counter++;
             }
         } else {
-            for ( Dof *dof: *DofMan ) {
+            for ( auto &dof: *DofMan ) {
                 dof->setBcId(0);
             }
         }
@@ -238,7 +234,7 @@ void MacroLSpace :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep
     if ( useUpdatedGpRecord ) { //printing of data
         answer = this->internalMacroForcesVector;
     } else {
-        OOFEM_LOG_INFO( "\n*** Solving reactions %p of macroElement %d, micTimeStep %d, macIteration %d, micTime %f\n", this->microMaterial->problemMicro, this->giveNumber(), this->microEngngModel->giveCurrentStep()->giveNumber(), this->iteration, this->microEngngModel->giveCurrentStep()->giveTargetTime() );
+        OOFEM_LOG_INFO( "\n*** Solving reactions of macroElement %d, micTimeStep %d, macIteration %d, micTime %f\n", this->giveNumber(), this->microEngngModel->giveCurrentStep()->giveNumber(), this->iteration, this->microEngngModel->giveCurrentStep()->giveTargetTime() );
 
         this->iteration++;
         this->changeMicroBoundaryConditions(tStep);
@@ -259,7 +255,7 @@ void MacroLSpace :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep
 
         for ( int i = 1; i <= this->microBoundaryDofManager.giveSize() / 3; i++ ) { //Number of DoFManagers stored in triplets
             DofMan = microDomain->giveDofManager( this->microBoundaryDofManager.at(3 * i - 2) );
-            this->evalInterpolation( n, microMaterial->microMasterCoords, * DofMan->giveCoordinates() );
+            this->evalInterpolation( n, microMaterial->microMasterCoords, DofMan->giveCoordinates() );
             for ( int j = 1; j <= DofMan->giveNumberOfDofs(); j++ ) { //3
                 reactionForce = reactions.at(3 * i + j - 3);
                 for ( int k = 1; k <= 8; k++ ) {
@@ -269,7 +265,7 @@ void MacroLSpace :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep
         }
 
         this->internalMacroForcesVector = answer;
-        OOFEM_LOG_INFO("*** Reactions done\n", this->microMaterial->problemMicro);
+        OOFEM_LOG_INFO("*** Reactions done\n");
     }
 
     //answer.printYourself();

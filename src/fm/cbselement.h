@@ -63,13 +63,12 @@ protected:
 
 public:
     CBSElement(int n, Domain * aDomain);
-    virtual ~CBSElement();
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual void giveCharacteristicMatrix(FloatMatrix &answer, CharType type, TimeStep *tStep);
-    virtual void giveCharacteristicVector(FloatArray &answer, CharType type, ValueModeType mode, TimeStep *tStep);
+    void giveCharacteristicMatrix(FloatMatrix &answer, CharType type, TimeStep *tStep) override;
+    void giveCharacteristicVector(FloatArray &answer, CharType type, ValueModeType mode, TimeStep *tStep) override;
 
     /** Calculates consistent mass matrix. */
     virtual void computeConsistentMassMtrx(FloatMatrix &answer, TimeStep *tStep) = 0;
@@ -99,12 +98,12 @@ public:
     virtual double computeCriticalTimeStep(TimeStep *tStep) = 0;
 
     // time step termination
-    virtual void updateInternalState(TimeStep *tStep);
-    virtual int checkConsistency();
+    void updateInternalState(TimeStep *tStep) override;
+    int checkConsistency() override;
 
 #ifdef __OOFEG
     int giveInternalStateAtNode(FloatArray &answer, InternalStateType type, InternalStateMode mode,
-                                int node, TimeStep *tStep);
+                                int node, TimeStep *tStep) override;
 #endif
 
 protected:

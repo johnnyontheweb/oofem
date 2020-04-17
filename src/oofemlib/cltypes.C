@@ -64,7 +64,7 @@ char cltypesGiveUnknownTypeModeKey(ValueModeType mode)
     case VM_Velocity:       return 'v';
 
     case VM_Acceleration:   return 'a';
-      
+
     case VM_TotalIntrinsic: return 'i';
 
     default: OOFEM_ERROR("unsupported ValueModeType");
@@ -82,11 +82,14 @@ InternalStateValueType giveInternalStateValueType(InternalStateType type)
     case IST_DeviatoricStrain:
     case IST_PlasticStrainTensor:
     case IST_ThermalStrainTensor:
+    case IST_ElasticStrainTensor:
     case IST_CylindricalStrainTensor:
     case IST_CreepStrainTensor:
     case IST_ShellStrainTensor:
     case IST_CurvatureTensor:
     case IST_CurvatureTensorTemp:
+    case IST_EigenStrainTensor:
+    case IST_CrackStrainTensor:
         return ISVT_TENSOR_S3E;
 
     case IST_StressTensor:
@@ -94,12 +97,12 @@ InternalStateValueType giveInternalStateValueType(InternalStateType type)
     case IST_CylindricalStressTensor:
     case IST_DeviatoricStress:
     case IST_CauchyStressTensor:
-    ///@todo Remove "Shell" from these. They are general;
-    // case IST_ShellStrainTensor: ///@todo Are shell strains S3E as well?
-    // case IST_ShellCurvatureTensor:
-    // case IST_ForceTensorTemp:
+
+    case IST_ShellForceTensor:
+    case IST_ShellForceTensorTemp:
     case IST_ShellMomentTensor:
-    case IST_ShellMomentTensorTemp:
+    case IST_MomentTensor:
+    case IST_MomentTensorTemp:
 
     ///@todo Should be have these are S3E or just S3?
     case IST_AutogenousShrinkageTensor:
@@ -141,12 +144,14 @@ InternalStateValueType giveInternalStateValueType(InternalStateType type)
     case IST_HumidityFlow:
     case IST_CrackDirs:
     case IST_CrackStatuses:
+    case IST_CrackStatusesTemp:
     case IST_CrackVector:
     case IST_2ndCrackVector:
     case IST_3rdCrackVector:      
     case IST_InterfaceFirstPKTraction:
     case IST_InterfaceTraction:
     case IST_InterfaceJump:
+    case IST_InterfaceNormal:
     case IST_PrincStressVector1:
     case IST_PrincStressVector2:
     case IST_PrincStressVector3:
@@ -202,7 +207,10 @@ InternalStateValueType giveInternalStateValueType(InternalStateType type)
     case IST_ResidualTensileStrength:
     case IST_CrackIndex:
     case IST_FiberStressNL:
-    case IST_FiberStressLocal:     
+    case IST_FiberStressLocal:
+    case IST_CrackSlip:
+    case IST_EquivalentTime:
+    case IST_IncrementCreepModulus:
         return ISVT_SCALAR;
 
     default:
@@ -244,23 +252,23 @@ InternalStateValueType giveInternalStateValueType(UnknownType type)
 }
 
 
-ContextIOERR :: ContextIOERR(contextIOResultType e, const char *file, int line)
+ContextIOERR :: ContextIOERR(contextIOResultType e, const char *file, int line) :
+    error(e),
+    msg(nullptr),
+    file(file),
+    line(line)
 {
-    error = e;
-    this->file = file;
-    this->line = line;
-    this->msg = NULL;
+    this->full_message = "ContextIOERR " + std::to_string(error) + " at line " + std::to_string(line) + " in file \"" + file + "\"";
 }
 
-ContextIOERR :: ContextIOERR(contextIOResultType e, const char *msg, const char *file, int line)
+ContextIOERR :: ContextIOERR(contextIOResultType e, const char *msg, const char *file, int line) :
+    error(e),
+    msg(msg),
+    file(file),
+    line(line)
 {
-    error = e;
-    this->file = file;
-    this->line = line;
-    this->msg  = msg;
+    this->full_message = "ContextIOERR " + std::to_string(error) + " at line " + std::to_string(line) + " in file \"" + file + "\":" + this->msg;
 }
-
-ContextIOERR :: ~ContextIOERR() { }
 
 
 void

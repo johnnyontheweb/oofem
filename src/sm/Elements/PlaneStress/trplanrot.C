@@ -32,9 +32,9 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/PlaneStress/trplanrot.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Elements/PlaneStress/trplanrot.h"
+#include "sm/CrossSections/structuralcrosssection.h"
+#include "sm/Materials/structuralms.h"
 #include "node.h"
 #include "material.h"
 #include "gausspoint.h"
@@ -69,7 +69,7 @@ TrPlaneStrRot :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize(1);
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 3) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 3);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], numberOfGaussPoints, this);
     }
 }
@@ -342,23 +342,22 @@ TrPlaneStrRot :: giveArea()
 void
 TrPlaneStrRot :: giveNodeCoordinates(FloatArray &x, FloatArray &y)
 {
-    FloatArray *nc1, *nc2, *nc3;
-    nc1 = this->giveNode(1)->giveCoordinates();
-    nc2 = this->giveNode(2)->giveCoordinates();
-    nc3 = this->giveNode(3)->giveCoordinates();
+    const auto &nc1 = this->giveNode(1)->giveCoordinates();
+    const auto &nc2 = this->giveNode(2)->giveCoordinates();
+    const auto &nc3 = this->giveNode(3)->giveCoordinates();
 
-    x.at(1) = nc1->at(1);
-    x.at(2) = nc2->at(1);
-    x.at(3) = nc3->at(1);
+    x.at(1) = nc1.at(1);
+    x.at(2) = nc2.at(1);
+    x.at(3) = nc3.at(1);
 
-    y.at(1) = nc1->at(2);
-    y.at(2) = nc2->at(2);
-    y.at(3) = nc3->at(2);
+    y.at(1) = nc1.at(2);
+    y.at(2) = nc2.at(2);
+    y.at(3) = nc3.at(2);
 
     //if (z) {
-    //  z[0] = nc1->at(3);
-    //  z[1] = nc2->at(3);
-    //  z[2] = nc3->at(3);
+    //  z[0] = nc1.at(3);
+    //  z[1] = nc2.at(3);
+    //  z[2] = nc3.at(3);
     //}
 }
 
@@ -570,16 +569,11 @@ TrPlaneStrRot :: GiveDerivativeVY(const FloatArray &lCoords)
 }
 
 
-IRResultType
-TrPlaneStrRot :: initializeFrom(InputRecord *ir)
+void
+TrPlaneStrRot :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;              // Required by IR_GIVE_FIELD macro
-
     numberOfGaussPoints = 1;
-    result = TrPlaneStress2d :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    TrPlaneStress2d :: initializeFrom(ir);
 
     numberOfRotGaussPoints = 1;
     IR_GIVE_OPTIONAL_FIELD(ir, numberOfRotGaussPoints, _IFT_TrPlaneStrRot_niprot);
@@ -605,16 +599,16 @@ TrPlaneStrRot :: initializeFrom(InputRecord *ir)
 void
 TrPlaneStrRot :: computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
 {
-    StructuralCrossSection *cs = this->giveStructuralCrossSection();
-    cs->giveMembraneRotStiffMtrx(answer, rMode, gp, tStep);
+    auto cs = this->giveStructuralCrossSection();
+    answer = cs->giveMembraneRotStiffMtrx(rMode, gp, tStep);
 }
 
 
 void
 TrPlaneStrRot :: computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
 {
-    StructuralCrossSection *cs = this->giveStructuralCrossSection();
-    cs->giveGeneralizedStress_MembraneRot(answer, gp, strain, tStep);
+    auto cs = this->giveStructuralCrossSection();
+    answer = cs->giveGeneralizedStress_MembraneRot(strain, gp, tStep);
 }
 
 

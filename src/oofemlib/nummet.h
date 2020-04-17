@@ -98,7 +98,7 @@ public:
     /// @return Engineering model receiver is connected to.
     EngngModel *giveEngngModel() { return engngModel; }
 
-    virtual IRResultType initializeFrom(InputRecord *ir)  { return IRRT_OK; }
+    virtual void initializeFrom(InputRecord &ir) { }
 
     /**
      * Reinitializes the receiver. This is used, when topology of problem has changed
@@ -113,8 +113,8 @@ public:
 
     virtual void setDomain(Domain *d) { domain = d; }
 
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL) { return CIO_OK; }
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL) { return CIO_OK; }
+    virtual void saveContext(DataStream &stream, ContextMode mode) { }
+    virtual void restoreContext(DataStream &stream, ContextMode mode) { }
 };
 } // end namespace oofem
 #endif // nummet_h

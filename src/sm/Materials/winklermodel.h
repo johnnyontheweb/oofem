@@ -35,13 +35,13 @@
 #ifndef winklermodel_h
 #define winklermodel_h
 
-#include "../sm/Materials/structuralmaterial.h"
+#include "sm/Materials/structuralmaterial.h"
 #include "floatarray.h"
 #include "floatmatrix.h"
 #include "matconst.h"
 #include "matstatus.h"
 #include "interface.h"
-#include "stressstrainprincmode.h"
+#include "../stressstrainprincmode.h"
 
 ///@name Input fields for WinklerMaterial
 //@{
@@ -55,11 +55,11 @@ namespace oofem {
 class GaussPoint;
 /**
  * Implementation of 1D/2D winkler model for plate (and potentiaonnaly beam) subsoil model.
-   For plates the only C1 spring constant for deflection DOF is needed 
-   (C1 array should have size equal to 1).
-   
-   For beams the elastic constants can be an array of spring stifnesses for each individual DOF. 
-   These stifnesses may be given in global or element coordinate system.
+ * For plates the only C1 spring constant for deflection DOF is needed 
+ * (C1 array should have size equal to 1).
+ *
+ * For beams the elastic constants can be an array of spring stifnesses for each individual DOF. 
+ * These stifnesses may be given in global or element coordinate system.
  */
 class WinklerMaterial : public StructuralMaterial
 {
@@ -67,7 +67,7 @@ protected:
     /// C1 constant, defined as $\int_0^hE_{oed}(z)\left\(d\Psi(z)\over dz\right\)^2\ dz$
     FloatArray c1;
     /// Flag indicating whether subsoil model defined in global or element local c.s.
-    bool globalFromulation;
+    bool globalFromulation = false;
 
 public:
     /**
@@ -76,40 +76,37 @@ public:
      * @param d Domain to which new material will belong.
      */
     WinklerMaterial(int n, Domain * d);
-    /// Destructor.
-    virtual ~WinklerMaterial();
 
-    // identification and auxiliary functions
+    bool hasMaterialModeCapability(MaterialMode mode) const override;
+    const char *giveClassName() const override { return "WinklerMaterial"; }
+    const char *giveInputRecordName() const override { return _IFT_WinklerMaterial_Name; }
 
-    virtual int hasMaterialModeCapability(MaterialMode mode);
-    virtual const char *giveClassName() const { return "WinklerMaterial"; }
-    virtual const char *giveInputRecordName() const { return _IFT_WinklerMaterial_Name; }
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    FloatArrayF<3> giveRealStressVector_2dPlateSubSoil(const FloatArrayF<3> &reducedE, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<6> giveRealStressVector_3dBeamSubSoil(const FloatArrayF<6> &reducedE, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual void giveRealStressVector_2dPlateSubSoil(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedE, TimeStep *tStep);
-    virtual void giveRealStressVector_3dBeamSubSoil(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedE, TimeStep *tStep);
-    
-    virtual void give2dPlateSubSoilStiffMtrx(FloatMatrix &answer, MatResponseMode mmode, GaussPoint *gp, TimeStep *tStep);
-    virtual void give3dBeamSubSoilStiffMtrx(FloatMatrix &answer, MatResponseMode mmode, GaussPoint *gp, TimeStep *tStep);
-    virtual MaterialStatus * CreateStatus(GaussPoint *gp) const;
+    FloatMatrixF<3,3> give2dPlateSubSoilStiffMtrx(MatResponseMode mmode, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<6,6> give3dBeamSubSoilStiffMtrx(MatResponseMode mmode, GaussPoint *gp, TimeStep *tStep) const override;
+    MaterialStatus * CreateStatus(GaussPoint *gp) const override;
 };
 
-  /**
-     Interface defining required functionality from associated element. 
-     The method for computing transformation matrix from global to local element c.s. is required.
-   */
-  class OOFEM_EXPORT Beam3dSubsoilMaterialInterface : public Interface
-  {
-  public:
+/**
+ * Interface defining required functionality from associated element. 
+ * The method for computing transformation matrix from global to local element c.s. is required.
+ */
+class OOFEM_EXPORT Beam3dSubsoilMaterialInterface : public Interface
+{
+public:
     /// Constructor
-    Beam3dSubsoilMaterialInterface() {};
+    Beam3dSubsoilMaterialInterface() { }
+    virtual ~Beam3dSubsoilMaterialInterface() { }
 
     /// Evaluate transformation matrix for reciver unknowns
-    virtual void B3SSMI_getUnknownsGtoLRotationMatrix (FloatMatrix &answer) = 0;
-  };
-  
+    virtual FloatMatrixF<6,6> B3SSMI_getUnknownsGtoLRotationMatrix() const = 0;
+};
+
  
 } // end namespace oofem
 #endif // winklermodel_h

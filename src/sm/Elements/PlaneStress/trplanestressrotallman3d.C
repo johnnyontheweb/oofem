@@ -32,9 +32,9 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/PlaneStress/trplanestressrotallman3d.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Elements/PlaneStress/trplanestressrotallman3d.h"
+#include "sm/CrossSections/structuralcrosssection.h"
+#include "sm/Materials/structuralms.h"
 #include "material.h"
 #include "node.h"
 #include "load.h"
@@ -67,10 +67,9 @@ TrPlanestressRotAllman3d :: computeLocalNodalCoordinates(std :: vector< FloatArr
 
 
     lxy.resize(6);
-    const FloatArray *nc;
     for ( int i = 0; i < 3; i++ ) {
-        nc = this->giveNode(i + 1)->giveCoordinates();
-        lxy [ i ].beProductOf(* GtoLRotationMatrix, * nc);
+        const auto &nc = this->giveNode(i + 1)->giveCoordinates();
+        lxy [ i ].beProductOf(* GtoLRotationMatrix, nc);
     }
     lxy [ 3 ].resize(3);
     lxy [ 4 ].resize(3);
@@ -121,8 +120,8 @@ TrPlanestressRotAllman3d :: computeGtoLRotationMatrix()
         FloatArray e1(3), e2(3), e3(3), help(3);
 
         // compute e1' = [N2-N1]  and  help = [N3-N1]
-        e1.beDifferenceOf( * this->giveNode(2)->giveCoordinates(),  * this->giveNode(1)->giveCoordinates() );
-        help.beDifferenceOf( * this->giveNode(3)->giveCoordinates(),  * this->giveNode(1)->giveCoordinates() );
+        e1.beDifferenceOf(this->giveNode(2)->giveCoordinates(), this->giveNode(1)->giveCoordinates());
+        help.beDifferenceOf(this->giveNode(3)->giveCoordinates(), this->giveNode(1)->giveCoordinates());
 
         // let us normalize e1'
         e1.normalize();
@@ -203,7 +202,7 @@ TrPlanestressRotAllman3d :: giveCharacteristicTensor(FloatMatrix &answer, CharTe
         answer.at(2, 2) = charVect.at(2);
         answer.at(1, 2) = charVect.at(3);
         answer.at(2, 1) = charVect.at(3);
-    } else if ( ( type == LocalMomentumTensor ) || ( type == GlobalMomentumTensor ) ) {} else if ( ( type == LocalStrainTensor ) || ( type == GlobalStrainTensor ) ) {
+    } else if ( ( type == LocalMomentTensor ) || ( type == GlobalMomentTensor ) ) {} else if ( ( type == LocalStrainTensor ) || ( type == GlobalStrainTensor ) ) {
         //this->computeStrainVector(charVect, gp, tStep);
         charVect = ms->giveStrainVector();
 
@@ -216,7 +215,7 @@ TrPlanestressRotAllman3d :: giveCharacteristicTensor(FloatMatrix &answer, CharTe
         exit(1);
     }
 
-    if ( ( type == GlobalForceTensor  ) || ( type == GlobalMomentumTensor  ) ||
+    if ( ( type == GlobalForceTensor  ) || ( type == GlobalMomentTensor  ) ||
          ( type == GlobalStrainTensor ) || ( type == GlobalCurvatureTensor ) ) {
         this->computeGtoLRotationMatrix();
         answer.rotatedWith(* GtoLRotationMatrix);

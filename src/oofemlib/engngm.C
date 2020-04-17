@@ -84,23 +84,18 @@
 #include <cstdio>
 #include <cstdarg>
 #include <ctime>
-// include unistd.h; needed for access
-#ifdef HAVE_UNISTD_H
- #include <unistd.h>
-#elif _MSC_VER
- #include <io.h>
-#endif
 
 #ifdef __OOFEG
  #include "oofeggraphiccontext.h"
 #endif
 
-
 namespace oofem {
-EngngModel :: EngngModel(int i, EngngModel *_master) : domainNeqs(), domainPrescribedNeqs()
+EngngModel :: EngngModel(int i, EngngModel *_master) : domainNeqs(), domainPrescribedNeqs(),
+    exportModuleManager(this),
+    initModuleManager(this),
+    monitorManager(this)
 {
     number = i;
-    defaultErrEstimator = NULL;
     numberOfSteps = 0;
     numberOfEquations = 0;
     numberOfPrescribedEquations = 0;
@@ -120,8 +115,6 @@ EngngModel :: EngngModel(int i, EngngModel *_master) : domainNeqs(), domainPresc
     pMode                 = _processor;  // for giveContextFile()
     pScale                = macroScale;
 
-    exportModuleManager   = new ExportModuleManager(this);
-    initModuleManager     = new InitModuleManager(this);
     master                = _master; // master mode by default
     // create context if in master mode; otherwise request context from master
     if ( master ) {
@@ -151,10 +144,6 @@ EngngModel :: EngngModel(int i, EngngModel *_master) : domainNeqs(), domainPresc
 
 EngngModel :: ~EngngModel()
 {
-    delete exportModuleManager;
-
-    delete initModuleManager;
-
     // master deletes the context
     if ( master == NULL ) {
         delete context;
@@ -167,14 +156,7 @@ EngngModel :: ~EngngModel()
 // #endif
     }
 
-    delete defaultErrEstimator;
-
 #ifdef __PARALLEL_MODE
-    if ( loadBalancingFlag ) {
-        delete lb;
-        delete lbm;
-    }
-
     delete communicator;
     delete nonlocCommunicator;
     delete commBuff;
@@ -202,20 +184,16 @@ EngngModel :: Instanciate_init()
     domainList.clear();
     domainList.reserve(ndomains);
     for ( int i = 1; i <= ndomains; i++ ) {
-        domainList.emplace_back(new Domain(i, 0, this));
+        domainList.push_back(std::make_unique<Domain>(i, 0, this));
     }
 
     this->initParallelContexts();
 }
 
 
-int EngngModel::instanciateYourself(DataReader *dr, InputRecord *ir, const char *dataOutputFileName, const char *desc)
-// simple input - only number of steps variable is read
+int EngngModel :: instanciateYourself(DataReader &dr, InputRecord &ir, const char *dataOutputFileName, const char *desc)
 {
-	OOFEMTXTDataReader *txtReader = dynamic_cast<OOFEMTXTDataReader*> (dr);
-	if (txtReader != NULL) {
-		referenceFileName = std::string(txtReader->giveDataSourceName());
-	}
+    referenceFileName = dr.giveReferenceName();
 
 	bool inputReaderFinish = true;
 
@@ -253,7 +231,7 @@ int EngngModel::instanciateYourself(DataReader *dr, InputRecord *ir, const char 
     fprintf(outputStream, "%s\n", desc);
 
 #  ifdef VERBOSE
-    OOFEM_LOG_DEBUG( "Reading all data from input file %s\n", dr->giveDataSourceName() );
+    OOFEM_LOG_DEBUG( "Reading all data from \"%s\"\n", referenceFileName.c_str() );
 #  endif
 #ifdef __PARALLEL_MODE
     if ( this->isParallel() ) {
@@ -262,45 +240,50 @@ int EngngModel::instanciateYourself(DataReader *dr, InputRecord *ir, const char 
 
 #endif
 
-    // instanciate receiver
-    this->initializeFrom(ir);
-    exportModuleManager->initializeFrom(ir);
-    initModuleManager->initializeFrom(ir);
+    try {
+        // instanciate receiver
+        this->initializeFrom(ir);
+        exportModuleManager.initializeFrom(ir);
+        initModuleManager.initializeFrom(ir);
+        monitorManager.initializeFrom(ir);
 
-    if ( this->nMetaSteps == 0 ) {
-        inputReaderFinish = false;
-        this->instanciateDefaultMetaStep(ir);
-    } else {
-        this->instanciateMetaSteps(dr);
-    }
+        if ( this->nMetaSteps == 0 ) {
+            inputReaderFinish = false;
+            this->instanciateDefaultMetaStep(ir);
+        } else {
+            this->instanciateMetaSteps(dr);
+        }
 
-    // instanciate initialization module manager
-    initModuleManager->instanciateYourself(dr, ir);
-    // instanciate export module manager
-    exportModuleManager->instanciateYourself(dr, ir);
-    this->instanciateDomains(dr);
+        // instanciate initialization module manager
+        initModuleManager.instanciateYourself(dr, ir);
+        // instanciate export module manager
+        exportModuleManager.instanciateYourself(dr, ir);
+        // instanciate monitor manager
+        monitorManager.instanciateYourself(dr, ir);
+        this->instanciateDomains(dr);
 
-    exportModuleManager->initialize();
+        exportModuleManager.initialize();
 
-    // Milan ??????????????????
-    //GPImportModule* gim = new GPImportModule(this);
-    //gim -> getInput();
-    // Milan ??????????????????
+        // Milan ??????????????????
+        //GPImportModule* gim = new GPImportModule(this);
+        //gim -> getInput();
+        // Milan ??????????????????
 
-    // check emodel input record if no default metastep, since all has been read
-    if ( inputReaderFinish ) {
-        ir->finish();
+        // check emodel input record if no default metastep, since all has been read
+        if ( inputReaderFinish ) {
+            ir.finish();
+        }
+    } catch ( InputException &e ) {
+        OOFEM_ERROR("Error initializing from user input: %s\n", e.what());
     }
 
     return 1;
 }
 
 
-IRResultType
-EngngModel :: initializeFrom(InputRecord *ir)
+void
+EngngModel :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
     IR_GIVE_FIELD(ir, numberOfSteps, _IFT_EngngModel_nsteps);
     if ( numberOfSteps <= 0 ) {
         OOFEM_ERROR("nsteps not specified, bad format");
@@ -343,12 +326,33 @@ EngngModel :: initializeFrom(InputRecord *ir)
     force_load_rebalance_in_first_step = _val;
 
 #endif
-    return IRRT_OK;
+
+    suppressOutput = ir.hasField(_IFT_EngngModel_suppressOutput);
+
+    if ( suppressOutput ) {
+        //printf("Suppressing output.\n");
+    }
+    else {
+
+        if ( ( outputStream = fopen(this->dataOutputFileName.c_str(), "w") ) == NULL ) {
+            OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str());
+        }
+
+        fprintf(outputStream, "%s", PRG_HEADER);
+        fprintf(outputStream, "\nStarting analysis on: %s\n", ctime(& this->startTime) );
+        fprintf(outputStream, "%s\n", simulationDescription.c_str());
+
+#ifdef __PARALLEL_MODE
+        if ( this->isParallel() ) {
+            fprintf(outputStream, "Problem rank is %d/%d on %s\n\n", this->rank, this->numProcs, this->processor_name);
+        }
+#endif
+    }
 }
 
 
 int
-EngngModel :: instanciateDomains(DataReader *dr)
+EngngModel :: instanciateDomains(DataReader &dr)
 {
     int result = 1;
     // read problem domains
@@ -361,12 +365,9 @@ EngngModel :: instanciateDomains(DataReader *dr)
 }
 
 
-
 int
-EngngModel :: instanciateMetaSteps(DataReader *dr)
+EngngModel :: instanciateMetaSteps(DataReader &dr)
 {
-    int result = 1;
-
     // create meta steps
     metaStepList.clear();
     metaStepList.reserve(nMetaSteps);
@@ -377,19 +378,17 @@ EngngModel :: instanciateMetaSteps(DataReader *dr)
 
     // read problem domains
     for ( int i = 1; i <= this->nMetaSteps; i++ ) {
-        InputRecord *ir = dr->giveInputRecord(DataReader :: IR_mstepRec, i);
-        result &= metaStepList[i-1].initializeFrom(ir);
+        auto &ir = dr.giveInputRecord(DataReader :: IR_mstepRec, i);
+        metaStepList[i-1].initializeFrom(ir);
     }
 
-
     this->numberOfSteps = metaStepList.size();
-    OOFEM_LOG_RELEVANT("Total number of solution steps     %d\n", numberOfSteps);
-    return result;
+    return 1;
 }
 
 
 int
-EngngModel :: instanciateDefaultMetaStep(InputRecord *ir)
+EngngModel :: instanciateDefaultMetaStep(InputRecord &ir)
 {
     if ( numberOfSteps == 0 ) {
         OOFEM_ERROR("nsteps cannot be zero");
@@ -399,9 +398,8 @@ EngngModel :: instanciateDefaultMetaStep(InputRecord *ir)
     this->nMetaSteps = 1;
     metaStepList.clear();
     //MetaStep *mstep = new MetaStep(1, this, numberOfSteps, *ir);
-    metaStepList.emplace_back(1, this, numberOfSteps, *ir);
+    metaStepList.emplace_back(1, this, numberOfSteps, ir);
 
-    OOFEM_LOG_RELEVANT("Total number of solution steps     %d\n",  numberOfSteps);
     return 1;
 }
 
@@ -530,7 +528,7 @@ EngngModel :: solveYourself()
     }
 
     for ( int imstep = smstep; imstep <= nMetaSteps; imstep++, sjstep = 1 ) { //loop over meta steps
-        MetaStep *activeMStep = this->giveMetaStep(imstep);
+        auto activeMStep = this->giveMetaStep(imstep);
         // update state according to new meta step
         this->initMetaStepAttributes(activeMStep);
 
@@ -561,8 +559,10 @@ EngngModel :: solveYourself()
             OOFEM_LOG_INFO("EngngModel info: user time consumed by solution step %d: %.2fs\n",
                            this->giveCurrentStep()->giveNumber(), _steptime);
 
-            fprintf(out, "\nUser time consumed by solution step %d: %.3f [s]\n\n",
-                    this->giveCurrentStep()->giveNumber(), _steptime);
+            if ( !suppressOutput ) {
+                fprintf(this->giveOutputStream(), "\nUser time consumed by solution step %d: %.3f [s]\n\n",
+                        this->giveCurrentStep()->giveNumber(), _steptime);
+            }
 #ifdef MEMSTR
 			fprintf(out, "endStep\n");
 			OOFEM_LOG_FORCED("endStep\n");
@@ -571,7 +571,6 @@ EngngModel :: solveYourself()
 			fflush(out);
 			oofem_logger.flush();
 #endif
-
 #ifdef __PARALLEL_MODE
             if ( loadBalancingFlag ) {
                 this->balanceLoad( this->giveCurrentStep() );
@@ -648,18 +647,16 @@ TimeStep* EngngModel :: generateNextStep(/* arguments */) {
       sjstep = this->giveMetaStep(smstep)->giveStepRelativeNumber( this->currentStep->giveNumber() ) + 1;
   }
 
-  // test if sjstep still valid for MetaStep
-  if (sjstep > this->giveMetaStep(smstep)->giveNumberOfSteps())
-    smstep++;
-  if (smstep > nMetaSteps) return NULL; // no more metasteps
+    // test if sjstep still valid for MetaStep
+    if (sjstep > this->giveMetaStep(smstep)->giveNumberOfSteps())
+        smstep++;
+    if (smstep > nMetaSteps) return NULL; // no more metasteps
 
-  this->initMetaStepAttributes(this->giveMetaStep(smstep));
+    this->initMetaStepAttributes(this->giveMetaStep(smstep));
 
-  this->preInitializeNextStep();
-  return this->giveNextStep();
+    this->preInitializeNextStep();
+    return this->giveNextStep();
 }
-
-
 
 
 void
@@ -668,14 +665,14 @@ EngngModel :: initMetaStepAttributes(MetaStep *mStep)
     // update attributes
     this->updateAttributes(mStep); // virtual function
     // finish data acquiring
-    mStep->giveAttributesRecord()->finish();
+    mStep->giveAttributesRecord().finish();
 }
 
 void
 EngngModel :: updateAttributes(MetaStep *mStep)
 {
     MetaStep *mStep1 = this->giveMetaStep( mStep->giveNumber() ); //this line ensures correct input file in staggered problem
-    InputRecord *ir = mStep1->giveAttributesRecord();
+    auto &ir = mStep1->giveAttributesRecord();
 
     if ( this->giveNumericalMethod(mStep1) ) {
         this->giveNumericalMethod(mStep1)->initializeFrom(ir);
@@ -741,36 +738,41 @@ EngngModel :: updateYourself(TimeStep *tStep)
 void
 EngngModel :: terminate(TimeStep *tStep)
 {
-    this->doStepOutput(tStep);
-    fflush( this->giveOutputStream() );
-    this->saveStepContext(tStep);
+    if ( !suppressOutput ) {
+        this->doStepOutput(tStep);
+        fflush( this->giveOutputStream() );
+    } else {
+        exportModuleManager.doOutput(tStep);
+    }
+    monitorManager.update(tStep, Monitor::MonitorEvent::TimeStepTermination);
+    
+    this->saveStepContext(tStep, CM_State | CM_Definition);
 }
 
 
 void
 EngngModel :: doStepOutput(TimeStep *tStep)
 {
-    FILE *File = this->giveOutputStream();
+    if ( !suppressOutput ) {
+        this->printOutputAt(this->giveOutputStream(), tStep);
+        fflush( this->giveOutputStream() );
+    }
 
     // print output
     this->printOutputAt(File, tStep);
     // export using export manager
-    exportModuleManager->doOutput(tStep);
+    exportModuleManager.doOutput(tStep);
 }
 
 void
-EngngModel :: saveStepContext(TimeStep *tStep)
+EngngModel :: saveStepContext(TimeStep *tStep, ContextMode mode)
 {
-    // save context if required
-    // default - save only if ALWAYS is set ( see cltypes.h )
+    if ( this->giveContextOutputMode() == COM_Always || this->giveContextOutputMode() == COM_Required || 
+        ( this->giveContextOutputMode() == COM_UserDefined && tStep->giveNumber() % this->giveContextOutputStep() == 0 ) ) {
 
-    if ( ( this->giveContextOutputMode() == COM_Always ) ||
-        ( this->giveContextOutputMode() == COM_Required ) ) {
-        this->saveContext(NULL, CM_State | CM_Definition);
-    } else if ( this->giveContextOutputMode() == COM_UserDefined ) {
-        if ( tStep->giveNumber() % this->giveContextOutputStep() == 0 ) {
-            this->saveContext(NULL, CM_State | CM_Definition);
-        }
+        auto fname = this->giveContextFileName(this->giveCurrentStep()->giveNumber(), this->giveCurrentStep()->giveVersion());
+        FileDataStream stream(fname, true);
+        this->saveContext(stream, mode);
     }
 }
 
@@ -800,6 +802,79 @@ EngngModel :: printOutputAt(FILE *File, TimeStep *tStep)
     }
 }
 
+
+void
+EngngModel :: printOutputAt(FILE *file, TimeStep *tStep, const IntArray &nodeSets, const IntArray &elementSets)
+{
+    for ( auto &domain: domainList ) {
+        int dnum = domain->giveNumber();
+        fprintf( file, "Output for domain %3d\n", dnum );
+        int nset = nodeSets.giveSize() < dnum ? 0 : nodeSets.at(dnum);
+        int eset = elementSets.giveSize() < dnum ? 0 : elementSets.at(dnum);
+
+        this->outputNodes(file, *domain, tStep, nset);
+        this->outputElements(file, *domain, tStep, eset);
+        ///@todo Add general support for reaction forces
+#if 0
+        this->outputReactionForces(file, *domain, tStep, nset);
+#endif
+    }
+}
+
+
+void
+EngngModel :: outputNodes(FILE *file, Domain &domain, TimeStep *tStep, int setNum)
+{
+    fprintf(file, "\n\nNode output:\n------------------\n");
+
+    if ( setNum == 0 ) { // No set specified, export all
+        for ( auto &dman : domain.giveDofManagers() ) {
+            if ( dman->giveParallelMode() == DofManager_null ) {
+                continue;
+            }
+            dman->printOutputAt(file, tStep);
+        }
+    } else {
+        auto &nodes = domain.giveSet(setNum)->giveNodeList();
+
+        for ( int inode : nodes ) {
+            auto dman = domain.giveDofManager(inode);
+            if ( dman->giveParallelMode() == DofManager_null ) {
+                continue;
+            }
+            dman->printOutputAt(file, tStep);
+        }
+    }
+    fprintf(file, "\n\n");
+}
+
+
+void
+EngngModel :: outputElements(FILE *file, Domain &domain, TimeStep *tStep, int setNum)
+{
+    fprintf(file, "\n\nElement output:\n---------------\n");
+
+    if ( setNum == 0 ) {
+        for ( auto &elem : domain.giveElements() ) {
+            if ( elem->giveParallelMode() == Element_remote ) {
+                continue;
+            }
+            elem->printOutputAt(file, tStep);
+        }
+    } else {
+        auto &elements = domain.giveSet(setNum)->giveElementList();
+        for ( int ielem : elements ) {
+            auto element = domain.giveElement(ielem);
+            if ( element->giveParallelMode() == Element_remote ) {
+                continue;
+            }
+            element->printOutputAt(file, tStep);
+        }
+    }
+    fprintf(file, "\n\n");
+}
+
+
 void EngngModel :: printYourself()
 {
     printf("\nEngineeringModel: instance %s\n", this->giveClassName() );
@@ -814,9 +889,6 @@ void EngngModel :: printDofOutputAt(FILE *stream, Dof *iDof, TimeStep *tStep)
 
 void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAssembler &ma,
                             const UnknownNumberingScheme &s, Domain *domain)
-//
-// assembles matrix
-//
 {
     IntArray loc;
     FloatMatrix mat, R;
@@ -827,11 +899,11 @@ void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAss
  #pragma omp parallel for shared(answer) private(mat, R, loc)
 #endif
     for ( int ielem = 1; ielem <= nelem; ielem++ ) {
-        Element *element = domain->giveElement(ielem);
+        auto element = domain->giveElement(ielem);
         // skip remote elements (these are used as mirrors of remote elements on other domains
         // when nonlocal constitutive models are used. They introduction is necessary to
         // allow local averaging on domains without fine grain communication between domains).
-        if ( element->giveParallelMode() == Element_remote || !element->isActivated(tStep) ) {
+        if ( element->giveParallelMode() == Element_remote || !element->isActivated(tStep) || !this->isElementActivated(element) ) {
             continue;
         }
 
@@ -853,15 +925,17 @@ void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAss
         }
     }
 
-    int nbc = domain->giveNumberOfBoundaryConditions();
-    for ( int i = 1; i <= nbc; ++i ) {
-        GeneralBoundaryCondition *bc = domain->giveBc(i);
-        ActiveBoundaryCondition *abc;
-        Load *load;
+    for ( auto &bc : domain->giveBcs() ) {
+        auto abc = dynamic_cast< ActiveBoundaryCondition * >(bc.get());
 
-        if ( ( abc = dynamic_cast< ActiveBoundaryCondition * >(bc) ) ) {
+        if ( abc ) {
+            /// @note: Some active bcs still make changes even when they are not applied
+            /// We should probably reconsider this approach, so that they e.g. just prescribe their lagrange mult. instead.
             ma.assembleFromActiveBC(answer, *abc, tStep, s, s);
-        } else if ( bc->giveSetNumber() && ( load = dynamic_cast< Load * >(bc) ) && bc->isImposed(tStep) ) {
+        } else if ( bc->giveSetNumber() ) {
+            if ( !bc->isImposed(tStep) ) continue;
+            auto load = dynamic_cast< Load * >(bc.get());
+            if ( !load ) continue;
             // Now we assemble the corresponding load type for the respective components in the set:
             IntArray loc, bNodes;
             FloatMatrix mat, R;
@@ -872,8 +946,8 @@ void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAss
 
             if ( ( bodyLoad = dynamic_cast< BodyLoad * >(load) ) ) { // Body load:
                 const IntArray &elements = set->giveElementList();
-                for ( int ielem = 1; ielem <= elements.giveSize(); ++ielem ) {
-                    Element *element = domain->giveElement( elements.at(ielem) );
+                for ( auto ielem : elements ) {
+                    auto element = domain->giveElement( ielem );
                     mat.clear();
                     ma.matrixFromLoad(mat, *element, bodyLoad, tStep);
 
@@ -886,16 +960,16 @@ void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAss
                         answer.assemble(loc, mat);
                     }
                 }
-            } else if ( ( sLoad = dynamic_cast< SurfaceLoad * >(load) ) ) { // Surface load:
-                const IntArray &boundaries = set->giveBoundaryList();
-                for ( int ibnd = 1; ibnd <= boundaries.giveSize() / 2; ++ibnd ) {
-                    Element *element = domain->giveElement( boundaries.at(ibnd * 2 - 1) );
-                    int boundary = boundaries.at(ibnd * 2);
+            } else if ( ( sLoad = dynamic_cast< SurfaceLoad * >(load) ) ) {
+                const auto &surfaces = set->giveBoundaryList();
+                for ( int ibnd = 1; ibnd <= surfaces.giveSize() / 2; ++ibnd ) {
+                    auto element = domain->giveElement( surfaces.at(ibnd * 2 - 1) );
+                    int boundary = surfaces.at(ibnd * 2);
                     mat.clear();
                     ma.matrixFromSurfaceLoad(mat, *element, sLoad, boundary, tStep);
 
                     if ( mat.isNotEmpty() ) {
-                        element->giveInterpolation()->boundaryGiveNodes(bNodes, boundary);
+                        bNodes = element->giveInterpolation()->boundaryGiveNodes(boundary);
                         if ( element->computeDofTransformationMatrix(R, bNodes, false) ) {
                             mat.rotatedWith(R);
                         }
@@ -904,16 +978,16 @@ void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAss
                         answer.assemble(loc, mat);
                     }
                 }
-            } else if ( ( eLoad = dynamic_cast< EdgeLoad * >(load) ) ) { // Edge load:
-                const IntArray &edgeBoundaries = set->giveEdgeList();
-                for ( int ibnd = 1; ibnd <= edgeBoundaries.giveSize() / 2; ++ibnd ) {
-                    Element *element = domain->giveElement( edgeBoundaries.at(ibnd * 2 - 1) );
-                    int boundary = edgeBoundaries.at(ibnd * 2);
+            } else if ( ( eLoad = dynamic_cast< EdgeLoad * >(load) ) ) {
+                const auto &edges = set->giveEdgeList();
+                for ( int ibnd = 1; ibnd <= edges.giveSize() / 2; ++ibnd ) {
+                    auto element = domain->giveElement( edges.at(ibnd * 2 - 1) );
+                    int boundary = edges.at(ibnd * 2);
                     mat.clear();
                     ma.matrixFromEdgeLoad(mat, *element, eLoad, boundary, tStep);
 
                     if ( mat.isNotEmpty() ) {
-                        element->giveInterpolation()->boundaryEdgeGiveNodes(bNodes, boundary);
+                        bNodes = element->giveInterpolation()->boundaryEdgeGiveNodes(boundary);
                         if ( element->computeDofTransformationMatrix(R, bNodes, false) ) {
                             mat.rotatedWith(R);
                         }
@@ -927,7 +1001,7 @@ void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAss
     }
 
     if ( domain->hasContactManager() ) {
-        OOFEM_ERROR("Contant problems temporarily deactivated");
+        OOFEM_ERROR("Contact problems temporarily deactivated");
         //domain->giveContactManager()->assembleTangentFromContacts(answer, tStep, type, s, s);
     }
 
@@ -954,7 +1028,7 @@ void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAss
     for ( int ielem = 1; ielem <= nelem; ielem++ ) {
         Element *element = domain->giveElement(ielem);
 
-        if ( element->giveParallelMode() == Element_remote || !element->isActivated(tStep) ) {
+        if ( element->giveParallelMode() == Element_remote || !element->isActivated(tStep) || !this->isElementActivated(element) ) {
             continue;
         }
 
@@ -977,9 +1051,8 @@ void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAss
         }
     }
 
-    int nbc = domain->giveNumberOfBoundaryConditions();
-    for ( int i = 1; i <= nbc; ++i ) {
-        ActiveBoundaryCondition *bc = dynamic_cast< ActiveBoundaryCondition * >( domain->giveBc(i) );
+    for ( auto &gbc : domain->giveBcs() ) {
+        ActiveBoundaryCondition *bc = dynamic_cast< ActiveBoundaryCondition * >( gbc.get() );
         if ( bc != NULL ) {
             ma.assembleFromActiveBC(answer, *bc, tStep, rs, cs);
         }
@@ -1097,8 +1170,8 @@ void EngngModel :: assembleVectorFromBC(FloatArray &answer, TimeStep *tStep,
         if ( ( abc = dynamic_cast< ActiveBoundaryCondition * >(bc) ) ) {
             va.assembleFromActiveBC(answer, *abc, tStep, mode, s, eNorms);
         } else if ( bc->giveSetNumber() && ( load = dynamic_cast< Load * >(bc) ) && bc->isImposed(tStep) ) {
-            // Now we assemble the corresponding load type for the respective components in the set:
-            IntArray dofids, loc, bNodes;
+            // Now we assemble the corresponding load type fo the respective components in the set:
+            IntArray dofids, loc;
             FloatArray charVec;
             FloatMatrix R;
             BodyLoad *bodyLoad;
@@ -1112,74 +1185,74 @@ void EngngModel :: assembleVectorFromBC(FloatArray &answer, TimeStep *tStep,
                 const IntArray &elements = set->giveElementList();
                 for ( int ielem = 1; ielem <= elements.giveSize(); ++ielem ) {
                     Element *element = domain->giveElement( elements.at(ielem) );
-		    if ( element->isActivated(tStep) ) {
-		      charVec.clear();
-		      va.vectorFromLoad(charVec, *element, bodyLoad, tStep, mode);
+                    if ( element->isActivated(tStep) && this->isElementActivated(element) ) {
+                        charVec.clear();
+                        va.vectorFromLoad(charVec, *element, bodyLoad, tStep, mode);
 
-		      if ( charVec.isNotEmpty() ) {
-                        if ( element->giveRotationMatrix(R) ) {
-			  charVec.rotatedWith(R, 't');
+                        if ( charVec.isNotEmpty() ) {
+                            if ( element->giveRotationMatrix(R) ) {
+                                charVec.rotatedWith(R, 't');
+                            }
+
+                            va.locationFromElement(loc, *element, s, & dofids);
+                            answer.assemble(charVec, loc);
+
+                            if ( eNorms ) {
+                                eNorms->assembleSquared(charVec, dofids);
+                            }
                         }
-
-                        va.locationFromElement(loc, *element, s, & dofids);
-                        answer.assemble(charVec, loc);
-
-                        if ( eNorms ) {
-			  eNorms->assembleSquared(charVec, dofids);
-                        }
-		      }
-		    }
+                    }
                 }
             } else if ( ( sLoad = dynamic_cast< SurfaceLoad * >(load) ) ) { // Surface load:
                 const IntArray &boundaries = set->giveBoundaryList();
                 for ( int ibnd = 1; ibnd <= boundaries.giveSize() / 2; ++ibnd ) {
                     Element *element = domain->giveElement( boundaries.at(ibnd * 2 - 1) );
-		    if ( element->isActivated(tStep) ) {
+                    if ( element->isActivated(tStep) && this->isElementActivated(element) ) {
 
-		      int boundary = boundaries.at(ibnd * 2);
-		      charVec.clear();
-		      va.vectorFromSurfaceLoad(charVec, *element, sLoad, boundary, tStep, mode);
+                        int boundary = boundaries.at(ibnd * 2);
+                        charVec.clear();
+                        va.vectorFromSurfaceLoad(charVec, *element, sLoad, boundary, tStep, mode);
 
-		      if ( charVec.isNotEmpty() ) {
-                        //element->giveInterpolation()->boundaryGiveNodes(bNodes, boundary);
-                        element->giveBoundarySurfaceNodes(bNodes, boundary);
-                        if ( element->computeDofTransformationMatrix(R, bNodes, false) ) {
-			  charVec.rotatedWith(R, 't');
+                        if ( charVec.isNotEmpty() ) {
+                            //element->giveInterpolation()->boundaryGiveNodes(bNodes, boundary);
+                            auto bNodes = element->giveBoundarySurfaceNodes(boundary);
+                            if ( element->computeDofTransformationMatrix(R, bNodes, false) ) {
+                                charVec.rotatedWith(R, 't');
+                            }
+
+                            va.locationFromElementNodes(loc, *element, bNodes, s, & dofids);
+                            answer.assemble(charVec, loc);
+
+                            if ( eNorms ) {
+                                eNorms->assembleSquared(charVec, dofids);
+                            }
                         }
-
-                        va.locationFromElementNodes(loc, *element, bNodes, s, & dofids);
-                        answer.assemble(charVec, loc);
-
-                        if ( eNorms ) {
-			  eNorms->assembleSquared(charVec, dofids);
-                        }
-		      }
-		    }
+                    }
                 }
             } else if ( ( eLoad = dynamic_cast< EdgeLoad * >(load) ) ) { // Edge load:
                 const IntArray &edgeBoundaries = set->giveEdgeList();
                 for ( int ibnd = 1; ibnd <= edgeBoundaries.giveSize() / 2; ++ibnd ) {
-		  Element *element = domain->giveElement( edgeBoundaries.at(ibnd * 2 - 1) );
-		  if ( element->isActivated(tStep) ) {
-		    int boundary = edgeBoundaries.at(ibnd * 2);
-		    charVec.clear();
-		    va.vectorFromEdgeLoad(charVec, *element, eLoad, boundary, tStep, mode);
+                    Element *element = domain->giveElement( edgeBoundaries.at(ibnd * 2 - 1) );
+                    if ( element->isActivated(tStep) && this->isElementActivated(element) ) {
+                        int boundary = edgeBoundaries.at(ibnd * 2);
+                        charVec.clear();
+                        va.vectorFromEdgeLoad(charVec, *element, eLoad, boundary, tStep, mode);
 
-		    if ( charVec.isNotEmpty() ) {
-		      //element->giveInterpolation()->boundaryEdgeGiveNodes(bNodes, boundary);
-                      element->giveBoundaryEdgeNodes(bNodes, boundary);
-		      if ( element->computeDofTransformationMatrix(R, bNodes, false) ) {
-			charVec.rotatedWith(R, 't');
-		      }
+                        if ( charVec.isNotEmpty() ) {
+                            //element->giveInterpolation()->boundaryEdgeGiveNodes(bNodes, boundary);
+                            auto bNodes = element->giveBoundaryEdgeNodes(boundary);
+                            if ( element->computeDofTransformationMatrix(R, bNodes, false) ) {
+                                charVec.rotatedWith(R, 't');
+                            }
 
-		      va.locationFromElementNodes(loc, *element, bNodes, s, & dofids);
-		      answer.assemble(charVec, loc);
+                            va.locationFromElementNodes(loc, *element, bNodes, s, & dofids);
+                            answer.assemble(charVec, loc);
 
-		      if ( eNorms ) {
-			eNorms->assembleSquared(charVec, dofids);
-		      }
-		    }
-		  }
+                            if ( eNorms ) {
+                                eNorms->assembleSquared(charVec, dofids);
+                            }
+                        }
+                    }
                 }
             } else if ( ( nLoad = dynamic_cast< NodalLoad * >(load) ) ) { // Nodal load:
                 const IntArray &nodes = set->giveNodeList();
@@ -1222,7 +1295,6 @@ void EngngModel :: assembleVectorFromElements(FloatArray &answer, TimeStep *tSte
     FloatArray charVec;
     int nelem = domain->giveNumberOfElements();
 
-
     ///@todo Checking the chartype is not since there could be some other chartype in the future. We need to try and deal with chartype in a better way.
     /// For now, this is the best we can do.
     if ( this->isParallel() ) {
@@ -1233,7 +1305,44 @@ void EngngModel :: assembleVectorFromElements(FloatArray &answer, TimeStep *tSte
     this->timer.resumeTimer(EngngModelTimer :: EMTT_NetComputationalStepTimer);
     ///@todo Consider using private answer variables and sum them up at the end, but it just might be slower then a shared variable.
 #ifdef _OPENMP
- #pragma omp parallel for shared(answer, eNorms) private(R, charVec, loc, dofids)
+#pragma omp parallel for shared(answer, eNorms) private(R, charVec, loc, dofids)
+#endif
+    for ( int i = 1; i <= nelem; i++ ) {
+
+      Element *element = domain->giveElement(i);
+
+        // skip remote elements (these are used as mirrors of remote elements on other domains
+        // when nonlocal constitutive models are used. They introduction is necessary to
+        // allow local averaging on domains without fine grain communication between domains).
+        if ( element->giveParallelMode() == Element_remote ) {
+            continue;
+        }
+
+        if ( !element->isActivated(tStep) || !this->isElementActivated(element) ) {
+            continue;
+        }
+
+
+        va.vectorFromElement(charVec, *element, tStep, mode);
+
+        if ( charVec.isNotEmpty() ) {
+            if ( element->giveRotationMatrix(R) ) {
+                charVec.rotatedWith(R, 't');
+            }
+            va.locationFromElement(loc, *element, s, & dofids);
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+            {
+                answer.assemble(charVec, loc);
+                if ( eNorms ) {
+                    eNorms->assembleSquared(charVec, dofids);
+                }
+            }
+        }
+
+#ifdef _OPENMP
+#pragma omp parallel for shared(answer, eNorms) private(R, charVec, loc, dofids)
 #endif
     for ( int i = 1; i <= nelem; i++ ) {
         Element *element = domain->giveElement(i);
@@ -1245,29 +1354,9 @@ void EngngModel :: assembleVectorFromElements(FloatArray &answer, TimeStep *tSte
             continue;
         }
 
-        if ( !element->isActivated(tStep) ) {
+        if ( !element->isActivated(tStep) || !this->isElementActivated(element) ) {
             continue;
         }
-
-
-        va.vectorFromElement(charVec, *element, tStep, mode);
-        if ( charVec.isNotEmpty() ) {
-            if ( element->giveRotationMatrix(R) ) {
-                charVec.rotatedWith(R, 't');
-            }
-            va.locationFromElement(loc, *element, s, & dofids);
-
-#ifdef _OPENMP
- #pragma omp critical
-#endif
-            {
-                answer.assemble(charVec, loc);
-                if ( eNorms ) {
-                    eNorms->assembleSquared(charVec, dofids);
-                }
-            }
-        }
-
 
         // obtain form element its body, surface, edge, and point loads
         const IntArray& list = element->giveBodyLoadList();
@@ -1284,67 +1373,92 @@ void EngngModel :: assembleVectorFromElements(FloatArray &answer, TimeStep *tSte
                 }
 
                 va.locationFromElement(loc, *element, s, & dofids);
-                answer.assemble(charVec, loc);
-                
-                if ( eNorms ) {
-                  eNorms->assembleSquared(charVec, dofids);
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+                {
+                    answer.assemble(charVec, loc);            
+                    if ( eNorms ) {
+                        eNorms->assembleSquared(charVec, dofids);
+                    }
                 }
               }
             }
             
           } // loop over body load list
         } // if (!(list = element->giveBodyLoadList()).isEmpty())
+    }
+
+#ifdef _OPENMP
+#pragma omp parallel for shared(answer, eNorms) private(R, charVec, loc, dofids, assembleFlag)
+#endif
+    for ( int i = 1; i <= nelem; i++ ) {
+        Element *element = domain->giveElement(i);
+
+        // skip remote elements (these are used as mirrors of remote elements on other domains
+        // when nonlocal constitutive models are used. They introduction is necessary to
+        // allow local averaging on domains without fine grain communication between domains).
+        if ( element->giveParallelMode() == Element_remote ) {
+            continue;
+        }
+
+        if ( !element->isActivated(tStep) || !this->isElementActivated(element) ) {
+            continue;
+        }
 
         // obtain from element its boundaryloads (surface+edge)
         const IntArray& list2 = element->giveBoundaryLoadList();
-        IntArray bNodes;
-        if (!list2.isEmpty()) {
-          for (int j=1; j<=list2.giveSize()/2; j++) { // loop over boundary loads
+
+        for (int j=1; j<=list2.giveSize()/2; j++) { // loop over boundary loads
             int iload = list2.at(j * 2 - 1) ;
             int boundary = list2.at(j * 2);
             SurfaceLoad *sLoad;
             EdgeLoad *eLoad;
+            bool assembleFlag = false;
+            IntArray bNodes;
+
             if ((eLoad = dynamic_cast< EdgeLoad * >(domain->giveLoad(iload)))) {
-              charVec.clear();
-              va.vectorFromEdgeLoad(charVec, *element, eLoad, boundary, tStep, mode);
-              
-              if ( charVec.isNotEmpty() ) {
-                //element->giveInterpolation()->boundaryEdgeGiveNodes(bNodes, boundary);
-                element->giveBoundaryEdgeNodes(bNodes, boundary);
-                if ( element->computeDofTransformationMatrix(R, bNodes, false) ) {
-                  charVec.rotatedWith(R, 't');
+                charVec.clear();
+                va.vectorFromEdgeLoad(charVec, *element, eLoad, boundary, tStep, mode);
+            
+                if ( charVec.isNotEmpty() ) {
+                    //element->giveInterpolation()->boundaryEdgeGiveNodes(bNodes, boundary);
+                    bNodes = element->giveBoundaryEdgeNodes(boundary);
+                    if ( element->computeDofTransformationMatrix(R, bNodes, false) ) {
+                        charVec.rotatedWith(R, 't');
+                    }
+                    assembleFlag = true;
                 }
-                
-                va.locationFromElementNodes(loc, *element, bNodes, s, & dofids);
-                answer.assemble(charVec, loc);
-                
-                if ( eNorms ) {
-                  eNorms->assembleSquared(charVec, dofids);
-                }
-              }
             } else if ((sLoad = dynamic_cast< SurfaceLoad * >(domain->giveLoad(iload)))) {
-              charVec.clear();
-              va.vectorFromSurfaceLoad(charVec, *element, sLoad, boundary, tStep, mode);
-              
-              if ( charVec.isNotEmpty() ) {
-                //element->giveInterpolation()->boundaryGiveNodes(bNodes, boundary);
-                element->giveBoundarySurfaceNodes(bNodes, boundary);
-                if ( element->computeDofTransformationMatrix(R, bNodes, false) ) {
-                  charVec.rotatedWith(R, 't');
+                charVec.clear();
+                va.vectorFromSurfaceLoad(charVec, *element, sLoad, boundary, tStep, mode);
+            
+                if ( charVec.isNotEmpty() ) {
+                    //element->giveInterpolation()->boundaryGiveNodes(bNodes, boundary);
+                    bNodes = element->giveBoundarySurfaceNodes(boundary);
+                    if ( element->computeDofTransformationMatrix(R, bNodes, false) ) {
+                        charVec.rotatedWith(R, 't');
+                    }
+                    assembleFlag = true;
                 }
-                
-                va.locationFromElementNodes(loc, *element, bNodes, s, & dofids);
-                answer.assemble(charVec, loc);
-                
-                if ( eNorms ) {
-                  eNorms->assembleSquared(charVec, dofids);
-                }
-              }
             } else {
-              OOFEM_ERROR ("Unsupported element boundary load type");
+                OOFEM_ERROR ("Unsupported element boundary load type");
             }
-          }
-        } // end loop over lement boundary loads
+
+            if ( assembleFlag ) {
+                // assemble the contribution
+                va.locationFromElementNodes(loc, *element, bNodes, s, & dofids);
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+                {
+                    answer.assemble(charVec, loc);
+                    if ( eNorms ) {
+                        eNorms->assembleSquared(charVec, dofids);
+                    }
+                }
+            } // end loop over lement boundary loads
+        }
 
     } // end loop over elements
 
@@ -1353,6 +1467,82 @@ void EngngModel :: assembleVectorFromElements(FloatArray &answer, TimeStep *tSte
 
 void
 EngngModel :: assembleExtrapolatedForces(FloatArray &answer, TimeStep *tStep, CharType type, Domain *domain)
+{
+    // Simply assembles contributions from each element in domain
+    IntArray loc;
+    FloatArray charVec, delta_u;
+    FloatMatrix charMatrix, R;
+    int nelems = domain->giveNumberOfElements();
+    EModelDefaultEquationNumbering dn;
+
+    answer.resize( this->giveNumberOfDomainEquations( domain->giveNumber(), EModelDefaultEquationNumbering() ) );
+    answer.zero();
+
+    this->timer.resumeTimer(EngngModelTimer :: EMTT_NetComputationalStepTimer);
+
+#ifdef _OPENMP
+ #pragma omp parallel for shared(answer) private(R, charMatrix, charVec, loc, delta_u)
+#endif
+    for ( int i = 1; i <= nelems; i++ ) {
+        Element *element = domain->giveElement(i);
+
+        // Skip remote elements (these are used as mirrors of remote elements on other domains
+        // when nonlocal constitutive models are used. Their introduction is necessary to
+        // allow local averaging on domains without fine grain communication between domains).
+        if ( element->giveParallelMode() == Element_remote ) {
+            continue;
+        }
+
+        if ( !element->isActivated(tStep) || !this->isElementActivated(element) ) {
+            continue;
+        }
+
+        element->giveLocationArray(loc, dn);
+
+        // Take the tangent from the previous step
+        ///@todo This is not perfect. It is probably no good for viscoelastic materials, and possibly other scenarios that are rate dependent
+        ///(tangent will be computed for the previous step, with whatever deltaT it had)
+        element->giveCharacteristicMatrix(charMatrix, type, tStep);
+        if ( charMatrix.isNotEmpty() ) {
+            ///@note Temporary work-around for active b.c. used in multiscale (it can't support VM_Incremental easily).
+            
+#if 0
+            element->computeVectorOf(VM_Incremental, tStep, delta_u);
+#else
+            element->computeVectorOf(VM_Total, tStep, delta_u);
+            FloatArray tmp;
+
+            if ( tStep->isTheFirstStep() ) {
+                tmp = delta_u;
+                tmp.zero();
+            } else {
+                element->computeVectorOf(VM_Total, tStep->givePreviousStep(), tmp);
+            }
+
+            delta_u.subtract(tmp);
+#endif
+
+            charVec.beProductOf(charMatrix, delta_u);
+            if ( element->giveRotationMatrix(R) ) {
+                charVec.rotatedWith(R, 't');
+            }
+
+            ///@todo Deal with element deactivation and reactivation properly.
+#ifdef _OPENMP
+ #pragma omp critical
+#endif
+            {
+                answer.assemble(charVec, loc);
+            }
+        }
+    }
+
+    this->timer.pauseTimer(EngngModelTimer :: EMTT_NetComputationalStepTimer);
+}
+
+
+void
+EngngModel :: assemblePrescribedExtrapolatedForces(FloatArray &answer, TimeStep *tStep, CharType type, Domain *domain)
 {
     // Simply assembles contributions from each element in domain
     IntArray loc;
@@ -1389,52 +1579,20 @@ EngngModel :: assembleExtrapolatedForces(FloatArray &answer, TimeStep *tStep, Ch
         ///@todo This is not perfect. It is probably no good for viscoelastic materials, and possibly other scenarios that are rate dependent
         ///(tangent will be computed for the previous step, with whatever deltaT it had)
         element->giveCharacteristicMatrix(charMatrix, type, tStep);
-        element->computeVectorOf(VM_Incremental, tStep, delta_u);
-        charVec.beProductOf(charMatrix, delta_u);
-        if ( element->giveRotationMatrix(R) ) {
-            charVec.rotatedWith(R, 't');
-        }
+        element->computeVectorOfPrescribed(VM_Incremental, tStep, delta_u);
+        if ( charMatrix.isNotEmpty() ) {
+            charVec.beProductOf(charMatrix, delta_u);
+            if ( element->giveRotationMatrix(R) ) {
+                charVec.rotatedWith(R, 't');
+            }
 
-        ///@todo Deal with element deactivation and reactivation properly.
-#ifdef _OPENMP
- #pragma omp critical
-#endif
-        {
-            answer.assemble(charVec, loc);
-        }
-    }
-
-    this->timer.pauseTimer(EngngModelTimer :: EMTT_NetComputationalStepTimer);
-}
-
-
-  
-void
-EngngModel :: assemblePrescribedExtrapolatedForces(FloatArray &answer, TimeStep *tStep, CharType type, Domain *domain)
-{
-    // Simply assembles contributions from each element in domain
-    IntArray loc;
-    FloatArray charVec, delta_u;
-    FloatMatrix charMatrix, R;
-    int nelems = domain->giveNumberOfElements();
-    EModelDefaultEquationNumbering dn;
-
-    answer.resize( this->giveNumberOfDomainEquations( domain->giveNumber(), EModelDefaultEquationNumbering() ) );
-    answer.zero();
-
-    this->timer.resumeTimer(EngngModelTimer :: EMTT_NetComputationalStepTimer);
-
-#ifdef _OPENMP
- #pragma omp parallel for shared(answer) private(R, charMatrix, charVec, loc, delta_u)
-#endif
-    for ( int i = 1; i <= nelems; i++ ) {
-        Element *element = domain->giveElement(i);
-
-        // Skip remote elements (these are used as mirrors of remote elements on other domains
-        // when nonlocal constitutive models are used. Their introduction is necessary to
-        // allow local averaging on domains without fine grain communication between domains).
-        if ( element->giveParallelMode() == Element_remote ) {
-            continue;
+            ///@todo Deal with element deactivation and reactivation properly.
+    #ifdef _OPENMP
+    #pragma omp critical
+    #endif
+            {
+                answer.assemble(charVec, loc);
+            }
         }
 
         if ( !element->isActivated(tStep) ) {
@@ -1478,12 +1636,29 @@ EngngModel :: assembleVectorFromContacts(FloatArray &answer, TimeStep *tStep, Ch
 
 void
 EngngModel :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *d)
-//
-// updates some component, which is used by numerical method
-// to newly reached state
-//
 {
     OOFEM_ERROR("Unknown Type of component.");
+}
+
+
+void
+EngngModel :: updateSolution(FloatArray &solutionVector, TimeStep *tStep, Domain *d)
+{
+    OOFEM_ERROR("updateSolution is not implemented.");
+}
+
+
+void
+EngngModel :: updateInternalRHS(FloatArray &answer, TimeStep *tStep, Domain *d, FloatArray *eNorms)
+{
+    OOFEM_ERROR("updateInternalRHS is not implemented.");
+}
+
+
+void
+EngngModel :: updateMatrix(SparseMtrx &mat, TimeStep *tStep, Domain *d)
+{
+    OOFEM_ERROR("updateMatrix is not implemented.");
 }
 
 
@@ -1516,10 +1691,10 @@ void
 EngngModel :: updateDomainLinks()
 {
     this->giveExportModuleManager()->initialize();
-};
+}
 
 
-contextIOResultType EngngModel :: saveContext(DataStream *stream, ContextMode mode, void *obj)
+void EngngModel :: saveContext(DataStream &stream, ContextMode mode)
 //
 // this procedure is used mainly for two reasons:
 //
@@ -1539,75 +1714,46 @@ contextIOResultType EngngModel :: saveContext(DataStream *stream, ContextMode mo
 //
 {
     contextIOResultType iores;
-    int closeFlag = 0;
-    FILE *file = NULL;
-
-
-    OOFEM_LOG_INFO("Storing context\n");
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, this->giveCurrentStep()->giveNumber(),
-                                    this->giveCurrentStep()->giveVersion(), contextMode_write) ) {
-            THROW_CIOERR(CIO_IOERR); // override
-        }
-
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
-
-    // store solution step
-    if ( ( iores = giveCurrentStep()->saveContext(*stream, mode) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    // store numberOfEquations and domainNeqs array
-    if ( !stream->write(numberOfEquations) ) {
+ 
+    if ( !stream.write(giveCurrentStep()->giveNumber()) ) {
         THROW_CIOERR(CIO_IOERR);
     }
 
-    if ( ( iores = domainNeqs.storeYourself(*stream) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
+    giveCurrentStep()->saveContext(stream);
 
-    // store numberOfPrescribedEquations and domainNeqs array
-    if ( !stream->write(numberOfPrescribedEquations) ) {
+    if ( !stream.write(numberOfEquations) ) {
         THROW_CIOERR(CIO_IOERR);
     }
 
-    if ( ( iores = domainPrescribedNeqs.storeYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = domainNeqs.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    // store renumber flag
-    if ( !stream->write(renumberFlag) ) {
+    if ( !stream.write(numberOfPrescribedEquations) ) {
         THROW_CIOERR(CIO_IOERR);
     }
 
+    if ( ( iores = domainPrescribedNeqs.storeYourself(stream) ) != CIO_OK ) {
+        THROW_CIOERR(iores);
+    }
+
+    if ( !stream.write(renumberFlag) ) {
+        THROW_CIOERR(CIO_IOERR);
+    }
 
     for ( auto &domain: domainList ) {
-        domain->saveContext(*stream, mode, obj);
+        domain->saveContext(stream, mode);
     }
-
 
     // store nMethod
     NumericalMethod *nmethod = this->giveNumericalMethod( this->giveMetaStep( giveCurrentStep()->giveMetaStepNumber() ) );
     if ( nmethod ) {
-        if ( ( iores = nmethod->saveContext(*stream, mode) ) != CIO_OK ) {
-            THROW_CIOERR(iores);
-        }
+        nmethod->saveContext(stream, mode);
     }
-
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete(stream);
-        stream = NULL;
-    }                                                         // ensure consistent records
-
-    return CIO_OK;
 }
 
 
-contextIOResultType EngngModel :: restoreContext(DataStream *stream, ContextMode mode, void *obj)
+void EngngModel :: restoreContext(DataStream &stream, ContextMode mode)
 //
 // this procedure is used mainly for two reasons:
 //
@@ -1626,34 +1772,20 @@ contextIOResultType EngngModel :: restoreContext(DataStream *stream, ContextMode
 // This version loads only Element and Material properties.
 //
 // This function is inverse to the saveContext() member function
-//
-// WARNING obj is cast into int pointer  to time step for which to seek Context.
-//
 {
     contextIOResultType iores;
-    int closeFlag = 0, istep, iversion;
-    FILE *file = NULL;
-
-    this->resolveCorrespondingStepNumber(istep, iversion, obj);
-    OOFEM_LOG_RELEVANT("Restoring context for time step %d.%d\n", istep, iversion);
-
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, istep, iversion, contextMode_read) ) {
-            THROW_CIOERR(CIO_IOERR);                                                              // override
-        }
-
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
 
     // restore solution step
-    if ( !currentStep ) {
-        currentStep.reset( new TimeStep(istep, this, 0, 0., 0., 0) );
+    int istep;
+    if ( !stream.read(istep) ) {
+        THROW_CIOERR(CIO_IOERR);
     }
 
-    if ( ( iores = currentStep->restoreContext(*stream, mode) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
+    if ( !currentStep ) {
+        currentStep = std::make_unique<TimeStep>(istep, this, 0, 0., 0., 0);
     }
+
+    currentStep->restoreContext(stream);
 
     // this->updateAttributes (currentStep);
 
@@ -1664,80 +1796,45 @@ contextIOResultType EngngModel :: restoreContext(DataStream *stream, ContextMode
         }
     }
 
-    previousStep.reset( new TimeStep(istep - 1, this, pmstep, currentStep->giveTargetTime ( ) - currentStep->giveTimeIncrement(),
-                                currentStep->giveTimeIncrement(), currentStep->giveSolutionStateCounter() - 1) );
+    previousStep = std::make_unique<TimeStep>(istep - 1, this, pmstep, currentStep->giveTargetTime ( ) - currentStep->giveTimeIncrement(),
+                                currentStep->giveTimeIncrement(), currentStep->giveSolutionStateCounter() - 1);
 
     // restore numberOfEquations and domainNeqs array
-    if ( !stream->read(numberOfEquations) ) {
+    if ( !stream.read(numberOfEquations) ) {
         THROW_CIOERR(CIO_IOERR);
     }
 
-    if ( ( iores = domainNeqs.restoreYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = domainNeqs.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
     // restore numberOfPrescribedEquations and domainNeqs array
-    if ( !stream->read(numberOfPrescribedEquations) ) {
+    if ( !stream.read(numberOfPrescribedEquations) ) {
         THROW_CIOERR(CIO_IOERR);
     }
 
-    if ( ( iores = domainPrescribedNeqs.restoreYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = domainPrescribedNeqs.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
     // restore renumber flag
-    if ( !stream->read(renumberFlag) ) {
+    if ( !stream.read(renumberFlag) ) {
         THROW_CIOERR(CIO_IOERR);
     }
 
     for ( auto &domain: domainList ) {
-        domain->restoreContext(*stream, mode, obj);
+        domain->restoreContext(stream, mode);
     }
 
     // restore nMethod
     NumericalMethod *nmethod = this->giveNumericalMethod( this->giveCurrentMetaStep() );
     if ( nmethod ) {
-        if ( ( iores = nmethod->restoreContext(*stream, mode) ) != CIO_OK ) {
-            THROW_CIOERR(iores);
-        }
+        nmethod->restoreContext(stream, mode);
     }
 
     this->updateDomainLinks();
     this->updateAttributes( this->giveCurrentMetaStep() );
     this->initStepIncrements();
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete stream;
-        stream = NULL;
-    }                                                           // ensure consistent records
-
-    return CIO_OK;
-}
-
-
-void
-EngngModel :: resolveCorrespondingStepNumber(int &istep, int &iversion, void *obj)
-{
-    //
-    // returns corresponding step number
-    //
-    if ( obj == NULL ) {
-        istep = 1;
-        iversion = 0;
-        return;
-    }
-
-    istep = * ( int * ) obj;
-    iversion = * ( ( ( int * ) obj ) + 1 );
-
-    if ( istep > this->giveNumberOfSteps() ) {
-        istep = this->giveNumberOfSteps();
-    }
-
-    if ( istep <= 0 ) {
-        istep = 1;
-    }
 }
 
 
@@ -1748,76 +1845,23 @@ EngngModel :: giveCurrentMetaStep()
 }
 
 
-int
-EngngModel :: giveContextFile(FILE **contextFile, int tStepNumber, int stepVersion, ContextFileMode cmode, int errLevel)
-//
-//
-// assigns context file of given step number to stream
-// returns nonzero on success
-//
+std ::string
+EngngModel :: giveContextFileName(int tStepNumber, int stepVersion) const
 {
     std :: string fname = this->coreOutputFileName;
     char fext [ 100 ];
     sprintf(fext, ".%d.%d.osf", tStepNumber, stepVersion);
-    fname += fext;
-
-    if ( cmode ==  contextMode_read ) {
-        * contextFile = fopen(fname.c_str(), "rb"); // open for reading
-    } else {
-        * contextFile = fopen(fname.c_str(), "wb"); // open for writing,
-    }
-
-    //  rewind (*contextFile); // seek the beginning
-    // // overwrite if exist
-    // else *contextFile = fopen(fname,"r+"); // open for reading and writing
-
-    if ( ( * contextFile == NULL ) && errLevel > 0 ) {
-        OOFEM_ERROR("can't open %s", fname.c_str());
-    }
-
-    return 1;
+    return fname + fext;
 }
 
-bool
-EngngModel :: testContextFile(int tStepNumber, int stepVersion)
-{
-    std :: string fname = this->coreOutputFileName;
-    char fext [ 100 ];
-    sprintf(fext, ".%d.%d.osf", tStepNumber, stepVersion);
-    fname.append(fext);
 
-#ifdef HAVE_ACCESS
-    return access(fname.c_str(), R_OK) == 0;
-
-#elif _MSC_VER
-    return _access(fname.c_str(), 4) == 0;
-
-#else
-    return true;
-
-#endif
-}
-
-DataReader *
-EngngModel :: GiveDomainDataReader(int domainNum, int domainSerNum, ContextFileMode cmode)
-//
-//
-// returns domain i/o file
-// returns nonzero on success
-//
+std :: string
+EngngModel :: giveDomainFileName(int domainNum, int domainSerNum) const
 {
     std :: string fname = this->coreOutputFileName;
     char fext [ 100 ];
     sprintf(fext, ".domain.%d.%d.din", domainNum, domainSerNum);
-    fname += fext;
-
-    DataReader *dr;
-
-    if ( ( dr = new OOFEMTXTDataReader( fname ) ) == NULL ) {
-        OOFEM_ERROR("Creation of DataReader failed");
-    }
-
-    return dr;
+    return fname + fext;
 }
 
 std :: string
@@ -1888,8 +1932,9 @@ EngngModel :: giveMetaStep(int i)
 }
 
 void
-EngngModel::letOutputBaseFileNameBe(const std :: string &src) {
-  this->dataOutputFileName = src;
+EngngModel :: letOutputBaseFileNameBe(const std :: string &src)
+{
+    this->dataOutputFileName = src;
 
   if (outputStream) {
 // #ifndef MEMSTR
@@ -1947,7 +1992,7 @@ EngngModel :: terminateAnalysis()
     OOFEM_LOG_FORCED("Real time consumed: %03dh:%02dm:%02ds\n", rhrs, rmin, rsec);
     fprintf(out, "User time consumed: %03dh:%02dm:%02ds\n\n\n", uhrs, umin, usec);
     OOFEM_LOG_FORCED("User time consumed: %03dh:%02dm:%02ds\n", uhrs, umin, usec);
-    exportModuleManager->terminate();
+    exportModuleManager.terminate();
 #ifdef MEMSTR
 	fprintf(out, "strTerm\n");
 	//if (usestream) fprintf(out, "strTerm\n");
@@ -2003,7 +2048,7 @@ EngngModel :: postInitialize()
 void
 EngngModel :: init()
 {
-    initModuleManager->doInit();
+    initModuleManager.doInit();
 }
 
 
@@ -2157,6 +2202,10 @@ EngngModel :: balanceLoad(TimeStep *tStep)
 {
     this->giveLoadBalancerMonitor();
     this->giveLoadBalancer();
+    if ( !lb ) {
+        OOFEM_WARNING("No load balancer found, skipping load balancing step");
+        return;
+    }
 
     //print statistics for current step
     lb->printStatistics();
@@ -2214,13 +2263,13 @@ int
 EngngModel :: packRemoteElementData(ProcessCommunicator &processComm)
 {
     int result = 1;
-    IntArray const *toSendMap = processComm.giveToSendMap();
-    CommunicationBuffer *send_buff = processComm.giveProcessCommunicatorBuff()->giveSendBuff();
+    const IntArray &toSendMap = processComm.giveToSendMap();
+    CommunicationBuffer &send_buff = processComm.giveProcessCommunicatorBuff()->giveSendBuff();
     Domain *domain = this->giveDomain(1);
 
 
-    for ( int i = 1; i <= toSendMap->giveSize(); i++ ) {
-        result &= domain->giveElement( toSendMap->at(i) )->packUnknowns( * send_buff, this->giveCurrentStep() );
+    for ( int ielem : toSendMap ) {
+        result &= domain->giveElement( ielem )->packUnknowns( send_buff, this->giveCurrentStep() );
     }
 
     return result;
@@ -2231,15 +2280,15 @@ int
 EngngModel :: unpackRemoteElementData(ProcessCommunicator &processComm)
 {
     int result = 1;
-    IntArray const *toRecvMap = processComm.giveToRecvMap();
-    CommunicationBuffer *recv_buff = processComm.giveProcessCommunicatorBuff()->giveRecvBuff();
+    const IntArray &toRecvMap = processComm.giveToRecvMap();
+    CommunicationBuffer &recv_buff = processComm.giveProcessCommunicatorBuff()->giveRecvBuff();
     Domain *domain = this->giveDomain(1);
 
 
-    for ( int i = 1; i <= toRecvMap->giveSize(); i++ ) {
-        Element *element = domain->giveElement( toRecvMap->at(i) );
+    for ( int ielem : toRecvMap ) {
+        Element *element = domain->giveElement( ielem );
         if ( element->giveParallelMode() == Element_remote ) {
-            result &= element->unpackAndUpdateUnknowns( * recv_buff, this->giveCurrentStep() );
+            result &= element->unpackAndUpdateUnknowns( recv_buff, this->giveCurrentStep() );
         } else {
             OOFEM_ERROR("element is not remote");
         }
@@ -2256,14 +2305,14 @@ EngngModel :: packDofManagers(ArrayWithNumbering *srcData, ProcessCommunicator &
     const UnknownNumberingScheme &s = * srcData->numbering;
     int result = 1;
     Domain *domain = this->giveDomain(1);
-    IntArray const *toSendMap = processComm.giveToSendMap();
+    const IntArray &toSendMap = processComm.giveToSendMap();
     ProcessCommunicatorBuff *pcbuff = processComm.giveProcessCommunicatorBuff();
 
     ///@todo Shouldn't hardcode domain number 1
     ///@todo Must fix: Internal dofmanagers in xfem and bc
-    for ( int i = 1; i <= toSendMap->giveSize(); i++ ) {
-        DofManager *dman = domain->giveDofManager( toSendMap->at(i) );
-        for ( Dof *jdof: *dman ) {
+    for ( int inode : toSendMap ) {
+        DofManager *dman = domain->giveDofManager( inode );
+        for ( auto &jdof: *dman ) {
             if ( jdof->isPrimaryDof() ) {
                 int eqNum = jdof->giveEquationNumber(s);
                 if ( eqNum ) {
@@ -2284,16 +2333,16 @@ EngngModel :: unpackDofManagers(ArrayWithNumbering *destData, ProcessCommunicato
     const UnknownNumberingScheme &s = * destData->numbering;
     int result = 1;
     Domain *domain = this->giveDomain(1);
-    IntArray const *toRecvMap = processComm.giveToRecvMap();
+    const IntArray &toRecvMap = processComm.giveToRecvMap();
     ProcessCommunicatorBuff *pcbuff = processComm.giveProcessCommunicatorBuff();
     double value;
 
     ///@todo Shouldn't hardcode domain number 1
     ///@todo Must fix: Internal dofmanagers in bc
-    for ( int i = 1; i <= toRecvMap->giveSize(); i++ ) {
-        DofManager *dman = domain->giveDofManager( toRecvMap->at(i) );
+    for ( int inode : toRecvMap ) {
+        DofManager *dman = domain->giveDofManager( inode );
         dofManagerParallelMode dofmanmode = dman->giveParallelMode();
-        for ( Dof *jdof: *dman ) {
+        for ( auto &jdof: *dman ) {
             int eqNum = jdof->giveEquationNumber(s);
             if ( jdof->isPrimaryDof() && eqNum ) {
                 result &= pcbuff->read(value);

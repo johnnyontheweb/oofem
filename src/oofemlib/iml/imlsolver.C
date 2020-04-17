@@ -55,29 +55,18 @@
 namespace oofem {
 REGISTER_SparseLinSolver(IMLSolver, ST_IML)
 
-IMLSolver :: IMLSolver(Domain *d, EngngModel *m) : SparseLinearSystemNM(d, m)
+IMLSolver :: IMLSolver(Domain *d, EngngModel *m) : SparseLinearSystemNM(d, m),
+    lhs(nullptr),
+    solverType(IML_ST_CG),
+    precondType(IML_VoidPrec),
+    precondInit(true)
+{}
+
+
+void
+IMLSolver :: initializeFrom(InputRecord &ir)
 {
-    Lhs = NULL;
-    M = NULL;
-    solverType = IML_ST_CG;
-    precondType = IML_VoidPrec;
-    precondInit = true;
-}
-
-
-IMLSolver :: ~IMLSolver()
-{
-    delete M;
-}
-
-IRResultType
-IMLSolver :: initializeFrom(InputRecord *ir)
-{
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
-    int val;
-
-    val = 0;
+    int val = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_IMLSolver_stype);
     solverType = ( IMLSolverType ) val;
 
@@ -91,18 +80,17 @@ IMLSolver :: initializeFrom(InputRecord *ir)
 
     // create preconditioner
     if ( precondType == IML_DiagPrec ) {
-        M = new DiagPreconditioner();
+        M = std::make_unique<DiagPreconditioner>();
     } else if ( precondType == IML_VoidPrec ) {
-        M = new VoidPreconditioner();
+        M = std::make_unique<VoidPreconditioner>();
     } else if ( precondType == IML_ILU_CompRowPrec ) {
-        M = new CompRow_ILUPreconditioner();
+        M = std::make_unique<CompRow_ILUPreconditioner>();
     } else if ( precondType == IML_ILU_CompColPrec ) {
-        M = new CompCol_ILUPreconditioner();
+        M = std::make_unique<CompCol_ILUPreconditioner>();
     } else if ( precondType == IML_ICPrec ) {
-        M = new CompCol_ICPreconditioner();
+        M = std::make_unique<CompCol_ICPreconditioner>();
     } else {
-        OOFEM_WARNING("unknown preconditioner type");
-        return IRRT_BAD_FORMAT;
+        throw ValueInputException(ir, _IFT_IMLSolver_lsprecond, "unknown preconditioner type");
     }
 
     // initialize precond attributes
@@ -119,17 +107,16 @@ IMLSolver :: solve(SparseMtrx &A, FloatArray &b, FloatArray &x)
         OOFEM_ERROR("size mismatch");
     }
 
-
     // check preconditioner
     if ( M ) {
-        if ( ( precondInit ) || ( Lhs != &A ) || ( this->lhsVersion != A.giveVersion() ) ) {
+        if ( precondInit || lhs != &A || this->lhsVersion != A.giveVersion() ) {
             M->init(A);
         }
     } else {
         OOFEM_ERROR("preconditioner creation error");
     }
 
-    Lhs = &A;
+    lhs = &A;
     this->lhsVersion = A.giveVersion();
 
 #ifdef TIME_REPORT
@@ -137,17 +124,15 @@ IMLSolver :: solve(SparseMtrx &A, FloatArray &b, FloatArray &x)
     timer.startTimer();
 #endif
 
-
+    int mi = this->maxite;
+    double t = this->tol;
     if ( solverType == IML_ST_CG ) {
-        int mi = this->maxite;
-        double t = this->tol;
-        result = CG(* Lhs, x, b, * M, mi, t);
+        result = CG(* lhs, x, b, * M, mi, t);
         OOFEM_LOG_INFO("CG(%s): flag=%d, nite %d, achieved tol. %g\n", M->giveClassName(), result, mi, t);
     } else if ( solverType == IML_ST_GMRES ) {
-        int mi = this->maxite, restart = 100;
-        double t = this->tol;
+        int restart = 100;
         FloatMatrix H(restart + 1, restart); // storage for upper Hesenberg
-        result = GMRES(* Lhs, x, b, * M, H, restart, mi, t);
+        result = GMRES(* lhs, x, b, * M, H, restart, mi, t);
         OOFEM_LOG_INFO("GMRES(%s): flag=%d, nite %d, achieved tol. %g\n", M->giveClassName(), result, mi, t);
     } else {
         OOFEM_ERROR("unknown lsover type");
@@ -158,8 +143,6 @@ IMLSolver :: solve(SparseMtrx &A, FloatArray &b, FloatArray &x)
     OOFEM_LOG_INFO( "IMLSolver info: user time consumed by solution: %.2fs\n", timer.getUtime() );
 #endif
 
-
-    //solved = 1;
     return NM_Success;
 }
 } // end namespace oofem

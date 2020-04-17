@@ -32,8 +32,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/PlaneStress/trplanestressrotallman.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
+#include "sm/Elements/PlaneStress/trplanestressrotallman.h"
+#include "sm/CrossSections/structuralcrosssection.h"
 #include "fei2dtrquad.h"
 #include "fei2dtrlin.h"
 #include "node.h"
@@ -57,7 +57,7 @@ REGISTER_Element(TrPlanestressRotAllman);
 FEI2dTrQuad TrPlanestressRotAllman :: qinterpolation(1, 2);
 
 TrPlanestressRotAllman :: TrPlanestressRotAllman(int n, Domain *aDomain) :
-    TrPlaneStress2d(n, aDomain)
+    TrPlaneStress2d(n, aDomain), LayeredCrossSectionInterface()
 {
     numberOfDofMans  = 3;
     numberOfGaussPoints = 4;
@@ -66,12 +66,15 @@ TrPlanestressRotAllman :: TrPlanestressRotAllman(int n, Domain *aDomain) :
 Interface *
 TrPlanestressRotAllman :: giveInterface(InterfaceType interface)
 {
-    if ( interface == ZZNodalRecoveryModelInterfaceType ) {
+    if ( interface == LayeredCrossSectionInterfaceType ) {
+        return static_cast< LayeredCrossSectionInterface * >(this);
+    } else if ( interface == ZZNodalRecoveryModelInterfaceType ) {
         return static_cast< ZZNodalRecoveryModelInterface * >(this);
     } else if ( interface == SPRNodalRecoveryModelInterfaceType ) {
         return static_cast< SPRNodalRecoveryModelInterface * >(this);
     } else if ( interface == SpatialLocalizerInterfaceType ) {
         return static_cast< SpatialLocalizerInterface * >(this);
+   
     }
     return NULL;
 }
@@ -81,7 +84,7 @@ TrPlanestressRotAllman :: computeLocalNodalCoordinates(std::vector< FloatArray >
 {
     lxy.resize(6);
     for ( int i = 0; i < 3; i++ ) {
-        lxy [ i ] = * this->giveNode(i + 1)->giveCoordinates();
+        lxy [ i ] = this->giveNode(i + 1)->giveCoordinates();
     }
     lxy [ 3 ].resize(2);
     lxy [ 4 ].resize(2);
@@ -253,7 +256,7 @@ void TrPlanestressRotAllman :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize( 1 );
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 3) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 3);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], numberOfGaussPoints, this);
     }
 }
@@ -263,12 +266,11 @@ TrPlanestressRotAllman :: computeEgdeNMatrixAt(FloatMatrix &answer, int iedge, G
 {
     std::vector< FloatArray > lxy;
     FloatArray l, n;
-    IntArray en;
     FEI2dTrQuad qi(1, 2);
 
     this->computeLocalNodalCoordinates(lxy); // get ready for tranformation into 3d
     qi.edgeEvalN( n, iedge, gp->giveNaturalCoordinates(), FEIVertexListGeometryWrapper(lxy) );
-    qi.computeLocalEdgeMapping(en, iedge); // get edge mapping
+    const auto &en = qi.computeLocalEdgeMapping(iedge); // get edge mapping
     this->interp.edgeEvalN( l, iedge, gp->giveNaturalCoordinates(), FEIElementGeometryWrapper(this) );
     answer.resize(3, 6);
 
@@ -315,6 +317,27 @@ TrPlanestressRotAllman :: giveEdgeDofMapping(IntArray &answer, int iEdge) const
     } else {
         OOFEM_ERROR("wrong edge number");
     }
+}
+
+//
+// layered cross section support functions
+//
+void
+TrPlanestressRotAllman :: computeStrainVectorInLayer(FloatArray &answer, const FloatArray &masterGpStrain, GaussPoint *masterGp, GaussPoint *slaveGp, TimeStep *tStep)
+// returns full 3d strain vector of given layer (whose z-coordinate from center-line is
+// stored in slaveGp) for given tStep
+{
+    double layerZeta, layerZCoord, top, bottom;
+
+    top    = this->giveCrossSection()->give(CS_TopZCoord, masterGp);
+    bottom = this->giveCrossSection()->give(CS_BottomZCoord, masterGp);
+    layerZeta = slaveGp->giveNaturalCoordinate(3);
+    layerZCoord = 0.5 * ( ( 1. - layerZeta ) * bottom + ( 1. + layerZeta ) * top );
+    answer.resize(3); // {eps_xx,eps_yy,gamma_yz}
+
+    answer.at(1) = masterGpStrain.at(1) * layerZCoord;
+    answer.at(2) = masterGpStrain.at(2) * layerZCoord;
+    answer.at(3) = masterGpStrain.at(3);
 }
 
 void TrPlanestressRotAllman :: computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, int boundary, CharType type, ValueModeType mode, TimeStep *tStep, bool global)
@@ -458,13 +481,10 @@ void TrPlanestressRotAllman :: computeBoundaryEdgeLoadVector(FloatArray &answer,
  * }
  */
 
-IRResultType
-TrPlanestressRotAllman :: initializeFrom(InputRecord *ir)
+void
+TrPlanestressRotAllman :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result = TrPlaneStress2d :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    TrPlaneStress2d :: initializeFrom(ir);
     numberOfGaussPoints = 4;
 	BMatrices.resize(this->numberOfGaussPoints);
 

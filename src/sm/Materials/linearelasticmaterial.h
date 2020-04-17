@@ -35,7 +35,9 @@
 #ifndef linearelasticmaterial_h
 #define linearelasticmaterial_h
 
-#include "../sm/Materials/structuralmaterial.h"
+#include "sm/Materials/structuralmaterial.h"
+#include "floatmatrixf.h"
+#include "floatarrayf.h"
 
 ///@name Input fields for LinearElasticMaterial
 //@{
@@ -64,36 +66,54 @@ class LinearElasticMaterial : public StructuralMaterial
 {
 protected:
     /// artificial isotropic damage to reflect reduction in stiffness for time < castingTime.
-    double preCastStiffnessReduction;
+    double preCastStiffnessReduction = 0.;
+
+    /// Preconstructed 3d tangent
+    FloatMatrixF<6,6> tangent;
+    FloatMatrixF<4,4> tangentPlaneStrain;
+    FloatMatrixF<3,3> tangentPlaneStress;
+
+    /// Thermal expansion
+    FloatArrayF<6> alpha;
 
 public:
     /// Constructor.
     LinearElasticMaterial(int n, Domain *d) : StructuralMaterial(n, d) { }
-    /// Destructor.
-    virtual ~LinearElasticMaterial() { }
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual void giveRealStressVector_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &strain, TimeStep *tStep);
-    virtual void giveRealStressVector_PlaneStrain(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep);
-    virtual void giveRealStressVector_3dDegeneratedShell(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedF, TimeStep *tStep);
-    virtual void giveRealStressVector_PlaneStress(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep);
-    virtual void giveRealStressVector_1d(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep);
-    virtual void giveRealStressVector_Warping(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep);
-    virtual void giveRealStressVector_2dBeamLayer(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedE, TimeStep *tStep);
-    virtual void giveRealStressVector_PlateLayer(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedE, TimeStep *tStep);
-    virtual void giveRealStressVector_Fiber(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedE, TimeStep *tStep);
+    const FloatMatrixF<6,6> &giveTangent() const { return tangent; }
+    const FloatArrayF<6> &giveAlpha() const { return alpha; }
+    
+    /**
+     * Computes the plane strain and plane stress tangents from the 3D tangent.
+     */
+    void computesSubTangents();
 
-    virtual void giveEshelbyStressVector_PlaneStrain(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedF, TimeStep *tStep);
+    FloatMatrixF<6,6> give3dMaterialStiffnessMatrix(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<6> giveThermalDilatationVector(GaussPoint *gp, TimeStep *tStep) const override;
+
+    FloatArrayF<6> giveRealStressVector_3d(const FloatArrayF<6> &strain, GaussPoint *gp, TimeStep *tStep) const override;
+    ///@todo Should this be virtual? It's never used. It's not part of the base class.
+    virtual FloatArrayF<6> giveRealStressVector_3dDegeneratedShell(const FloatArrayF<6> &reducedF, GaussPoint *gp, TimeStep *tStep) const;
+    FloatArrayF<3> giveRealStressVector_PlaneStress(const FloatArrayF<3> &reducedStrain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<1> giveRealStressVector_1d(const FloatArrayF<1> &reducedStrain, GaussPoint *gp, TimeStep *tStep) const  override;
+    FloatArrayF<2> giveRealStressVector_Warping(const FloatArrayF<2> &reducedStrain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<2> giveRealStressVector_2dBeamLayer(const FloatArrayF<2> &reducedE, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<5> giveRealStressVector_PlateLayer(const FloatArrayF<5> &reducedE, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<3> giveRealStressVector_Fiber(const FloatArrayF<3> &reducedE, GaussPoint *gp, TimeStep *tStep) const override;
+
+    void giveEshelbyStressVector_PlaneStrain(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedF, TimeStep *tStep) override;
     double giveEnergyDensity(GaussPoint *gp, TimeStep *tStep);
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const;
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
 
-    virtual double giveShearModulus() { return 1.; }
-    virtual int hasNonLinearBehaviour() { return 0; }
-    virtual int hasCastingTimeSupport() { return 1.; }
-    virtual const char *giveClassName() const { return "LinearElasticMaterial"; }
+    ///@todo This makes no sense in this  base class, it should belong to isotropiclinearelastic material.
+    virtual double giveShearModulus() const { return 1.; }
+    bool hasCastingTimeSupport() const override { return true; }
+    const char *giveClassName() const override { return "LinearElasticMaterial"; }
 };
 } // end namespace oofem
 #endif // linearelasticmaterial_h

@@ -32,9 +32,9 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/Beams/libeam3dnl.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Elements/Beams/libeam3dnl.h"
+#include "sm/CrossSections/structuralcrosssection.h"
+#include "sm/Materials/structuralms.h"
 #include "node.h"
 #include "material.h"
 #include "gausspoint.h"
@@ -339,22 +339,17 @@ LIBeam3dNL :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize( 1 );
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 2) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 2);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], 1, this);
     }
 }
 
 
-IRResultType
-LIBeam3dNL :: initializeFrom(InputRecord *ir)
+void
+LIBeam3dNL :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
     // first call parent
-    result = NLStructuralElement :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    NLStructuralElement :: initializeFrom(ir);
 
     IR_GIVE_FIELD(ir, referenceNode, _IFT_LIBeam3dNL_refnode);
     if ( referenceNode == 0 ) {
@@ -376,8 +371,6 @@ LIBeam3dNL :: initializeFrom(InputRecord *ir)
     FloatMatrix lcs;
     this->giveLocalCoordinateSystem(lcs);
     this->tc.beTranspositionOf(lcs);
-
-    return IRRT_OK;
 }
 
 
@@ -515,14 +508,14 @@ LIBeam3dNL :: computeGlobalCoordinates(FloatArray &answer, const FloatArray &lco
 void
 LIBeam3dNL :: computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->give3dBeamStiffMtrx(answer, rMode, gp, tStep);
+    answer = this->giveStructuralCrossSection()->give3dBeamStiffMtrx(rMode, gp, tStep);
 }
 
 
 void
 LIBeam3dNL :: computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->giveGeneralizedStress_Beam3d(answer, gp, strain, tStep);
+    answer = this->giveStructuralCrossSection()->giveGeneralizedStress_Beam3d(strain, gp, tStep);
 }
 
 

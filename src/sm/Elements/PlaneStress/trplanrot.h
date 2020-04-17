@@ -35,7 +35,7 @@
 #ifndef trplanrot_h
 #define trplanrot_h
 
-#include "../sm/Elements/PlaneStress/trplanstrss.h"
+#include "sm/Elements/PlaneStress/trplanstrss.h"
 
 ///@name Input fields for TrPlaneStrRot
 //@{
@@ -69,38 +69,38 @@ public:
 	FloatArray la1;
 
 protected:
-    virtual void computeGaussPoints();
-    virtual void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int = 1, int = ALL_STRAINS);
-    virtual void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer);
+    void computeGaussPoints() override;
+    void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int = 1, int = ALL_STRAINS) override;
+    void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer) override;
 
-    virtual void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep);
-    virtual void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep);
+    void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) override;
+    void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep) override;
 
-    virtual double giveArea();
+    double giveArea() override;
     virtual void giveNodeCoordinates(FloatArray &x, FloatArray &y);
 
-    virtual void computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode);
+    void computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode) override;
 
 public:
     // definition & identification
-    virtual const char *giveInputRecordName() const { return _IFT_TrPlaneStrRot_Name; }
-    virtual const char *giveClassName() const { return "TrPlaneStrRot"; }
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual MaterialMode giveMaterialMode() { return _PlaneStressRot; }
+    const char *giveInputRecordName() const override { return _IFT_TrPlaneStrRot_Name; }
+    const char *giveClassName() const override { return "TrPlaneStrRot"; }
+    void initializeFrom(InputRecord &ir) override;
+    MaterialMode giveMaterialMode() override { return _PlaneStressRot; }
 
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 
-    virtual int computeNumberOfDofs() { return 9; }
-    virtual void giveDofManDofIDMask(int inode, IntArray &) const;
+    int computeNumberOfDofs() override { return 9; }
+    void giveDofManDofIDMask(int inode, IntArray &) const override;
 
-    virtual double giveCharacteristicLength(const FloatArray &normalToCrackPlane);
+    double giveCharacteristicLength(const FloatArray &normalToCrackPlane) override;
 
     FloatArray GivePitch();
     FloatArray GiveDerivativeUX(const FloatArray &lCoords);
     FloatArray GiveDerivativeVX(const FloatArray &lCoords);
     FloatArray GiveDerivativeUY(const FloatArray &lCoords);
     FloatArray GiveDerivativeVY(const FloatArray &lCoords);
-    //virtual void computeStrainVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep);
+    //void computeStrainVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep) override;
 
 	virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep);
 	virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord);

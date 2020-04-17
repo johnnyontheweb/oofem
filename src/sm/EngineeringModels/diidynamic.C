@@ -32,9 +32,9 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/EngineeringModels/diidynamic.h"
-#include "../sm/Elements/structuralelement.h"
-#include "../sm/Elements/structuralelementevaluator.h"
+#include "sm/EngineeringModels/diidynamic.h"
+#include "sm/Elements/structuralelement.h"
+#include "sm/Elements/structuralelementevaluator.h"
 #include "timestep.h"
 #include "element.h"
 #include "dofmanager.h"
@@ -70,7 +70,7 @@ NumericalMethod *DIIDynamic :: giveNumericalMethod(MetaStep *mStep)
         return nMethod.get();
     }
 
-    nMethod.reset( classFactory.createSparseLinSolver(solverType, this->giveDomain(1), this) );
+    nMethod = classFactory.createSparseLinSolver(solverType, this->giveDomain(1), this);
     if ( !nMethod ) {
         OOFEM_ERROR("linear solver creation failed for lstype %d", solverType);
     }
@@ -79,15 +79,10 @@ NumericalMethod *DIIDynamic :: giveNumericalMethod(MetaStep *mStep)
 }
 
 
-IRResultType
-DIIDynamic :: initializeFrom(InputRecord *ir)
+void
+DIIDynamic :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
-    result = StructuralEngngModel :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    StructuralEngngModel :: initializeFrom(ir);
 
     int val = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_EngngModel_lstype);
@@ -127,13 +122,10 @@ DIIDynamic :: initializeFrom(InputRecord *ir)
             theta = 1.37;
         }
     } else {
-        OOFEM_WARNING("Time-stepping scheme not found!");
-        return IRRT_BAD_FORMAT;
+        throw ValueInputException(ir, _IFT_DIIDynamic_ddtScheme, "Time-stepping scheme not found!");
     }
 
     IR_GIVE_FIELD(ir, deltaT, _IFT_DIIDynamic_deltat);
-
-    return IRRT_OK;
 }
 
 
@@ -198,7 +190,7 @@ TimeStep *DIIDynamic :: giveNextStep()
 
     previousStep = std :: move(currentStep);
 
-    currentStep.reset( new TimeStep(istep, this, 1, totalTime, deltaT, counter, td) );
+    currentStep = std::make_unique<TimeStep>(istep, this, 1, totalTime, deltaT, counter, td);
 
     return currentStep.get();
 }
@@ -265,14 +257,14 @@ void DIIDynamic :: solveYourselfAt(TimeStep *tStep)
 #ifdef VERBOSE
         OOFEM_LOG_DEBUG("Assembling stiffness matrix\n");
 #endif
-        stiffnessMatrix.reset( classFactory.createSparseMtrx(sparseMtrxType) );
+        stiffnessMatrix = classFactory.createSparseMtrx(sparseMtrxType);
         if ( !stiffnessMatrix ) {
             OOFEM_ERROR("sparse matrix creation failed");
         }
 
         stiffnessMatrix->buildInternalStructure( this, 1, EModelDefaultEquationNumbering() );
 
-        this->assemble(*stiffnessMatrix, tStep, EffectiveTangentAssembler(false, 1 + this->delta * a1,  this->a0 + this->eta * this->a1),
+        this->assemble(*stiffnessMatrix, tStep, EffectiveTangentAssembler(TangentStiffness, false, 1 + this->delta * a1,  this->a0 + this->eta * this->a1),
                        EModelDefaultEquationNumbering(), domain);
 
         help.resize(neq);
@@ -291,7 +283,7 @@ void DIIDynamic :: solveYourselfAt(TimeStep *tStep)
         OOFEM_LOG_DEBUG("Assembling stiffness matrix\n");
 #endif
         stiffnessMatrix->zero();
-        this->assemble(*stiffnessMatrix, tStep, EffectiveTangentAssembler(false, 1 + this->delta * a1,  this->a0 + this->eta * this->a1),
+        this->assemble(*stiffnessMatrix, tStep, EffectiveTangentAssembler(TangentStiffness, false, 1 + this->delta * a1,  this->a0 + this->eta * this->a1),
                        EModelDefaultEquationNumbering(), domain);
     }
 
@@ -629,53 +621,31 @@ DIIDynamic :: determineConstants(TimeStep *tStep)
 }
 
 
-contextIOResultType DIIDynamic :: saveContext(DataStream *stream, ContextMode mode, void *obj)
+void DIIDynamic :: saveContext(DataStream &stream, ContextMode mode)
 {
-    int closeFlag = 0;
     contextIOResultType iores;
-    FILE *file = NULL;
 
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, this->giveCurrentStep()->giveNumber(),
-                                    this->giveCurrentStep()->giveVersion(), contextMode_write) ) {
-            THROW_CIOERR(CIO_IOERR); // Override.
-        }
+    EngngModel :: saveContext(stream, mode);
 
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
-
-    if ( ( iores = EngngModel :: saveContext(stream, mode) ) != CIO_OK ) {
+    if ( ( iores = displacementVector.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = displacementVector.storeYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = velocityVector.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = velocityVector.storeYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = accelerationVector.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = accelerationVector.storeYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = loadVector.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = loadVector.storeYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = previousIncrementOfDisplacement.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    if ( ( iores = previousIncrementOfDisplacement.storeYourself(*stream) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete stream;
-        stream = NULL;
-    }
-
-    return CIO_OK;
 }
 
 void
@@ -689,51 +659,28 @@ DIIDynamic::terminate(TimeStep *tStep)
 
 contextIOResultType DIIDynamic :: restoreContext(DataStream *stream, ContextMode mode, void *obj)
 {
-    int closeFlag = 0;
-    int istep, iversion;
     contextIOResultType iores;
-    FILE *file = NULL;
 
-    this->resolveCorrespondingStepNumber(istep, iversion, obj);
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, istep, iversion, contextMode_read) ) {
-            THROW_CIOERR(CIO_IOERR); // Override.
-        }
+    EngngModel :: restoreContext(stream, mode);
 
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
-
-    if ( ( iores = EngngModel :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
+    if ( ( iores = displacementVector.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = displacementVector.restoreYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = velocityVector.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = velocityVector.restoreYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = accelerationVector.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = accelerationVector.restoreYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = loadVector.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = loadVector.restoreYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = previousIncrementOfDisplacement.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    if ( ( iores = previousIncrementOfDisplacement.restoreYourself(*stream) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete stream;
-        stream = NULL;
-    }
-
-    return CIO_OK;
 }
 } // end namespace oofem

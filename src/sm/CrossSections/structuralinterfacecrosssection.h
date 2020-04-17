@@ -35,7 +35,7 @@
 #ifndef structuralinterfacecrosssection_h
 #define structuralinterfacecrosssection_h
 
-#include "../sm/Materials/InterfaceMaterials/structuralinterfacematerial.h"
+#include "sm/Materials/InterfaceMaterials/structuralinterfacematerial.h"
 #include "crosssection.h"
 #include "classfactory.h"
 
@@ -74,9 +74,9 @@ public:
     /// Destructor.
     virtual ~StructuralInterfaceCrossSection() { }
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual int testCrossSectionExtension(CrossSectExtension ext) { return this->crossSectionType; }
+    int testCrossSectionExtension(CrossSectExtension ext) override { return this->crossSectionType; }
 
     /**
      * Computes the real stress vector for given strain and integration point.
@@ -89,56 +89,58 @@ public:
      * services for corresponding material model defined for given integration point.
      * @param answer Contains result.
      * @param gp Integration point.
-     * @param reducedF Deformation gradient in reduced form.
+     * @param reduthiscedF Deformation gradient in reduced form.
      * @param tStep Current time step (most models are able to respond only when tStep is current time step).
      */
     //@{
     // Pass all calls to the material
-    void giveFirstPKTraction_1d( FloatArray &answer, GaussPoint *gp, const FloatArray &jump, const FloatMatrix &F, TimeStep *tStep )
-    { this->giveInterfaceMaterial()->giveFirstPKTraction_1d(answer, gp, jump, F, tStep); }
-    void giveFirstPKTraction_2d( FloatArray &answer, GaussPoint *gp, const FloatArray &jump, const FloatMatrix &F, TimeStep *tStep )
-    { this->giveInterfaceMaterial()->giveFirstPKTraction_2d(answer, gp, jump, F, tStep); }
-    void giveFirstPKTraction_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &jump, const FloatMatrix &F, TimeStep *tStep)
-    { this->giveInterfaceMaterial()->giveFirstPKTraction_3d(answer, gp, jump, F, tStep); }
+    double giveFirstPKTraction_1d(double jump, double F, GaussPoint *gp, TimeStep *tStep ) const
+    { return this->giveInterfaceMaterial()->giveFirstPKTraction_1d(jump, F, gp, tStep); }
+    FloatArrayF<2> giveFirstPKTraction_2d( const FloatArrayF<2> &jump, const FloatMatrixF<2,2> &F, GaussPoint *gp, TimeStep *tStep ) const
+    { return this->giveInterfaceMaterial()->giveFirstPKTraction_2d(jump, F, gp, tStep); }
+    FloatArrayF<3> giveFirstPKTraction_3d(const FloatArrayF<3> &jump, const FloatMatrixF<3,3> &F, GaussPoint *gp, TimeStep *tStep) const
+    { return this->giveInterfaceMaterial()->giveFirstPKTraction_3d(jump, F, gp, tStep); }
 
 
-    void giveEngTraction_1d(FloatArray &answer, GaussPoint *gp, const FloatArray &jump, TimeStep *tStep)
+    double giveEngTraction_1d(double jump, GaussPoint *gp, TimeStep *tStep) const
     {
-        this->giveInterfaceMaterial()->giveEngTraction_1d(answer, gp, jump, tStep);
+        return this->giveInterfaceMaterial()->giveEngTraction_1d(jump, gp, tStep);
     }
-    void giveEngTraction_2d(FloatArray &answer, GaussPoint *gp, const FloatArray &jump, TimeStep *tStep)
+    FloatArrayF<2> giveEngTraction_2d(const FloatArrayF<2> &jump, GaussPoint *gp, TimeStep *tStep) const
     {
-        this->giveInterfaceMaterial()->giveEngTraction_2d(answer, gp, jump, tStep);   
+        return this->giveInterfaceMaterial()->giveEngTraction_2d(jump, gp, tStep);
     }
-    void giveEngTraction_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &jump, TimeStep *tStep)
+    FloatArrayF<3> giveEngTraction_3d(const FloatArrayF<3> &jump, GaussPoint *gp, TimeStep *tStep) const
     {
-        this->giveInterfaceMaterial()->giveEngTraction_3d(answer, gp, jump, tStep);
+        return this->giveInterfaceMaterial()->giveEngTraction_3d(jump, gp, tStep);
     }
 
-    void give1dStiffnessMatrix_dTdj( FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep );
-    void give2dStiffnessMatrix_dTdj( FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep );
-    void give3dStiffnessMatrix_dTdj( FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep );
+    FloatMatrixF<1,1> give1dStiffnessMatrix_dTdj(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep ) const;
+    FloatMatrixF<2,2> give2dStiffnessMatrix_dTdj(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep ) const;
+    FloatMatrixF<3,3> give3dStiffnessMatrix_dTdj(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep ) const;
 
-
-    void give1dStiffnessMatrix_Eng( FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep );
-    void give2dStiffnessMatrix_Eng( FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep );
-    void give3dStiffnessMatrix_Eng( FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep );
+    FloatMatrixF<1,1> give1dStiffnessMatrix_Eng(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep ) const;
+    FloatMatrixF<2,2> give2dStiffnessMatrix_Eng(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep ) const;
+    FloatMatrixF<3,3> give3dStiffnessMatrix_Eng(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep ) const;
     //@}
 
-    StructuralInterfaceMaterial *giveInterfaceMaterial();
-    const FloatArray &giveTraction(IntegrationPoint *ip);
+    StructuralInterfaceMaterial *giveInterfaceMaterial() const;
 
-    virtual int checkConsistency();
+    int checkConsistency() override;
 
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *ip, InternalStateType type, TimeStep *tStep);
+    int giveIPValue(FloatArray &answer, GaussPoint *ip, InternalStateType type, TimeStep *tStep) override;
 
-    virtual int packUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *gp);
-    virtual int unpackAndUpdateUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *gp);
-    virtual int estimatePackSize(DataStream &buff, GaussPoint *gp);
+    Material *giveMaterial(IntegrationPoint *ip) const override;
+    int giveMaterialNumber() const { return this->materialNum; }
+    void setMaterialNumber(int matNum) { this->materialNum = matNum; }
+
+    int packUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *gp) override;
+    int unpackAndUpdateUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *gp) override;
+    int estimatePackSize(DataStream &buff, GaussPoint *gp) override;
 
     // identification and auxiliary functions
-    virtual const char *giveClassName() const { return "StructuralInterfaceCrossSection"; }
-    virtual const char *giveInputRecordName() const { return _IFT_StructuralInterfaceCrossSection_Name; }
+    const char *giveClassName() const override { return "StructuralInterfaceCrossSection"; }
+    const char *giveInputRecordName() const override { return _IFT_StructuralInterfaceCrossSection_Name; }
 
     CrossSectExtension crossSectionType;
 private:
