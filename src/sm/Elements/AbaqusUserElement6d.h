@@ -175,7 +175,7 @@ public:
 
     /// Destructor
     virtual ~AbaqusUserElement6d();
-
+	//virtual double computeLength();
     virtual void computeConsistentMassMatrix(FloatMatrix &answer, TimeStep *tStep, double &mass, const double *ipDensity = NULL);
     //virtual void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep);
     virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep);
