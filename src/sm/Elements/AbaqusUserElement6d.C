@@ -471,6 +471,23 @@ AbaqusUserElement6d::printOutputAt(FILE *File, TimeStep *tStep)
 	fprintf(File, "\n");
 }
 
+double
+AbaqusUserElement6d::computeLength()
+// Returns the length of the receiver.
+{
+	double dx, dy, dz, length;
+	Node *nodeA, *nodeB;
+
+	nodeA = this->giveNode(1);
+	nodeB = this->giveNode(2);
+	dx = nodeB->giveCoordinate(1) - nodeA->giveCoordinate(1);
+	dy = nodeB->giveCoordinate(2) - nodeA->giveCoordinate(2);
+	dz = nodeB->giveCoordinate(3) - nodeA->giveCoordinate(3);
+	length = sqrt(dx * dx + dy * dy + dz * dz);
+
+	return length;
+}
+
 void
 AbaqusUserElement6d::computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
 {
@@ -478,53 +495,55 @@ AbaqusUserElement6d::computeInitialStressMatrix(FloatMatrix &answer, TimeStep *t
 	answer.resize(ndofel, ndofel);
 	answer.zero();
 
-	//// computes initial stress matrix of receiver (or geometric stiffness matrix)
+	// computes initial stress matrix of receiver (or geometric stiffness matrix)
 
-	//FloatMatrix stiff;
-	//FloatArray endForces;
+	FloatMatrix stiff;
+	FloatArray endForces;
 
-	//double l = this->computeLength();
-	//double N;
+	double l = this->computeLength();
 
-	//answer.resize(6, 6);
-	//answer.zero();
+	if (l > 0) {
+		double N;
 
-	//answer.at(2, 2) = 1;
-	//answer.at(2, 11) = -1;
+		answer.resize(6, 6);
+		answer.zero();
 
-	//answer.at(3, 3) = 1;
-	//answer.at(3, 12) = -1;
+		answer.at(2, 2) = 1;
+		answer.at(2, 11) = -1;
 
-	//answer.at(11, 2) = -1;
-	//answer.at(11, 11) = 1;
+		answer.at(3, 3) = 1;
+		answer.at(3, 12) = -1;
 
-	//answer.at(12, 3) = -1;
-	//answer.at(12, 12) = 1;
+		answer.at(11, 2) = -1;
+		answer.at(11, 11) = 1;
 
-	//FloatMatrix lcs;
-	//this->giveLocalCoordinateSystem(lcs);
+		answer.at(12, 3) = -1;
+		answer.at(12, 12) = 1;
 
-	//FloatMatrix transf(12, 12);
-	//this->computeGtoLRotationMatrix(transf);
+		FloatMatrix lcs;
+		this->giveLocalCoordinateSystem(lcs);
 
-	//answer.rotatedWith(transf, 'n');
-	//// ask end forces in g.c.s
-	//this->giveInternalForcesVector(endForces, tStep);
+		FloatMatrix transf(12, 12);
+		this->computeGtoLRotationMatrix(transf);
 
-	//FloatArray N1, N2;
-	//IntArray ind({ 1, 2, 3 });
-	//IntArray ind2({ 7, 8, 9 });
-	//N1.beSubArrayOf(endForces, ind);
-	//N2.beSubArrayOf(endForces, ind2);
+		answer.rotatedWith(transf, 'n');
+		// ask end forces in g.c.s
+		this->giveInternalForcesVector(endForces, tStep);
 
-	//FloatArray lx;
-	//lx.beDifferenceOf(*this->giveNode(2)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
-	//lx.normalize();
+		FloatArray N1, N2;
+		IntArray ind({ 1, 2, 3 });
+		IntArray ind2({ 7, 8, 9 });
+		N1.beSubArrayOf(endForces, ind);
+		N2.beSubArrayOf(endForces, ind2);
 
-	//// sign of N
-	//N = (-N1.dotProduct(lx) + N2.dotProduct(lx)) / 2.;
-	//answer.times(N / l);
+		FloatArray lx;
+		lx.beDifferenceOf(*this->giveNode(2)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
+		lx.normalize();
 
+		// sign of N
+		N = (-N1.dotProduct(lx) + N2.dotProduct(lx)) / 2.;
+		answer.times(N / l);
+	}
 }
 
 }       // namespace oofem

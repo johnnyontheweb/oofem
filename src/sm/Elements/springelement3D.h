@@ -77,7 +77,7 @@ protected:
 public:
     SpringElement3D(int n, Domain * d);
     virtual ~SpringElement3D() { }
-
+	virtual double computeLength();
     virtual void computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep);
     virtual void computeMassMatrix(FloatMatrix &answer, TimeStep *tStep)
     { computeLumpedMassMatrix(answer, tStep); }
