@@ -1,0 +1,27 @@
+quadDiv.out
+-> NextFEM model 10/13/2020 19:51:48
+LinearStatic nsteps 1 nmodules 2 lstype 2 smtype 6
+bem tstep_all domain_all
+nrm tstep_all domain_all vars 5 9 10  1 4 37 stype 0
+domain 3dShell
+OutputManager tstep_all dofman_all element_all
+ndofman 4 nelem 1 ncrosssect 2 nmat 1 nbc 3 nic 0 nltf 3 nset 3
+node 1 coords 3 0e0 0e0 0e0 
+node 2 coords 3 1e0 0e0 0e0 
+node 3 coords 3 1e0 1e0 0e0 
+node 4 coords 3 0e0 1e0 0e0 
+mitc4shell 1 nodes 4 4 1 2 3  crossSect 2 mat 1  lcs1 3 0e0 -1e0 0e0  boundaryLoads 2 1 0 
+# fictitious section for LumpedMass elements
+SimpleCS 1 thick 0
+SimpleCS 2 thick 5e-2 drillstiffness 2.5e9
+IsoLE 1 d 0 E 2.1e8 n 3e-1 tAlpha 1.2e-5
+BoundaryCondition 2 loadTimeFunction 1 DOFs 6 1 2 3 4 5 6  values 6 0 0 0 0 0 0  set 2
+BoundaryCondition 3 loadTimeFunction 1 DOFs 6 1 2 3 4 5 6  values 6 0 0 0 0 0 0  set 3
+#ConstantSurfaceLoad 1 loadType 3 loadTimeFunction 2  csType 0 Components 6 0e0 0e0 1e0 0e0 0e0 0e0
+LinearSurfaceLoad 1 loadType 3 loadTimeFunction 2 csType 0 Components 6 0e0 0e0 1e0 0e0 0e0 0e0 normValues 4 1 1 0 0
+ConstantFunction 1 f(t) 1.0
+PiecewiseLinFunction 2 npoints 3 t 3 -1.0 0.0 1.0 f(t) 3 0.0 0.0 1.0
+PiecewiseLinFunction 3 npoints 3 t 3 -1.0 0.0 1.0 f(t) 3 0.0 0.0 1.0
+set 2 nodes 1 1
+set 3 nodes 1 4
+set 1 elementedges 2 1 1

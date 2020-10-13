@@ -91,12 +91,12 @@ LinearSurfaceLoad :: computeValueAt(FloatArray &answer, TimeStep *tStep, const F
     answer.beScaled(factor, componentArray);
 
 	// load plane
-	FloatArray xc; xc.resize(4); xc.at(1) = 1; xc.at(2) = 1; xc.at(3) = -1; xc.at(4) = -1;
+	FloatArray xc; xc.resize(4); xc.at(1) = -1; xc.at(2) = -1; xc.at(3) = 1; xc.at(4) = 1;
 	FloatArray yc; yc.resize(4); yc.at(1) = 1; yc.at(2) = -1; yc.at(3) = -1; yc.at(4) = 1;
 	FloatMatrix A(3, 3); A.zero();
 	FloatArray b(3), x; b.zero(); x.zero();
-
-	for (int i = 1; i <= normVals.giveSize(); i++) {
+	double n = normVals.giveSize();
+	for (int i = 1; i <= n; i++) {
 		//  sum_i x[i] * x[i], sum_i x[i] * y[i], sum_i x[i]
 		//	sum_i x[i] * y[i], sum_i y[i] * y[i], sum_i y[i]
 		//	sum_i x[i], sum_i y[i], n
@@ -110,7 +110,7 @@ LinearSurfaceLoad :: computeValueAt(FloatArray &answer, TimeStep *tStep, const F
 
 		A.at(1, 3) += xc.at(i);
 		A.at(2, 3) += yc.at(i);
-		A.at(3, 3) += 4;
+		A.at(3, 3) = 4;
 
 		//{sum_i x[i]*z[i],   sum_i y[i]*z[i],    sum_i z[i]}
 		b.at(1) += xc.at(i)*normVals.at(i);
