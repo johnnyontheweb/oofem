@@ -89,5 +89,38 @@ LinearSurfaceLoad :: computeValueAt(FloatArray &answer, TimeStep *tStep, const F
 
     double factor = this->giveTimeFunction()->evaluate(tStep, mode);
     answer.beScaled(factor, componentArray);
+
+	// load plane
+	FloatArray xc; xc.resize(4); xc.at(1) = 1; xc.at(2) = 1; xc.at(3) = -1; xc.at(4) = -1;
+	FloatArray yc; yc.resize(4); yc.at(1) = 1; yc.at(2) = -1; yc.at(3) = -1; yc.at(4) = 1;
+	FloatMatrix A(3, 3); A.zero();
+	FloatArray b(3), x; b.zero(); x.zero();
+
+	for (int i = 1; i <= normVals.giveSize(); i++) {
+		//  sum_i x[i] * x[i], sum_i x[i] * y[i], sum_i x[i]
+		//	sum_i x[i] * y[i], sum_i y[i] * y[i], sum_i y[i]
+		//	sum_i x[i], sum_i y[i], n
+		A.at(1, 1) += xc.at(i)*xc.at(i);
+		A.at(2, 1) += xc.at(i)*yc.at(i);
+		A.at(3, 1) += xc.at(i);
+
+		A.at(1, 2) += xc.at(i)*yc.at(i);
+		A.at(2, 2) += yc.at(i)*yc.at(i);
+		A.at(3, 2) += yc.at(i);
+
+		A.at(1, 3) += xc.at(i);
+		A.at(2, 3) += yc.at(i);
+		A.at(3, 3) += 4;
+
+		//{sum_i x[i]*z[i],   sum_i y[i]*z[i],    sum_i z[i]}
+		b.at(1) += xc.at(i)*normVals.at(i);
+		b.at(2) += yc.at(i)*normVals.at(i);
+		b.at(3) +=normVals.at(i);
+	}
+	// solve
+	A.solveForRhs(b, x);
+
+	double fplane = x.at(1)*coords.at(1) + x.at(2)*coords.at(2) + x.at(3);
+	answer.beScaled(fplane, componentArray);
 }
 } // end namespace oofem
