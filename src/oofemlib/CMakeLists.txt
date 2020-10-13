@@ -271,6 +271,7 @@ set (core_bc
     linearedgeload.C
     constantedgeload.C
     constantsurfaceload.C
+    linearsurfaceload.C
     nodalload.C
     deadweight.C
     volumeload.C
