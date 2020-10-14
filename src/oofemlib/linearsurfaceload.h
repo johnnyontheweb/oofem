@@ -85,6 +85,7 @@ public:
 
 private:
 	virtual void computeNArray(FloatArray &answer, const FloatArray &coords) const;
+	double loadPlane(const FloatArray &coords);
 };
 } // end namespace oofem
 #endif // LinearSurfaceLoad_h

@@ -60,24 +60,9 @@ LinearSurfaceLoad :: initializeFrom(InputRecord *ir)
 void 
 LinearSurfaceLoad::computeNArray(FloatArray &answer, const FloatArray &coords) const
 {
-	//// compute local isoparametric coordinates of given point
-	//FloatArray ksi; ksi.resize(2); ksi.zero();
-	//double w = 1. / coords.giveSize();
+	// compute local isoparametric coordinates of given point
 	answer.resize(coords.giveSize());
 	answer.zero();
-
-	//ksi = coords.at(1);
-	//if ((ksi < -1.0) || (ksi > 1.0)) {
-	//	OOFEM_WARNING("point out of receiver, skipped", 1);
-	//	return;
-	//}
-
-	//for (int j=1; j <= normVals.giveSize(); j++) {
-	//	int i=j-1;
-	//	if (i == 0) j = normVals.giveSize();
-
-	//	answer.at(j) = (1. - ksi) * w;
-	//}
 }
 
 void
@@ -90,12 +75,27 @@ LinearSurfaceLoad :: computeValueAt(FloatArray &answer, TimeStep *tStep, const F
     double factor = this->giveTimeFunction()->evaluate(tStep, mode);
     answer.beScaled(factor, componentArray);
 
+	double fplane = loadPlane(coords);
+	answer.beScaled(fplane, componentArray);
+}
+
+double
+LinearSurfaceLoad::loadPlane(const FloatArray &coords)
+{
+	int n = normVals.giveSize();
 	// load plane
-	FloatArray xc; xc.resize(4); xc.at(1) = -1; xc.at(2) = -1; xc.at(3) = 1; xc.at(4) = 1;
-	FloatArray yc; yc.resize(4); yc.at(1) = 1; yc.at(2) = -1; yc.at(3) = -1; yc.at(4) = 1;
+	FloatArray xc; xc.resize(n); 
+	FloatArray yc; yc.resize(n); 
+	if (n == 4) {
+		xc.at(1) = -1; xc.at(2) = -1; xc.at(3) = 1; xc.at(4) = 1;
+		yc.at(1) = 1; yc.at(2) = -1; yc.at(3) = -1; yc.at(4) = 1;
+	} else {
+		xc.at(1) = 0; xc.at(2) = 1; xc.at(3) = 0;
+		yc.at(1) = 0; yc.at(2) = 0; yc.at(3) = 1;
+	}
 	FloatMatrix A(3, 3); A.zero();
 	FloatArray b(3), x; b.zero(); x.zero();
-	double n = normVals.giveSize();
+	A.at(3, 3) = n;
 	for (int i = 1; i <= n; i++) {
 		//  sum_i x[i] * x[i], sum_i x[i] * y[i], sum_i x[i]
 		//	sum_i x[i] * y[i], sum_i y[i] * y[i], sum_i y[i]
@@ -110,17 +110,17 @@ LinearSurfaceLoad :: computeValueAt(FloatArray &answer, TimeStep *tStep, const F
 
 		A.at(1, 3) += xc.at(i);
 		A.at(2, 3) += yc.at(i);
-		A.at(3, 3) = 4;
 
 		//{sum_i x[i]*z[i],   sum_i y[i]*z[i],    sum_i z[i]}
 		b.at(1) += xc.at(i)*normVals.at(i);
 		b.at(2) += yc.at(i)*normVals.at(i);
-		b.at(3) +=normVals.at(i);
+		b.at(3) += normVals.at(i);
 	}
 	// solve
 	A.solveForRhs(b, x);
 
 	double fplane = x.at(1)*coords.at(1) + x.at(2)*coords.at(2) + x.at(3);
-	answer.beScaled(fplane, componentArray);
+	return fplane;
 }
+
 } // end namespace oofem
