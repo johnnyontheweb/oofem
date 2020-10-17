@@ -40,8 +40,13 @@
 #include "node.h"
 #include "math.h"
 
+
 #ifdef _WIN32 //_MSC_VER and __MINGW32__ included
  #include <Windows.h>
+#ifdef DEBUG
+//#include <iostream>
+#include <fstream>
+#endif
 #else
  #include <dlfcn.h>
 #endif
@@ -326,6 +331,18 @@ void AbaqusUserElement6d :: updateYourself(TimeStep *tStep)
     amatrx = tempAmatrx;
     rhs = tempRHS;
     hasTangentFlag = false;
+
+#ifdef DEBUG
+	std::ofstream fs;
+	std::string fout = "svars" + std::to_string(this->giveLabel());
+	fs.open(fout + ".csv", std::ios_base::app);
+	for (int i = 1; i <= svars.giveSize(); i++) {
+		fs << svars.at(i) << ";";
+	}
+	fs << "\n";
+	fs.close();
+	// svars.printYourself();
+#endif
 }
 
 void AbaqusUserElement6d :: updateInternalState(TimeStep *tStep)
