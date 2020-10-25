@@ -416,6 +416,7 @@ namespace oofem {
 		}  // end of search among internal dof managers
 		// end of creation of translational unit displacement vectors
 
+		// if no mass defined in a direction, then centroid in that direction is undefined
 		int contr[3];
 
 		for (int i = 1; i <= 3; i++)
@@ -426,15 +427,14 @@ namespace oofem {
 			totMass.at(i) = tempCol->dotProduct(*tempCol2);  // total mass for direction i-th direction
 			tempCol->beColumnOf(tempMat2, i);	// fetch coordinates in i-th direction
 			if (totMass.at(i) != 0.0) {
-				centroid.at(i) = tempCol->dotProduct(*tempCol2) / totMass.at(i);// dot multiply to get first moment, then divide by total mass in i-th direction to get i-th coordinate of the centroid
+				centroid.at(i) = tempCol->dotProduct(*tempCol2) / totMass.at(i); // dot multiply to get first moment, then divide by total mass in i-th direction to get i-th coordinate of the centroid
 				contr[i - 1] = 1;
 			}
 			else {
 				contr[i - 1] = 0;
 			}
 		}
-
-
+		
 		// we have the centroid. we can now calculate rotational components. first from nodes.
 		for (std::unique_ptr<DofManager> &node : domain->giveDofManagers()) {
 			//node->giveLocationArray(dofIDArry, loc, EModelDefaultEquationNumbering());
