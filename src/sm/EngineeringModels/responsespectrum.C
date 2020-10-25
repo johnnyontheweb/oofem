@@ -416,6 +416,7 @@ namespace oofem {
 		}  // end of search among internal dof managers
 		// end of creation of translational unit displacement vectors
 
+		int contr[3];
 
 		for (int i = 1; i <= 3; i++)
 		{
@@ -424,7 +425,13 @@ namespace oofem {
 			tempMat.setColumn(*tempCol2, i);
 			totMass.at(i) = tempCol->dotProduct(*tempCol2);  // total mass for direction i-th direction
 			tempCol->beColumnOf(tempMat2, i);	// fetch coordinates in i-th direction
-			if (totMass.at(i) != 0.0) centroid.at(i) = tempCol->dotProduct(*tempCol2) / totMass.at(i);  // dot multiply to get first moment, then divide by total mass in i-th direction to get i-th coordinate of the centroid
+			if (totMass.at(i) != 0.0) {
+				centroid.at(i) = tempCol->dotProduct(*tempCol2) / totMass.at(i);// dot multiply to get first moment, then divide by total mass in i-th direction to get i-th coordinate of the centroid
+				contr[i - 1] = 1;
+			}
+			else {
+				contr[i - 1] = 0;
+			}
 		}
 
 
@@ -466,7 +473,7 @@ namespace oofem {
 						if ((dType >= D_u) && (dType <= D_w) && eqN) {
 							// save unit displacement and coordinate
 
-							vk.at(dType) = node->giveCoordinate(dType) - centroid.at(dType);
+							vk.at(dType) = contr[dType-1] * (node->giveCoordinate(dType) - centroid.at(dType));
 							eq.at(dType) = eqN;
 						}
 					}
@@ -579,7 +586,7 @@ namespace oofem {
 							eq.at(dType) = 0;
 							continue;
 						}
-						vk.at(dType) = tempCoord.at(myDof) - centroid.at(dType);
+						vk.at(dType) = contr[dType - 1] * (tempCoord.at(myDof) - centroid.at(dType));
 						eq.at(dType) = locationArray.at(myDof);
 					}
 
