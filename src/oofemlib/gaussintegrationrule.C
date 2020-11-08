@@ -347,7 +347,7 @@ GaussIntegrationRule :: getRequiredNumberOfIntegrationPoints(integrationDomain d
 
     switch ( dType ) {
     case _Line:
-        requiredNIP = (int)ceil(( approxOrder + 1 ) / 2);
+		requiredNIP = (int)ceil(((double)approxOrder + 1.0) / 2.0);
 
         if ( requiredNIP <= 8 ) {
             return requiredNIP;
