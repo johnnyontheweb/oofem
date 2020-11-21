@@ -93,7 +93,7 @@ void StructuralElement :: computeLoadVector(FloatArray &answer, BodyLoad *load, 
         return;
     }
     // Just a wrapper for the deadweight body load computations:
-    PointLoad *p = static_cast< PointLoad * >(load);
+    PointLoad *p = dynamic_cast< PointLoad * >(load);
     if ( p ) {
         FloatArray lcoords;
         if ( this->computeLocalCoordinates( lcoords, p->giveCoordinates() ) ) {
