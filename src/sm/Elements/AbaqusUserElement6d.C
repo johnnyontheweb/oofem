@@ -102,6 +102,10 @@ IRResultType AbaqusUserElement6d :: initializeFrom(InputRecord *ir)
 	this->pos = 0;
 	IR_GIVE_OPTIONAL_FIELD(ir, pos, _IFT_AbaqusUserElement6d_pos);
 
+	// prDof
+	this->prDof = 0;
+	IR_GIVE_OPTIONAL_FIELD(ir, prDof, _IFT_AbaqusUserElement6d_prdof);
+
     IR_GIVE_FIELD(ir, this->numSvars, _IFT_AbaqusUserElement6d_numsvars);
     if ( this->numSvars < 0 ) {
         OOFEM_ERROR("'numsvars' field has an invalid value");
@@ -393,6 +397,8 @@ void AbaqusUserElement6d :: giveInternalForcesVector(FloatArray &answer, TimeSte
         double dtime = tStep->giveTimeIncrement();
 		double ttime = tStep->giveTargetTime();
 		double time[] = { ttime, ttime };
+		// support for combined springs
+		mdLoad = prDof;
 
 		// see description at http://abaqus.software.polimi.it/v6.12/books/sub/default.htm
         this->uel(

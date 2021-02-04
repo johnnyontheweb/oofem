@@ -56,6 +56,7 @@
 #define _IFT_AbaqusUserElement6d_macroElem "macroelem"
 #define _IFT_AbaqusUserElement6d_orientation "dir"
 #define _IFT_AbaqusUserElement6d_pos "pos"
+#define _IFT_AbaqusUserElement6d_prdof "prdof"
 //@}
 
 namespace oofem {
@@ -253,6 +254,8 @@ protected:
 	FloatArray dir;
 	double referenceAngle = 0;
 	double pos;
+	// principal dof to be used in combined springs
+	int prDof=0;
 };
 
 }// namespace oofem

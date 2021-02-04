@@ -250,7 +250,7 @@ protected:
 	* for torsional spring it defines the axis of rotation.
 	*/
 	FloatArray dir;
-
+	// trasl. 4, rot. 5
 	int mode;
 };
 
