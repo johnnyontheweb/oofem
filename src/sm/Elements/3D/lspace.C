@@ -196,54 +196,99 @@ LSpace :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int nod
 
     A.solveForRhs(r, b);
 
-    switch ( node ) {
-    case 1:
-        x1 =  1.0;
-        x2 =  1.0;
-        x3 =  1.0;
-        break;
-    case 2:
-        x1 = -1.0;
-        x2 =  1.0;
-        x3 =  1.0;
-        break;
-    case 3:
-        x1 = -1.0;
-        x2 = -1.0;
-        x3 =  1.0;
-        break;
-    case 4:
-        x1 =  1.0;
-        x2 = -1.0;
-        x3 =  1.0;
-        break;
-    case 5:
-        x1 =  1.0;
-        x2 =  1.0;
-        x3 = -1.0;
-        break;
-    case 6:
-        x1 = -1.0;
-        x2 =  1.0;
-        x3 = -1.0;
-        break;
-    case 7:
-        x1 = -1.0;
-        x2 = -1.0;
-        x3 = -1.0;
-        break;
-    case 8:
-        x1 =  1.0;
-        x2 = -1.0;
-        x3 = -1.0;
-        break;
-    default:
-        OOFEM_ERROR("unsupported node");
-    }
+    //switch ( node ) {
+    //case 1:
+    //    x1 =  1.0;
+    //    x2 =  1.0;
+    //    x3 =  1.0;
+    //    break;
+    //case 2:
+    //    x1 = -1.0;
+    //    x2 =  1.0;
+    //    x3 =  1.0;
+    //    break;
+    //case 3:
+    //    x1 = -1.0;
+    //    x2 = -1.0;
+    //    x3 =  1.0;
+    //    break;
+    //case 4:
+    //    x1 =  1.0;
+    //    x2 = -1.0;
+    //    x3 =  1.0;
+    //    break;
+    //case 5:
+    //    x1 =  1.0;
+    //    x2 =  1.0;
+    //    x3 = -1.0;
+    //    break;
+    //case 6:
+    //    x1 = -1.0;
+    //    x2 =  1.0;
+    //    x3 = -1.0;
+    //    break;
+    //case 7:
+    //    x1 = -1.0;
+    //    x2 = -1.0;
+    //    x3 = -1.0;
+    //    break;
+    //case 8:
+    //    x1 =  1.0;
+    //    x2 = -1.0;
+    //    x3 = -1.0;
+    //    break;
+    //default:
+    //    OOFEM_ERROR("unsupported node");
+    //}
+
+	switch (node) {
+	case 1:
+		x1 = -1.0;
+		x2 = -1.0;
+		x3 = -1.0;
+		break;
+	case 2:
+		x1 = 1.0;
+		x2 = -1.0;
+		x3 = -1.0;
+		break;
+	case 3:
+		x1 = 1.0;
+		x2 = 1.0;
+		x3 = -1.0;
+		break;
+	case 4:
+		x1 = -1.0;
+		x2 = 1.0;
+		x3 = -1.0;
+		break;
+	case 5:
+		x1 = -1.0;
+		x2 = -1.0;
+		x3 = 1.0;
+		break;
+	case 6:
+		x1 = 1.0;
+		x2 = -1.0;
+		x3 = 1.0;
+		break;
+	case 7:
+		x1 = 1.0;
+		x2 = 1.0;
+		x3 = 1.0;
+		break;
+	case 8:
+		x1 = -1.0;
+		x2 = 1.0;
+		x3 = 1.0;
+		break;
+	default:
+		OOFEM_ERROR("unsupported node");
+	}
 
     answer.resize(size);
     for ( int j = 1; j <= size; j++ ) {
-        answer.at(j) = b.at(1, j) + x1 *b.at(2, j) * x2 * b.at(3, j) * x3 * b.at(4, j);
+        answer.at(j) = b.at(1, j) + x1 * b.at(2, j) + x2 * b.at(3, j) + x3 * b.at(4, j);
     }
 }
 
