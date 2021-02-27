@@ -105,6 +105,7 @@ public:
     virtual const char *giveInputRecordName() const { return _IFT_SpringElement3D_Name; }
     virtual const char *giveClassName() const { return "SpringElement3D"; }
     virtual IRResultType initializeFrom(InputRecord *ir);
+	virtual void postInitialize();
     virtual Element_Geometry_Type giveGeometryType() const { return EGT_point; }
 
 protected:

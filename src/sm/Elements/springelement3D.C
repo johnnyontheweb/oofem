@@ -231,12 +231,15 @@ SpringElement3D :: initializeFrom(InputRecord *ir)
 	this->referenceAngle = 0;
 	IR_GIVE_OPTIONAL_FIELD(ir, this->referenceAngle, _IFT_SpringElement3D_refangle);
 
-	int isRL = 0;
 	this->d = 0;
-	IR_GIVE_OPTIONAL_FIELD(ir, isRL, _IFT_SpringElement3D_actAsRigidLink);
-	if (isRL == 1) this->d = this->computeLength();
-
+	IR_GIVE_OPTIONAL_FIELD(ir, this->d, _IFT_SpringElement3D_actAsRigidLink);
+	
     return StructuralElement :: initializeFrom(ir);
+}
+
+void SpringElement3D::postInitialize()
+{
+	if (this->d == 1) this->d = this->computeLength();
 }
 
 void SpringElement3D :: printOutputAt(FILE *File, TimeStep *tStep)
