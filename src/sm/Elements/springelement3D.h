@@ -51,6 +51,7 @@
 #define _IFT_SpringElement3D_mass "m"
 #define _IFT_SpringElement3D_macroElem "macroelem"
 #define _IFT_SpringElement3D_refangle "refangle"
+#define _IFT_SpringElement3D_actAsRigidLink "rl"
 //@}
 
 namespace oofem {
@@ -74,6 +75,8 @@ protected:
 	// macro element number
 	int macroElem;
 	double referenceAngle = 0;
+	// length of element for rigid link transport terms
+	double d = 0;
 public:
     SpringElement3D(int n, Domain * d);
     virtual ~SpringElement3D() { }
