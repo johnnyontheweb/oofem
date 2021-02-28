@@ -69,17 +69,22 @@ SpringElement3D :: computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode r
 	answer.at(4, 4) = answer.at(10, 10) = this->springC4;
 	answer.at(4, 10) = answer.at(10, 4) = -this->springC4;
 
-	answer.at(5, 5) = answer.at(11, 11) = this->springC5 + this->springC3*(d*d);
-	answer.at(5, 11) = answer.at(11, 5) = -this->springC5 - this->springC3*(d*d);
+	answer.at(5, 5) = answer.at(11, 11) = -this->springC5 + this->springC3*(d*d);
+	answer.at(5, 11) = answer.at(11, 5) = this->springC5 - this->springC3*(d*d);
 
-	answer.at(6, 6) = answer.at(12, 12) = this->springC6 + this->springC2*(d*d);
-	answer.at(6, 12) = answer.at(12, 6) = -this->springC6 - this->springC2*(d*d);
+	answer.at(6, 6) = answer.at(12, 12) = this->springC6 - this->springC2*(d*d);
+	answer.at(6, 12) = answer.at(12, 6) = -this->springC6 + this->springC2*(d*d);
 	
 	// rigid link transport terms
-	answer.at(6, 2) = answer.at(2, 6) = d*this->springC2;
-	answer.at(6 + 6, 2) = answer.at(2 + 6, 6) = -d*this->springC2;
-	answer.at(6, 2 + 6) = answer.at(2, 6 + 6) = -d*this->springC2;
-	answer.at(6 + 6, 2 + 6) = answer.at(2 + 6, 6 + 6) = d*this->springC2;
+	//answer.at(6, 2) = answer.at(2, 6) = d*this->springC2;
+	//answer.at(6 + 6, 2) = answer.at(2 + 6, 6) = -d*this->springC2;
+	//answer.at(6, 2 + 6) = answer.at(2, 6 + 6) = -d*this->springC2;
+	//answer.at(6 + 6, 2 + 6) = answer.at(2 + 6, 6 + 6) = d*this->springC2;
+
+	answer.at(2, 6) = d*this->springC2; answer.at(6, 2) = -d*this->springC2; // cambia segno 6,2
+	answer.at(2 + 6, 6) = -d*this->springC2; answer.at(6 + 6, 2) = d*this->springC2;
+	answer.at(2, 6 + 6) = -d*this->springC2; answer.at(6, 2 + 6) = d*this->springC2;
+	answer.at(2 + 6, 6 + 6) = d*this->springC2; answer.at(6 + 6, 2 + 6) = -d*this->springC2;
 
 	answer.at(5, 3) = answer.at(3, 5) = d*this->springC3;
 	answer.at(5 + 6, 3) = answer.at(3 + 6, 5) = -d*this->springC3;
