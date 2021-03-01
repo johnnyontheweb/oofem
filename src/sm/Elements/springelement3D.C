@@ -71,29 +71,35 @@ SpringElement3D :: computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode r
 
 	//answer.at(5, 5) = answer.at(11, 11) = this->springC5 + this->springC3*(d*d);
 	//answer.at(5, 11) = answer.at(11, 5) = -this->springC5 - this->springC3*(d*d);
-	answer.at(5, 5) = answer.at(11, 11) = this->springC5;
-	answer.at(5, 11) = answer.at(11, 5) = -this->springC5; // -this->springC3*(d*d);
+	answer.at(5, 5) = this->springC5; answer.at(11, 11) = this->springC5 + this->springC3*(d*d);
+	answer.at(5, 11) = answer.at(11, 5) = -this->springC5;
 
 	//answer.at(6, 6) = answer.at(12, 12) = this->springC6 + this->springC2*(d*d);
 	//answer.at(6, 12) = answer.at(12, 6) = -this->springC6 - this->springC2*(d*d);
-	answer.at(6, 6) = answer.at(12, 12) = this->springC6;
-	answer.at(6, 12) = answer.at(12, 6) = -this->springC6; // -this->springC2*(d*d);
+	answer.at(6, 6) = this->springC6; answer.at(12, 12) = this->springC6 + this->springC2*(d*d);
+	answer.at(6, 12) = answer.at(12, 6) = -this->springC6;
 	
-	// rigid link transport terms
-	answer.at(6, 2) = answer.at(2, 6) = -d*this->springC2;
-	answer.at(6 + 6, 2) = answer.at(2 + 6, 6) = d*this->springC2;
-	answer.at(6, 2 + 6) = answer.at(2, 6 + 6) = d*this->springC2;
-	answer.at(6 + 6, 2 + 6) = answer.at(2 + 6, 6 + 6) = -d*this->springC2;
+	// rigid link transport terms -------------------------------------------------------------------
+	//answer.at(6, 2) = answer.at(2, 6) = -d*this->springC2;
+	//answer.at(6 + 6, 2) = answer.at(2 + 6, 6) = d*this->springC2;
+	//answer.at(6, 2 + 6) = answer.at(2, 6 + 6) = d*this->springC2;
+	//answer.at(6 + 6, 2 + 6) = answer.at(2 + 6, 6 + 6) = -d*this->springC2;
 
 	//answer.at(2, 6) = d*this->springC2; answer.at(6, 2) = -d*this->springC2; // cambia segno 6,2
-	//answer.at(2 + 6, 6) = -d*this->springC2; answer.at(6 + 6, 2) = d*this->springC2;
-	//answer.at(2, 6 + 6) = -d*this->springC2; answer.at(6, 2 + 6) = d*this->springC2;
-	//answer.at(2 + 6, 6 + 6) = d*this->springC2; answer.at(6 + 6, 2 + 6) = -d*this->springC2;
+	//answer.at(2 + 6, 6) = -d*this->springC2; 
+	answer.at(6 + 6, 2) = -d*this->springC2; answer.at(2, 6 + 6) = -d*this->springC2; 
+	//answer.at(6, 2 + 6) = d*this->springC2;
+	answer.at(2 + 6, 6 + 6) = d*this->springC2; answer.at(6 + 6, 2 + 6) = d*this->springC2;
 
-	answer.at(5, 3) = answer.at(3, 5) = d*this->springC3;
-	answer.at(5 + 6, 3) = answer.at(3 + 6, 5) = -d*this->springC3;
-	answer.at(5, 3 + 6) = answer.at(3, 5 + 6) = -d*this->springC3;
-	answer.at(5 + 6, 3 + 6) = answer.at(3 + 6, 5 + 6) = d*this->springC3;
+	//answer.at(5, 3) = answer.at(3, 5) = d*this->springC3;
+	//answer.at(5 + 6, 3) = answer.at(3 + 6, 5) = -d*this->springC3;
+	//answer.at(5, 3 + 6) = answer.at(3, 5 + 6) = -d*this->springC3;
+	//answer.at(5 + 6, 3 + 6) = answer.at(3 + 6, 5 + 6) = d*this->springC3;
+
+	//answer.at(5, 3) = answer.at(3, 5) = d*this->springC3;
+	answer.at(5 + 6, 3) = answer.at(3 , 5+ 6) = d*this->springC3;
+	answer.at(11, 3 + 6) = answer.at(3 + 6, 11) = -d*this->springC3;
+	//answer.at(5 + 6, 3 + 6) = answer.at(3 + 6, 5 + 6) = d*this->springC3;
 }
 
 
