@@ -481,7 +481,7 @@ AbaqusUserElement6d::printOutputAt(FILE *File, TimeStep *tStep)
 	fprintf(File, "\n  hinge_status %d ", 6);
 	for (int i = 1; i <= 6; i++)
 	{
-		fprintf(File, " %d",int(this->svars.at(6+(this->numSvars/6)*(i-1))));
+		fprintf(File, " %d", int(this->svars.at(6 + (this->numSvars - 8) / 6 * (i - 1))));
 	}
 
 #ifdef DEBUG
