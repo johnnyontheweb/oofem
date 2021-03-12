@@ -704,6 +704,11 @@ NRSolver :: checkConvergence(FloatArray &RT, FloatArray &F, FloatArray &rhs,  Fl
                 if ( forceErr > rtolf.at(1) ) {
                     answer = false;
                 }
+				if ((forceErr > 0.0) && (nite == 0)) {
+					// if forceError > 0 and first iteration we report no convergence to actually
+					// apply the loading
+					answer = false;
+				}
                 OOFEM_LOG_INFO(zeroFNorm ? " *%.3e" : "  %.3e", forceErr);
 
                 // Store the errors from the current iteration
@@ -751,7 +756,7 @@ NRSolver :: checkConvergence(FloatArray &RT, FloatArray &F, FloatArray &rhs,  Fl
         dXdX *= dXdX;
 
         if ( rtolf.at(1) > 0.0 ) {
-            // we compute a relative error norm
+            // compute a relative error norm
             if ( ( RRT + internalForcesEBENorm.at(1) ) > nrsolver_ERROR_NORM_SMALL_NUM ) {
                 forceErr = sqrt( forceErr / ( RRT + internalForcesEBENorm.at(1) ) );
             } else {
