@@ -50,11 +50,11 @@ Set 1 elementranges {(1 16)}
 Set 2 nodes 2 1 17
 #
 #
-#%BEGIN_CHECK% tolerance 1.e-2
+#%BEGIN_CHECK% tolerance 1.e-4
 ## check eigen values
-#EIGVAL tStep 1 EigNum 1 value 1.28049596e+03
+#EIGVAL tStep 1 EigNum 1 value 1.26835015e+03
 #EIGVAL tStep 1 EigNum 2 value 2.85378786e+03
-#EIGVAL tStep 1 EigNum 3 value 2.10785640e+04
+#EIGVAL tStep 1 EigNum 3 value 2.02942280e+04
 #%END_CHECK%
 
 
