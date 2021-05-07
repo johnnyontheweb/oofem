@@ -781,7 +781,7 @@ Beam3d :: computeBodyLoadVectorAt(FloatArray &answer, Load *load, TimeStep *tSte
 void
 Beam3d :: computeConsistentMassMatrix(FloatMatrix &answer, TimeStep *tStep, double &mass, const double *ipDensity)
 {
-	// computes mass matrix of the receiver
+	// false
   if (0) {
     StructuralElement::computeConsistentMassMatrix(answer, tStep, mass, ipDensity);
     GaussPoint *gp = integrationRulesArray [ 0 ]->getIntegrationPoint(0);
@@ -791,7 +791,7 @@ Beam3d :: computeConsistentMassMatrix(FloatMatrix &answer, TimeStep *tStep, doub
     return;
   } else {
     
-
+	  // computes mass matrix of the receiver
     FloatMatrix stiff;
     GaussPoint *gp = integrationRulesArray [ 0 ]->getIntegrationPoint(0);
 
@@ -812,6 +812,8 @@ Beam3d :: computeConsistentMassMatrix(FloatMatrix &answer, TimeStep *tStep, doub
     }
 
     double area = this->giveCrossSection()->give(CS_Area, gp); // constant area assumed
+    double Ikk = this->giveCrossSection()->give(CS_InertiaMomentY, gp) +
+      this->giveCrossSection()->give(CS_InertiaMomentZ, gp); // polar moment of inertia 
     double c2y = ( area * density ) / ( ( 1. + 2. * kappay ) * ( 1. + 2. * kappay ) );
     double c2z = ( area * density ) / ( ( 1. + 2. * kappaz ) * ( 1. + 2. * kappaz ) );
     double c1 = ( area * density );
@@ -829,6 +831,8 @@ Beam3d :: computeConsistentMassMatrix(FloatMatrix &answer, TimeStep *tStep, doub
     answer.at(3, 5) = -c2y * l * l * ( 11. / 210. + kappay * 11. / 60. + kappay2 / 6. );
     answer.at(3, 9) = c2y * l * ( 9. / 70. + kappay * 3. / 5. + kappay2 * 2. / 3. );
     answer.at(3, 11) = c2y * l * l * ( 13. / 420. + kappay * 3. / 20. + kappay2 / 6. );
+    answer.at(4,4) = Ikk*density*l/3.;
+    answer.at(4,10) = Ikk*density*l/6.;
     answer.at(5, 5) = c2y * l * l * l * ( 1. / 105. + kappay / 30. + kappay2 / 30. );
     answer.at(5, 9) = -c2y * l * l * ( 13. / 420. + kappay * 3. / 20. + kappay2 / 6. );
     answer.at(5, 11) = -c2y * l * l * l * ( 1. / 140. + kappay / 30. + kappay2 / 30. );
@@ -842,6 +846,7 @@ Beam3d :: computeConsistentMassMatrix(FloatMatrix &answer, TimeStep *tStep, doub
     answer.at(8, 12) = -c2z * l * l * ( 11. / 210. + kappaz * 11. / 60. + kappaz2 / 6. );
     answer.at(9, 9) = c2y * l * ( 13. / 35. + kappay * 7. / 5. + kappay2 * 4. / 3. );
     answer.at(9, 11) = c2y * l * l * ( 11. / 210. + kappay * 11. / 60. + kappay2 / 6. );
+    answer.at(10,10) = Ikk*density*l/3.;
     answer.at(11, 11) = c2y * l * l * l * ( 1. / 105. + kappay / 30. + kappay2 / 30. );
     answer.at(12, 12) = c2z * l * l * l * ( 1. / 105. + kappaz / 30. + kappaz2 / 30. );
 
