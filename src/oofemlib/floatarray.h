@@ -42,6 +42,7 @@
 #include <initializer_list>
 #include <vector>
 #include <iosfwd>
+#include <string>
 
 namespace oofem {
 class IntArray;

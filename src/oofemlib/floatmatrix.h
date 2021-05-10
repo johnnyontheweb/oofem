@@ -49,6 +49,7 @@
 #include <iosfwd>
 #include <initializer_list>
 #include <algorithm>
+#include <string>
 
 #ifdef BOOST_PYTHON
 namespace boost {

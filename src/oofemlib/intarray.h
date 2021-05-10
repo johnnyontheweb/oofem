@@ -43,6 +43,7 @@
 #include <vector>
 #include <iosfwd>
 #include <initializer_list>
+#include <string>
 
 namespace oofem {
 class DataStream;

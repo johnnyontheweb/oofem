@@ -312,6 +312,8 @@ enum {
 # define DWORD unsigned long
 #endif
 #endif
+// https://stackoverflow.com/questions/33557506/timespec-redefinition-error
+#define HAVE_STRUCT_TIMESPEC // avoid error C2011 in vs2019
 
 #if !defined(HAVE_STRUCT_TIMESPEC)
 #define HAVE_STRUCT_TIMESPEC
