@@ -33,19 +33,20 @@
 
 #include "trwarp.h"
 #include "node.h"
-#include "CrossSections/warpingcrosssection.h"
+#include "sm/CrossSections/warpingcrosssection.h"
 #include "gausspoint.h"
 #include "gaussintegrationrule.h"
 #include "floatmatrix.h"
 #include "floatarray.h"
 #include "intarray.h"
 #include "mathfem.h"
-#include "CrossSections/structuralcrosssection.h"
+#include "sm/CrossSections/structuralcrosssection.h"
 #include "classfactory.h"
 #include "load.h"
-#include "EngineeringModels/freewarping.h"
+#include "sm/EngineeringModels/freewarping.h"
 #include "engngm.h"
 #include "dof.h"
+#include "sm/CrossSections/structuralcrosssection.h"
 
 
 
@@ -56,14 +57,12 @@ FEI2dTrLin Tr_Warp :: interp(1, 2);
 
 Tr_Warp :: Tr_Warp(int n, Domain *aDomain) :
     StructuralElement(n, aDomain), SpatialLocalizerInterface(this),  ZZNodalRecoveryModelInterface(this)
-    // Constructor.
 {
     numberOfDofMans  = 3;
     numberOfGaussPoints = 1;
 }
 
 Tr_Warp :: ~Tr_Warp()
-// Destructor
 { }
 
 void
@@ -74,40 +73,47 @@ Tr_Warp :: giveCharacteristicVector(FloatArray &answer, CharType mtrx, ValueMode
 //
 {
     if ( mtrx == ExternalForcesVector ) {
-      // include implicit edge contribution 
-      this->computeEdgeLoadVectorAt(answer, NULL, tStep, mode);
+        // include implicit edge contribution 
+        this->computeEdgeLoadVectorAt(answer, NULL, tStep, mode);
     } else {
-      StructuralElement::giveCharacteristicVector(answer, mtrx, mode, tStep);
+        StructuralElement::giveCharacteristicVector(answer, mtrx, mode, tStep);
     }
 }
 
 
-  
 void
 Tr_Warp :: computeGaussPoints()
 // Sets up the array containing the Gauss point of the receiver.
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize(1);
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 4) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 4);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], numberOfGaussPoints, this);
     }
 }
 
 
-IRResultType
-Tr_Warp :: initializeFrom(InputRecord *ir)
+void
+Tr_Warp :: initializeFrom(InputRecord &ir)
 {
     numberOfGaussPoints = 1;
-    return StructuralElement :: initializeFrom(ir);
+    StructuralElement :: initializeFrom(ir);
 }
 
 
 void
 Tr_Warp :: computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->giveRealStress_Warping(answer, gp, strain, tStep);
+    answer = this->giveStructuralCrossSection()->giveRealStress_Warping(strain, gp, tStep);
 }
+
+
+void
+Tr_Warp :: computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
+{
+    this->giveStructuralCrossSection()->giveCharMaterialStiffnessMatrix(answer, rMode, gp, tStep);
+}
+
 
 void
 Tr_Warp :: computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer)
@@ -135,7 +141,7 @@ Tr_Warp :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer,
     this->interp.evaldNdx( dN, gp->giveNaturalCoordinates(), FEIElementGeometryWrapper(this) );
     // gausspoint coordinates
     FloatArray gcoords;
-    Element *elem = gp->giveElement();
+    Element *elem = gp->giveElement(); ///@todo Why?! Is this really called *not* by this elements own GP?!?!?! If so, ouch! / Mikael
     elem->computeGlobalCoordinates( gcoords, gp->giveNaturalCoordinates() );
 
     this->transformCoordinates( tc, gcoords, this->giveCrossSection()->giveNumber() );
@@ -155,7 +161,8 @@ Tr_Warp :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer,
 
 
 void
-Tr_Warp :: transformCoordinates(FloatArray &answer, FloatArray &c, const int CGnumber) {
+Tr_Warp :: transformCoordinates(FloatArray &answer, FloatArray &c, const int CGnumber)
+{
     answer.resize(2);
     FreeWarping *em = dynamic_cast< FreeWarping * >( this->giveDomain()->giveEngngModel() );
     if ( em ) {
@@ -231,17 +238,17 @@ Tr_Warp :: computeEdgeLoadVectorAt(FloatArray &answer, Load *load, TimeStep *tSt
         this->giveEdgeDofMapping(mask, iEdge);
 
         // coordinates of the initial and final node of the edge
-        FloatArray *coord1 = giveNode( mask.at(1) )->giveCoordinates();
-        FloatArray *coord2 = giveNode( mask.at(2) )->giveCoordinates();
+        const auto &coord1 = giveNode( mask.at(1) )->giveCoordinates();
+        const auto &coord2 = giveNode( mask.at(2) )->giveCoordinates();
         // components of the edge vector (from the initial to the final node)
-        double dx = coord2->at(1) - coord1->at(1);
-        double dy = coord2->at(2) - coord1->at(2);
+        double dx = coord2.at(1) - coord1.at(1);
+        double dy = coord2.at(2) - coord1.at(2);
         // coordinates of the initial node
-        double x1 =  coord1->at(1);
-        double y1 =  coord1->at(2);
+        double x1 =  coord1.at(1);
+        double y1 =  coord1.at(2);
         // coordinates of the final node
-        double x2 = coord2->at(1);
-        double y2 = coord2->at(2);
+        double x2 = coord2.at(1);
+        double y2 = coord2.at(2);
 
         // transform to coordinates w.r. center of gravity
         FloatArray tc1(2), c1(2), tc2(2), c2(2);
@@ -340,16 +347,6 @@ Tr_Warp :: SpatialLocalizerI_containsPoint(const FloatArray &coords)
 }
 
 
-double
-Tr_Warp :: SpatialLocalizerI_giveDistanceFromParametricCenter(const FloatArray &coords)
-{
-    FloatArray lcoords(3), gcoords;
-    lcoords.at(1) = lcoords.at(2) = lcoords.at(3) = 1. / 3.;
-    this->computeGlobalCoordinates(gcoords, lcoords);
-    return gcoords.distance(coords);
-}
-
-
 void
 Tr_Warp :: ZZNodalRecoveryMI_computeNNMatrix(FloatArray &answer, InternalStateType type)
 {
@@ -361,28 +358,25 @@ Tr_Warp :: ZZNodalRecoveryMI_computeNNMatrix(FloatArray &answer, InternalStateTy
     double volume = 0.0;
     FloatMatrix fullAnswer;
     FloatArray n;
-    Element *elem  = this->ZZNodalRecoveryMI_giveElement();
-    FEInterpolation *interpol = elem->giveInterpolation();
-    IntegrationRule *iRule = elem->giveDefaultIntegrationRulePtr();
+    FEInterpolation *interpol = this->giveInterpolation();
+    IntegrationRule *iRule = this->giveDefaultIntegrationRulePtr();
 
     if ( !interpol ) {
-        OOFEM_ERROR( "ZZNodalRecoveryMI_computeNNMatrix: Element %d not providing interpolation", elem->giveNumber() );
+        OOFEM_ERROR( "ZZNodalRecoveryMI_computeNNMatrix: Element %d not providing interpolation", this->giveNumber() );
     }
 
-    int size = 3; //elem->giveNumberOfDofManagers();
+    int size = 3; //this->giveNumberOfDofManagers();
     fullAnswer.resize(size, size);
     fullAnswer.zero();
     double pok = 0.0;
 
-    for ( int i = 0; i < iRule->giveNumberOfIntegrationPoints(); i++ ) {
-        GaussPoint *gp = iRule->getIntegrationPoint(i);
-        double dV = elem->computeVolumeAround(gp);
-        interpol->evalN( n, gp->giveNaturalCoordinates(), FEIElementGeometryWrapper(elem) );
+    for ( auto &gp : *iRule ) {
+        double dV = this->computeVolumeAround(gp);
+        interpol->evalN( n, gp->giveNaturalCoordinates(), FEIElementGeometryWrapper(this) );
         fullAnswer.plusDyadSymmUpper(n, dV);
         pok += ( n.at(1) * dV ); ///@todo What is this? Completely unused.
         volume += dV;
     }
-
 
     fullAnswer.symmetrized();
     answer.resize(4);
@@ -404,20 +398,18 @@ Tr_Warp :: ZZNodalRecoveryMI_computeNValProduct(FloatMatrix &answer, InternalSta
    // N(nsigma, nsigma*nnodes)
    // Definition : sigmaVector = N * nodalSigmaVector
     FloatArray stressVector, n;
-    Element *elem  = this->ZZNodalRecoveryMI_giveElement();
-    FEInterpolation *interpol = elem->giveInterpolation();
-    IntegrationRule *iRule = elem->giveDefaultIntegrationRulePtr();
+    FEInterpolation *interpol = this->giveInterpolation();
+    IntegrationRule *iRule = this->giveDefaultIntegrationRulePtr();
 
     answer.clear();
-    for ( int i = 0; i < iRule->giveNumberOfIntegrationPoints(); i++ ) {
-        GaussPoint *gp = iRule->getIntegrationPoint(i);
-        double dV = elem->computeVolumeAround(gp);
+    for ( auto &gp : *iRule ) {
+        double dV = this->computeVolumeAround(gp);
         //this-> computeStressVector(stressVector, gp, tStep);
-        if ( !elem->giveIPValue(stressVector, gp, type, tStep) ) {
+        if ( !this->giveIPValue(stressVector, gp, type, tStep) ) {
             continue;
         }
 
-        interpol->evalN( n, gp->giveNaturalCoordinates(), FEIElementGeometryWrapper(elem) );
+        interpol->evalN( n, gp->giveNaturalCoordinates(), FEIElementGeometryWrapper(this) );
         answer.plusDyadUnsym(n, stressVector, dV);
 
         //  help.beTProductOf(n,stressVector);

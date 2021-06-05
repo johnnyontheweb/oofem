@@ -32,8 +32,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/igaelements.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
+#include "sm/Elements/igaelements.h"
+#include "sm/CrossSections/structuralcrosssection.h"
 #include "floatarray.h"
 #include "floatmatrix.h"
 #include "domain.h"
@@ -62,10 +62,10 @@ REGISTER_Element(NURBSSpace3dElement);
 BsplinePlaneStressElement :: BsplinePlaneStressElement(int n, Domain *aDomain) : IGAElement(n, aDomain), PlaneStressStructuralElementEvaluator(), interpolation(2) { }
 
 
-IRResultType BsplinePlaneStressElement :: initializeFrom(InputRecord *ir)
+void BsplinePlaneStressElement :: initializeFrom(InputRecord &ir)
 {
     //PlaneStressStructuralElementEvaluator::initializeFrom(ir);
-    return IGAElement :: initializeFrom(ir);
+    IGAElement :: initializeFrom(ir);
 }
 
 
@@ -84,10 +84,10 @@ int BsplinePlaneStressElement :: checkConsistency()
 NURBSPlaneStressElement :: NURBSPlaneStressElement(int n, Domain *aDomain) : IGAElement(n, aDomain), PlaneStressStructuralElementEvaluator(), interpolation(2) { }
 
 
-IRResultType NURBSPlaneStressElement :: initializeFrom(InputRecord *ir)
+void NURBSPlaneStressElement :: initializeFrom(InputRecord &ir)
 {
     //PlaneStressStructuralElementEvaluator::initializeFrom(ir);
-    return IGAElement :: initializeFrom(ir);
+    IGAElement :: initializeFrom(ir);
 }
 
 
@@ -110,10 +110,10 @@ TSplinePlaneStressElement :: TSplinePlaneStressElement(int n, Domain *aDomain) :
 NURBSSpace3dElement :: NURBSSpace3dElement(int n, Domain *aDomain) : IGAElement(n, aDomain), Space3dStructuralElementEvaluator(), interpolation(3) { }
 
 
-IRResultType NURBSSpace3dElement :: initializeFrom(InputRecord *ir)
+void NURBSSpace3dElement :: initializeFrom(InputRecord &ir)
 {
     //PlaneStressStructuralElementEvaluator::initializeFrom(ir);
-    return IGAElement :: initializeFrom(ir);
+    IGAElement :: initializeFrom(ir);
 }
 
 
@@ -153,7 +153,7 @@ void BsplinePlaneStressElement :: drawScalar(oofegGraphicContext &gc, TimeStep *
 
     EASValsSetLayer(OOFEG_VARPLOT_PATTERN_LAYER);
     EASValsSetFillStyle(FILL_SOLID);
-    const double *const *knotVector = interp->giveKnotVector();
+    const FloatArray *knotVector = interp->giveKnotVector();
     const IntArray *span;
     int j, nsd = this->giveNsd();
     FloatArray c [ 4 ], cg [ 4 ], u;
@@ -228,7 +228,7 @@ void BsplinePlaneStressElement :: drawScalar(oofegGraphicContext &gc, TimeStep *
                         s [ k ] = val.at(indx);
                     }
 
-                    if ( ( isnan(s [ 0 ]) ) || ( isnan(s [ 1 ]) ) || ( isnan(s [ 2 ]) ) || ( isnan(s [ 3 ]) ) ) {
+                    if ( ( std::isnan(s [ 0 ]) ) || ( std::isnan(s [ 1 ]) ) || ( std::isnan(s [ 2 ]) ) || ( std::isnan(s [ 3 ]) ) ) {
                         continue;
                     }
 
@@ -265,7 +265,7 @@ void NURBSPlaneStressElement :: drawScalar(oofegGraphicContext &gc, TimeStep *tS
     EASValsSetLayer(OOFEG_VARPLOT_PATTERN_LAYER);
     EASValsSetFillStyle(FILL_SOLID);
     EASValsSetEdgeFlag(true);
-    const double *const *knotVector = interp->giveKnotVector();
+    const FloatArray *knotVector = interp->giveKnotVector();
     const IntArray *span;
     int j, nsd = this->giveNsd();
     FloatArray c [ 4 ], cg [ 4 ];
@@ -421,7 +421,7 @@ void NURBSPlaneStressElement :: drawScalar(oofegGraphicContext &gc, TimeStep *tS
  #endif
                     }
 
-                    if ( ( isnan(s [ 0 ]) ) || ( isnan(s [ 1 ]) ) || ( isnan(s [ 2 ]) ) || ( isnan(s [ 3 ]) ) ) {
+                    if ( ( std::isnan(s [ 0 ]) ) || ( std::isnan(s [ 1 ]) ) || ( std::isnan(s [ 2 ]) ) || ( std::isnan(s [ 3 ]) ) ) {
                         continue;
                     }
 
@@ -467,7 +467,7 @@ void TSplinePlaneStressElement :: drawScalar(oofegGraphicContext &gc, TimeStep *
     EASValsSetLayer(OOFEG_VARPLOT_PATTERN_LAYER);
     EASValsSetFillStyle(FILL_SOLID);
     EASValsSetEdgeFlag(true);
-    const double *const *knotVector = interp->giveKnotVector();
+    const FloatArray *knotVector = interp->giveKnotVector();
     const IntArray *span;
     int j, nsd = this->giveNsd();
     FloatArray c [ 4 ], cg [ 4 ], u;
@@ -541,7 +541,7 @@ void TSplinePlaneStressElement :: drawScalar(oofegGraphicContext &gc, TimeStep *
                         s [ k ] = val.at(indx);
                     }
 
-                    if ( ( isnan(s [ 0 ]) ) || ( isnan(s [ 1 ]) ) || ( isnan(s [ 2 ]) ) || ( isnan(s [ 3 ]) ) ) {
+                    if ( ( std::isnan(s [ 0 ]) ) || ( std::isnan(s [ 1 ]) ) || ( std::isnan(s [ 2 ]) ) || ( std::isnan(s [ 3 ]) ) ) {
                         continue;
                     }
 
@@ -580,7 +580,7 @@ void NURBSSpace3dElement :: drawScalar(oofegGraphicContext &gc, TimeStep *tStep)
     EASValsSetLayer(OOFEG_VARPLOT_PATTERN_LAYER);
     EASValsSetFillStyle(FILL_SOLID);
     EASValsSetEdgeFlag(true);
-    const double *const *knotVector = interp->giveKnotVector();
+    const FloatArray *knotVector = interp->giveKnotVector();
     const IntArray *span;
     int j, nsd = this->giveNsd();
     FloatArray c [ 8 ], cg [ 8 ];
@@ -796,11 +796,11 @@ void NURBSSpace3dElement :: drawScalar(oofegGraphicContext &gc, TimeStep *tStep)
  #endif
                         }
 
-                        if ( ( isnan(s [ 0 ]) ) || ( isnan(s [ 1 ]) ) || ( isnan(s [ 2 ]) ) || ( isnan(s [ 3 ]) ) ) {
+                        if ( ( std::isnan(s [ 0 ]) ) || ( std::isnan(s [ 1 ]) ) || ( std::isnan(s [ 2 ]) ) || ( std::isnan(s [ 3 ]) ) ) {
                             continue;
                         }
 
-                        if ( ( isnan(s [ 4 ]) ) || ( isnan(s [ 5 ]) ) || ( isnan(s [ 6 ]) ) || ( isnan(s [ 7 ]) ) ) {
+                        if ( ( std::isnan(s [ 4 ]) ) || ( std::isnan(s [ 5 ]) ) || ( std::isnan(s [ 6 ]) ) || ( std::isnan(s [ 7 ]) ) ) {
                             continue;
                         }
 

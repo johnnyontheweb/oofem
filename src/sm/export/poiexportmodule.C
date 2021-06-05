@@ -62,10 +62,11 @@ POIExportModule :: ~POIExportModule()
 }
 
 
-IRResultType
-POIExportModule :: initializeFrom(InputRecord *ir)
+void
+POIExportModule :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
+    ExportModule :: initializeFrom(ir);
+
     int val;
 
     IR_GIVE_OPTIONAL_FIELD(ir, internalVarsToExport, _IFT_POIExportModule_vars);
@@ -78,8 +79,6 @@ POIExportModule :: initializeFrom(InputRecord *ir)
     std :: string poiFileName;
     IR_GIVE_OPTIONAL_FIELD(ir, poiFileName, _IFT_POIExportModule_poifilename);
     this->readPOIFile(poiFileName); // parse poi file
-
-    return ExportModule :: initializeFrom(ir);
 }
 
 void
@@ -90,7 +89,7 @@ POIExportModule :: readPOIFile(const std :: string &poiFileName)
     // Open the file;
     std :: ifstream file(poiFileName.c_str(), std :: ios :: in);
     if ( !file.is_open() ) {
-        OOFEM_ERROR("Failed to open time data file: %s\n", poiFileName.c_str() );
+        OOFEM_ERROR("Failed to open POI data file: %s\n. Did you specify poifilename?", poiFileName.c_str() );
     }
 
     file >> nPOI; // Not actually needed.
@@ -210,11 +209,11 @@ POIExportModule :: giveMapper()
 {
     if ( !this->mapper ) {
         if ( this->mtype == POI_CPT ) {
-            this->mapper.reset( new MMAClosestIPTransfer() );
+            this->mapper = std::make_unique<MMAClosestIPTransfer>();
         } else if ( this->mtype == POI_SFT ) {
-            this->mapper.reset( new MMAShapeFunctProjection() );
+            this->mapper = std::make_unique<MMAShapeFunctProjection>();
         } else if ( this->mtype == POI_LST ) {
-            this->mapper.reset( new MMALeastSquareProjection() );
+            this->mapper = std::make_unique<MMALeastSquareProjection>();
         } else {
             OOFEM_ERROR("unsupported smoother type ID");
         }
@@ -273,8 +272,8 @@ POIExportModule :: exportPrimVarAs(UnknownType valID, FILE *stream, TimeStep *tS
     SpatialLocalizer *sl = d->giveSpatialLocalizer();
     // loop over POIs
     for ( auto &poi: POIList ) {
-		coords.at(1) = poi.x;
-		coords.at(2) = poi.y;
+        coords.at(1) = poi.x;
+        coords.at(2) = poi.y;
         coords.at(3) = poi.z;
         //region = poi.region;
 

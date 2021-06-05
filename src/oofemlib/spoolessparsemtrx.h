@@ -43,6 +43,8 @@ extern "C" {
 #include <spooles/SymbFac.h>
 };
 
+#define _IFT_SpoolesSparseMtrx_Name "spooles"
+
 namespace oofem {
 /**
  * This class provides an sparse matrix interface to SPOOLES InpMtrx
@@ -52,49 +54,36 @@ class OOFEM_EXPORT SpoolesSparseMtrx : public SparseMtrx
 protected:
     InpMtx *mtrx;
     int type;
-    int nent;
     int sflag;
 
 public:
-    SpoolesSparseMtrx(int _type, int _nent, int _sflag, int n, int m) : SparseMtrx(n, m)
-    {
-        type = _type;
-        nent = _nent;
-        sflag = _sflag;
-        mtrx = NULL;
-    }
-    SpoolesSparseMtrx() : SparseMtrx() {
-        type = SPOOLES_REAL;
-        nent = 0;
-        sflag = SPOOLES_SYMMETRIC;
-        mtrx = NULL;
-    }
+    SpoolesSparseMtrx(int n=0, int m=0, int _sflag=SPOOLES_SYMMETRIC, int _type=SPOOLES_REAL) : SparseMtrx(n, m),
+        mtrx(nullptr),
+        type(_type),
+        sflag(_sflag)
+    { }
     virtual ~SpoolesSparseMtrx() {
         if ( mtrx ) {
             InpMtx_free(mtrx);
         }
     }
 
-
-	virtual const char *giveClassName() const { return "SpoolesSparseMtrx"; }
-    // Overloaded methods
-    virtual SparseMtrx *GiveCopy() const;
-    virtual void times(const FloatArray &x, FloatArray &answer) const;
-    virtual void timesT(const FloatArray &x, FloatArray &answer) const;
-    virtual void times(double x);
-    virtual int buildInternalStructure(EngngModel *eModel, int di, const UnknownNumberingScheme &s);
-    virtual int assemble(const IntArray &loc, const FloatMatrix &mat);
-    virtual int assemble(const IntArray &rloc, const IntArray &cloc, const FloatMatrix &mat);
-    virtual bool canBeFactorized() const { return false; }
-    virtual SparseMtrx *factorized() { return NULL; }
-    virtual FloatArray *backSubstitutionWith(FloatArray &y) const { return NULL; }
-    virtual void zero();
-    virtual double &at(int i, int j);
-    virtual double at(int i, int j) const;
-    virtual void printStatistics() const;
-    virtual void printYourself() const;
-    virtual SparseMtrxType  giveType() const { return SMT_SpoolesMtrx; }
-    virtual bool isAsymmetric() const { return this->type == SPOOLES_NONSYMMETRIC; }
+    void times(const FloatArray &x, FloatArray &answer) const override;
+    void timesT(const FloatArray &x, FloatArray &answer) const override;
+    void times(double x) override;
+    int buildInternalStructure(EngngModel *eModel, int di, const UnknownNumberingScheme &s) override;
+    int assemble(const IntArray &loc, const FloatMatrix &mat) override;
+    int assemble(const IntArray &rloc, const IntArray &cloc, const FloatMatrix &mat) override;
+    bool canBeFactorized() const override { return false; }
+    SparseMtrx *factorized() override { return nullptr; }
+    FloatArray *backSubstitutionWith(FloatArray &y) const override { return nullptr; }
+    void zero() override;
+    double &at(int i, int j) override;
+    double at(int i, int j) const override;
+    void printStatistics() const override;
+    void printYourself() const override;
+    SparseMtrxType  giveType() const override { return SMT_SpoolesMtrx; }
+    bool isAsymmetric() const override { return this->type == SPOOLES_NONSYMMETRIC; }
 	virtual void add(double x, FloatMatrix &m);
     // Exposed internals
     InpMtx *giveInpMtrx() { return this->mtrx; }

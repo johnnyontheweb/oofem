@@ -35,7 +35,7 @@
 #ifndef winklerpasternak_h
 #define winklerpasternak_h
 
-#include "../sm/Materials/structuralmaterial.h"
+#include "sm/Materials/structuralmaterial.h"
 #include "floatarray.h"
 #include "floatmatrix.h"
 #include "matconst.h"
@@ -61,9 +61,15 @@ class WinklerPasternakMaterial : public StructuralMaterial
 {
 protected:
     /// C1 constant, defined as $\int_0^hE_{oed}(z)\left\(d\Psi(z)\over dz\right\)^2\ dz$
+<<<<<<< HEAD
     double c1;
     /// C2 constants in x and y directions, defined as $\int_0^hG_{x,y}(z)Psi^2(z)\ dz$
     double c2x, c2y;
+=======
+    double c1 = 0.;
+    /// C2 constants in x and y directions, defined as $\int_0^hG_{x,y}(z)Psi^2(z)\ dz$
+    double c2x = 0., c2y = 0.;
+>>>>>>> bp2/master
 
 public:
     /**
@@ -72,21 +78,17 @@ public:
      * @param d Domain to which new material will belong.
      */
     WinklerPasternakMaterial(int n, Domain * d);
-    /// Destructor.
-    virtual ~WinklerPasternakMaterial();
 
-    // identification and auxiliary functions
+    bool hasMaterialModeCapability(MaterialMode mode) const override;
+    const char *giveClassName() const override { return "WinklerPasternakMaterial"; }
+    const char *giveInputRecordName() const override { return _IFT_WinklerPasternakMaterial_Name; }
 
-    virtual int hasMaterialModeCapability(MaterialMode mode);
-    virtual const char *giveClassName() const { return "WinklerPasternakMaterial"; }
-    virtual const char *giveInputRecordName() const { return _IFT_WinklerPasternakMaterial_Name; }
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
-
-    virtual void giveRealStressVector_2dPlateSubSoil(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedE, TimeStep *tStep);
-    virtual void give2dPlateSubSoilStiffMtrx(FloatMatrix &answer, MatResponseMode mmode, GaussPoint *gp, TimeStep *tStep);
-    virtual MaterialStatus * CreateStatus(GaussPoint *gp) const;
+    FloatArrayF<3> giveRealStressVector_2dPlateSubSoil(const FloatArrayF<3> &reducedE, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<3,3> give2dPlateSubSoilStiffMtrx(MatResponseMode mmode, GaussPoint *gp, TimeStep *tStep) const override;
+    MaterialStatus * CreateStatus(GaussPoint *gp) const override;
 };
 } // end namespace oofem
 #endif // winklerpasternak_h

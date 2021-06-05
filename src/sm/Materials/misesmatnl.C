@@ -33,7 +33,7 @@
  */
 
 #include "misesmatnl.h"
-#include "../sm/Elements/structuralelement.h"
+#include "sm/Elements/structuralelement.h"
 #include "gausspoint.h"
 #include "floatmatrix.h"
 #include "floatarray.h"
@@ -50,74 +50,72 @@ REGISTER_Material(MisesMatNl);
 
 MisesMatNl :: MisesMatNl(int n, Domain *d) : MisesMat(n, d), StructuralNonlocalMaterialExtensionInterface(d), NonlocalMaterialStiffnessInterface()
 {
-    Rf = 0.;
-    exponent = 1.;
-    averType = 0;
 }
 
 
-MisesMatNl :: ~MisesMatNl()
-{ }
-
-
-void
-MisesMatNl :: giveRealStressVector_3d(FloatArray &answer, GaussPoint *gp,
-                                   const FloatArray &totalStrain, TimeStep *tStep)
+FloatArrayF<6>
+MisesMatNl :: giveRealStressVector_3d(const FloatArrayF<6> &strain, GaussPoint *gp, TimeStep *tStep) const
 {
     OOFEM_ERROR("3D mode not supported");
+    return zeros<6>();
 }
 
 
-void
-MisesMatNl :: giveRealStressVector_1d(FloatArray &answer, GaussPoint *gp,
-                                   const FloatArray &totalStrain, TimeStep *tStep)
+FloatArrayF<1>
+MisesMatNl :: giveRealStressVector_1d(const FloatArrayF<1> &totalStrain, GaussPoint *gp, TimeStep *tStep) const
 {
-    MisesMatNlStatus *nlStatus = static_cast< MisesMatNlStatus * >( this->giveStatus(gp) );
+    auto nlStatus = static_cast< MisesMatNlStatus * >( this->giveStatus(gp) );
     
+<<<<<<< HEAD
     double tempDam;
     performPlasticityReturn(gp, totalStrain, tStep);
     tempDam = this->computeDamage(gp, tStep);
     answer.beScaled(1.0 - tempDam, nlStatus->giveTempEffectiveStress());
+=======
+    performPlasticityReturn(totalStrain, gp, tStep);
+    double tempDam = this->computeDamage(gp, tStep);
+    FloatArrayF<6> stress = (1.0 - tempDam) * nlStatus->giveTempEffectiveStress();
+>>>>>>> bp2/master
     nlStatus->setTempDamage(tempDam);
     nlStatus->letTempStrainVectorBe(totalStrain);
-    nlStatus->letTempStressVectorBe(answer);
+    nlStatus->letTempStressVectorBe(stress);
+    return stress[{0}];
 }
 
 
-void
-MisesMatNl :: give1dStressStiffMtrx(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep)
+FloatMatrixF<1,1>
+MisesMatNl :: give1dStressStiffMtrx(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const
 {
-    answer.resize(1, 1);
-    LinearElasticMaterial *lmat = this->giveLinearElasticMaterial();
-    double E = lmat->give('E', gp);
-    MisesMatNlStatus *status = static_cast< MisesMatNlStatus * >( this->giveStatus(gp) );
+    auto status = static_cast< MisesMatNlStatus * >( this->giveStatus(gp) );
+    double E = linearElasticMaterial.give('E', gp);
     double kappa = status->giveCumulativePlasticStrain();
     double tempKappa = status->giveTempCumulativePlasticStrain();
     double tempDamage = status->giveTempDamage();
     double damage = status->giveDamage();
-    answer.at(1, 1) = ( 1 - tempDamage ) * E;
+    
+    auto tangent = ( 1 - tempDamage ) * E;
     if ( mode != TangentStiffness ) {
-        return;
+        return {tangent};
     }
 
     if ( tempKappa <= kappa ) { // elastic loading - elastic stiffness plays the role of tangent stiffness
-        return;
+        return {tangent};
     }
 
     // === plastic loading ===
-    const FloatArray &stressVector = status->giveTempEffectiveStress();
+    const auto &stressVector = status->giveTempEffectiveStress();
     double stress = stressVector.at(1);
-    answer.at(1, 1) = ( 1. - tempDamage ) * E * H / ( E + H );
+    tangent = ( 1. - tempDamage ) * E * H / ( E + H );
     if ( tempDamage > damage ) {
-        double nlKappa;
-        this->computeCumPlasticStrain(nlKappa, gp, tStep);
-        answer.at(1, 1) -= ( 1 - mm ) * computeDamageParamPrime(nlKappa) * E / ( E + H ) * stress * sgn(stress);
+        double nlKappa = this->computeCumPlasticStrain(gp, tStep);
+        tangent -= ( 1 - mm ) * computeDamageParamPrime(nlKappa) * E / ( E + H ) * stress * sgn(stress);
     }
+    return {tangent};
 }
 
 
 void
-MisesMatNl :: updateBeforeNonlocAverage(const FloatArray &strainVector, GaussPoint *gp, TimeStep *tStep)
+MisesMatNl :: updateBeforeNonlocAverage(const FloatArray &strainVector, GaussPoint *gp, TimeStep *tStep) const
 {
     /* Implements the service updating local variables in given integration points,
      * which take part in nonlocal average process. Actually, no update is necessary,
@@ -126,12 +124,16 @@ MisesMatNl :: updateBeforeNonlocAverage(const FloatArray &strainVector, GaussPoi
      * This service is declared at StructuralNonlocalMaterial level.
      */
 
-    double cumPlasticStrain;
-    MisesMatNlStatus *nlstatus = static_cast< MisesMatNlStatus * >( this->giveStatus(gp) );
+    auto nlstatus = static_cast< MisesMatNlStatus * >( this->giveStatus(gp) );
 
     this->initTempStatus(gp);
+<<<<<<< HEAD
     this->performPlasticityReturn(gp, strainVector, tStep);
     this->computeLocalCumPlasticStrain(cumPlasticStrain, gp, tStep);
+=======
+    this->performPlasticityReturn(strainVector, gp, tStep);
+    double cumPlasticStrain = this->computeLocalCumPlasticStrain(gp, tStep);
+>>>>>>> bp2/master
     // standard formulation based on averaging of equivalent strain
     nlstatus->setLocalCumPlasticStrainForAverage(cumPlasticStrain);
 
@@ -143,7 +145,7 @@ MisesMatNl :: updateBeforeNonlocAverage(const FloatArray &strainVector, GaussPoi
 
 
 void
-MisesMatNl :: modifyNonlocalWeightFunctionAround(GaussPoint *gp)
+MisesMatNl :: modifyNonlocalWeightFunctionAround(GaussPoint *gp) const
 {
     MisesMatNlStatus *nonlocStatus, *status = static_cast< MisesMatNlStatus * >( this->giveStatus(gp) );
     std :: list< localIntegrationRecord > *list = this->giveIPIntegrationList(gp);
@@ -221,7 +223,7 @@ MisesMatNl :: modifyNonlocalWeightFunctionAround(GaussPoint *gp)
 }
 
 double
-MisesMatNl :: computeDistanceModifier(double damage)
+MisesMatNl :: computeDistanceModifier(double damage) const
 {
     switch ( averType ) {
     case 2: return 1. / ( Rf / cl + ( 1. - Rf / cl ) * pow(1. - damage, exponent) );
@@ -240,11 +242,10 @@ MisesMatNl :: computeDistanceModifier(double damage)
     }
 }
 
-void
-MisesMatNl :: computeCumPlasticStrain(double &kappa, GaussPoint *gp, TimeStep *tStep)
+double
+MisesMatNl :: computeCumPlasticStrain(GaussPoint *gp, TimeStep *tStep) const
 {
-    double nonlocalContribution, nonlocalCumPlasticStrain = 0.0;
-    MisesMatNlStatus *nonlocStatus, *status = static_cast< MisesMatNlStatus * >( this->giveStatus(gp) );
+    auto status = static_cast< MisesMatNlStatus * >( this->giveStatus(gp) );
 
     this->buildNonlocalPointTable(gp);
     this->updateDomainBeforeNonlocAverage(tStep);
@@ -252,9 +253,10 @@ MisesMatNl :: computeCumPlasticStrain(double &kappa, GaussPoint *gp, TimeStep *t
     // compute nonlocal cumulative plastic strain
     std :: list< localIntegrationRecord > *list = this->giveIPIntegrationList(gp);
 
+    double nonlocalCumPlasticStrain = 0.0;
     for ( auto &lir: *list ) {
-        nonlocStatus = static_cast< MisesMatNlStatus * >( this->giveStatus(lir.nearGp) );
-        nonlocalContribution = nonlocStatus->giveLocalCumPlasticStrainForAverage();
+        auto nonlocStatus = static_cast< MisesMatNlStatus * >( this->giveStatus(lir.nearGp) );
+        auto nonlocalContribution = nonlocStatus->giveLocalCumPlasticStrainForAverage();
         if ( nonlocalContribution > 0 ) {
             nonlocalContribution *= lir.weight;
         }
@@ -273,7 +275,7 @@ MisesMatNl :: computeCumPlasticStrain(double &kappa, GaussPoint *gp, TimeStep *t
         }
     }
 
-    kappa = mm * nonlocalCumPlasticStrain + ( 1. - mm ) * localCumPlasticStrain;
+    return mm * nonlocalCumPlasticStrain + ( 1. - mm ) * localCumPlasticStrain;
 }
 
 Interface *
@@ -289,15 +291,11 @@ MisesMatNl :: giveInterface(InterfaceType type)
 }
 
 
-IRResultType
-MisesMatNl :: initializeFrom(InputRecord *ir)
+void
+MisesMatNl :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
-    result = MisesMat :: initializeFrom(ir);
-    if ( result != IRRT_OK ) return result;
-    result = StructuralNonlocalMaterialExtensionInterface :: initializeFrom(ir);
-    if ( result != IRRT_OK ) return result;
+    MisesMat :: initializeFrom(ir);
+    StructuralNonlocalMaterialExtensionInterface :: initializeFrom(ir);
 
     averType = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, averType, _IFT_MisesMatNl_averagingtype);
@@ -316,8 +314,6 @@ MisesMatNl :: initializeFrom(InputRecord *ir)
     if ( averType >= 2 && averType <= 5 ) {
         IR_GIVE_OPTIONAL_FIELD(ir, Rf, _IFT_MisesMatNl_rf);
     }
-
-    return IRRT_OK;
 }
 
 
@@ -340,14 +336,12 @@ MisesMatNl :: giveInputRecord(DynamicInputRecord &input)
 
 
 double
-MisesMatNl :: computeDamage(GaussPoint *gp, TimeStep *tStep)
+MisesMatNl :: computeDamage(GaussPoint *gp, TimeStep *tStep) const
 {
-    MisesMatNlStatus *nlStatus = static_cast< MisesMatNlStatus * >( this->giveStatus(gp) );
-    double nlKappa;
-    this->computeCumPlasticStrain(nlKappa, gp, tStep);
-    double dam, tempDam;
-    dam = nlStatus->giveDamage();
-    tempDam = this->computeDamageParam(nlKappa);
+    auto nlStatus = static_cast< MisesMatNlStatus * >( this->giveStatus(gp) );
+    double nlKappa = this->computeCumPlasticStrain(gp, tStep);
+    double dam = nlStatus->giveDamage();
+    double tempDam = this->computeDamageParam(nlKappa);
     if ( tempDam < dam ) {
         tempDam = dam;
     }
@@ -400,19 +394,18 @@ int
 MisesMatNl :: giveLocalNonlocalStiffnessContribution(GaussPoint *gp, IntArray &loc, const UnknownNumberingScheme &s,
                                                      FloatArray &lcontrib, TimeStep *tStep)
 {
-    double nlKappa, damage, tempDamage, dDamF;
-    MisesMatNlStatus *status = static_cast< MisesMatNlStatus * >( this->giveStatus(gp) );
-    StructuralElement *elem = static_cast< StructuralElement * >( gp->giveElement() );
+    auto status = static_cast< MisesMatNlStatus * >( this->giveStatus(gp) );
+    auto elem = static_cast< StructuralElement * >( gp->giveElement() );
     FloatMatrix b;
 
-    this->computeCumPlasticStrain(nlKappa, gp, tStep);
-    damage = status->giveDamage();
-    tempDamage = status->giveTempDamage();
+    double nlKappa = this->computeCumPlasticStrain(gp, tStep);
+    double damage = status->giveDamage();
+    double tempDamage = status->giveTempDamage();
     if ( ( tempDamage - damage ) > 0 ) {
         const FloatArray &stress = status->giveTempEffectiveStress();
         elem->giveLocationArray(loc, s);
         elem->computeBmatrixAt(gp, b);
-        dDamF = computeDamageParamPrime(nlKappa);
+        double dDamF = computeDamageParamPrime(nlKappa);
         lcontrib.clear();
         lcontrib.plusProduct(b, stress, mm * dDamF);
     }
@@ -437,8 +430,7 @@ MisesMatNl :: giveRemoteNonlocalStiffnessContribution(GaussPoint *gp, IntArray &
 
     rcontrib.clear();
     if ( ( tempKappa - kappa ) > 0 ) {
-        LinearElasticMaterial *lmat = this->giveLinearElasticMaterial();
-        double E = lmat->give('E', gp);
+        double E = linearElasticMaterial.give('E', gp);
         const FloatArray &stress = status->giveTempEffectiveStress();
         if ( gp->giveMaterialMode() == _1dMat ) {
             double coeff = sgn( stress.at(1) ) * E / ( E + H );
@@ -453,19 +445,13 @@ MisesMatNl :: giveRemoteNonlocalStiffnessContribution(GaussPoint *gp, IntArray &
 
 /*********************************************status**************************************************************/
 
-MisesMatNlStatus :: MisesMatNlStatus(int n, Domain *d, GaussPoint *g) :
-    MisesMatStatus(n, d, g), StructuralNonlocalMaterialStatusExtensionInterface()
-{
-    localCumPlasticStrainForAverage = 0.0;
-}
-
-
-MisesMatNlStatus :: ~MisesMatNlStatus()
-{ }
+MisesMatNlStatus :: MisesMatNlStatus(GaussPoint *g) :
+    MisesMatStatus(g), StructuralNonlocalMaterialStatusExtensionInterface()
+{}
 
 
 void
-MisesMatNlStatus :: printOutputAt(FILE *file, TimeStep *tStep)
+MisesMatNlStatus :: printOutputAt(FILE *file, TimeStep *tStep) const
 {
     StructuralMaterialStatus :: printOutputAt(file, tStep);
     fprintf(file, "status { ");
@@ -497,40 +483,19 @@ MisesMatNlStatus :: updateYourself(TimeStep *tStep)
 }
 
 
-contextIOResultType
-MisesMatNlStatus :: saveContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// saves full information stored in this Status
-// no temp variables stored
-//
+void
+MisesMatNlStatus :: saveContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-    // save parent class status
-    if ( ( iores = MisesMatStatus :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    //if (!stream.write(&localEquivalentStrainForAverage,1)) THROW_CIOERR(CIO_IOERR);
-    return CIO_OK;
+    MisesMatStatus :: saveContext(stream, mode);
+    //if (!stream.write(localEquivalentStrainForAverage,1)) THROW_CIOERR(CIO_IOERR);
 }
 
 
-contextIOResultType
-MisesMatNlStatus :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// restores full information stored in stream to this Status
-//
+void
+MisesMatNlStatus :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-    // read parent class status
-    if ( ( iores = MisesMatStatus :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    // read raw data
-    //if (!stream.read (&localEquivalentStrainForAverage,1)) THROW_CIOERR(CIO_IOERR);
-
-    return CIO_OK;
+    MisesMatStatus :: restoreContext(stream, mode);
+    //if (!stream.read(localEquivalentStrainForAverage,1)) THROW_CIOERR(CIO_IOERR);
 }
 
 

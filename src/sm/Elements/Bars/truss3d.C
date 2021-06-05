@@ -32,8 +32,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/Bars/truss3d.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
+#include "sm/Elements/Bars/truss3d.h"
+#include "sm/CrossSections/structuralcrosssection.h"
 #include "fei3dlinelin.h"
 #include "node.h"
 #include "material.h"
@@ -111,12 +111,19 @@ Truss3d :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int ui)
 
 
 void
+Truss3d :: computeBHmatrixAt(GaussPoint *gp, FloatMatrix &answer)
+{
+    this->computeBmatrixAt(gp, answer);
+}
+
+  
+void
 Truss3d :: computeGaussPoints()
 // Sets up the array of Gauss Points of the receiver.
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize( 1 );
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 2) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 2);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], 1, this);
     }
 }
@@ -239,7 +246,7 @@ Truss3d :: giveLocalCoordinateSystem(FloatMatrix &answer)
 {
     FloatArray lx, ly(3), lz;
 
-    lx.beDifferenceOf( * this->giveNode(2)->giveCoordinates(), * this->giveNode(1)->giveCoordinates() );
+    lx.beDifferenceOf( this->giveNode(2)->giveCoordinates(), this->giveNode(1)->giveCoordinates() );
     lx.normalize();
 
     ly(0) = lx(1);
@@ -263,8 +270,8 @@ Truss3d :: giveLocalCoordinateSystem(FloatMatrix &answer)
 }
 
 
-IRResultType
-Truss3d :: initializeFrom(InputRecord *ir)
+void
+Truss3d :: initializeFrom(InputRecord &ir)
 {
 	IRResultType result;                    // Required by IR_GIVE_FIELD macro
 
@@ -278,13 +285,13 @@ Truss3d :: initializeFrom(InputRecord *ir)
 void
 Truss3d :: computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->giveRealStress_1d(answer, gp, strain, tStep);
+    answer = this->giveStructuralCrossSection()->giveRealStress_1d(strain, gp, tStep);
 }
 
 void
 Truss3d :: computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->giveStiffnessMatrix_1d(answer, rMode, gp, tStep);
+    answer = this->giveStructuralCrossSection()->giveStiffnessMatrix_1d(rMode, gp, tStep);
 }
 
 void

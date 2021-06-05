@@ -39,17 +39,15 @@
 #include "mathfem.h"
 #include "dynamicinputrecord.h"
 #include "contextioerr.h"
+#include "datastream.h"
 
 namespace oofem {
 Material :: Material(int n, Domain *d) : FEMComponent(n, d), propertyDictionary(), castingTime(-1.) { }
 
 
-Material :: ~Material()
-{}
-
 
 double
-Material :: give(int aProperty, GaussPoint *gp)
+Material :: give(int aProperty, GaussPoint *gp) const
 // Returns the value of the property aProperty (e.g. the Young's modulus
 // 'E') of the receiver.
 // tStep allows time dependent behavior to be taken into account
@@ -67,7 +65,7 @@ Material :: give(int aProperty, GaussPoint *gp)
 
 
 bool
-Material :: hasProperty(int aProperty, GaussPoint *gp)
+Material :: hasProperty(int aProperty, GaussPoint *gp) const
 // Returns true if the aProperty is defined on a material
 {
     return propertyDictionary.includes(aProperty);
@@ -85,11 +83,9 @@ Material :: modifyProperty(int aProperty, double value, GaussPoint *gp)
 }
 
 
-IRResultType
-Material :: initializeFrom(InputRecord *ir)
+void
+Material :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
     double value;
 
 #  ifdef VERBOSE
@@ -102,7 +98,8 @@ Material :: initializeFrom(InputRecord *ir)
     this->castingTime = -1.e10;
     IR_GIVE_OPTIONAL_FIELD(ir, castingTime, _IFT_Material_castingtime);
 
-    return IRRT_OK;
+    this->preCastingTimeMat = 0;
+    IR_GIVE_OPTIONAL_FIELD(ir, preCastingTimeMat, _IFT_Material_preCastingTimeMat);
 }
 
 
@@ -115,26 +112,19 @@ Material :: giveInputRecord(DynamicInputRecord &input)
 }
 
 
-int
-Material :: hasMaterialModeCapability(MaterialMode mode)
+bool
+Material :: hasMaterialModeCapability(MaterialMode mode) const
 //
 // returns whether receiver supports given mode
 //
 {
-    return 0;
+    return false;
 }
 
-int
-Material :: hasCastingTimeSupport()
-//
-// returns whether receiver fully supports casting time
-//
+bool
+Material :: hasCastingTimeSupport() const
 {
-    if ( this->castingTime > 0. ) {
-        return 0; // casting time is user-defined. By default the casting time is not supported.
-    } else {
-        return 1; // do not check anything - casting time has not been user-defined
-    }
+    return this->castingTime <= 0.;
 }
 
 
@@ -169,66 +159,41 @@ Material :: printYourself()
 // store & restore context - material info in gp not saved now!
 //
 
-contextIOResultType
+void
 Material :: saveIPContext(DataStream &stream, ContextMode mode, GaussPoint *gp)
-//
-// saves full material status (saves state variables, that completely describe
-// current state) stored in gp->matstatusDict with key = this->giveNumber()
-// storing of corresponding context if it is defined for current material in
-// gp status dictionary should be performed here by overloading this function.
-// (such code should invoke also corresponding function for yield conditions,
-// submaterials and so on)
-//
-
-//
 {
-    contextIOResultType iores;
-
-    if ( gp == NULL ) {
+    if ( gp == nullptr ) {
         THROW_CIOERR(CIO_BADOBJ);
     }
 
-    // write raw data - we save status there for this
     MaterialStatus *status = this->giveStatus(gp);
-
     if ( status ) {
-        if ( ( iores = status->saveContext(stream, mode, gp) ) != CIO_OK ) {
-            THROW_CIOERR(iores);
+        status->saveContext(stream, mode);
         }
     }
 
-    return CIO_OK;
-}
-
-contextIOResultType
+void
 Material :: restoreIPContext(DataStream &stream, ContextMode mode, GaussPoint *gp)
-//
-// restores full material status (saves state variables, that completely describe
-// current state) stored in gp->matstatusDict with key = this->giveNumber()
-// restoring of corresponding context if it is defined for current material in
-// gp status dictionary should be performed here by overloading this function.
-// (such code should invoke also corresponding function for yield conditions,
-//  submaterials and so on)
-//
-
-//
 {
-    contextIOResultType iores;
-    if ( gp == NULL ) {
+    if ( gp == nullptr ) {
         THROW_CIOERR(CIO_BADOBJ);
     }
 
-    // read raw data - context
     MaterialStatus *status =  this->giveStatus(gp);
     if ( status ) {
-        if ( ( iores = status->restoreContext(stream, mode, gp) ) != CIO_OK ) {
-            THROW_CIOERR(iores);
+        status->restoreContext(stream, mode);
         }
     }
 
-    return CIO_OK;
+
+int Material :: checkConsistency()
+{
+    if ( !this->hasCastingTimeSupport() ) {
+        OOFEM_WARNING("Material %3d does not support casting time (casting time = %lf)", this->giveNumber(), this->castingTime);
 }
 
+    return FEMComponent :: checkConsistency();
+}
 
 int Material :: checkConsistency()
 {
@@ -247,15 +212,15 @@ Material :: giveStatus(GaussPoint *gp) const
  */
 {
     MaterialStatus *status = static_cast< MaterialStatus * >( gp->giveMaterialStatus() );
-    if ( status == NULL ) {
+    if ( status == nullptr ) {
         // create a new one
         status = this->CreateStatus(gp);
 
         // if newly created status is null
         // dont include it. specific instance
         // does not have status.
-        if ( status != NULL ) {
-            gp->setMaterialStatus( status, this->giveNumber() );
+        if ( status ) {
+            gp->setMaterialStatus( status );
         }
     }
 
@@ -264,7 +229,7 @@ Material :: giveStatus(GaussPoint *gp) const
 
 
 void
-Material :: initTempStatus(GaussPoint *gp)
+Material :: initTempStatus(GaussPoint *gp) const
 //
 // Initialize MatStatus (respective it's temporary variables at the begining
 // of integrating incremental constitutive relations) to correct values
@@ -282,4 +247,33 @@ Material :: initMaterial(Element *element)
 {
     return 0;
 }
+
+
+void Material :: saveContext(DataStream &stream, ContextMode mode)
+{
+    FEMComponent :: saveContext(stream, mode);
+
+    if ( ( mode & CM_Definition ) ) {
+        propertyDictionary.saveContext(stream);
+
+        if ( !stream.write(castingTime) ) {
+            THROW_CIOERR(CIO_IOERR);
+        }
+    }
+}
+
+
+void Material :: restoreContext(DataStream &stream, ContextMode mode)
+{
+    FEMComponent :: restoreContext(stream, mode);
+
+    if ( mode & CM_Definition ) {
+        propertyDictionary.restoreContext(stream);
+
+        if ( !stream.read(castingTime) ) {
+            THROW_CIOERR(CIO_IOERR);
+        }
+    }
+}
+
 } // end namespace oofem

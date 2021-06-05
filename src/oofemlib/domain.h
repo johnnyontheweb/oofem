@@ -114,15 +114,16 @@ class ContactManager;
  */
 class OOFEM_EXPORT Domain
 {
-private:
+    public:
     /// Element list.
     std :: vector< std :: unique_ptr< Element > > elementList;
     /// Dof manager list.
     std :: vector< std :: unique_ptr< DofManager > > dofManagerList;
+    /// Cross section list.
+    std :: vector< std :: unique_ptr< CrossSection > > crossSectionList;    
+private:
     /// Material list.
     std :: vector< std :: unique_ptr< Material > > materialList;
-    /// Cross section list.
-    std :: vector< std :: unique_ptr< CrossSection > > crossSectionList;
     /// Boundary condition list.
     std :: vector< std :: unique_ptr< GeneralBoundaryCondition > > bcList;
     /// Initial condition list.
@@ -198,28 +199,31 @@ private:
     BCTracker bcTracker;
     
     /**
-     * Map from an element's global number to its place
+     * Map from an element's global number (label) to its place
      * in the element array. Added by ES 140326.
      */
-    std::unordered_map< int, int > mElementPlaceInArray;
+    // elementGlobal2LocalMap
+    std::unordered_map< int, int > elementGlobal2LocalMap;
 
     /**
-     * Map from a dofmans's global number to its place
+     * Map from a dofmans's global number (label) to its place
      * in the dofman array.
      */
-    std::unordered_map< int, int > mDofManPlaceInArray;
+    std::unordered_map< int, int > dofmanGlobal2LocalMap;
 
     /**
      * Map from material number to elements that have the
      * given material number. Added by ES 140718.
      */
-    std::unordered_map< int, IntArray> mMapMaterialNum2El;
+    std::unordered_map< int, IntArray> materialNum2ElMap;
 
     /// Topology description
     std :: unique_ptr< TopologyDescription > topology;
 
+public:
     /// Keeps track of next free dof ID (for special Lagrange multipliers, XFEM and such)
     int freeDofID;
+private:
 
 #ifdef __PARALLEL_MODE
     /**
@@ -256,9 +260,6 @@ public:
 
     Domain(const Domain& src) = delete;
     Domain &operator = (const Domain &src) = delete;
-
-    /// Create a copy of the domain using the dynamic data reader.
-    Domain *Clone();
 
     /// Destructor.
     ~Domain();
@@ -305,6 +306,9 @@ public:
      * Returns engineering model to which receiver is associated.
      */
     EngngModel *giveEngngModel();
+
+    void SetEngngModel(EngngModel *ipEngngModel) {engineeringModel = ipEngngModel;}
+
     /**
      * Service for accessing particular domain load.
      * Generates error if no such load is defined.
@@ -414,7 +418,7 @@ public:
      * @return Nonzero if o.k.
      * @see FemComponent::initializeFrom
      */
-    int instanciateYourself(DataReader *dr);
+    int instanciateYourself(DataReader &dr);
     /**
      * Performs post-initialization for all the domain contents (which is called after initializeFrom).
      * Currently, it only calls Element::postInitialize.
@@ -474,27 +478,40 @@ public:
     /// Resizes the internal data structure to accommodate space for _newSize sets.
     void resizeSets(int _newSize);
 
+    ///@note Needed for some of the boost-python bindings. NOTE: This takes ownership of the pointers, so it's actually completely unsafe.
+    //@{
+    void py_setDofManager(int i, DofManager *obj);
+    void py_setElement(int i, Element *obj);
+    void py_setCrossSection(int i, CrossSection *obj);
+    void py_setMaterial(int i, Material *obj);
+    void py_setNonlocalBarrier(int i, NonlocalBarrier *obj);
+    void py_setBoundaryCondition(int i, GeneralBoundaryCondition *obj);
+    void py_setInitialCondition(int i, InitialCondition *obj);
+    void py_setFunction(int i, Function *obj);
+    void py_setSet(int i, Set *obj);
+    ///@}
+
     /// Sets i-th component. The component will be further managed and maintained by domain object.
-    void setDofManager(int i, DofManager *obj);
+    void setDofManager(int i, std::unique_ptr<DofManager> obj);
     /// Sets i-th component. The component will be further managed and maintained by domain object.
-    void setElement(int i, Element *obj);
+    void setElement(int i, std::unique_ptr<Element> obj);
     /// Sets i-th component. The component will be further managed and maintained by domain object.
-    void setCrossSection(int i, CrossSection *obj);
+    void setCrossSection(int i, std::unique_ptr<CrossSection> obj);
     /// Sets i-th component. The component will be further managed and maintained by domain object.
-    void setMaterial(int i, Material *obj);
+    void setMaterial(int i, std::unique_ptr<Material> obj);
     /// Sets i-th component. The component will be further managed and maintained by domain object.
-    void setNonlocalBarrier(int i, NonlocalBarrier *obj);
+    void setNonlocalBarrier(int i, std::unique_ptr<NonlocalBarrier> obj);
     /// Sets i-th component. The component will be further managed and maintained by domain object.
-    void setBoundaryCondition(int i, GeneralBoundaryCondition *obj);
+    void setBoundaryCondition(int i, std::unique_ptr<GeneralBoundaryCondition> obj);
     /// Sets i-th component. The component will be further managed and maintained by domain object.
-    void setInitialCondition(int i, InitialCondition *obj);
+    void setInitialCondition(int i, std::unique_ptr<InitialCondition> obj);
     /// Sets i-th component. The component will be further managed and maintained by domain object.
-    void setFunction(int i, Function *obj);
+    void setFunction(int i, std::unique_ptr<Function> obj);
     /// Sets i-th component. The component will be further managed and maintained by domain object.
-    void setSet(int i, Set *obj);
+    void setSet(int i, std::unique_ptr<Set> obj);
 
     /// Temporary function, sets xfemManager.
-    void setXfemManager(XfemManager *ipXfemManager);
+    void setXfemManager(std::unique_ptr<XfemManager> ipXfemManager);
 
     XfemManager *giveXfemManager();
     bool hasXfemManager();
@@ -531,12 +548,9 @@ public:
      * @param stream Context stream. If NULL then new file descriptor will be opened and closed
      * at the end else the stream given as parameter will be used and not closed at the end.
      * @param mode Determines amount of info in stream.
-     * @param obj Void pointer to an int array containing two values:time step number and
-     * version of a context file to be restored.
-     * @return contextIOResultType.
      * @exception ContextIOERR If error encountered.
      */
-    contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void saveContext(DataStream &stream, ContextMode mode);
     /**
      * Restores the domain state from output stream. Restores recursively the state of all
      * managed objects, like DofManagers and Elements.
@@ -547,12 +561,9 @@ public:
      * context.
      * @param stream Context file.
      * @param mode Determines amount of info in stream.
-     * @param obj Void pointer to an int array containing two values:time step number and
-     * version of a context file to be restored.
-     * @return contextIOResultType.
      * @exception ContextIOERR exception if error encountered.
      */
-    contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void restoreContext(DataStream &stream, ContextMode mode);
     /**
      * Returns default DofID array which defines physical meaning of particular DOFs.
      * of nodal dofs. Default values are determined using current domain type.
@@ -609,6 +620,11 @@ public:
      * Returns receiver's associated spatial localizer.
      */
     SpatialLocalizer *giveSpatialLocalizer();
+    
+    /**
+    * Set spatial localizer
+    */
+    void setSpatialLocalizer(std::unique_ptr<SpatialLocalizer> sl);
     /**
      * Returns domain output manager.
      */
@@ -692,9 +708,9 @@ public:
     /// sets the value of nonlocalUpdateStateCounter
     void setNonlocalUpdateStateCounter(StateCounterType val) { this->nonlocalUpdateStateCounter = val; }
 
-private:
     void resolveDomainDofsDefaults(const char *);
 
+private:
     /// Returns string for prepending output (used by error reporting macros).
     std :: string errorInfo(const char *func) const;
 

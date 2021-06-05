@@ -51,6 +51,9 @@
 #include "internalstatevaluetype.h"
 #include "XFEMDebugTools.h"
 #include "xfemtolerances.h"
+#include "nucleationcriterion.h"
+#include "sm/Elements/Shells/shell7basexfem.h"
+#include "sm/EngineeringModels/structengngmodel.h"
 
 namespace oofem {
 REGISTER_XfemManager(XfemManager)
@@ -59,6 +62,7 @@ XfemManager :: XfemManager(Domain *domain)
 {
     this->domain = domain;
     numberOfEnrichmentItems = -1;
+    numberOfNucleationCriteria = 0;
     mNumGpPerTri = 12;
 
     // Default is no refinement of triangles.
@@ -123,18 +127,36 @@ void
 XfemManager :: createEnrichedDofs()
 {
     // Creates new dofs due to enrichment and appends them to the dof managers
-    IntArray dofIdArray;
+	mXFEMPotentialDofIDs.clear();
 
     for ( auto &ei: enrichmentItemList ) {
+        IntArray dofIdArray;
         ei->createEnrichedDofs();
+        ei->givePotentialEIDofIdArray(dofIdArray);
+//        printf("dofIdArray: "); dofIdArray.printYourself();
+        mXFEMPotentialDofIDs.followedBy(dofIdArray);
     }
 }
 
-IRResultType XfemManager :: initializeFrom(InputRecord *ir)
+IntArray XfemManager :: giveEnrichedDofIDs(const DofManager &iDMan) const
 {
-    IRResultType result; // Required by IR_GIVE_FIELD macro
+    IntArray dofIdArray;
 
+    for(int id : mXFEMPotentialDofIDs) {
+    	if(iDMan.hasDofID( DofIDItem(id) )) {
+    		dofIdArray.followedBy(id);
+    	}
+    }
+
+    return dofIdArray;
+}
+
+void XfemManager :: initializeFrom(InputRecord &ir)
+{
     IR_GIVE_FIELD(ir, numberOfEnrichmentItems, _IFT_XfemManager_numberOfEnrichmentItems);
+
+    IR_GIVE_OPTIONAL_FIELD(ir, numberOfNucleationCriteria, _IFT_XfemManager_numberOfNucleationCriteria);
+//    printf("numberOfNucleationCriteria: %d\n", numberOfNucleationCriteria);
 
     IR_GIVE_OPTIONAL_FIELD(ir, mNumGpPerTri, _IFT_XfemManager_numberOfGpPerTri);
     IR_GIVE_OPTIONAL_FIELD(ir, mNumTriRef, _IFT_XfemManager_numberOfTriRefs);
@@ -156,15 +178,20 @@ IRResultType XfemManager :: initializeFrom(InputRecord *ir)
 
     // TODO: Read as input.
     XfemTolerances :: setCharacteristicElementLength(0.001);
-
-    return IRRT_OK;
 }
 
 
 void XfemManager :: giveInputRecord(DynamicInputRecord &input)
 {
     input.setRecordKeywordField(giveInputRecordName(), 1);
+
+    numberOfEnrichmentItems = giveNumberOfEnrichmentItems();
     input.setField(numberOfEnrichmentItems, _IFT_XfemManager_numberOfEnrichmentItems);
+
+    numberOfNucleationCriteria = giveNumberOfNucleationCriteria();
+    input.setField(numberOfNucleationCriteria, _IFT_XfemManager_numberOfNucleationCriteria);
+
+
     input.setField(mNumGpPerTri, _IFT_XfemManager_numberOfGpPerTri);
     input.setField(mNumTriRef, _IFT_XfemManager_numberOfTriRefs);
     input.setField(mEnrDofScaleFac, _IFT_XfemManager_enrDofScaleFac);
@@ -176,19 +203,14 @@ void XfemManager :: giveInputRecord(DynamicInputRecord &input)
     }
 }
 
-int XfemManager :: instanciateYourself(DataReader *dr)
+int XfemManager :: instanciateYourself(DataReader &dr)
 {
-    IRResultType result; // Required by IR_GIVE_FIELD macro
     std :: string name;
 
     enrichmentItemList.resize(numberOfEnrichmentItems);
     for ( int i = 1; i <= numberOfEnrichmentItems; i++ ) {
-        InputRecord *mir = dr->giveInputRecord(DataReader :: IR_enrichItemRec, i);
-        result = mir->giveRecordKeywordField(name);
-
-        if ( result != IRRT_OK ) {
-            mir->report_error(this->giveClassName(), __func__, "", result, __FILE__, __LINE__);
-        }
+        auto &mir = dr.giveInputRecord(DataReader :: IR_enrichItemRec, i);
+        mir.giveRecordKeywordField(name);
 
         std :: unique_ptr< EnrichmentItem >ei( classFactory.createEnrichmentItem( name.c_str(), i, this, this->giveDomain() ) );
         if ( ei.get() == NULL ) {
@@ -200,10 +222,41 @@ int XfemManager :: instanciateYourself(DataReader *dr)
         this->enrichmentItemList [ i - 1 ] = std :: move(ei);
     }
 
-    updateNodeEnrichmentItemMap();
+    mNucleationCriteria.resize(numberOfNucleationCriteria);
+    for ( int i = 1; i <= numberOfNucleationCriteria; i++ ) {
+        auto &mir = dr.giveInputRecord(DataReader :: IR_crackNucleationRec, i);
+        mir.giveRecordKeywordField(name);
 
+        std :: unique_ptr< NucleationCriterion >nc( classFactory.createNucleationCriterion( name.c_str(), this->giveDomain() ) );
+        if ( nc.get() == NULL ) {
+            OOFEM_ERROR( "Unknown nucleation criterion: (%s)", name.c_str() );
+        }
+
+        nc->initializeFrom(mir);
+        nc->instanciateYourself(dr);
+        this->mNucleationCriteria [ i - 1 ] = std :: move(nc);
+    }
+
+
+   
     return 1;
 }
+
+void XfemManager :: postInitialize()
+{
+    for ( int i = 1; i <= numberOfEnrichmentItems; i++ ) {
+        this->giveEnrichmentItem(i)->postInitialize();
+    }
+
+     for ( int i = 1; i <= numberOfNucleationCriteria; i++ ) {
+         giveNucleationCriterion(i)->postInitialize();
+     }
+
+    updateNodeEnrichmentItemMap();
+
+}
+
+
 
 void XfemManager :: setDomain(Domain *ipDomain)
 {
@@ -214,10 +267,8 @@ void XfemManager :: setDomain(Domain *ipDomain)
     }
 }
 
-contextIOResultType XfemManager :: saveContext(DataStream &stream, ContextMode mode, void *obj)
+void XfemManager :: saveContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-
     if ( mode & CM_Definition ) {
         if ( !stream.write(this->numberOfEnrichmentItems) ) {
             THROW_CIOERR(CIO_IOERR);
@@ -232,19 +283,13 @@ contextIOResultType XfemManager :: saveContext(DataStream &stream, ContextMode m
             }
         }
 
-        if ( ( iores = object->saveContext(stream, mode) ) != CIO_OK ) {
-            THROW_CIOERR(iores);
-        }
+        object->saveContext(stream, mode);
     }
-
-    return CIO_OK;
 }
 
 
-contextIOResultType XfemManager :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
+void XfemManager :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-
     if ( mode & CM_Definition ) {
         if ( !stream.read(this->numberOfEnrichmentItems) ) {
             THROW_CIOERR(CIO_IOERR);
@@ -267,12 +312,8 @@ contextIOResultType XfemManager :: restoreContext(DataStream &stream, ContextMod
             obj = this->giveEnrichmentItem(i);
         }
 
-        if ( ( iores = obj->restoreContext(stream, mode) ) != CIO_OK ) {
-            THROW_CIOERR(CIO_IOERR);
-        }
+        obj->restoreContext(stream, mode);
     }
-
-    return CIO_OK;
 }
 
 void XfemManager :: updateYourself(TimeStep *tStep)
@@ -288,9 +329,9 @@ void XfemManager :: updateYourself(TimeStep *tStep)
 void XfemManager :: propagateFronts(bool &oAnyFronHasPropagated)
 {
     oAnyFronHasPropagated = false;
-
+    
     for ( auto &ei: enrichmentItemList ) {
-
+        
         bool eiHasPropagated = false;
         ei->propagateFronts(eiHasPropagated);
 
@@ -322,6 +363,74 @@ void XfemManager :: propagateFronts(bool &oAnyFronHasPropagated)
     updateNodeEnrichmentItemMap();
 }
 
+void XfemManager :: initiateFronts(bool &oAnyFronHasPropagated, TimeStep *tStep)
+{
+#ifdef __SM_MODULE
+  oAnyFronHasPropagated = false;
+        
+    // Loop over EI:s and collect cross sections which have delaminaion EI:s
+    IntArray CSnumbers;
+    std :: vector < FloatArray > initiationFactors; initiationFactors.resize(this->domain->giveNumberOfCrossSectionModels());
+    for ( auto &ei: enrichmentItemList ) {
+        if ( Delamination *dei =  dynamic_cast< Delamination * >( ei.get() ) ) {
+            int CSinterfaceNumber = dei->giveDelamInterfaceNum();
+            for (int CSnumber : dei->giveDelamCrossSectionNum()) {
+                CSnumbers.insertSortedOnce(CSnumber);
+                if (initiationFactors[CSnumber-1].giveSize() < CSinterfaceNumber) {
+                    initiationFactors[CSnumber-1].resizeWithValues(CSinterfaceNumber);
+                }
+                initiationFactors[CSnumber-1].at(CSinterfaceNumber) = dei->giveInitiationFactor();
+            }
+        }
+    }
+    
+    bool failureChecked = false;
+    std :: vector < IntArray > CSinterfaceNumbers; CSinterfaceNumbers.resize(CSnumbers.giveSize());
+    std :: vector < IntArray > CSDofManNumbers; CSDofManNumbers.resize(CSnumbers.giveSize());
+    
+    for ( auto &ei: enrichmentItemList ) {
+
+        bool eiHasPropagated = false;
+
+        if ( Delamination *dei =  dynamic_cast< Delamination * >( ei.get() ) ) {         
+            
+            if ( !failureChecked ) {
+                dei->findInitiationFronts(failureChecked, CSnumbers, CSinterfaceNumbers, CSDofManNumbers, initiationFactors, tStep);
+            }
+            
+            for (int CSnum : dei->giveDelamCrossSectionNum()) {
+                                
+                int iCS = CSnumbers.findSorted(CSnum);
+                int iInt = CSinterfaceNumbers[iCS-1].findSorted(dei->giveDelamInterfaceNum());
+                if ( iInt ) {
+                    // Check if nodes are viable for enrichment
+                    ///TODO: this should actually not inlcude the nodes at the boundary of the delamination, since this will propagate the delamination outside.
+                    IntArray delamNodes, propNodes;
+                    Set *elSet = this->giveDomain()->giveSet(this->giveDomain()->giveCrossSection(CSnum)->giveSetNumber());
+                    for (int elID : elSet->giveElementList() ) {
+                        delamNodes.followedBy(this->giveDomain()->giveElement(elID)->giveDofManArray());
+                    } 
+                    delamNodes.sort();
+                    delamNodes.findCommonValuesSorted(CSDofManNumbers[iCS-1], propNodes);
+                    dei->initiateFronts(eiHasPropagated,propNodes);
+                }
+            }
+        } else {
+            OOFEM_ERROR(" XfemManager :: initiateFronts not implemented for other than Delamination.")
+        }
+        if(eiHasPropagated) {
+            oAnyFronHasPropagated = true;
+        }
+    }
+    updateNodeEnrichmentItemMap();
+
+#else
+    OOFEM_ERROR(" XfemManager :: initiateFronts not implemented for other than Delamination.")
+#endif
+
+
+}
+
 bool XfemManager :: hasPropagatingFronts()
 {
     for ( auto &ei: enrichmentItemList ) {
@@ -331,6 +440,69 @@ bool XfemManager :: hasPropagatingFronts()
     }
 
     return false;
+}
+
+bool XfemManager :: hasInitiationCriteria()
+{
+    for ( auto &ei: enrichmentItemList ) {
+        if ( ei->hasInitiationCriteria() ) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void XfemManager :: clearEnrichmentItems()
+{
+	enrichmentItemList.clear();
+    updateNodeEnrichmentItemMap();
+}
+
+void XfemManager :: appendEnrichmentItems(std :: vector< std :: unique_ptr< EnrichmentItem > > &iEIlist)
+{
+	for( auto &ei : iEIlist ) {
+		enrichmentItemList.push_back(std::move(ei));
+	}
+
+	numberOfEnrichmentItems = enrichmentItemList.size();
+    updateNodeEnrichmentItemMap();
+}
+
+void XfemManager :: nucleateEnrichmentItems(bool &oNewItemsWereNucleated)
+{
+//	printf("Entering XfemManager :: nucleateEnrichmentItems\n");
+
+	for(auto &nucCrit : mNucleationCriteria) {
+		std::vector<std::unique_ptr<EnrichmentItem>> eiList = std::move(nucCrit->nucleateEnrichmentItems());
+
+		if(eiList.size() > 0) {
+//			printf("eiList.size(): %lu\n", eiList.size() );
+
+//			if(giveNumberOfEnrichmentItems() == 0) {
+//				printf("giveNumberOfEnrichmentItems() == 0\n");
+
+				for(auto &ei : eiList) {
+					enrichmentItemList.push_back(std::move(ei));
+				}
+
+				//				enrichmentItemList.push_back(std::move(ei));
+				numberOfEnrichmentItems = enrichmentItemList.size();
+				oNewItemsWereNucleated = true;
+			    updateNodeEnrichmentItemMap();
+
+				return;
+//			}
+		}
+	}
+
+	oNewItemsWereNucleated = false;
+	return;
+}
+
+bool XfemManager :: hasNucleationCriteria()
+{
+	return ( mNucleationCriteria.size() > 0 );
 }
 
 void XfemManager :: updateNodeEnrichmentItemMap()

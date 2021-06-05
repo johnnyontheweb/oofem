@@ -32,7 +32,7 @@
 *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "../sm/EngineeringModels/eigenvaluedynamic.h"
+#include "sm/EngineeringModels/eigenvaluedynamic.h"
 #include "timestep.h"
 #include "floatmatrix.h"
 #include "floatarray.h"
@@ -58,10 +58,18 @@
 namespace oofem {
 	REGISTER_EngngModel(EigenValueDynamic);
 
+
+EigenValueDynamic :: EigenValueDynamic(int i, EngngModel *master) : EngngModel(i, master)
+{
+    numberOfSteps = 1;
+    ndomains = 1;
+}
+
+
 	NumericalMethod *EigenValueDynamic::giveNumericalMethod(MetaStep *mStep)
 	{
 		if (!nMethod) {
-			nMethod.reset(classFactory.createGeneralizedEigenValueSolver(solverType, this->giveDomain(1), this));
+        nMethod = classFactory.createGeneralizedEigenValueSolver(solverType, this->giveDomain(1), this);
 			if (!nMethod) {
 				OOFEM_ERROR("solver creation failed");
 			}
@@ -70,13 +78,14 @@ namespace oofem {
 		return nMethod.get();
 	}
 
-	IRResultType
-		EigenValueDynamic::initializeFrom(InputRecord *ir)
+
+void
+EigenValueDynamic :: initializeFrom(InputRecord &ir)
 	{
-		IRResultType result;                // Required by IR_GIVE_FIELD macro
 		//EngngModel::instanciateFrom (ir);
 
 		IR_GIVE_FIELD(ir, numberOfRequiredEigenValues, _IFT_EigenValueDynamic_nroot);
+    this->field = std::make_unique<EigenVectorPrimaryField>(this, 1, FT_Displacements, numberOfRequiredEigenValues);
 
 		// numberOfSteps set artificially to numberOfRequiredEigenValues
 		// in order to allow
@@ -87,9 +96,7 @@ namespace oofem {
 		IR_GIVE_FIELD(ir, rtolv, _IFT_EigenValueDynamic_rtolv);
 		if (rtolv < 1.e-12) {
 			rtolv = 1.e-12;
-		}
-
-		if (rtolv > 0.01) {
+    } else if ( rtolv > 0.01 ) {
 			rtolv = 0.01;
 		}
 
@@ -101,38 +108,36 @@ namespace oofem {
 		IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_EngngModel_smtype);
 		sparseMtrxType = (SparseMtrxType)val;
 
+    suppressOutput = ir.hasField(_IFT_EngngModel_suppressOutput);
 		if (solverType == GenEigvalSolverType::GES_Eigen)
 			sparseMtrxType = SparseMtrxType::SMT_EigenSparse;
+    if ( suppressOutput ) {
+        printf("Suppressing output.\n");
+    } else {
+        if ( ( outputStream = fopen(this->dataOutputFileName.c_str(), "w") ) == NULL ) {
+            OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str());
+        }
 
-		return IRRT_OK;
+        fprintf(outputStream, "%s", PRG_HEADER);
+        fprintf(outputStream, "\nStarting analysis on: %s\n", ctime(& this->startTime) );
+        fprintf(outputStream, "%s\n", simulationDescription.c_str());
+    }
 	}
 
 
-	double EigenValueDynamic::giveUnknownComponent(ValueModeType mode, TimeStep *tStep, Domain *d, Dof *dof)
-		// returns unknown quantity like displacement, eigenvalue.
-		// This function translates this request to numerical method language
+int EigenValueDynamic :: giveUnknownDictHashIndx(ValueModeType mode, TimeStep *tStep)
 	{
-		int eq = dof->__giveEquationNumber();
-#ifdef DEBUG
-		if (eq == 0) {
-			OOFEM_ERROR("invalid equation number");
-		}
-#endif
+    return tStep->giveNumber() % this->numberOfRequiredEigenValues; 
+}
 
-		switch (mode) {
-		case VM_Total:  // EigenVector
-		case VM_Incremental:
-			return eigVec.at(eq, (int)tStep->giveTargetTime());
 		case VM_Velocity:
 			return 0.;
 		case VM_Acceleration:
 			return 0.;
-		default:
-			OOFEM_ERROR("Unknown is of undefined type for this problem");
-		}
-
-		return 0.;
-	}
+double EigenValueDynamic :: giveUnknownComponent(ValueModeType mode, TimeStep *tStep, Domain *d, Dof *dof)
+{
+    return field->giveUnknownValue(dof, mode, tStep);
+}
 
 
 	TimeStep *EigenValueDynamic::giveNextStep()
@@ -146,65 +151,45 @@ namespace oofem {
 		}
 
 		previousStep = std::move(currentStep);
-		currentStep.reset(new TimeStep(istep, this, 1, (double)istep, 0., counter));
+    currentStep = std::make_unique<TimeStep>(istep, this, 1, ( double ) istep, 0., counter);
 
 		return currentStep.get();
 	}
 
 
-	void EigenValueDynamic::solveYourselfAt(TimeStep *tStep)
+void EigenValueDynamic :: solveYourself()
 	{
-		//
-		// creates system of governing eq's and solves them at given time step
-		//
-		// first assemble problem at current time step
+    this->timer.startTimer(EngngModelTimer :: EMTT_AnalysisTimer);
 
-#ifdef VERBOSE
+    TimeStep *tStep = this->giveNextStep();
+    this->updateAttributes( this->giveCurrentMetaStep() );
+
 		OOFEM_LOG_INFO("Assembling stiffness and mass matrices\n");
-#endif
 
-		if (tStep->giveNumber() == 1) {
-			//
-			// first step  assemble stiffness Matrix
-			//
+    FloatMatrix eigVec;
+    {
+        std :: unique_ptr< SparseMtrx > stiffnessMatrix;
+        std :: unique_ptr< SparseMtrx > massMatrix;
 
-			stiffnessMatrix.reset(classFactory.createSparseMtrx(sparseMtrxType));
+        stiffnessMatrix = classFactory.createSparseMtrx(sparseMtrxType);
 			stiffnessMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
 
-			massMatrix.reset(classFactory.createSparseMtrx(sparseMtrxType));
+        massMatrix = classFactory.createSparseMtrx(sparseMtrxType);
 			massMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
 
-			this->assemble(*stiffnessMatrix, tStep, TangentAssembler(TangentStiffness),
-				EModelDefaultEquationNumbering(), this->giveDomain(1));
-			this->assemble(*massMatrix, tStep, MassMatrixAssembler(),
-				EModelDefaultEquationNumbering(), this->giveDomain(1));
-			//
-			// create resulting objects eigVec and eigVal
-			//
-			eigVec.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), numberOfRequiredEigenValues);
-			eigVec.zero();
-			eigVal.resize(numberOfRequiredEigenValues);
-			eigVal.zero();
-		}
+        this->assemble( *stiffnessMatrix, tStep, TangentAssembler(TangentStiffness), EModelDefaultEquationNumbering(), this->giveDomain(1) );
+        this->assemble( *massMatrix, tStep, MassMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain(1) );
 
-		//
-		// set-up numerical model
-		//
-		this->giveNumericalMethod(this->giveMetaStep(tStep->giveMetaStepNumber()));
-
-		//
-		// call numerical model to solve arised problem
-		//
-#ifdef VERBOSE
-		OOFEM_LOG_INFO("Solving ...\n");
-#endif
-
+        this->giveNumericalMethod( this->giveMetaStep( tStep->giveMetaStepNumber() ) );
+        OOFEM_LOG_INFO("Solving ...\n");
 #ifdef DEBUG
 		//stiffnessMatrix->writeToFile("K.dat");
 		//massMatrix->writeToFile("M.dat");
 #endif
 
-		nMethod->solve(*stiffnessMatrix, *massMatrix, eigVal, eigVec, rtolv, numberOfRequiredEigenValues);
+        nMethod->solve(*stiffnessMatrix, *massMatrix, eigVal, eigVec, rtolv, numberOfRequiredEigenValues);
+    }
+    this->field->updateAll(eigVec, EModelDefaultEquationNumbering());
 
 		FloatMatrix *unitDisp = new FloatMatrix();
 		FloatArray *tempCol = new FloatArray();
@@ -653,6 +638,7 @@ namespace oofem {
 				"Printing eigen vector no. %d, corresponding eigen value is %15.8e\n\n",
 				i, eigVal.at(i));
 			tStep->setTime((double)i); // we use time as intrinsic eigen value index
+        tStep->setNumber(i);
 
 			if (this->requiresUnknownsDictionaryUpdate()) {
 				for (auto &dman : domain->giveDofManagers()) {
@@ -678,121 +664,41 @@ namespace oofem {
 	}
 
 
-	contextIOResultType EigenValueDynamic::saveContext(DataStream *stream, ContextMode mode, void *obj)
-		//
-		// saves state variable - displacement vector
-		//
+void EigenValueDynamic :: saveContext(DataStream &stream, ContextMode mode)
 	{
-		int closeFlag = 0;
+    EngngModel :: saveContext(stream, mode);
+
 		contextIOResultType iores;
-		FILE *file = NULL;
-
-		if (stream == NULL) {
-			if (!this->giveContextFile(&file, this->giveCurrentStep()->giveNumber(),
-				this->giveCurrentStep()->giveVersion(), contextMode_write)) {
-				THROW_CIOERR(CIO_IOERR); // override
-			}
-
-			stream = new FileDataStream(file);
-			closeFlag = 1;
-		}
-
-		if ((iores = EngngModel::saveContext(stream, mode)) != CIO_OK) {
+    if ( ( iores = eigVal.storeYourself(stream) ) != CIO_OK ) {
 			THROW_CIOERR(iores);
 		}
 
-		if ((iores = eigVal.storeYourself(*stream)) != CIO_OK) {
-			THROW_CIOERR(iores);
+    this->field->saveContext(stream);
 		}
 
-		if ((eigVec.storeYourself(*stream)) != CIO_OK) {
-			THROW_CIOERR(iores);
-		}
 
-		if (closeFlag) {
-			fclose(file);
-			delete stream;
-			stream = NULL;
-		} // ensure consistent records
+void EigenValueDynamic :: restoreContext(DataStream &stream, ContextMode mode)
+{
+    EngngModel :: restoreContext(stream, mode);
 
-		return CIO_OK;
-	}
-
-
-	contextIOResultType EigenValueDynamic::restoreContext(DataStream *stream, ContextMode mode, void *obj)
-		//
-		// restore state variable - displacement vector
-		//
-	{
-		int closeFlag = 0;
-		int activeVector = this->resolveCorrespondingEigenStepNumber(obj);
-		int istep = 1, iversion = 0;
 		contextIOResultType iores;
-		FILE *file = NULL;
-
-		if (restoreFlag == 0) { // not restored before
-			if (stream == NULL) {
-				if (!this->giveContextFile(&file, istep, iversion, contextMode_read)) {
-					THROW_CIOERR(CIO_IOERR); // override
-				}
-
-				stream = new FileDataStream(file);
-				closeFlag = 1;
-			}
-
-			// save element context
-
-			if ((iores = EngngModel::restoreContext(stream, mode, (void *)& istep)) != CIO_OK) {
+    if ( ( iores = eigVal.restoreYourself(stream) ) != CIO_OK ) {
 				THROW_CIOERR(iores);
 			}
 
-			if ((iores = eigVal.restoreYourself(*stream)) != CIO_OK) {
-				THROW_CIOERR(iores);
+    this->field->restoreContext(stream);
 			}
 
-			if ((iores = eigVec.restoreYourself(*stream)) != CIO_OK) {
-				THROW_CIOERR(iores);
-			}
 
-			if (closeFlag) {
-				fclose(file);
-				delete stream;
-				stream = NULL;
-			} // ensure consistent records
-		}
-
+void EigenValueDynamic :: setActiveVector(int i)
+{
+    this->activeVector = i;
 		if (activeVector > numberOfRequiredEigenValues) {
 			activeVector = numberOfRequiredEigenValues;
 		}
 
-		OOFEM_LOG_INFO("Restoring - corresponding index is %d, EigenValue is %f\n", activeVector, eigVal.at(activeVector));
+    this->giveCurrentStep()->setNumber( activeVector );
 		this->giveCurrentStep()->setTime((double)activeVector);
-		this->restoreFlag = 1;
-
-		return CIO_OK;
-	}
-
-
-	int EigenValueDynamic::resolveCorrespondingEigenStepNumber(void *obj)
-	{
-		//
-		// returns corresponding eigen step number
-		//
-		if (obj == NULL) {
-			return 1;
-		}
-
-		int *istep = (int *)obj;
-
-		if (*istep > numberOfRequiredEigenValues) {
-			return numberOfRequiredEigenValues;
-		}
-
-		if (*istep <= 0) {
-			return 1;
-		}
-
-		return *istep;
 	}
 
 } // end namespace oofem

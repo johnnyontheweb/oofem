@@ -182,7 +182,7 @@ public:
         return 0;
     }
 
-    IRResultType initializeFrom(InputRecord *ir) override;
+    void initializeFrom(InputRecord &ir) override;
     void giveInputRecord(DynamicInputRecord &input) override;
 
     /**
@@ -191,8 +191,8 @@ public:
     const FloatArray &giveComponentArray() const;
     void setComponentArray(FloatArray &arry) { componentArray = std::move(arry); }
 
-	contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL) override;
-	contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL) override;
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 };
 } // end namespace oofem
 #endif // load_h

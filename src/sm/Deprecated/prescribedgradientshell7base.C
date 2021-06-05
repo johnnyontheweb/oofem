@@ -150,8 +150,8 @@ void PrescribedGenStrainShell7 :: updateCoefficientMatrix(FloatMatrix &C)
     for ( int i = 1; i <= nNodes; i++ ) {
         Node *n = domain->giveNode(i);
         FloatArray *coords = n->giveCoordinates();
-        Dof *d1 = n->giveDofWithID( this->dofs(0) );
-        Dof *d2 = n->giveDofWithID( this->dofs(1) );
+        Dof *d1 = n->giveDofWithID( this->dofs[0] );
+        Dof *d2 = n->giveDofWithID( this->dofs[1] );
         int k1 = d1->__givePrescribedEquationNumber();
         int k2 = d2->__givePrescribedEquationNumber();
         if ( nsd == 2 ) {
@@ -277,17 +277,15 @@ void PrescribedGenStrainShell7 :: computeTangent(FloatMatrix &tangent, EquationI
 }
 
 
-IRResultType PrescribedGenStrainShell7 :: initializeFrom(InputRecord *ir)
+void PrescribedGenStrainShell7 :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                   // Required by IR_GIVE_FIELD macro
+    GeneralBoundaryCondition :: initializeFrom(ir);
 
     IR_GIVE_FIELD(ir, this->gradient, _IFT_PrescribedGenStrainShell7_gradient);
 
     this->centerCoord.resize( this->gradient.giveNumberOfColumns() );
     this->centerCoord.zero();
     IR_GIVE_OPTIONAL_FIELD(ir, this->centerCoord, _IFT_PrescribedGenStrainShell7_centercoords)
-
-    return GeneralBoundaryCondition :: initializeFrom(ir);
 }
 
 

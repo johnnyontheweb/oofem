@@ -62,11 +62,11 @@ namespace oofem {
 class OOFEM_EXPORT ConstantSurfaceLoad : public SurfaceLoad
 {
 public:
-    ConstantSurfaceLoad(int i, Domain * d) : SurfaceLoad(i, d) { }
+    ConstantSurfaceLoad(int i, Domain * d);
 
     // Overloaded methods:
-    virtual void computeValueAt(FloatArray &answer, TimeStep *tStep, const FloatArray &coords, ValueModeType mode);
-    virtual int giveApproxOrder() { return 0; }
+    void computeValueAt(FloatArray &answer, TimeStep *tStep, const FloatArray &coords, ValueModeType mode) override;
+    int giveApproxOrder() override { return 0; }
 
     /**
      * Sets a new load vector.
@@ -74,14 +74,15 @@ public:
      */
     void updateLoad(const FloatArray &newValue) { componentArray = newValue; }
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual bcGeomType giveBCGeoType() const { return SurfaceLoadBGT; }
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
+    bcGeomType giveBCGeoType() const override { return SurfaceLoadBGT; }
 
-    virtual const char *giveClassName() const { return "ConstantSurfaceLoad"; }
-    virtual const char *giveInputRecordName() const { return _IFT_ConstantSurfaceLoad_Name; }
+    const char *giveClassName() const override { return "ConstantSurfaceLoad"; }
+    const char *giveInputRecordName() const override { return _IFT_ConstantSurfaceLoad_Name; }
 
 private:
-    virtual void computeNArray(FloatArray &answer, const FloatArray &coords) const { answer.clear(); }
+    void computeNArray(FloatArray &answer, const FloatArray &coords) const override { answer.clear(); }
 };
 } // end namespace oofem
 #endif // constantsurfaceload_h

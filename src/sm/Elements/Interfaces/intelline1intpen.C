@@ -12,30 +12,25 @@
 #include "fei2dlinelin.h"
 #include "fei2dlinequad.h"
 #include "feinterpol.h"
-#include "../sm/Materials/InterfaceMaterials/structuralinterfacematerialstatus.h"
+#include "sm/Materials/InterfaceMaterials/structuralinterfacematerialstatus.h"
 
 namespace oofem {
 REGISTER_Element(IntElLine1IntPen);
 
-IntElLine1IntPen::IntElLine1IntPen(int n, Domain * d) : IntElLine1(n, d) {
+IntElLine1IntPen::IntElLine1IntPen(int n, Domain * d) : IntElLine1(n, d)
+{
     numberOfDofMans = 6;
-
     numberOfGaussPoints = 4;
-
 }
 
-IntElLine1IntPen::~IntElLine1IntPen() {
-
-}
-
-int IntElLine1IntPen :: computeGlobalCoordinates(FloatArray &answer, const FloatArray &lcoords) {
+int IntElLine1IntPen :: computeGlobalCoordinates(FloatArray &answer, const FloatArray &lcoords)
+{
     FloatArray N;
     FEInterpolation *interp = this->giveInterpolation();
     interp->evalN( N, lcoords, FEIElementGeometryWrapper(this) );
 
-    answer.resize(this->giveDofManager(1)->giveCoordinates()->giveSize());
+    answer.resize(this->giveDofManager(1)->giveCoordinates().giveSize());
     answer.zero();
-
 
     double xi_0 = 0.;
     FloatArray xiScaled = {0.};
@@ -44,31 +39,27 @@ int IntElLine1IntPen :: computeGlobalCoordinates(FloatArray &answer, const Float
     	xiScaled.at(1) = lcoords.at(1)*2. + 1.;
     	interp->evalN( N, xiScaled, FEIElementGeometryWrapper(this) );
 
-    	const FloatArray &x1 = *(this->giveDofManager(1)->giveCoordinates());
+        const auto &x1 = this->giveDofManager(1)->giveCoordinates();
     	answer.add(N.at(1), x1 );
 
-    	const FloatArray &x3 = *(this->giveDofManager(3)->giveCoordinates());
+        const FloatArray &x3 = this->giveDofManager(3)->giveCoordinates();
     	answer.add(N.at(2), x3 );
-    }
-    else {
+    } else {
     	xiScaled.at(1) = lcoords.at(1)*2. - 1.;
     	interp->evalN( N, xiScaled, FEIElementGeometryWrapper(this) );
 
-    	const FloatArray &x3 = *(this->giveDofManager(3)->giveCoordinates());
+        const auto &x3 = this->giveDofManager(3)->giveCoordinates();
     	answer.add(N.at(1), x3 );
 
-    	const FloatArray &x2 = *(this->giveDofManager(2)->giveCoordinates());
+        const auto &x2 = this->giveDofManager(2)->giveCoordinates();
     	answer.add(N.at(2), x2 );
     }
-
-
-
 
     return true;
 }
 
-void
-IntElLine1IntPen :: computeCovarBaseVectorAt(IntegrationPoint *ip, FloatArray &G)
+FloatArrayF<2>
+IntElLine1IntPen :: computeCovarBaseVectorAt(IntegrationPoint *ip) const
 {
 //	printf("Entering IntElLine2IntPen :: computeCovarBaseVectorAt\n");
 
@@ -82,22 +73,19 @@ IntElLine1IntPen :: computeCovarBaseVectorAt(IntegrationPoint *ip, FloatArray &G
     //interp->evaldNdxi( dNdxi, ip->giveNaturalCoordinates(), FEIElementGeometryWrapper(this) );
     interp->evaldNdxi( dNdxi, xi_0, FEIElementGeometryWrapper(this) );
 
-    G.resize(2);
-    G.zero();
+    FloatArrayF<2> G;
 
     double X1_i = 0.5 * ( this->giveNode(1)->giveCoordinate(1) + this->giveNode(4)->giveCoordinate(1) ); // (mean) point on the fictious mid surface
     double X2_i = 0.5 * ( this->giveNode(1)->giveCoordinate(2) + this->giveNode(4)->giveCoordinate(2) );
     G.at(1) += dNdxi.at(1, 1) * X1_i;
     G.at(2) += dNdxi.at(1, 1) * X2_i;
 
-
     X1_i = 0.5 * ( this->giveNode(2)->giveCoordinate(1) + this->giveNode(5)->giveCoordinate(1) ); // (mean) point on the fictious mid surface
     X2_i = 0.5 * ( this->giveNode(2)->giveCoordinate(2) + this->giveNode(5)->giveCoordinate(2) );
     G.at(1) += dNdxi.at(2, 1) * X1_i;
     G.at(2) += dNdxi.at(2, 1) * X2_i;
-
+    return G;
 }
-
 
 
 void
@@ -267,16 +255,10 @@ IntElLine1IntPen :: computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode 
         }
     }
 
-
     if ( matStiffSymmFlag ) {
         answer.symmetrized();
     }
-
-
-
 #endif
-
-
 }
 
 
@@ -466,7 +448,6 @@ for ( auto &ip: *this->giveDefaultIntegrationRulePtr() ) {
 
 }
 
-
 #endif
 
 void
@@ -495,8 +476,7 @@ IntElLine1IntPen :: computeNmatrixAt(GaussPoint *ip, FloatMatrix &answer)
 		answer.at(1, 7) = answer.at(2, 8) = N.at(1);
 //		answer.at(1, 9) = answer.at(2, 10) = N.at(2);
 		answer.at(1, 11) = answer.at(2, 12) = N.at(2);
-    }
-    else {
+    } else {
     	xiScaled.at(1) = ip->giveNaturalCoordinate(1)*2. - 1.;
     	interp->evalN( N, xiScaled, FEIElementGeometryWrapper(this) );
 
@@ -513,16 +493,15 @@ IntElLine1IntPen :: computeNmatrixAt(GaussPoint *ip, FloatMatrix &answer)
 
 void
 IntElLine1IntPen :: computeGaussPoints()
-// Sets up the array of Gauss Points of the receiver.
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize( 1 );
 
-//        integrationRulesArray[ 0 ].reset( new LobattoIntegrationRule (1,this, 1, 2, false) );
+//        integrationRulesArray[ 0 ] = std::make_unique<LobattoIntegrationRule>(1,this, 1, 2, false);
 //        integrationRulesArray [ 0 ]->SetUpPointsOnLine(2, _2dInterface);
 
         int numGP = 4;
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 2) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 2);
         integrationRulesArray [ 0 ]->SetUpPointsOnLine(numGP, _2dInterface);
     }
 }

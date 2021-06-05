@@ -9,22 +9,24 @@ html:
 	cd matlibmanual; make html
 	cd programmer; make html
 	cd refman; make html
+	cd theorymanual; make html
 
 ps:
 	cd elementlibmanual; make ps
-	cd oofemInput; make ps
 	cd paper-actap; make ps
 	cd extractorInput; make ps
 	cd matlibmanual; make ps
 	cd programmer; make ps
+	cd theorymanual; make ps
 
 pdf:
 	cd elementlibmanual; make pdf
-	cd oofemInput; make pdf
+	cd oofemInput; make latexpdf
 	cd paper-actap; make pdf
 	cd extractorInput; make pdf
 	cd matlibmanual; make pdf
 	cd programmer; make pdf
+	cd theorymanual; make pdf
 
 www-install:
 ifdef INSTALLDIR
@@ -36,6 +38,7 @@ ifdef INSTALLDIR
 	cd matlibmanual; make www-install
 	cd programmer; make www-install
 	cd refman; make www-install
+	cd theorymanual; make www-install
 else
 	echo "INSTALLDIR not defined"
 endif
@@ -49,3 +52,4 @@ clean:
 	cd matlibmanual; make clean
 	cd programmer; make clean
 	cd refman; make clean
+	cd theorymanual; make clean

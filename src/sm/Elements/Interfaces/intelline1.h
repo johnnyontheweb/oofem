@@ -35,7 +35,9 @@
 #ifndef intelline1_h
 #define intelline1_h
 
-#include "../sm/Elements/Interfaces/structuralinterfaceelement.h"
+#include "sm/Elements/Interfaces/structuralinterfaceelement.h"
+#include "floatmatrixf.h"
+#include "nodalaveragingrecoverymodel.h"
 
 #define _IFT_IntElLine1_Name "intelline1"
 #define _IFT_IntElLine1_axisymmode "axisymmode"
@@ -52,56 +54,56 @@ class FEI2dLineLin;
  * @author Jim Brouzoulis
  * @author Borek Patzak
  */
-class IntElLine1 : public StructuralInterfaceElement
+class IntElLine1 : public StructuralInterfaceElement, public NodalAveragingRecoveryModelInterface
 {
 protected:
     static FEI2dLineLin interp;
     /// Flag controlling axisymmetric mode (integration over unit circumferential angle)
-    bool axisymmode;
-    
+    bool axisymmode = false;
+
 public:
     IntElLine1(int n, Domain * d);
-    virtual ~IntElLine1() { }
 
-    virtual FEInterpolation *giveInterpolation() const;
+    FEInterpolation *giveInterpolation() const override;
 
-    virtual int computeNumberOfDofs() { return 8; }
-    virtual void giveDofManDofIDMask(int inode, IntArray &answer) const;
+    int computeNumberOfDofs() override { return 8; }
+    void giveDofManDofIDMask(int inode, IntArray &answer) const override;
 
-    virtual double computeAreaAround(GaussPoint *gp);
-    virtual void computeTransformationMatrixAt(GaussPoint *gp, FloatMatrix &answer);
-    virtual void computeCovarBaseVectorAt(GaussPoint *gp, FloatArray &G);
+    double computeAreaAround(GaussPoint *gp) override;
+    void computeTransformationMatrixAt(GaussPoint *gp, FloatMatrix &answer) override;
+    virtual FloatArrayF<2> computeCovarBaseVectorAt(GaussPoint *gp) const;
 
-    virtual int testElementExtension(ElementExtension ext) { return 0; }
+    int testElementExtension(ElementExtension ext) override { return 0; }
 
-    //virtual Interface *giveInterface(InterfaceType) { return NULL; }
-
+    Interface *giveInterface(InterfaceType interface) override;
+    void NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,
+                                                    InternalStateType type, TimeStep *tStep) override;
     // definition & identification
-    virtual const char *giveInputRecordName() const { return _IFT_IntElLine1_Name; }
-    virtual const char *giveClassName() const { return "IntElLine1"; }
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    const char *giveInputRecordName() const override { return _IFT_IntElLine1_Name; }
+    const char *giveClassName() const override { return "IntElLine1"; }
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual void giveEngTraction(FloatArray &answer, GaussPoint *gp, const FloatArray &jump, TimeStep *tStep)
+    void giveEngTraction(FloatArray &answer, GaussPoint *gp, const FloatArray &jump, TimeStep *tStep) override
     {
-        this->giveInterfaceCrossSection()->giveEngTraction_2d(answer, gp, jump, tStep);
+        answer = this->giveInterfaceCrossSection()->giveEngTraction_2d(jump, gp, tStep);
     }
 
-    virtual void giveStiffnessMatrix_Eng(FloatMatrix &answer, MatResponseMode rMode, IntegrationPoint *ip, TimeStep *tStep)
+    void giveStiffnessMatrix_Eng(FloatMatrix &answer, MatResponseMode rMode, IntegrationPoint *ip, TimeStep *tStep) override
     {
-        this->giveInterfaceCrossSection()->give2dStiffnessMatrix_Eng(answer, rMode, ip, tStep);
+        answer = this->giveInterfaceCrossSection()->give2dStiffnessMatrix_Eng(rMode, ip, tStep);
     }
 
-    #ifdef __OOFEG
-    virtual void drawRawGeometry(oofegGraphicContext &gc, TimeStep *tStep);
-    virtual void drawDeformedGeometry(oofegGraphicContext &gc, TimeStep *tStep, UnknownType);
-    virtual void drawScalar(oofegGraphicContext &gc, TimeStep *tStep);
-    #endif
-    
+#ifdef __OOFEG
+    void drawRawGeometry(oofegGraphicContext &gc, TimeStep *tStep) override;
+    void drawDeformedGeometry(oofegGraphicContext &gc, TimeStep *tStep, UnknownType) override;
+    void drawScalar(oofegGraphicContext &gc, TimeStep *tStep) override;
+#endif
+
 protected:
-    virtual void computeNmatrixAt(GaussPoint *gp, FloatMatrix &answer);
-    virtual void computeGaussPoints();
+    void computeNmatrixAt(GaussPoint *gp, FloatMatrix &answer) override;
+    void computeGaussPoints() override;
 
-    Element_Geometry_Type giveGeometryType() const { return EGT_quad_1_interface; }
+    Element_Geometry_Type giveGeometryType() const override { return EGT_line_1; }
 };
 } // end namespace oofem
 #endif

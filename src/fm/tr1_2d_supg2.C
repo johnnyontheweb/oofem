@@ -44,7 +44,7 @@
 #include "domain.h"
 #include "mathfem.h"
 #include "engngm.h"
-#include "fluiddynamicmaterial.h"
+#include "fm/Materials/fluiddynamicmaterial.h"
 #include "fluidcrosssection.h"
 #include "load.h"
 #include "timestep.h"
@@ -75,10 +75,6 @@ TR1_2D_SUPG2 :: TR1_2D_SUPG2(int n, Domain *aDomain) :
     numberOfDofMans  = 3;
 }
 
-TR1_2D_SUPG2 :: ~TR1_2D_SUPG2()
-{
-}
-
 
 void
 TR1_2D_SUPG2 :: computeNVector(FloatArray &answer, GaussPoint *gp)
@@ -99,16 +95,10 @@ TR1_2D_SUPG2 :: giveDofManDofIDMask(int inode, IntArray &answer) const
     answer = {V_u, V_v, P_f};
 }
 
-IRResultType
-TR1_2D_SUPG2 :: initializeFrom(InputRecord *ir)
+void
+TR1_2D_SUPG2 :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;               // Required by IR_GIVE_FIELD macro
-
-    result = SUPGElement :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
-
+    SUPGElement :: initializeFrom(ir);
 
     this->vof = 0.0;
     IR_GIVE_OPTIONAL_FIELD(ir, vof, _IFT_Tr1SUPG_pvof);
@@ -125,8 +115,6 @@ TR1_2D_SUPG2 :: initializeFrom(InputRecord *ir)
     IR_GIVE_OPTIONAL_FIELD(ir, mat [ 0 ], _IFT_Tr1SUPG2_mat0);
     IR_GIVE_OPTIONAL_FIELD(ir, mat [ 1 ], _IFT_Tr1SUPG2_mat1);
     this->material = this->mat [ 0 ];
-
-    return IRRT_OK;
 }
 
 
@@ -160,11 +148,11 @@ TR1_2D_SUPG2 :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize(2);
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 3, true) );
-        integrationRulesArray [ 1 ].reset( new GaussIntegrationRule(2, this, 1, 3, true) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 3, true);
+        integrationRulesArray [ 1 ] = std::make_unique<GaussIntegrationRule>(2, this, 1, 3, true);
     }
     if ( !defaultIRule ) {
-        defaultIRule.reset( new GaussIntegrationRule(1, this, 1, 3, true) );
+        defaultIRule = std::make_unique<GaussIntegrationRule>(1, this, 1, 3, true);
         this->giveCrossSection()->setupIntegrationPoints(* defaultIRule, 1, this);
     }
 }
@@ -450,7 +438,7 @@ TR1_2D_SUPG2 :: computeDiffusionTerm_MB(FloatArray &answer, TimeStep *tStep)
     answer.resize(6);
     answer.zero();
     FloatArray u, eps(3), stress;
-    double dV, Re = static_cast< FluidModel * >( domain->giveEngngModel() )->giveReynoldsNumber();
+    double Re = static_cast< FluidModel * >( domain->giveEngngModel() )->giveReynoldsNumber();
     //double dudx,dudy,dvdx,dvdy;
 
     this->computeVectorOfVelocities(VM_Total, tStep, u);
@@ -469,11 +457,10 @@ TR1_2D_SUPG2 :: computeDiffusionTerm_MB(FloatArray &answer, TimeStep *tStep)
 
     for ( int ifluid = 0; ifluid < 2; ifluid++ ) {
         FluidDynamicMaterial *mat = static_cast< FluidDynamicMaterial * >( this->_giveMaterial(ifluid) );
-        for ( GaussPoint *gp: *integrationRulesArray [ ifluid ] ) {
-            dV = this->computeVolumeAroundID(gp, id [ ifluid ], vcoords [ ifluid ]);
+        for ( auto &gp: *integrationRulesArray [ ifluid ] ) {
+            double dV = this->computeVolumeAroundID(gp, id [ ifluid ], vcoords [ ifluid ]);
 
-            mat->computeDeviatoricStressVector(stress, gp, eps, tStep);
-            stress.times(1. / Re);
+            stress = (1. / Re) * mat->computeDeviatoricStress2D(eps, gp, tStep);
 
             // \int dNu/dxj \Tau_ij
             for ( int i = 0; i < 3; i++ ) {
@@ -510,7 +497,6 @@ TR1_2D_SUPG2 :: computeDiffusionTerm_MB(FloatArray &answer, TimeStep *tStep)
 void
 TR1_2D_SUPG2 :: computeDiffusionDerivativeTerm_MB(FloatMatrix &answer, MatResponseMode mode, TimeStep *tStep)
 {
-    double dV;
     //double dudx, dudy, dvdx, dvdy;
     answer.resize(6, 6);
     answer.zero();
@@ -554,11 +540,10 @@ TR1_2D_SUPG2 :: computeDiffusionDerivativeTerm_MB(FloatMatrix &answer, MatRespon
 
     for ( int ifluid = 0; ifluid < 2; ifluid++ ) {
         FluidDynamicMaterial *mat = static_cast< FluidDynamicMaterial * >( this->_giveMaterial(ifluid) );
-        for ( GaussPoint *gp: *integrationRulesArray [ ifluid ] ) {
-            dV = this->computeVolumeAroundID(gp, id [ ifluid ], vcoords [ ifluid ]);
+        for ( auto &gp: *integrationRulesArray [ ifluid ] ) {
+            double dV = this->computeVolumeAroundID(gp, id [ ifluid ], vcoords [ ifluid ]);
 
-
-            mat->giveDeviatoricStiffnessMatrix(_d, mode, gp, tStep);
+            _d = mat->computeTangent2D(mode, gp, tStep);
             _db.beProductOf(_d, _b);
             answer.plusProductSymmUpper(_b, _db, dV);
             //answer.plusProductSymmUpper (_bs,_db,dV*t_supg);
@@ -1195,25 +1180,27 @@ TR1_2D_SUPG2 :: giveInterface(InterfaceType interface)
         return static_cast< LEPlicElementInterface * >(this);
     }
 
-    return NULL;
+    return nullptr;
 }
 
 
 void
-TR1_2D_SUPG2 :: computeDeviatoricStress(FloatArray &answer, GaussPoint *gp, TimeStep *tStep)
+TR1_2D_SUPG2 :: computeDeviatoricStress(FloatArray &answer, const FloatArray &eps, GaussPoint *gp, TimeStep *tStep)
 {
     /* one computes here average deviatoric stress, based on rule of mixture (this is used only for postprocessing) */
-    FloatArray eps, s0, s1;
-    answer.resize(3);
+    auto s0 = static_cast< FluidDynamicMaterial * >( this->_giveMaterial(0) )->computeDeviatoricStress2D(eps, gp, tStep);
+    auto s1 = static_cast< FluidDynamicMaterial * >( this->_giveMaterial(1) )->computeDeviatoricStress2D(eps, gp, tStep);
 
-    this->computeDeviatoricStrain(eps, gp, tStep);
+    answer = temp_vof * s0 + ( 1. - temp_vof ) * s1;
+}
 
-    static_cast< FluidDynamicMaterial * >( this->_giveMaterial(0) )->computeDeviatoricStressVector(s0, gp, eps, tStep);
-    static_cast< FluidDynamicMaterial * >( this->_giveMaterial(1) )->computeDeviatoricStressVector(s1, gp, eps, tStep);
+void
+TR1_2D_SUPG2 :: computeTangent(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep)
+{
+    auto t0 = static_cast< FluidDynamicMaterial * >( this->_giveMaterial(0) )->computeTangent2D(mode, gp, tStep);
+    auto t1 = static_cast< FluidDynamicMaterial * >( this->_giveMaterial(1) )->computeTangent2D(mode, gp, tStep);
 
-    for ( int i = 1; i <= 3; i++ ) {
-        answer.at(i) = ( temp_vof ) * s0.at(i) + ( 1. - temp_vof ) * s1.at(i);
-    }
+    answer = temp_vof * t0 + (1. - temp_vof) * t1;
 }
 
 
@@ -1864,48 +1851,18 @@ TR1_2D_SUPG2 :: printOutputAt(FILE *file, TimeStep *tStep)
 }
 
 
-contextIOResultType TR1_2D_SUPG2 :: saveContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// saves full element context (saves state variables, that completely describe
-// current state)
-//
+void TR1_2D_SUPG2 :: saveContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-
-    if ( ( iores = SUPGElement :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( ( iores = LEPlicElementInterface :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    return CIO_OK;
+    SUPGElement :: saveContext(stream, mode);
+    LEPlicElementInterface :: saveContext(stream, mode);
 }
 
 
-
-contextIOResultType TR1_2D_SUPG2 :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// restores full element context (saves state variables, that completely describe
-// current state)
-//
+void TR1_2D_SUPG2 :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-
-    if ( ( iores = SUPGElement :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( ( iores = LEPlicElementInterface :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-
-    return CIO_OK;
+    SUPGElement :: restoreContext(stream, mode);
+    LEPlicElementInterface :: restoreContext(stream, mode);
 }
-
-
 
 
 #ifdef __OOFEG

@@ -35,10 +35,15 @@
 #ifndef integrationpointstatus_h
 #define integrationpointstatus_h
 
-#include "femcmpnn.h"
+#include "interface.h"
+#include "interfacetype.h"
+#include "contextioresulttype.h"
+#include "contextmode.h"
 
 namespace oofem {
 class GaussPoint;
+class TimeStep;
+class DataStream;
 
 /**
  * Abstract base class representing  a integration status.
@@ -50,7 +55,7 @@ class GaussPoint;
  * Any object that stores its status in integration point is responsible for its creation,
  * initialization, and serialization.
  */
-class OOFEM_EXPORT IntegrationPointStatus : public FEMComponent
+class OOFEM_EXPORT IntegrationPointStatus
 {
 protected:
     /// Associated integration point.
@@ -59,15 +64,13 @@ protected:
 public:
     /**
      * Constructor.
-     * @param n receiver's number
-     * @param d domain to which new status belongs
      * @param g associated integration point
      */
-    IntegrationPointStatus(int n, Domain * d, GaussPoint * g) : FEMComponent(n, d), gp(g) { }
+    IntegrationPointStatus(GaussPoint * g) : gp(g) { }
     /// Destructor.
-    virtual ~IntegrationPointStatus() { }
+    virtual ~IntegrationPointStatus() = default;
     /// Print receiver's output to given stream.
-    virtual void printOutputAt(FILE *file, TimeStep *tStep) { }
+    virtual void printOutputAt(FILE *file, TimeStep *tStep) const { }
     /**
      * Update equilibrium history variables according to temp-variables.
      * Invoked, after new equilibrium state has been reached.
@@ -82,10 +85,25 @@ public:
      * by another simulation (e.g. of the manufacturing process).
      */
     virtual void setStatusVariable(int varID, double value) { }
+    /**
+     * Stores receiver state to output stream.
+     * @param stream Output stream.
+     * @param mode Determines amount of info required in stream (state, definition, ...).
+     * @exception throws an ContextIOERR exception if error encountered.
+     */
+    virtual void saveContext(DataStream &stream, ContextMode mode) { }
+    /**
+     * Restores the receiver state previously written in stream.
+     * @see saveContext
+     * @param stream Input stream.
+     * @param mode Determines amount of info available in stream (state, definition, ...).
+     * @exception throws an ContextIOERR exception if error encountered.
+     */
+    virtual void restoreContext(DataStream &stream, ContextMode mode) { }
 
-    virtual const char *giveInputRecordName() const { return NULL; }
-    virtual const char *giveClassName() const { return "IntegrationPointStatus"; }
-    virtual IRResultType initializeFrom(InputRecord *ir) { return IRRT_OK; }
+    virtual Interface *giveInterface(InterfaceType t) { return nullptr; }
+
+    virtual const char *giveClassName() const = 0; //{ return "IntegrationPointStatus"; }
 };
 } // end namespace oofem
 #endif // integrationpointstatus_h

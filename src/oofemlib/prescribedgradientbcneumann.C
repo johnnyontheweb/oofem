@@ -50,6 +50,10 @@
 #include "engngm.h"
 #include "mathfem.h"
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 namespace oofem {
 REGISTER_BoundaryCondition(PrescribedGradientBCNeumann);
 
@@ -72,10 +76,10 @@ PrescribedGradientBCNeumann :: ~PrescribedGradientBCNeumann()
 }
 
 
-IRResultType PrescribedGradientBCNeumann :: initializeFrom(InputRecord *ir)
+void PrescribedGradientBCNeumann :: initializeFrom(InputRecord &ir)
 {
     ActiveBoundaryCondition :: initializeFrom(ir);
-    return PrescribedGradientHomogenization :: initializeFrom(ir);
+    PrescribedGradientHomogenization :: initializeFrom(ir);
 }
 
 
@@ -98,7 +102,9 @@ void PrescribedGradientBCNeumann :: scale(double s)
 
 void PrescribedGradientBCNeumann :: assembleVector(FloatArray &answer, TimeStep *tStep,
                                                    CharType type, ValueModeType mode,
-                                                   const UnknownNumberingScheme &s, FloatArray *eNorm)
+                                                   const UnknownNumberingScheme &s, 
+                                                   FloatArray *eNorm, 
+                                                   void* lock)
 {
     Set *setPointer = this->giveDomain()->giveSet(this->set);
     const IntArray &boundaries = setPointer->giveBoundaryList();
@@ -116,8 +122,13 @@ void PrescribedGradientBCNeumann :: assembleVector(FloatArray &answer, TimeStep 
 
         double loadLevel = this->giveTimeFunction()->evaluateAtTime(tStep->giveTargetTime());
         stressLoad.beScaled(-rve_size*loadLevel, gradVoigt);
-
+#ifdef _OPENMP
+        if (lock) omp_set_lock(static_cast<omp_lock_t*>(lock));
+#endif
         answer.assemble(stressLoad, sigma_loc);
+#ifdef _OPENMP
+        if (lock) omp_unset_lock(static_cast<omp_lock_t*>(lock));
+#endif
     } else if ( type == InternalForcesVector ) {
         FloatMatrix Ke;
         FloatArray fe_v, fe_s;
@@ -150,19 +161,28 @@ void PrescribedGradientBCNeumann :: assembleVector(FloatArray &answer, TimeStep 
             // Note: The terms appear negative in the equations:
             fe_v.negated();
             fe_s.negated();
-
+#ifdef _OPENMP
+            if (lock) omp_set_lock(static_cast<omp_lock_t*>(lock));
+#endif
             answer.assemble(fe_s, loc); // Contributions to delta_v equations
             answer.assemble(fe_v, sigma_loc); // Contribution to delta_s_i equations
             if ( eNorm != NULL ) {
                 eNorm->assembleSquared(fe_s, masterDofIDs);
                 eNorm->assembleSquared(fe_v, sigmaMasterDofIDs);
             }
+#ifdef _OPENMP
+            if (lock) omp_unset_lock(static_cast<omp_lock_t*>(lock));
+#endif
         }
     }
 }
 
 void PrescribedGradientBCNeumann :: assemble(SparseMtrx &answer, TimeStep *tStep,
-                                             CharType type, const UnknownNumberingScheme &r_s, const UnknownNumberingScheme &c_s)
+                                             CharType type, 
+                                             const UnknownNumberingScheme &r_s, 
+                                             const UnknownNumberingScheme &c_s, 
+                                             double scale,
+                                             void* lock)
 {
     if ( type == TangentStiffnessMatrix || type == SecantStiffnessMatrix || type == ElasticStiffnessMatrix ) {
         FloatMatrix Ke, KeT;
@@ -188,10 +208,16 @@ void PrescribedGradientBCNeumann :: assemble(SparseMtrx &answer, TimeStep *tStep
 
             this->integrateTangent(Ke, e, boundary);
             Ke.negated();
+            Ke.times(scale);
             KeT.beTranspositionOf(Ke);
-
+#ifdef _OPENMP
+            if (lock) omp_set_lock(static_cast<omp_lock_t*>(lock));
+#endif
             answer.assemble(sigma_loc_r, loc_c, Ke); // Contribution to delta_s_i equations
             answer.assemble(loc_r, sigma_loc_c, KeT); // Contributions to delta_v equations
+#ifdef _OPENMP
+            if (lock) omp_unset_lock(static_cast<omp_lock_t*>(lock));
+#endif
         }
     } else   {
         printf("Skipping assembly in PrescribedGradientBCNeumann::assemble().\n");
@@ -269,8 +295,13 @@ void PrescribedGradientBCNeumann :: computeTangent(FloatMatrix &tangent, TimeSte
     // Setup up indices and locations
     int neq = Kff->giveNumberOfRows();
 
-    // Indices and such of internal dofs
-    int n = this->mpSigmaHom->giveNumberOfDofs();
+    std :: unique_ptr< SparseMtrx > Kuu = Kff->giveSubMatrix(loc_u, loc_u);
+    // NOTE: Kus is actually a dense matrix, but we have to make it a dense matrix first
+    std :: unique_ptr< SparseMtrx > Kus = Kff->giveSubMatrix(loc_u, loc_s);
+    FloatMatrix eye(Kus->giveNumberOfColumns(), Kus->giveNumberOfColumns());
+    eye.beUnitMatrix();
+    FloatMatrix KusD;
+    Kus->times(KusD, eye);
 
     // Matrices and arrays for sensitivities
     FloatMatrix grad_pert(neq, n), s_d(neq, n);
@@ -318,26 +349,25 @@ void PrescribedGradientBCNeumann :: integrateTangent(FloatMatrix &oTangent, Elem
     std :: unique_ptr< IntegrationRule > ir;
 
     XfemElementInterface *xfemElInt = dynamic_cast< XfemElementInterface * >( e );
-    if ( xfemElInt != NULL && domain->hasXfemManager() ) {
-        IntArray edgeNodes;
+    if ( xfemElInt && domain->hasXfemManager() ) {
         FEInterpolation2d *interp2d = dynamic_cast< FEInterpolation2d * >( interp );
-        if ( interp2d == NULL ) {
+        if ( !interp2d ) {
             OOFEM_ERROR("failed to cast to FEInterpolation2d.")
         }
-        interp2d->computeLocalEdgeMapping(edgeNodes, iBndIndex);
+        const auto &edgeNodes = interp2d->computeLocalEdgeMapping(iBndIndex);
 
-        const FloatArray &xS = * ( e->giveDofManager( edgeNodes.at(1) )->giveCoordinates() );
-        const FloatArray &xE = * ( e->giveDofManager( edgeNodes.at( edgeNodes.giveSize() ) )->giveCoordinates() );
+//        const auto &xS = * ( e->giveDofManager( edgeNodes.at(1) )->giveCoordinates() );
+//        const auto &xE = * ( e->giveDofManager( edgeNodes.at( edgeNodes.giveSize() ) )->giveCoordinates() );
 
         std :: vector< Line >segments;
         std :: vector< FloatArray >intersecPoints;
         xfemElInt->partitionEdgeSegment(iBndIndex, segments, intersecPoints);
         MaterialMode matMode = e->giveMaterialMode();
-        ir.reset( new DiscontinuousSegmentIntegrationRule(1, e, segments, xS, xE) );
+        ir = std::make_unique<DiscontinuousSegmentIntegrationRule>(1, e, segments);
         int numPointsPerSeg = 1;
         ir->SetUpPointsOnLine(numPointsPerSeg, matMode);
     } else {
-        ir.reset( interp->giveBoundaryIntegrationRule(order, iBndIndex) );
+        ir = interp->giveBoundaryIntegrationRule(order, iBndIndex);
     }
 
     oTangent.clear();
@@ -349,22 +379,23 @@ void PrescribedGradientBCNeumann :: integrateTangent(FloatMatrix &oTangent, Elem
         // Evaluate the normal;
         double detJ = interp->boundaryEvalNormal(normal, iBndIndex, lcoords, cellgeo);
 
-        interp->boundaryEvalN(n, iBndIndex, lcoords, cellgeo);
-        // If cracks cross the edge, special treatment is necessary.
-        // Exploit the XfemElementInterface to minimize duplication of code.
-        if ( xfemElInt != NULL && domain->hasXfemManager() ) {
             // Compute global coordinates of Gauss point
             FloatArray globalCoord;
 
             interp->boundaryLocal2Global(globalCoord, iBndIndex, lcoords, cellgeo);
 
             // Compute local coordinates on the element
-            FloatArray locCoord;
-            e->computeLocalCoordinates(locCoord, globalCoord);
+        FloatArray bulkElLocCoords;
+        e->computeLocalCoordinates(bulkElLocCoords, globalCoord);
 
-            xfemElInt->XfemElementInterface_createEnrNmatrixAt(nMatrix, locCoord, * e, false);
+        // If cracks cross the edge, special treatment is necessary.
+        // Exploit the XfemElementInterface to minimize duplication of code.
+        if ( xfemElInt != NULL && domain->hasXfemManager() ) {
+
+            xfemElInt->XfemElementInterface_createEnrNmatrixAt(nMatrix, bulkElLocCoords, * e, false);
         } else {
             // Evaluate the velocity/displacement coefficients
+            interp->evalN(n, bulkElLocCoords, cellgeo);
             nMatrix.beNMatrixOf(n, nsd);
         }
 

@@ -41,18 +41,15 @@ CompRow_ILUPreconditioner ::
 CompRow_ILUPreconditioner(const SparseMtrx &A, InputRecord &attributes) : Preconditioner(A, attributes)
 { }
 
-IRResultType
-CompRow_ILUPreconditioner :: initializeFrom(InputRecord *ir)
+void
+CompRow_ILUPreconditioner :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
+    Preconditioner :: initializeFrom(ir);
     this->drop_tol = 1.e-8;
     IR_GIVE_OPTIONAL_FIELD(ir, this->drop_tol, _IFT_CompRow_ILUPrecond_droptol);
 
     part_fill = 5;
     IR_GIVE_OPTIONAL_FIELD(ir, part_fill, _IFT_CompRow_ILUPrecond_partfill);
-
-    return Preconditioner :: initializeFrom(ir);
 }
 
 
@@ -60,12 +57,13 @@ void
 CompRow_ILUPreconditioner :: init(const SparseMtrx &A)
 {
     if ( dynamic_cast< const DynCompRow *>(& A) ) {
-        this->A =  ( * ( ( DynCompRow * ) & A ) );
-        ( this->A ).ILUPYourself(part_fill, drop_tol);
+        this->A = static_cast< const DynCompRow &>(A);
+        this->A.ILUPYourself(part_fill, drop_tol);
     } else {
         OOFEM_ERROR("unsupported sparse matrix type");
     }
 }
+
 
 void
 CompRow_ILUPreconditioner :: solve(const FloatArray &x, FloatArray &y) const

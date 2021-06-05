@@ -32,9 +32,9 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/nlstructuralelement.h"
-#include "../sm/Materials/structuralms.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
+#include "sm/Elements/nlstructuralelement.h"
+#include "sm/Materials/structuralms.h"
+#include "sm/CrossSections/structuralcrosssection.h"
 #include "feinterpol.h"
 #include "domain.h"
 #include "material.h"
@@ -501,15 +501,18 @@ NLStructuralElement :: computeStiffnessMatrix_withIRulesAsSubcells(FloatMatrix &
 
 
 
+<<<<<<< HEAD
 IRResultType
 NLStructuralElement :: initializeFrom(InputRecord *ir)
+=======
+void
+NLStructuralElement :: initializeFrom(InputRecord &ir)
+>>>>>>> bp2/master
 {
-    IRResultType result;                   // Required by IR_GIVE_FIELD macro
+    StructuralElement :: initializeFrom(ir);
 
     nlGeometry = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, nlGeometry, _IFT_NLStructuralElement_nlgeoflag);
-
-    return StructuralElement :: initializeFrom(ir);
 }
 
 void NLStructuralElement :: giveInputRecord(DynamicInputRecord &input)

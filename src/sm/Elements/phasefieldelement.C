@@ -33,9 +33,9 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/phasefieldelement.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Elements/phasefieldelement.h"
+#include "sm/CrossSections/structuralcrosssection.h"
+#include "sm/Materials/structuralms.h"
 #include "node.h"
 #include "material.h"
 #include "gausspoint.h"
@@ -403,13 +403,10 @@ PhaseFieldElement :: computeStiffnessMatrix_dd(FloatMatrix &answer, MatResponseM
 }
 
 
-IRResultType
-PhaseFieldElement :: initializeFrom(InputRecord *ir)
+void
+PhaseFieldElement :: initializeFrom(InputRecord &ir)
 {
-    //IRResultType result;                // Required by IR_GIVE_FIELD macro
     //nlGeo = 0;
-
-    return IRRT_OK;
 }
 
 

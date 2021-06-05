@@ -35,7 +35,7 @@
 #ifndef incrementallinearstatic_h
 #define incrementallinearstatic_h
 
-#include "../sm/EngineeringModels/structengngmodel.h"
+#include "sm/EngineeringModels/structengngmodel.h"
 #include "sparselinsystemnm.h"
 #include "sparsemtrxtype.h"
 
@@ -81,18 +81,18 @@ protected:
     SparseMtrxType sparseMtrxType;
 
 public:
-    IncrementalLinearStatic(int i, EngngModel * _master = NULL);
+    IncrementalLinearStatic(int i, EngngModel *master = nullptr);
     virtual ~IncrementalLinearStatic();
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual void solveYourself();
-    virtual void solveYourselfAt(TimeStep *tStep);
+    void solveYourself() override;
+    void solveYourselfAt(TimeStep *tStep) override;
 
-    virtual double giveUnknownComponent(ValueModeType mode, TimeStep *tStep, Domain *d, Dof *dof);
-    virtual contextIOResultType saveContext(DataStream *stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream *stream, ContextMode mode, void *obj = NULL);
-    virtual TimeStep *giveNextStep();
+    double giveUnknownComponent(ValueModeType mode, TimeStep *tStep, Domain *d, Dof *dof) override;
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
+    TimeStep *giveNextStep() override;
 
     /**
      * This function returns time valid for iStep time step, used in integration
@@ -107,22 +107,26 @@ public:
      * @param iStep Time step number.
      */
     double giveDiscreteTime(int iStep);
-    virtual double giveEndOfTimeOfInterest() { return endOfTimeOfInterest; }
+    double giveEndOfTimeOfInterest() override { return endOfTimeOfInterest; }
 
-    virtual NumericalMethod *giveNumericalMethod(MetaStep *mStep);
+    NumericalMethod *giveNumericalMethod(MetaStep *mStep) override;
 
+<<<<<<< HEAD
     virtual void terminate(TimeStep *tStep);
 
     virtual fMode giveFormulation() { return TL; }
+=======
+    fMode giveFormulation() override { return TL; }
+>>>>>>> bp2/master
 
-    virtual const char *giveInputRecordName() const { return _IFT_IncrementalLinearStatic_Name; }
-    virtual const char *giveClassName() const { return "IncrementalLinearStatic"; }
+    const char *giveInputRecordName() const { return _IFT_IncrementalLinearStatic_Name; }
+    const char *giveClassName() const override { return "IncrementalLinearStatic"; }
 
-    virtual int requiresUnknownsDictionaryUpdate() { return true; }
-    virtual bool requiresEquationRenumbering(TimeStep *) { return true; }
-    virtual void updateDofUnknownsDictionary(DofManager *, TimeStep *);
+    int requiresUnknownsDictionaryUpdate() override { return true; }
+    bool requiresEquationRenumbering(TimeStep *tStep) override { return true; }
+    void updateDofUnknownsDictionary(DofManager *dman, TimeStep *tStep) override;
     // Here we store only total and incremental value; so hash is computed from mode value only
-    virtual int giveUnknownDictHashIndx(ValueModeType mode, TimeStep *tStep);
+    int giveUnknownDictHashIndx(ValueModeType mode, TimeStep *tStep) override;
 };
 } // end namespace oofem
 #endif // incrementallinearstatic_h

@@ -34,8 +34,8 @@
 
 #ifndef misesmatnl_h
 
-#include "Materials/misesmat.h"
-#include "Materials/structuralnonlocalmaterialext.h"
+#include "sm/Materials/misesmat.h"
+#include "sm/Materials/structuralnonlocalmaterialext.h"
 #include "nonlocmatstiffinterface.h"
 #include "cltypes.h"
 
@@ -57,30 +57,27 @@ class MisesMatNlStatus : public MisesMatStatus, public StructuralNonlocalMateria
 protected:
     // STATE VARIABLE DECLARATION
     // Equivalent strain for avaraging
-    double localCumPlasticStrainForAverage;
+    double localCumPlasticStrainForAverage = 0.;
 
 public:
-    MisesMatNlStatus(int n, Domain * d, GaussPoint * g);
-    virtual ~MisesMatNlStatus();
+    MisesMatNlStatus(GaussPoint * g);
 
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    void printOutputAt(FILE *file, TimeStep *tStep) const override;
 
     // STATE VARIABLE
     // declare state variable access and modification methods
     double giveLocalCumPlasticStrainForAverage() { return localCumPlasticStrainForAverage; }
-    const FloatArray *giveLTangentContrib();
     void setLocalCumPlasticStrainForAverage(double ls) { localCumPlasticStrainForAverage = ls; }
 
-    // DEFINITION
-    virtual const char *giveClassName() const { return "MisesMatNlStatus"; }
+    const char *giveClassName() const override { return "MisesMatNlStatus"; }
 
-    virtual void initTempStatus();
+    void initTempStatus() override;
 
-    virtual void updateYourself(TimeStep *tStep);
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void updateYourself(TimeStep *tStep) override;
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 
-    virtual Interface *giveInterface(InterfaceType);
+    Interface *giveInterface(InterfaceType) override;
 };
 
 
@@ -92,21 +89,20 @@ class MisesMatNl : public MisesMat, public StructuralNonlocalMaterialExtensionIn
 public NonlocalMaterialStiffnessInterface
 {
 protected:
-    double Rf;
-    double exponent;
-    int averType;
+    double Rf = 0.;
+    double exponent = 1.;
+    int averType = 0;
 
 public:
     MisesMatNl(int n, Domain * d);
-    virtual ~MisesMatNl();
 
-    virtual const char *giveClassName() const { return "MisesMatNl"; }
-    virtual const char *giveInputRecordName() const { return _IFT_MisesMatNl_Name; }
+    const char *giveClassName() const override { return "MisesMatNl"; }
+    const char *giveInputRecordName() const override { return _IFT_MisesMatNl_Name; }
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual Interface *giveInterface(InterfaceType);
+    Interface *giveInterface(InterfaceType) override;
 
     /**
      * Computes the nonlocal cumulated plastic strain from its local form.
@@ -114,23 +110,27 @@ public:
      * @param gp Integration point.
      * @param tStep Time step.
      */
-    virtual void computeCumPlasticStrain(double &kappa, GaussPoint *gp, TimeStep *tStep);
-    double computeDamage(GaussPoint *gp, TimeStep *tStep);
-    void modifyNonlocalWeightFunctionAround(GaussPoint *gp);
-    double computeDistanceModifier(double damage);
-    void computeLocalCumPlasticStrain(double &kappa, GaussPoint *gp, TimeStep *tStep)
+    virtual double computeCumPlasticStrain(GaussPoint *gp, TimeStep *tStep) const;
+    double computeDamage(GaussPoint *gp, TimeStep *tStep) const;
+    void modifyNonlocalWeightFunctionAround(GaussPoint *gp) const;
+    double computeDistanceModifier(double damage) const;
+    double computeLocalCumPlasticStrain(GaussPoint *gp, TimeStep *tStep) const
     {
-        MisesMat :: computeCumPlastStrain(kappa, gp, tStep);
+        return MisesMat :: computeCumPlastStrain(gp, tStep);
     }
 
-    virtual void give1dStressStiffMtrx(FloatMatrix &answer, MatResponseMode mmode, GaussPoint *gp, TimeStep *tStep);
-    //virtual void givePlaneStrainStiffMtrx(FloatMatrix& answer, MatResponseMode, GaussPoint *gp,TimeStep *tStep);
-    //virtual void give3dMaterialStiffnessMatrix(FloatMatrix& answer, MatResponseMode, GaussPoint *gp, TimeStep *tStep);
+    FloatMatrixF<1,1> give1dStressStiffMtrx(MatResponseMode mmode, GaussPoint *gp, TimeStep *tStep) const override;
+    //void givePlaneStrainStiffMtrx(FloatMatrix& answer, MatResponseMode, GaussPoint *gp,TimeStep *tStep) override;
+    //void give3dMaterialStiffnessMatrix(FloatMatrix& answer, MatResponseMode, GaussPoint *gp, TimeStep *tStep) override;
 
-    virtual void NonlocalMaterialStiffnessInterface_addIPContribution(SparseMtrx &dest, const UnknownNumberingScheme &s,
-                                                                      GaussPoint *gp, TimeStep *tStep);
+    void NonlocalMaterialStiffnessInterface_addIPContribution(SparseMtrx &dest, const UnknownNumberingScheme &s,
+                                                              GaussPoint *gp, TimeStep *tStep) override;
 
+<<<<<<< HEAD
     virtual std :: list< localIntegrationRecord > *NonlocalMaterialStiffnessInterface_giveIntegrationDomainList(GaussPoint *gp);
+=======
+    std :: vector< localIntegrationRecord > *NonlocalMaterialStiffnessInterface_giveIntegrationDomainList(GaussPoint *gp) override;
+>>>>>>> bp2/master
 
     /**
      * Computes the "local" part of nonlocal stiffness contribution assembled for given integration point.
@@ -155,20 +155,19 @@ public:
     void giveRemoteNonlocalStiffnessContribution(GaussPoint *gp, IntArray &rloc, const UnknownNumberingScheme &s,
                                                  FloatArray &rcontrib, TimeStep *tStep);
 
-    virtual void giveRealStressVector_3d(FloatArray &answer,  GaussPoint *gp, const FloatArray &strainVector, TimeStep *tStep);
-    virtual void giveRealStressVector_1d(FloatArray &answer,  GaussPoint *gp, const FloatArray &strainVector, TimeStep *tStep);
+    FloatArrayF<6> giveRealStressVector_3d(const FloatArrayF<6> &strain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<1> giveRealStressVector_1d(const FloatArrayF<1> &strainVector, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual void updateBeforeNonlocAverage(const FloatArray &strainVector, GaussPoint *gp, TimeStep *tStep);
+    void updateBeforeNonlocAverage(const FloatArray &strainVector, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual int hasBoundedSupport() { return 1; }
+    int hasBoundedSupport() const override { return 1; }
 
-    virtual int packUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *ip);
-    virtual int unpackAndUpdateUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *ip);
-    virtual int estimatePackSize(DataStream &buff, GaussPoint *ip);
+    int packUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *ip) override;
+    int unpackAndUpdateUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *ip) override;
+    int estimatePackSize(DataStream &buff, GaussPoint *ip) override;
 
 protected:
-    // Creates the corresponding material status
-    MaterialStatus *CreateStatus(GaussPoint *gp) const { return new MisesMatNlStatus(1, MisesMat :: domain, gp); }
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new MisesMatNlStatus(gp); }
 };
 } // end namespace oofem
 #define misesmatnl_h

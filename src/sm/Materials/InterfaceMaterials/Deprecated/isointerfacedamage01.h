@@ -35,8 +35,8 @@
 #ifndef isointerfacedamage01_h
 #define isointerfacedamage01_h
 
-#include "../structuralinterfacematerial.h"
-#include "../structuralinterfacematerialstatus.h"
+#include "sm/Materials/InterfaceMaterials/structuralinterfacematerial.h"
+#include "sm/Materials/InterfaceMaterials/structuralinterfacematerialstatus.h"
 
 ///@name Input fields for IsoInterfaceDamageMaterial
 //@{
@@ -58,43 +58,40 @@ class IsoInterfaceDamageMaterialStatus : public StructuralInterfaceMaterialStatu
 {
 protected:
     /// Scalar measure of the largest equivalent displacement ever reached in material.
-    double kappa;
+    double kappa = 0.;
     /// Non-equilibrated scalar measure of the largest equivalent displacement.
-    double tempKappa;
+    double tempKappa = 0.;
     /// Damage level of material.
-    double damage;
+    double damage = 0.;
     /// Non-equilibrated damage level of material.
-    double tempDamage;
+    double tempDamage = 0.;
 
 public:
     /// Constructor
-    IsoInterfaceDamageMaterialStatus(int n, Domain * d, GaussPoint * g);
-    /// Destructor
-    virtual ~IsoInterfaceDamageMaterialStatus();
+    IsoInterfaceDamageMaterialStatus(GaussPoint * g);
 
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    void printOutputAt(FILE *file, TimeStep *tStep) const override;
 
     /// Returns the last equilibrated scalar measure of the largest strain level.
-    double giveKappa() { return kappa; }
+    double giveKappa() const { return kappa; }
     /// Returns the temp. scalar measure of the largest strain level.
-    double giveTempKappa() { return tempKappa; }
+    double giveTempKappa() const { return tempKappa; }
     /// Sets the temp scalar measure of the largest strain level to given value.
     void setTempKappa(double newKappa) { tempKappa = newKappa; }
     /// Returns the last equilibrated damage level.
-    double giveDamage() { return damage; }
+    double giveDamage() const override { return damage; }
     /// Returns the temp. damage level.
-    double giveTempDamage() { return tempDamage; }
+    double giveTempDamage() const override { return tempDamage; }
     /// Sets the temp damage level to given value.
     void setTempDamage(double newDamage) { tempDamage = newDamage; }
 
-    // definition
-    virtual const char *giveClassName() const { return "IsoInterfaceDamageMaterialStatus"; }
+    const char *giveClassName() const override { return "IsoInterfaceDamageMaterialStatus"; }
 
-    virtual void initTempStatus();
-    virtual void updateYourself(TimeStep *tStep);
+    void initTempStatus() override;
+    void updateYourself(TimeStep *tStep) override;
 
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 };
 
 
@@ -114,54 +111,51 @@ class IsoInterfaceDamageMaterial : public StructuralInterfaceMaterial
 {
 protected:
     /// Coefficient of thermal dilatation.
-    double tempDillatCoeff;
+    double tempDillatCoeff = 0.;
     /// Elastic properties (normal moduli).
-    double kn;
+    double kn = 0.;
     /// Shear moduli.
-    double ks;
+    double ks = 0.;
     /// Tension strength.
-    double ft;
+    double ft = 0.;
     /// Fracture energy.
-    double gf;
+    double gf = 0.;
     /// Limit elastic deformation.
-    double e0;
+    double e0 = 0.;
     /// Maximum limit on omega. The purpose is elimination of a too compliant material which may cause convergency problems. Set to something like 0.99 if needed.
-    double maxOmega;
+    double maxOmega = 0.999999;
     /// Weight factor for the influence of shear component of displacement jump on equivalent strain.
-    double beta;
+    double beta = 0.;
 
 public:
     /// Constructor
     IsoInterfaceDamageMaterial(int n, Domain * d);
-    /// Destructor
-    virtual ~IsoInterfaceDamageMaterial();
 
-    virtual int hasNonLinearBehaviour() { return 1; }
-    virtual bool hasAnalyticalTangentStiffness() const { return true; }
+    bool hasAnalyticalTangentStiffness() const override { return true; }
 
-    virtual const char *giveInputRecordName() const { return _IFT_IsoInterfaceDamageMaterial_Name; }
-    virtual const char *giveClassName() const { return "IsoInterfaceDamageMaterial"; }
+    const char *giveInputRecordName() const override { return _IFT_IsoInterfaceDamageMaterial_Name; }
+    const char *giveClassName() const override { return "IsoInterfaceDamageMaterial"; }
 
-    virtual void giveEngTraction_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &jump, TimeStep *tStep);
-    virtual void give3dStiffnessMatrix_Eng(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep);
+    FloatArrayF<3> giveEngTraction_3d(const FloatArrayF<3> &jump, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<3,3> give3dStiffnessMatrix_Eng(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 
-    void computeEquivalentStrain(double &kappa, const FloatArray &jump, GaussPoint *gp, TimeStep *tStep);
+    double computeEquivalentStrain(const FloatArrayF<3> &jump, GaussPoint *gp, TimeStep *tStep) const;
 
     /**
-     * computes the value of damage parameter omega, based on given value of equivalent strain.
-     * @param[out] omega Contains result.
+     * Computes the value of damage parameter omega, based on given value of equivalent strain.
      * @param kappa Equivalent strain measure.
      * @param strain Total strain vector in full form. (unnecessary?)
      * @param gp Integration point.
+     * @return omega.
      */
-    virtual void computeDamageParam(double &omega, double kappa, const FloatArray &strain, GaussPoint *gp);
+    virtual double computeDamageParam(double kappa, const FloatArrayF<3> &strain, GaussPoint *gp) const;
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const { return new IsoInterfaceDamageMaterialStatus(1, domain, gp); }
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new IsoInterfaceDamageMaterialStatus(gp); }
 };
 } // end namespace oofem
 #endif // isointerfacedamage01_h

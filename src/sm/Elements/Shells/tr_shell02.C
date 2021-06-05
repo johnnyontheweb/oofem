@@ -32,7 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/Shells/tr_shell02.h"
+#include "sm/Elements/Shells/tr_shell02.h"
 #include "fei2dtrlin.h"
 #include "contextioerr.h"
 #include "gaussintegrationrule.h"
@@ -55,19 +55,20 @@ IntArray TR_SHELL02 :: loc_plate = {3, 4, 5, 9, 10, 11, 15, 16, 17};
 IntArray TR_SHELL02 :: loc_membrane = {1, 2, 6, 7, 8, 12, 13, 14, 18};
 
 TR_SHELL02 :: TR_SHELL02(int n, Domain *aDomain) : StructuralElement(n, aDomain), ZZNodalRecoveryModelInterface(this), ZZErrorEstimatorInterface(this), SpatialLocalizerInterface(this),
-    plate(new DKTPlate3d(-1, aDomain)), membrane(new TrPlanestressRotAllman3d(-1, aDomain))
+    plate(std::make_unique<DKTPlate3d>(-1, aDomain)),
+    membrane(std::make_unique<TrPlanestressRotAllman3d>(-1, aDomain))
 {
     numberOfDofMans = 3;
 }
 
 
-IRResultType
-TR_SHELL02 :: initializeFrom(InputRecord *ir)
+void
+TR_SHELL02 :: initializeFrom(InputRecord &ir)
 {
     // proc tady neni return = this...   ??? termitovo
-    IRResultType result = StructuralElement :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
+    StructuralElement :: initializeFrom(ir);
+    plate->initializeFrom(ir);
+    membrane->initializeFrom(ir);
     }
 
 	// optional record for 1st local axes
@@ -578,43 +579,30 @@ TR_SHELL02::computeEdgeVolumeAround(GaussPoint *gp, int iEdge)
 	return detJ * gp->giveWeight();
 }
 
-contextIOResultType
-TR_SHELL02 :: saveContext(DataStream &stream, ContextMode mode, void *obj)
-{
-    contextIOResultType iores;
-    if ( ( iores =  StructuralElement :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    if ( ( iores =  this->plate->saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    if ( ( iores = this->membrane->saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    return iores;
-}
 
-contextIOResultType
-TR_SHELL02 :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
+void
+TR_SHELL02 :: saveContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-    if ( ( iores =  StructuralElement :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
+    StructuralElement :: saveContext(stream, mode);
+    this->plate->saveContext(stream, mode);
+    this->membrane->saveContext(stream, mode);
     }
-    if ( ( iores =   this->plate->restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
+
+
+void
+TR_SHELL02 :: restoreContext(DataStream &stream, ContextMode mode)
+{
+    StructuralElement :: restoreContext(stream, mode);
+    this->plate->restoreContext(stream, mode);
+    this->membrane->restoreContext(stream, mode);
     }
-    if ( ( iores =  this->membrane->restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    return iores;
-}
+
 
 IntegrationRule *
 TR_SHELL02 :: ZZErrorEstimatorI_giveIntegrationRule()
 {
     if ( !this->compositeIR ) {
-        this->compositeIR.reset( new GaussIntegrationRule(1, this, 1, 12) );
+        this->compositeIR = std::make_unique<GaussIntegrationRule>(1, this, 1, 12);
         this->compositeIR->SetUpPointsOnTriangle(plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints(), _3dShell);
     }
     return this->compositeIR.get();
@@ -693,9 +681,9 @@ TR_SHELL02 :: SpatialLocalizerI_giveBBox(FloatArray &bb0, FloatArray &bb1)
     FloatArray _c;
 
     for ( int i = 1; i <= this->giveNumberOfNodes(); ++i ) {
-        FloatArray *coordinates = this->giveNode(i)->giveCoordinates();
+        const auto &coordinates = this->giveNode(i)->giveCoordinates();
 
-        _c = * coordinates;
+        _c = coordinates;
         _c.add(gt3);
         if ( i == 1 ) {
             bb0 = bb1 = _c;
@@ -704,7 +692,7 @@ TR_SHELL02 :: SpatialLocalizerI_giveBBox(FloatArray &bb0, FloatArray &bb1)
             bb1.beMaxOf(bb1, _c);
         }
 
-        _c = * coordinates;
+        _c = coordinates;
         _c.subtract(gt3);
         bb0.beMinOf(bb0, _c);
         bb1.beMaxOf(bb1, _c);

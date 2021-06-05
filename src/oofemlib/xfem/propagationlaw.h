@@ -45,6 +45,9 @@
 #define _IFT_PLCrackPrescribedDir_Dir "angle" // Angle in degrees
 #define _IFT_PLCrackPrescribedDir_IncLength "incrementlength" // Increment per time step
 
+#define _IFT_PLnodeRadius_Name "propagationlawnoderadius"
+#define _IFT_PLnodeRadius_Radius "radius" 
+
 
 namespace oofem {
 class Domain;
@@ -67,7 +70,7 @@ public:
     virtual const char *giveClassName() const = 0;
     virtual const char *giveInputRecordName() const = 0;
 
-    virtual IRResultType initializeFrom(InputRecord *ir) = 0;
+    virtual void initializeFrom(InputRecord &ir) = 0;
     virtual void giveInputRecord(DynamicInputRecord &input) = 0;
 
     virtual bool hasPropagation() const = 0;
@@ -84,14 +87,14 @@ public:
     PLDoNothing() { }
     virtual ~PLDoNothing() { }
 
-    virtual const char *giveClassName() const { return "PLDoNothing"; }
-    virtual const char *giveInputRecordName() const { return _IFT_PLDoNothing_Name; }
+    const char *giveClassName() const override { return "PLDoNothing"; }
+    const char *giveInputRecordName() const override { return _IFT_PLDoNothing_Name; }
 
-    virtual IRResultType initializeFrom(InputRecord *ir) { return IRRT_OK; }
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    void initializeFrom(InputRecord &ir) override { }
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual bool hasPropagation() const { return false; }
-    virtual bool propagateInterface(Domain &iDomain, EnrichmentFront &iEnrFront, TipPropagation &oTipProp) { return false; }
+    bool hasPropagation() const override { return false; }
+    bool propagateInterface(Domain &iDomain, EnrichmentFront &iEnrFront, TipPropagation &oTipProp) override { return false; }
 };
 
 /**
@@ -104,17 +107,40 @@ public:
     PLCrackPrescribedDir() : mAngle(0.0), mIncrementLength(0.0) { }
     virtual ~PLCrackPrescribedDir() { }
 
-    virtual const char *giveClassName() const { return "PLCrackPrescribedDir"; }
-    virtual const char *giveInputRecordName() const { return _IFT_PLCrackPrescribedDir_Name; }
+    const char *giveClassName() const override { return "PLCrackPrescribedDir"; }
+    const char *giveInputRecordName() const override { return _IFT_PLCrackPrescribedDir_Name; }
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual bool hasPropagation() const { return mIncrementLength > 0.; }
-    virtual bool propagateInterface(Domain &iDomain, EnrichmentFront &iEnrFront, TipPropagation &oTipProp);
+    bool hasPropagation() const override { return mIncrementLength > 0.; }
+    bool propagateInterface(Domain &iDomain, EnrichmentFront &iEnrFront, TipPropagation &oTipProp) override;
 
 protected:
     double mAngle, mIncrementLength;
+};
+
+/**
+ * Propagation law that propagates a delamination in a predefined radius from an element.
+ * @author Johannes Främby
+ */
+class OOFEM_EXPORT PLnodeRadius : public PropagationLaw
+{
+public:
+    PLnodeRadius() : mRadius(0.0) { }
+    virtual ~PLnodeRadius() { }
+
+    const char *giveClassName() const override { return "PLnodeRadius"; }
+    const char *giveInputRecordName() const override { return _IFT_PLnodeRadius_Name; }
+
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
+
+    bool hasPropagation() const override { return mRadius > 0.; }
+    bool propagateInterface(Domain &iDomain, EnrichmentFront &iEnrFront, TipPropagation &oTipProp) override;
+
+protected:
+    double mRadius;
 };
 } // end namespace oofem
 

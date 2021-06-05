@@ -34,21 +34,20 @@
 
 #include "nodalload.h"
 #include "classfactory.h"
+#include "datastream.h"
 #include "dynamicinputrecord.h"
+#include "contextioerr.h"
 
 namespace oofem {
 REGISTER_BoundaryCondition(NodalLoad);
 
-IRResultType
-NodalLoad :: initializeFrom(InputRecord *ir)
+void
+NodalLoad :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
+    Load :: initializeFrom(ir);
     int value = 1;
     IR_GIVE_OPTIONAL_FIELD(ir, value, _IFT_NodalLoad_cstype);
     coordSystemType = ( CoordSystType ) value;
-
-    return Load :: initializeFrom(ir);
 }
 
 
@@ -57,4 +56,34 @@ void NodalLoad :: giveInputRecord(DynamicInputRecord &input)
     Load :: giveInputRecord(input);
     input.setField(this->coordSystemType, _IFT_NodalLoad_cstype);
 }
+
+
+void
+NodalLoad :: saveContext(DataStream &stream, ContextMode mode)
+{
+    Load :: saveContext(stream, mode);
+
+    if ( mode & CM_Definition ) {
+        if ( !stream.write(coordSystemType) ) {
+          THROW_CIOERR(CIO_IOERR);
+        }
+    }
+}
+
+
+void
+NodalLoad :: restoreContext(DataStream &stream, ContextMode mode)
+{
+    Load :: restoreContext(stream, mode);
+
+    if ( mode & CM_Definition ) {
+        int _val;
+        if ( !stream.read(_val) ) {
+          THROW_CIOERR(CIO_IOERR);
+        }
+        coordSystemType = (CoordSystType) _val;
+    }
+}
+
+
 } // end namespace oofem

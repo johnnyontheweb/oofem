@@ -54,22 +54,19 @@ namespace oofem {
 class DoublePowerLawMaterial : public MaxwellChainMaterial
 {
 protected:
-    double E28; ///< Young modulus at age of 28 days [MPa].
-    double fi1; ///< Basic creep coefficient.
-    double m, n;
-    double alpha;
+    double E28 = 0.; ///< Young modulus at age of 28 days [MPa].
+    double fi1 = 0.; ///< Basic creep coefficient.
+    double m = 0., n = 0.;
+    double alpha = 0.;
 
 public:
     DoublePowerLawMaterial(int n, Domain *d) : MaxwellChainMaterial(n, d) { }
-    virtual ~DoublePowerLawMaterial() { }
 
-    virtual const char *giveClassName() const { return "DoublePowerLawMaterial"; }
-    virtual const char *giveInputRecordName() const { return _IFT_DoublePowerLawMaterial_Name; }
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    const char *giveClassName() const override { return "DoublePowerLawMaterial"; }
+    const char *giveInputRecordName() const override { return _IFT_DoublePowerLawMaterial_Name; }
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual double computeCreepFunction(double t, double t_prime, GaussPoint *gp, TimeStep *tStep);
-
-protected:
+    double computeCreepFunction(double t, double t_prime, GaussPoint *gp, TimeStep *tStep) const override;
 };
 } // end namespace oofem
 #endif // doublepowerlaw_h

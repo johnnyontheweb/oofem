@@ -35,8 +35,8 @@
 #ifndef simplecrosssection_h
 #define simplecrosssection_h
 
-#include "../sm/CrossSections/structuralcrosssection.h"
-#include "../sm/Materials/structuralmaterial.h"
+#include "sm/CrossSections/structuralcrosssection.h"
+#include "sm/Materials/structuralmaterial.h"
 #include "floatarray.h"
 #include "floatmatrix.h"
 
@@ -85,48 +85,47 @@ namespace oofem {
  */
 class OOFEM_EXPORT SimpleCrossSection : public StructuralCrossSection
 {
+protected:
+    int materialNumber = 0;   ///< Material number
+    int czMaterialNumber = 0; ///< Cohesive zone material number
+
 public:
     /**
      * Constructor.
      * @param n Cross section number.
      * @param d Associated domain.
      */
-    SimpleCrossSection(int n, Domain *d) : StructuralCrossSection(n, d) {
-        materialNumber = 0;
-        czMaterialNumber = 0;
-    }
+    SimpleCrossSection(int n, Domain *d) : StructuralCrossSection(n, d) { }
 
-    virtual void giveRealStress_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep);
-    virtual void giveRealStress_3dDegeneratedShell(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep);
-    virtual void giveRealStress_PlaneStrain(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep);
-    virtual void giveRealStress_PlaneStress(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep);
-    virtual void giveRealStress_1d(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep);
-    virtual void giveRealStress_Warping(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep);
+    FloatArrayF<6> giveRealStress_3d(const FloatArrayF<6> &reducedStrain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<6> giveRealStress_3dDegeneratedShell(const FloatArrayF<6> &reducedStrain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<4> giveRealStress_PlaneStrain(const FloatArrayF<4> &reducedStrain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<3> giveRealStress_PlaneStress(const FloatArrayF<3> &reducedStrain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<1> giveRealStress_1d(const FloatArrayF<1> &reducedStrain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<2> giveRealStress_Warping(const FloatArrayF<2> &reducedStrain, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual void giveStiffnessMatrix_3d(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void giveStiffnessMatrix_PlaneStress(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void giveStiffnessMatrix_PlaneStrain(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void giveStiffnessMatrix_1d(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
+    FloatMatrixF<6,6> giveStiffnessMatrix_3d(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<3,3> giveStiffnessMatrix_PlaneStress(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<4,4> giveStiffnessMatrix_PlaneStrain(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<1,1> giveStiffnessMatrix_1d(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
 
+    FloatArrayF<3> giveGeneralizedStress_Beam2d(const FloatArrayF<3> &generalizedStrain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<6> giveGeneralizedStress_Beam3d(const FloatArrayF<6> &generalizedStrain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<5> giveGeneralizedStress_Plate(const FloatArrayF<5> &generalizedStrain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<8> giveGeneralizedStress_Shell(const FloatArrayF<8> &generalizedStrain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<4> giveGeneralizedStress_MembraneRot(const FloatArrayF<4> &generalizedStrain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<3> giveGeneralizedStress_PlateSubSoil(const FloatArrayF<3> &generalizedStrain, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual void giveGeneralizedStress_Beam2d(FloatArray &answer, GaussPoint *gp, const FloatArray &generalizedStrain, TimeStep *tStep);
-    virtual void giveGeneralizedStress_Beam3d(FloatArray &answer, GaussPoint *gp, const FloatArray &generalizedStrain, TimeStep *tStep);
-    virtual void giveGeneralizedStress_Plate(FloatArray &answer, GaussPoint *gp, const FloatArray &generalizedStrain, TimeStep *tStep);
-    virtual void giveGeneralizedStress_Shell(FloatArray &answer, GaussPoint *gp, const FloatArray &generalizedStrain, TimeStep *tStep);
-    virtual void giveGeneralizedStress_MembraneRot(FloatArray &answer, GaussPoint *gp, const FloatArray &generalizedStrain, TimeStep *tStep);
-    virtual void giveGeneralizedStress_PlateSubSoil(FloatArray &answer, GaussPoint *gp, const FloatArray &generalizedStrain, TimeStep *tStep);
+    void giveCharMaterialStiffnessMatrix(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) override;
+    bool isCharacteristicMtrxSymmetric(MatResponseMode mode) const override;
 
-    virtual void giveCharMaterialStiffnessMatrix(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual bool isCharacteristicMtrxSymmetric(MatResponseMode mode);
-
-    virtual void give3dDegeneratedShellStiffMtrx(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep);
-    virtual void give2dBeamStiffMtrx(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void give3dBeamStiffMtrx(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void give2dPlateStiffMtrx(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void give3dShellStiffMtrx(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void giveMembraneRotStiffMtrx(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void give2dPlateSubSoilStiffMtrx(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-
+    FloatMatrixF<6,6> give3dDegeneratedShellStiffMtrx(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<3,3> give2dBeamStiffMtrx(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<6,6> give3dBeamStiffMtrx(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<5,5> give2dPlateStiffMtrx(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<8,8> give3dShellStiffMtrx(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<4,4> giveMembraneRotStiffMtrx(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<3,3> give2dPlateSubSoilStiffMtrx(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
 
     /**
      * Initializes receiver acording to object description stored in input record.
@@ -140,45 +139,41 @@ public:
      * - 'beamshearcoeff' Beam shear coefficient
      * @param ir Record to read off.
      */
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual void createMaterialStatus(GaussPoint &iGP); // ES
+    void createMaterialStatus(GaussPoint &iGP) override;
 
 
-    // identification and auxiliary functions
-    virtual const char *giveClassName() const { return "SimpleCrossSection"; }
-    virtual const char *giveInputRecordName() const { return _IFT_SimpleCrossSection_Name; }
+    const char *giveClassName() const override { return "SimpleCrossSection"; }
+    const char *giveInputRecordName() const override { return _IFT_SimpleCrossSection_Name; }
 
-    virtual double give(int aProperty, GaussPoint *gp);
-    virtual double give(CrossSectionProperty a, GaussPoint *gp) { return CrossSection :: give(a, gp); }
-    virtual double give(CrossSectionProperty a, const FloatArray &coords, Element *elem, bool local) { return CrossSection :: give(a, coords, elem, local); }
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *ip, InternalStateType type, TimeStep *tStep);
-    virtual Material *giveMaterial(IntegrationPoint *ip);
+    double give(int aProperty, GaussPoint *gp) const override;
+    double give(CrossSectionProperty a, GaussPoint *gp) const override { return CrossSection :: give(a, gp); }
+    double give(CrossSectionProperty a, const FloatArray &coords, Element *elem, bool local) const override { return CrossSection :: give(a, coords, elem, local); }
+    int giveIPValue(FloatArray &answer, GaussPoint *ip, InternalStateType type, TimeStep *tStep) override;
+    Material *giveMaterial(IntegrationPoint *ip) const override;
 
     int giveMaterialNumber() const { return this->materialNumber; }
     void setMaterialNumber(int matNum) { this->materialNumber = matNum; }
-    virtual int checkConsistency();
-    virtual Interface *giveMaterialInterface(InterfaceType t, IntegrationPoint *ip);
+    int checkConsistency() override;
+    Interface *giveMaterialInterface(InterfaceType t, IntegrationPoint *ip) override;
 
 
+    void giveFirstPKStresses(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedFIncrement, TimeStep *tStep) override;
+    void giveCauchyStresses(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedFIncrement, TimeStep *tStep) override;
+    void giveEshelbyStresses(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedvF, TimeStep *tStep) override;
+    void giveStiffnessMatrix_dPdF(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) override;
+    void giveStiffnessMatrix_dCde(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) override;
 
+    void giveTemperatureVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep) const;
 
-    virtual void giveFirstPKStresses(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedFIncrement, TimeStep *tStep);
-    virtual void giveCauchyStresses(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedFIncrement, TimeStep *tStep);
-    virtual void giveEshelbyStresses(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedvF, TimeStep *tStep);
-    virtual void giveStiffnessMatrix_dPdF(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void giveStiffnessMatrix_dCde(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
+    int packUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *gp) override;
+    int unpackAndUpdateUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *gp) override;
+    int estimatePackSize(DataStream &buff, GaussPoint *gp) override;
 
-    virtual void giveTemperatureVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep);
-
-    virtual int packUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *gp);
-    virtual int unpackAndUpdateUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *gp);
-    virtual int estimatePackSize(DataStream &buff, GaussPoint *gp);
-
-protected:
-    int materialNumber;   // material number
-    int czMaterialNumber; // cohesive zone material number
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 };
 } // end namespace oofem
 #endif // simplecrosssection_h

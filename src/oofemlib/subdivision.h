@@ -47,6 +47,8 @@
 #include <queue>
 #include <list>
 
+#define _IFT_Subdivision_Name "subdiv"
+
 namespace oofem {
 
 #define SHARED_IRREGULAR_DATA_TAG 7654
@@ -93,7 +95,7 @@ protected:
         IntArray partitions;
 #endif
 public:
-        RS_Node(int n, Subdivision :: RS_Mesh * m, int parent, FloatArray & c, double rd, bool boundary) {
+        RS_Node(int n, Subdivision :: RS_Mesh * m, int parent, const FloatArray & c, double rd, bool boundary) {
             this->number = n;
             this->mesh = m;
             this->coords = c;
@@ -151,7 +153,7 @@ public:
             i = iNode;
             j = jNode;
         }
-        virtual bool isIrregular() { return true; }
+        bool isIrregular() override { return true; }
     };
 
     class RS_Element
@@ -254,17 +256,17 @@ public:
     {
 public:
         RS_Triangle(int number, Subdivision :: RS_Mesh * mesh, int parent, IntArray & nodes);
-        int evaluateLongestEdge();
-        void bisect(std :: queue< int > &subdivqueue, std :: list< int > &sharedIrregularsQueue);
-        void generate(std :: list< int > &sharedEdgesQueue);
-        void update_neighbours();
-        double giveDensity();
-        bool isNeighborOf(Subdivision :: RS_Element *elem);
-        void giveSideNodes(int iside, IntArray &snodes);
-        int giveEdgeIndex(int iNode, int jNode);
-        virtual void importConnectivity(ConnectivityTable *ct);
+        int evaluateLongestEdge() override;
+        void bisect(std :: queue< int > &subdivqueue, std :: list< int > &sharedIrregularsQueue) override;
+        void generate(std :: list< int > &sharedEdgesQueue) override;
+        void update_neighbours() override;
+        double giveDensity() override;
+        bool isNeighborOf(Subdivision :: RS_Element *elem) override;
+        void giveSideNodes(int iside, IntArray &snodes) override;
+        int giveEdgeIndex(int iNode, int jNode) override;
+        void importConnectivity(ConnectivityTable *ct) override;
 #ifdef __OOFEG
-        void drawGeometry();
+        void drawGeometry() override;
 #endif
 #ifdef __PARALLEL_MODE
         void numberSharedEdges(int iNode, IntArray &connNodes);
@@ -281,17 +283,17 @@ protected:
         IntArray side_leIndex;
 public:
         RS_Tetra(int number, Subdivision :: RS_Mesh * mesh, int parent, IntArray & nodes);
-        int evaluateLongestEdge();
-        void bisect(std :: queue< int > &subdivqueue, std :: list< int > &sharedIrregularsQueue);
-        void generate(std :: list< int > &sharedEdgesQueue);
-        void update_neighbours();
-        double giveDensity();
-        bool isNeighborOf(Subdivision :: RS_Element *elem);
-        void giveSideNodes(int iside, IntArray &snodes);
-        int giveEdgeIndex(int iNode, int jNode);
-        virtual void importConnectivity(ConnectivityTable *ct);
+        int evaluateLongestEdge() override;
+        void bisect(std :: queue< int > &subdivqueue, std :: list< int > &sharedIrregularsQueue) override;
+        void generate(std :: list< int > &sharedEdgesQueue) override;
+        void update_neighbours() override;
+        double giveDensity() override;
+        bool isNeighborOf(Subdivision :: RS_Element *elem) override;
+        void giveSideNodes(int iside, IntArray &snodes) override;
+        int giveEdgeIndex(int iNode, int jNode) override;
+        void importConnectivity(ConnectivityTable *ct) override;
 #ifdef __OOFEG
-        void drawGeometry();
+        void drawGeometry() override;
 #endif
 #ifdef __PARALLEL_MODE
         void numberSharedEdges(int iNode, IntArray &connNodes);
@@ -416,7 +418,7 @@ public:
     }
 
     /// Runs the mesh generation, mesh will be written to corresponding domain din file
-    virtual returnCode createMesh(TimeStep *tStep, int domainNumber, int domainSerNum, Domain **dNew);
+    returnCode createMesh(TimeStep *tStep, int domainNumber, int domainSerNum, Domain **dNew) override;
     const char *giveClassName() { return "Subdivision"; }
     Domain *giveDomain() { return domain; }
 

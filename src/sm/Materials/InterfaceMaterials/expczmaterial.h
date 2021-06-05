@@ -59,20 +59,17 @@ protected:
 
 public:
     /// Constructor
-    ExpCZMaterialStatus(int n, Domain * d, GaussPoint * g);
-    /// Destructor
-    virtual ~ExpCZMaterialStatus();
+    ExpCZMaterialStatus(GaussPoint * g);
 
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    void printOutputAt(FILE *file, TimeStep *tStep) override;
 
-    // definition
-    virtual const char *giveClassName() const { return "ExpCZMaterialStatus"; }
+    const char *giveClassName() const override { return "ExpCZMaterialStatus"; }
 
-    virtual void initTempStatus();
-    virtual void updateYourself(TimeStep *tStep);
+    void initTempStatus() override;
+    void updateYourself(TimeStep *tStep) override;
 
-    //virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    //virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    //void saveContext(DataStream &stream, ContextMode mode) override;
+    //void restoreContext(DataStream &stream, ContextMode mode) override;
 };
 
 
@@ -92,42 +89,37 @@ class ExpCZMaterial : public StructuralInterfaceMaterial
 {
 protected:
     /// Material parameters
-    double kn0;
-    double ks0;
-    double GIc;
-    double GIIc;
-    double sigfn;
-    double sigfs;
+    double kn0 = 0.;
+    double ks0 = 0.;
+    double GIc = 0.;
+    double GIIc = 0.;
+    double sigfn = 0.;
+    double sigfs = 0.;
 
     /// normal jump at damage initiation
-    double gn0;
+    double gn0 = 0.;
     /// shear jump at damage initiations
-    double gs0;
-    double q;
-    double r;
+    double gs0 = 0.;
+    double q = 0.;
+    double r = 0.;
 
 public:
     /// Constructor
     ExpCZMaterial(int n, Domain * d);
-    /// Destructor
-    virtual ~ExpCZMaterial();
 
-    virtual int hasNonLinearBehaviour() { return 1; }
-    virtual int checkConsistency();
+    int checkConsistency() override;
 
-    virtual const char *giveClassName() const { return "ExpCZMaterial"; }
+    const char *giveClassName() const override { return "ExpCZMaterial"; }
 
-    virtual void giveEngTraction_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &jump, TimeStep *tStep);
-    virtual void give3dStiffnessMatrix_Eng(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep);
+    void giveEngTraction_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &jump, TimeStep *tStep) override;
+    void give3dStiffnessMatrix_Eng(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) override;
 
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
-    virtual int giveIntVarCompFullIndx(IntArray &answer, InternalStateType type, MaterialMode mmode);
-    virtual int giveIPValueSize(InternalStateType type, GaussPoint *gp);
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const { return new ExpCZMaterialStatus(1, domain, gp); }
-    virtual void printYourself();
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new ExpCZMaterialStatus(gp); }
+    void printYourself() override;
 };
 } // end namespace oofem
 #endif // isointerfacedamage01_h

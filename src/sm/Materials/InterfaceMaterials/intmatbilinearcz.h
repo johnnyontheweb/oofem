@@ -56,32 +56,31 @@ namespace oofem {
 class IntMatBilinearCZStatus : public StructuralInterfaceMaterialStatus
 {
 public:
-    IntMatBilinearCZStatus(int n, Domain * d, GaussPoint * g);
-    virtual ~IntMatBilinearCZStatus();
+    IntMatBilinearCZStatus(GaussPoint * g);
 
     /// damage variable
-    double mDamageNew, mDamageOld;
+    double mDamageNew = 0., mDamageOld = 0.;
 
     /// Traction
-    FloatArray mTractionOld, mTractionNew;
+    FloatArrayF<3> mTractionOld, mTractionNew;
 
     /// Discontinuity
-    FloatArray mJumpOld, mJumpNew;
+    FloatArrayF<3> mJumpOld, mJumpNew;
 
     /**
      * Increment of plastic multiplier. Storing this allows
      * semi-explicit update of damage.
      */
-    double mPlastMultIncNew, mPlastMultIncOld;
+    double mPlastMultIncNew = 0., mPlastMultIncOld = 0.;
 
-    virtual const char *giveClassName() const { return "IntMatBilinearCZStatus"; }
+    const char *giveClassName() const override { return "IntMatBilinearCZStatus"; }
 
-    virtual void initTempStatus();
-    virtual void updateYourself(TimeStep *tStep);
+    void initTempStatus() override;
+    void updateYourself(TimeStep *tStep) override;
 
     /// Functions for MaterialStatusMapperInterface
-    virtual void copyStateVariables(const MaterialStatus &iStatus);
-    virtual void addStateVariables(const MaterialStatus &iStatus);
+    void copyStateVariables(const MaterialStatus &iStatus) override;
+    void addStateVariables(const MaterialStatus &iStatus) override;
 };
 
 
@@ -92,52 +91,43 @@ public:
  */
 class IntMatBilinearCZ : public StructuralInterfaceMaterial
 {
+protected:
+    double mPenaltyStiffness = 0.;
+    double mGIc = 0.;   // fracture energy, mode 1
+    double mGIIc = 0.;  // fracture energy, mode 2
+    double mSigmaF = 0.;  // max stress
+
+    double mMu = 0.;    // loading function parameter
+    double mGamma = 0.; // loading function parameter
+
+    bool mSemiExplicit = false; // If semi-explicit time integration should be used
+
+    int checkConsistency() override;
+
 public:
     IntMatBilinearCZ(int n, Domain * d);
-    virtual ~IntMatBilinearCZ();
 
-protected:
-    /// Material parameters
-    double mPenaltyStiffness;
-    double mGIc;   // fracture energy, mode 1
-    double mGIIc;  // fracture energy, mode 1
-    double mSigmaF;  // max stress
+    const char *giveClassName() const override { return "IntMatBilinearCZ"; }
+    const char *giveInputRecordName() const override { return _IFT_IntMatBilinearCZ_Name; }
 
-    double mMu;    // loading function parameter
-    double mGamma; // loading function parameter
-
-    bool mSemiExplicit; // If semi-explicit time integration should be used
-
-    virtual int checkConsistency();
-
-public:
-
-    virtual int hasNonLinearBehaviour()   { return 1; }
-
-    virtual const char *giveClassName() const { return "IntMatBilinearCZ"; }
-    virtual const char *giveInputRecordName() const { return _IFT_IntMatBilinearCZ_Name; }
-
-
-    virtual void giveFirstPKTraction_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &jump,
-                                        const FloatMatrix &F, TimeStep *tStep);
+    FloatArrayF<3> giveFirstPKTraction_3d(const FloatArrayF<3> &jump, const FloatMatrixF<3,3> &F, GaussPoint *gp, TimeStep *tStep) const override;
 
     // Dummy implementation, we must rely on numerical computation of the tangent.
-    virtual void give3dStiffnessMatrix_dTdj(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep);
+    FloatMatrixF<3,3> give3dStiffnessMatrix_dTdj(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual bool hasAnalyticalTangentStiffness() const { return false; }
+    bool hasAnalyticalTangentStiffness() const override { return false; }
 
 private:
     // Help functions
-    double computeYieldFunction(const double &iTractionNormal, const double &iTractionTang) const;
-    void computeTraction(FloatArray &oT, const FloatArray &iTTrial, const double &iPlastMultInc) const;
+    double computeYieldFunction(double iTractionNormal, double iTractionTang) const;
+    FloatArrayF<3> computeTraction(const FloatArrayF<3> &iTTrial, double iPlastMultInc) const;
 
 public:
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const { return new IntMatBilinearCZStatus(1, domain, gp); }
-    virtual void printYourself();
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new IntMatBilinearCZStatus(gp); }
+    void printYourself() override;
 };
 } /* namespace oofem */
 #endif /* INTMATBILINEARCZ_H_ */

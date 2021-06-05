@@ -46,17 +46,8 @@ namespace oofem {
 REGISTER_Material(RCSDNLMaterial);
 
 RCSDNLMaterial :: RCSDNLMaterial(int n, Domain *d) : RCSDEMaterial(n, d), StructuralNonlocalMaterialExtensionInterface(d)
-{
-    //linearElasticMaterial = new IsotropicLinearElasticMaterial (n,d);
-    SDTransitionCoeff2 = 0.;
-    R = 0.;
-}
+{}
 
-
-RCSDNLMaterial :: ~RCSDNLMaterial()
-{
-    //delete linearElasticMaterial;
-}
 
 Interface *
 RCSDNLMaterial :: giveInterface(InterfaceType type)
@@ -64,13 +55,13 @@ RCSDNLMaterial :: giveInterface(InterfaceType type)
     if ( type == NonlocalMaterialExtensionInterfaceType ) {
         return static_cast< StructuralNonlocalMaterialExtensionInterface * >(this);
     } else {
-        return NULL;
+        return nullptr;
     }
 }
 
 
 void
-RCSDNLMaterial :: updateBeforeNonlocAverage(const FloatArray &strainVector, GaussPoint *gp, TimeStep *tStep)
+RCSDNLMaterial :: updateBeforeNonlocAverage(const FloatArray &strainVector, GaussPoint *gp, TimeStep *tStep) const
 {
     /*  Implements the service updating local variables in given integration points,
      * which take part in nonlocal average process. Actually, no update is necessary,
@@ -78,7 +69,7 @@ RCSDNLMaterial :: updateBeforeNonlocAverage(const FloatArray &strainVector, Gaus
      * computation. It is therefore necessary only to store local strain in corresponding status.
      * This service is declared at StructuralNonlocalMaterial level.
      */
-    RCSDNLMaterialStatus *status = static_cast< RCSDNLMaterialStatus * >( this->giveStatus(gp) );
+    auto status = static_cast< RCSDNLMaterialStatus * >( this->giveStatus(gp) );
 
     this->initTempStatus(gp);
 
@@ -346,17 +337,12 @@ RCSDNLMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint *gp,
 }
 
 
-IRResultType
-RCSDNLMaterial :: initializeFrom(InputRecord *ir)
+void
+RCSDNLMaterial :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
     //RCSDEMaterial::instanciateFrom (ir);
-    result = this->giveLinearElasticMaterial()->initializeFrom(ir);
-    if ( result != IRRT_OK ) return result;    
-
-    result = StructuralNonlocalMaterialExtensionInterface :: initializeFrom(ir);
-    if ( result != IRRT_OK ) return result;
+    this->giveLinearElasticMaterial()->initializeFrom(ir);
+    StructuralNonlocalMaterialExtensionInterface :: initializeFrom(ir);
 
     IR_GIVE_FIELD(ir, Ft, _IFT_RCSDNLMaterial_ft);
     IR_GIVE_FIELD(ir, SDTransitionCoeff, _IFT_RCSDNLMaterial_sdtransitioncoeff);
@@ -374,18 +360,15 @@ RCSDNLMaterial :: initializeFrom(InputRecord *ir)
         R = 0.0;
     }
 
-    if ( ir->hasField(_IFT_RCSDNLMaterial_ef) ) { // if ef is specified, Gf is computed acordingly
+    if ( ir.hasField(_IFT_RCSDNLMaterial_ef) ) { // if ef is specified, Gf is computed acordingly
         IR_GIVE_FIELD(ir, this->ef, _IFT_RCSDNLMaterial_ef);
         this->Gf = this->Ft * this->ef;
-    } else if ( ir->hasField(_IFT_RCSDNLMaterial_gf) ) { // otherwise if Gf is specified, ef is computed acordingly
+    } else if ( ir.hasField(_IFT_RCSDNLMaterial_gf) ) { // otherwise if Gf is specified, ef is computed acordingly
         IR_GIVE_FIELD(ir, this->Gf, _IFT_RCSDNLMaterial_gf);
         this->ef = this->Gf / this->Ft;
     } else {
-        OOFEM_WARNING("cannot determine Gf and ef from input data");
-        return IRRT_BAD_FORMAT;
+        throw ValueInputException(ir, "none", "cannot determine Gf and ef from input data");
     }
-
-    return IRRT_OK;
 }
 
 
@@ -397,11 +380,11 @@ RCSDNLMaterial :: giveMinCrackStrainsForFullyOpenCrack(GaussPoint *gp, int i)
 
 
 double
-RCSDNLMaterial :: computeWeightFunction(const FloatArray &src, const FloatArray &coord)
+RCSDNLMaterial :: computeWeightFunction(const FloatArray &src, const FloatArray &coord) const
 {
     // Bell shaped function decaying with the distance.
 
-    double dist = src.distance(coord);
+    double dist = distance(src, coord);
 
     if ( ( dist >= 0. ) && ( dist <= this->R ) ) {
         double help = ( 1. - dist * dist / ( R * R ) );
@@ -436,22 +419,18 @@ RCSDNLMaterial :: computeWeightFunction(const FloatArray &src, const FloatArray 
 
 
 
-RCSDNLMaterialStatus :: RCSDNLMaterialStatus(int n, Domain *d, GaussPoint *g) :
-    RCSDEMaterialStatus(n, d, g), StructuralNonlocalMaterialStatusExtensionInterface(), nonlocalStrainVector(),
+RCSDNLMaterialStatus :: RCSDNLMaterialStatus(GaussPoint *g) :
+    RCSDEMaterialStatus(g), StructuralNonlocalMaterialStatusExtensionInterface(), nonlocalStrainVector(),
     tempNonlocalStrainVector(), localStrainVectorForAverage()
 {
-    nonlocalStrainVector.resize( StructuralMaterial :: giveSizeOfVoigtSymVector( gp->giveMaterialMode() ) );
+    nonlocalStrainVector.resize( StructuralMaterial :: giveSizeOfVoigtSymVector( g->giveMaterialMode() ) );
 
-    localStrainVectorForAverage.resize( StructuralMaterial :: giveSizeOfVoigtSymVector( gp->giveMaterialMode() ) );
+    localStrainVectorForAverage.resize( StructuralMaterial :: giveSizeOfVoigtSymVector( g->giveMaterialMode() ) );
 }
 
 
-RCSDNLMaterialStatus :: ~RCSDNLMaterialStatus()
-{ }
-
-
 void
-RCSDNLMaterialStatus :: printOutputAt(FILE *file, TimeStep *tStep)
+RCSDNLMaterialStatus :: printOutputAt(FILE *file, TimeStep *tStep) const
 {
     FloatArray helpVec;
 
@@ -477,14 +456,6 @@ RCSDNLMaterialStatus :: initTempStatus()
 {
     RCSDEMaterialStatus :: initTempStatus();
 
-    if ( nonlocalStrainVector.giveSize() == 0 ) {
-        nonlocalStrainVector.resize( StructuralMaterial :: giveSizeOfVoigtSymVector( gp->giveMaterialMode() ) );
-    }
-
-    if ( localStrainVectorForAverage.giveSize() == 0 ) {
-        localStrainVectorForAverage.resize( StructuralMaterial :: giveSizeOfVoigtSymVector( gp->giveMaterialMode() ) );
-    }
-
     tempNonlocalStrainVector = nonlocalStrainVector;
 }
 
@@ -502,49 +473,27 @@ RCSDNLMaterialStatus :: updateYourself(TimeStep *tStep)
 }
 
 
-contextIOResultType
-RCSDNLMaterialStatus :: saveContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// saves full information stored in this Status
-// no temp variables stored
-//
+void
+RCSDNLMaterialStatus :: saveContext(DataStream &stream, ContextMode mode)
 {
+    RCSDEMaterialStatus :: saveContext(stream, mode);
+
     contextIOResultType iores;
-
-    // save parent class status
-    if ( ( iores = RCSDEMaterialStatus :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    // write a raw data
     if ( ( iores = nonlocalStrainVector.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    return CIO_OK;
 }
 
 
-contextIOResultType
-RCSDNLMaterialStatus :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// restores full information stored in stream to this Status
-//
+void
+RCSDNLMaterialStatus :: restoreContext(DataStream &stream, ContextMode mode)
 {
+    RCSDEMaterialStatus :: restoreContext(stream, mode);
+
     contextIOResultType iores;
-
-    // read parent class status
-    if ( ( iores = RCSDEMaterialStatus :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    // read raw data
-
     if ( ( iores = nonlocalStrainVector.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    return CIO_OK; // return success
 }
 
 
@@ -554,7 +503,7 @@ RCSDNLMaterialStatus :: giveInterface(InterfaceType type)
     if ( type == NonlocalMaterialStatusExtensionInterfaceType ) {
         return this;
     } else {
-        return NULL;
+        return nullptr;
     }
 }
 

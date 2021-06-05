@@ -32,7 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "Elements/PlaneStrain/quad1planestrain.h"
+#include "sm/Elements/PlaneStrain/quad1planestrain.h"
 #include "fei2dquadlin.h"
 #include "node.h"
 #include "crosssection.h"
@@ -48,7 +48,7 @@
 #ifdef __OOFEG
  #include "oofeggraphiccontext.h"
  #include "oofegutils.h"
- #include "Materials/rcm2.h"
+ #include "sm/Materials/rcm2.h"
 #endif
 
 namespace oofem {
@@ -203,14 +203,11 @@ Quad1PlaneStrain :: computeBHmatrixAt(GaussPoint *gp, FloatMatrix &answer)
 }
 
 
-IRResultType
-Quad1PlaneStrain :: initializeFrom(InputRecord *ir)
+void
+Quad1PlaneStrain :: initializeFrom(InputRecord &ir)
 {
     numberOfGaussPoints = 4;
-    IRResultType result = PlaneStrainElement :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    PlaneStrainElement :: initializeFrom(ir);
 
     if ( !( ( numberOfGaussPoints == 4 ) ||
             ( numberOfGaussPoints == 1 ) ||
@@ -254,37 +251,37 @@ Quad1PlaneStrain :: HuertaErrorEstimatorI_setupRefinedElementProblem(RefinedElem
                                                                      IntArray &controlNode, IntArray &controlDof,
                                                                      HuertaErrorEstimator :: AnalysisMode aMode)
 {
-    int inode, nodes = 4, iside, sides = 4, nd1, nd2;
-    FloatArray *corner [ 4 ], midSide [ 4 ], midNode, cor [ 4 ];
+    int nodes = 4, sides = 4;
     double x = 0.0, y = 0.0;
 
     static int sideNode [ 4 ] [ 2 ] = { { 1, 2 }, { 2, 3 }, { 3, 4 }, { 4, 1 } };
 
+    FloatArray corner [ 4 ], midSide [ 4 ], midNode, cor [ 4 ];
     if ( sMode == HuertaErrorEstimatorInterface :: NodeMode ||
          ( sMode == HuertaErrorEstimatorInterface :: BCMode && aMode == HuertaErrorEstimator :: HEE_linear ) ) {
-        for ( inode = 0; inode < nodes; inode++ ) {
+        for ( int inode = 0; inode < nodes; inode++ ) {
             corner [ inode ] = this->giveNode(inode + 1)->giveCoordinates();
-            if ( corner [ inode ]->giveSize() != 3 ) {
+            if ( corner [ inode ].giveSize() != 3 ) {
                 cor [ inode ].resize(3);
-                cor [ inode ].at(1) = corner [ inode ]->at(1);
-                cor [ inode ].at(2) = corner [ inode ]->at(2);
+                cor [ inode ].at(1) = corner [ inode ].at(1);
+                cor [ inode ].at(2) = corner [ inode ].at(2);
                 cor [ inode ].at(3) = 0.0;
 
-                corner [ inode ] = & ( cor [ inode ] );
+                corner [ inode ] = cor [ inode ];
             }
 
-            x += corner [ inode ]->at(1);
-            y += corner [ inode ]->at(2);
+            x += corner [ inode ].at(1);
+            y += corner [ inode ].at(2);
         }
 
-        for ( iside = 0; iside < sides; iside++ ) {
+        for ( int iside = 0; iside < sides; iside++ ) {
             midSide [ iside ].resize(3);
 
-            nd1 = sideNode [ iside ] [ 0 ] - 1;
-            nd2 = sideNode [ iside ] [ 1 ] - 1;
+            int nd1 = sideNode [ iside ] [ 0 ] - 1;
+            int nd2 = sideNode [ iside ] [ 1 ] - 1;
 
-            midSide [ iside ].at(1) = ( corner [ nd1 ]->at(1) + corner [ nd2 ]->at(1) ) / 2.0;
-            midSide [ iside ].at(2) = ( corner [ nd1 ]->at(2) + corner [ nd2 ]->at(2) ) / 2.0;
+            midSide [ iside ].at(1) = ( corner [ nd1 ].at(1) + corner [ nd2 ].at(1) ) / 2.0;
+            midSide [ iside ].at(2) = ( corner [ nd1 ].at(2) + corner [ nd2 ].at(2) ) / 2.0;
             midSide [ iside ].at(3) = 0.0;
         }
 

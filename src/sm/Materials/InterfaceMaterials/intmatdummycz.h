@@ -56,24 +56,22 @@ class IntMatDummyCZ : public StructuralInterfaceMaterial
 {
 public:
     IntMatDummyCZ(int n, Domain *d);
-    virtual ~IntMatDummyCZ();
 
-    virtual const char *giveClassName() const { return "IntMatBilinearCZ"; }
-    virtual const char *giveInputRecordName() const { return _IFT_IntMatDummyCZ_Name; }
+    const char *giveClassName() const override { return "IntMatBilinearCZ"; }
+    const char *giveInputRecordName() const override { return _IFT_IntMatDummyCZ_Name; }
 
 
-    virtual void giveFirstPKTraction_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &jump,
-                                        const FloatMatrix &F, TimeStep *tStep);
+    FloatArrayF<3> giveFirstPKTraction_3d(const FloatArrayF<3> &jump, const FloatMatrixF<3,3> &F, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual void give3dStiffnessMatrix_dTdj(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep);
+    FloatMatrixF<3,3> give3dStiffnessMatrix_dTdj(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual bool hasAnalyticalTangentStiffness() const { return true; }
+    bool hasAnalyticalTangentStiffness() const override { return true; }
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const { return new StructuralInterfaceMaterialStatus(1, domain, gp); }
-    virtual void printYourself();
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new StructuralInterfaceMaterialStatus(gp); }
+    void printYourself() override;
 };
 
 } /* namespace oofem */

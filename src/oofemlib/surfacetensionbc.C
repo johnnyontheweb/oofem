@@ -53,18 +53,20 @@
 #include <list>
 #include <memory>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 namespace oofem {
 REGISTER_BoundaryCondition(SurfaceTensionBoundaryCondition);
 
-IRResultType SurfaceTensionBoundaryCondition :: initializeFrom(InputRecord *ir)
+void SurfaceTensionBoundaryCondition :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;
+    ActiveBoundaryCondition :: initializeFrom(ir);
 
     IR_GIVE_FIELD(ir, this->gamma, _IFT_SurfaceTensionBoundaryCondition_gamma);
 
-    this->useTangent = ir->hasField(_IFT_SurfaceTensionBoundaryCondition_useTangent);
-
-    return ActiveBoundaryCondition :: initializeFrom(ir);
+    this->useTangent = ir.hasField(_IFT_SurfaceTensionBoundaryCondition_useTangent);
 }
 
 void SurfaceTensionBoundaryCondition :: giveLocationArrays(std :: vector< IntArray > &rows, std :: vector< IntArray > &cols, CharType type,
@@ -76,7 +78,6 @@ void SurfaceTensionBoundaryCondition :: giveLocationArrays(std :: vector< IntArr
 
     Set *set = this->giveDomain()->giveSet(this->set);
     const IntArray &boundaries = set->giveBoundaryList();
-    IntArray bNodes;
 
     rows.resize(boundaries.giveSize() / 2);
     cols.resize(boundaries.giveSize() / 2);
@@ -85,7 +86,7 @@ void SurfaceTensionBoundaryCondition :: giveLocationArrays(std :: vector< IntArr
         Element *e = this->giveDomain()->giveElement( boundaries.at(pos * 2 - 1) );
         int boundary = boundaries.at(pos * 2);
 
-        e->giveInterpolation()->boundaryGiveNodes(bNodes, boundary);
+        const auto &bNodes = e->giveInterpolation()->boundaryGiveNodes(boundary);
 
         e->giveBoundaryLocationArray(rows [ pos ], bNodes, this->dofs, r_s);
         e->giveBoundaryLocationArray(cols [ pos ], bNodes, this->dofs, c_s);
@@ -93,7 +94,9 @@ void SurfaceTensionBoundaryCondition :: giveLocationArrays(std :: vector< IntArr
 }
 
 void SurfaceTensionBoundaryCondition :: assemble(SparseMtrx &answer, TimeStep *tStep,
-                                                 CharType type, const UnknownNumberingScheme &r_s, const UnknownNumberingScheme &c_s)
+                                                 CharType type, const UnknownNumberingScheme &r_s, 
+                                                 const UnknownNumberingScheme &c_s, double scale,
+                                                 void*lock)
 {
     if ( !this->useTangent || type != TangentStiffnessMatrix ) {
         return;
@@ -102,7 +105,7 @@ void SurfaceTensionBoundaryCondition :: assemble(SparseMtrx &answer, TimeStep *t
     OOFEM_ERROR("Not implemented yet.");
 
     FloatMatrix Ke;
-    IntArray r_loc, c_loc, bNodes;
+    IntArray r_loc, c_loc;
 
     Set *set = this->giveDomain()->giveSet(this->set);
     const IntArray &boundaries = set->giveBoundaryList();
@@ -111,25 +114,34 @@ void SurfaceTensionBoundaryCondition :: assemble(SparseMtrx &answer, TimeStep *t
         Element *e = this->giveDomain()->giveElement( boundaries.at(pos * 2 - 1) );
         int boundary = boundaries.at(pos * 2);
 
-        e->giveInterpolation()->boundaryGiveNodes(bNodes, boundary);
+        const auto &bNodes = e->giveInterpolation()->boundaryGiveNodes(boundary);
 
         e->giveBoundaryLocationArray(r_loc, bNodes, this->dofs, r_s);
         e->giveBoundaryLocationArray(c_loc, bNodes, this->dofs, c_s);
         this->computeTangentFromElement(Ke, e, boundary, tStep);
+        Ke.times(scale);
+#ifdef _OPENMP
+        if (lock) omp_set_lock(static_cast<omp_lock_t*>(lock));
+#endif
         answer.assemble(r_loc, c_loc, Ke);
+#ifdef _OPENMP
+        if (lock) omp_unset_lock(static_cast<omp_lock_t*>(lock));
+#endif
     }
 }
 
 void SurfaceTensionBoundaryCondition :: assembleVector(FloatArray &answer, TimeStep *tStep,
                                                        CharType type, ValueModeType mode,
-                                                       const UnknownNumberingScheme &s, FloatArray *eNorms)
+                                                       const UnknownNumberingScheme &s, 
+                                                       FloatArray *eNorms,
+                                                       void*lock)
 {
     if ( type != ExternalForcesVector ) {
         return;
     }
 
     FloatArray fe;
-    IntArray loc, masterdofids, bNodes;
+    IntArray loc, masterdofids;
 
     Set *set = this->giveDomain()->giveSet(this->set);
     const IntArray &boundaries = set->giveBoundaryList();
@@ -138,14 +150,20 @@ void SurfaceTensionBoundaryCondition :: assembleVector(FloatArray &answer, TimeS
         Element *e = this->giveDomain()->giveElement( boundaries.at(pos * 2 - 1) );
         int boundary = boundaries.at(pos * 2);
 
-        e->giveInterpolation()->boundaryGiveNodes(bNodes, boundary);
+        const auto &bNodes = e->giveInterpolation()->boundaryGiveNodes(boundary);
 
         e->giveBoundaryLocationArray(loc, bNodes, this->dofs, s, & masterdofids);
         this->computeLoadVectorFromElement(fe, e, boundary, tStep);
+#ifdef _OPENMP
+        if (lock) omp_set_lock(static_cast<omp_lock_t*>(lock));
+#endif
         answer.assemble(fe, loc);
         if ( eNorms ) {
             eNorms->assembleSquared(fe, masterdofids);
         }
+#ifdef _OPENMP
+        if (lock) omp_unset_lock(static_cast<omp_lock_t*>(lock));
+#endif
     }
 }
 
@@ -281,8 +299,7 @@ void SurfaceTensionBoundaryCondition :: computeLoadVectorFromElement(FloatArray 
         FEInterpolation2d *fei2d = static_cast< FEInterpolation2d * >(fei);
 
         ///@todo More of this grunt work should be moved to the interpolation classes
-        IntArray bnodes;
-        fei2d->boundaryGiveNodes(bnodes, side);
+        const auto &bnodes = fei2d->boundaryGiveNodes(side);
         int nodes = bnodes.giveSize();
         FloatMatrix xy(2, nodes);
         for ( int i = 1; i <= nodes; i++ ) {

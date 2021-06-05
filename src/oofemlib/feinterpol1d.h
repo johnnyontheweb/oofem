@@ -36,6 +36,7 @@
 #define feinterpol1d_h
 
 #include "feinterpol.h"
+#include <stdexcept>
 
 namespace oofem {
 /**
@@ -45,15 +46,32 @@ class OOFEM_EXPORT FEInterpolation1d : public FEInterpolation
 {
 public:
     FEInterpolation1d(int o) : FEInterpolation(o) { }
-    virtual int giveNsd() { return 1; }
+    int giveNsd() override { return 1; }
 
-    //virtual FloatArray giveParametricCenter() const { return {0.}; }
+    //FloatArray giveParametricCenter() const override { return {0.}; }
 
-    virtual void boundaryGiveNodes(IntArray &answer, int boundary);
-    virtual void boundaryEvalN(FloatArray &answer, int boundary, const FloatArray &lcoords, const FEICellGeometry &cellgeo);
-    virtual double boundaryEvalNormal(FloatArray &answer, int boundary, const FloatArray &lcoords, const FEICellGeometry &cellgeo);
-    virtual double boundaryGiveTransformationJacobian(int boundary, const FloatArray &lcoords, const FEICellGeometry &cellgeo);
-    virtual void boundaryLocal2Global(FloatArray &answer, int boundary, const FloatArray &lcoords, const FEICellGeometry &cellgeo);
+    IntArray boundaryGiveNodes(int boundary) const override;
+    void boundaryEvalN(FloatArray &answer, int boundary, const FloatArray &lcoords, const FEICellGeometry &cellgeo) override;
+    double boundaryEvalNormal(FloatArray &answer, int boundary, const FloatArray &lcoords, const FEICellGeometry &cellgeo) override;
+    double boundaryGiveTransformationJacobian(int boundary, const FloatArray &lcoords, const FEICellGeometry &cellgeo) override;
+    void boundaryLocal2Global(FloatArray &answer, int boundary, const FloatArray &lcoords, const FEICellGeometry &cellgeo) override;
+
+    /**@name Surface interpolation services */
+    //@{
+    void boundarySurfaceEvalN(FloatArray &answer, int isurf, const FloatArray &lcoords, const FEICellGeometry &cellgeo) override
+    { OOFEM_ERROR("Functions not supported for this interpolator."); }
+    void boundarySurfaceEvaldNdx(FloatMatrix &answer, int isurf, const FloatArray &lcoords, const FEICellGeometry &cellgeo) override
+    { OOFEM_ERROR("Functions not supported for this interpolator."); }
+    double boundarySurfaceEvalNormal(FloatArray &answer, int isurf, const FloatArray &lcoords, const FEICellGeometry &cellgeo) override
+    { OOFEM_ERROR("Functions not supported for this interpolator."); }
+    void boundarySurfaceLocal2global(FloatArray &answer, int isurf, const FloatArray &lcoords, const FEICellGeometry &cellgeo) override
+    { OOFEM_ERROR("Functions not supported for this interpolator."); }
+    double boundarySurfaceGiveTransformationJacobian(int isurf, const FloatArray &lcoords, const FEICellGeometry &cellgeo) override
+    { OOFEM_ERROR("Functions not supported for this interpolator."); }
+    IntArray boundarySurfaceGiveNodes(int boundary) const override
+    { throw std::runtime_error("Functions not supported for this interpolator."); }
+    //@}
+
 
     /**@name Surface interpolation services */
     //@{
@@ -88,9 +106,9 @@ public:
         return 0;
     }
 
-    virtual IntegrationRule *giveIntegrationRule(int order);
-    virtual IntegrationRule *giveBoundaryIntegrationRule(int order, int boundary);
-    virtual IntegrationRule *giveBoundaryEdgeIntegrationRule(int order, int boundary);
+    std::unique_ptr<IntegrationRule> giveIntegrationRule(int order) override;
+    std::unique_ptr<IntegrationRule> giveBoundaryIntegrationRule(int order, int boundary) override;
+    std::unique_ptr<IntegrationRule> giveBoundaryEdgeIntegrationRule(int order, int boundary) override;
 };
 } // end namespace oofem
 #endif // feinterpol1d_h

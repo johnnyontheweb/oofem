@@ -36,7 +36,7 @@
 #define micromaterial_h
 
 #include "structuralmaterial.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Materials/structuralms.h"
 #include "dictionary.h"
 #include "floatarray.h"
 #include "floatmatrix.h"
@@ -45,7 +45,7 @@
 #include "contextioerr.h"
 #include "unknownnumberingscheme.h"
 #include "boundarycondition.h"
-#include "Elements/3D/macrolspace.h"
+#include "sm/Elements/3D/macrolspace.h"
 #include "error.h"
 
 ///@name Input fields for MicroMaterial
@@ -63,19 +63,16 @@ class MicroMaterialStatus : public StructuralMaterialStatus
 {
 public:
     /// Constructor
-    MicroMaterialStatus(int, Domain * d, GaussPoint * gp);
+    MicroMaterialStatus(GaussPoint * gp);
 
-    /// Destructor
-    virtual ~MicroMaterialStatus();
+    void initTempStatus() override;
+    void updateYourself(TimeStep *tStep) override;
+    void printOutputAt(FILE *file, TimeStep *tStep) const override;
 
-    virtual void initTempStatus();
-    virtual void updateYourself(TimeStep *tStep);
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    const char *giveClassName() const override { return "MicroMaterialStatus"; }
 
-    virtual const char *giveClassName() const { return "MicroMaterialStatus"; }
-
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 };
 
 
@@ -91,68 +88,66 @@ class MicroMaterial : public StructuralMaterial, public UnknownNumberingScheme
 public:
     /// Constructor
     MicroMaterial(int n, Domain * d);
-    /// Destructor
-    virtual ~MicroMaterial();
 
     std :: string inputFileNameMicro;
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual const char *giveInputRecordName() const { return _IFT_MicroMaterial_Name; }
-    virtual const char *giveClassName() const { return "MicroMaterial"; }
+    const char *giveInputRecordName() const override { return _IFT_MicroMaterial_Name; }
+    const char *giveClassName() const override { return "MicroMaterial"; }
 
-    virtual void giveRealStressVector_3d(FloatArray &answer, GaussPoint *, const FloatArray &, TimeStep *);
+    FloatArrayF<6> giveRealStressVector_3d(const FloatArrayF<6> &strain, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const;
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
 
     void giveMacroStiffnessMatrix(FloatMatrix &answer, TimeStep *tStep, MatResponseMode rMode, const IntArray &microMasterNodes, const IntArray &microBoundaryNodes);
 
     void setMacroProperties(Domain *macroDomain, MacroLSpace *macroLSpaceElement, const IntArray &microMasterNodes, const IntArray &microBoundaryNodes);
 
     /// Pointer to the underlying micro problem.
-    EngngModel *problemMicro;
+    std::unique_ptr<EngngModel> problemMicro;
 
     /// Pointer to the macroscale domain.
-    Domain *macroDomain;
+    Domain *macroDomain = nullptr;
 
     /// Pointer to the macroscale element.
-    MacroLSpace *macroLSpaceElement;
+    MacroLSpace *macroLSpaceElement = nullptr;
 
     /// Related to numbering scheme.
-    void init(void);
-    int giveDofEquationNumber(Dof *dof) const;
-    virtual bool isDefault() const { return isDefaultNumbering; }
-    virtual int giveRequiredNumberOfDomainEquation() const;
+    void init(void) override;
+    int giveDofEquationNumber(Dof *dof) const override;
+    bool isDefault() const override { return isDefaultNumbering; }
+    int giveRequiredNumberOfDomainEquation() const override;
     //friend class EngngModel;-not here but define in EngngModel class
     /// Array containing coordinates of 8 master nodes of microproblem.
     std::vector< FloatArray >microMasterCoords;
     /// Array containing equation numbers for boundary nodes [DofManagerNumber][DOF].
-    int **microBoundaryDofs;
+    std::vector<IntArray> microBoundaryDofs;
     /// Array of equation numbers associated to boundary nodes.
     IntArray microBoundaryDofsArr;
     /// Array containing equation numbers for internal nodes to be condensed out [DofManagerNumber][DOF].
-    int **microInternalDofs;
+    std::vector<IntArray> microInternalDofs;
     /// Array of equation numbers associated to internal nodes.
     IntArray microInternalDofsArr;
     /// Array containing default equation numbers for all nodes [DofManagerNumber][DOF].
-    int **microDefaultDofs;
+    std::vector<IntArray> microDefaultDofs;
     /// Flag signalizing whether micromaterial is used by other element.
-    bool microMatIsUsed;
+    bool microMatIsUsed = false;
 
 protected:
-    bool isDefaultNumbering;
+    bool isDefaultNumbering = true;
     /// The maximum DOFs corresponding to released all of the boundary conditions.
-    int maxNumberOfDomainEquation;
+    int maxNumberOfDomainEquation = 0;
     /// Required number of domain equations.
-    int reqNumberOfDomainEquation;
+    int reqNumberOfDomainEquation = 0;
     /// Number of DOF Managers.
-    int NumberOfDofManagers;
+    int NumberOfDofManagers = 0;
     enum EquationNumbering { AllNodes, BoundaryNodes, InteriorNodes };
-    EquationNumbering DofEquationNumbering;
+    EquationNumbering DofEquationNumbering = AllNodes;
     /// Number of equations associated with boundary nodes.
-    int totalBoundaryDofs;
+    int totalBoundaryDofs = 0;
     /// Number of equations associated with boundary nodes.
-    int totalInternalDofs;
+    int totalInternalDofs = 0;
 };
 } // end namespace oofem
 #endif // micromaterial_h

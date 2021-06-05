@@ -35,7 +35,7 @@
 #ifndef microplanematerial_bazant_h
 #define microplanematerial_bazant_h
 
-#include "../sm/Materials/structuralms.h"
+#include "sm/Materials/structuralms.h"
 #include "microplanematerial.h"
 
 
@@ -56,21 +56,21 @@ public:
      * @param d Domain to which newly created material belongs.
      */
     MicroplaneMaterial_Bazant(int n, Domain * d);
-    /// Destructor.
-    virtual ~MicroplaneMaterial_Bazant() { }
 
-    virtual void giveRealStressVector_3d(FloatArray &answer, GaussPoint *gp,
-                                      const FloatArray &reducedStrain, TimeStep *tStep);
+    FloatArrayF<6> giveRealStressVector_3d(const FloatArrayF<6> &strain, GaussPoint *gp,
+                                           TimeStep *tStep) const override;
 
+    /**
+    * Computes stress on given microplane (volumetric, deviatoric normal stresses and shead stresses)
+    */
+    virtual MicroplaneState giveRealMicroplaneStressVector(GaussPoint *gp, int mnumber, const MicroplaneState &strain, TimeStep *tStep) const = 0;
 
     /**
      * Updates the volumetric stress component after computing real stress microplane vectors.
      */
-    virtual void updateVolumetricStressTo(Microplane *mPlane, double sigv) = 0;
+    virtual void updateVolumetricStressTo(GaussPoint *gp, int mnumber, double sigv) const = 0;
 
-    virtual const char *giveClassName() const { return "MicroplaneMaterial_Bazant"; }
-
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const { return new StructuralMaterialStatus(1, domain, gp); }
+    const char *giveClassName() const override { return "MicroplaneMaterial_Bazant"; }
 };
 } // end namespace oofem
 #endif // microplanematerial_bazant_h

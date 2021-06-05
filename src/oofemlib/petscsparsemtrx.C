@@ -50,11 +50,17 @@ REGISTER_SparseMtrx(PetscSparseMtrx, SMT_PetscMtrx);
 
 
 PetscSparseMtrx :: PetscSparseMtrx(int n, int m) : SparseMtrx(n, m),
-    mtrx(NULL), symmFlag(false), leqs(0), geqs(0), blocksize(1), di(0), kspInit(false), newValues(true), localIS(NULL), globalIS(NULL) { }
-
-
-PetscSparseMtrx :: PetscSparseMtrx() : SparseMtrx(),
-    mtrx(NULL), symmFlag(false), leqs(0), geqs(0), blocksize(1), di(0), kspInit(false), newValues(true), localIS(NULL), globalIS(NULL){ }
+    mtrx(NULL),
+    symmFlag(false),
+    leqs(0),
+    geqs(0),
+    blocksize(1),
+    di(0),
+    kspInit(false),
+    newValues(true),
+    localIS(NULL),
+    globalIS(NULL)
+{ }
 
 
 PetscSparseMtrx :: ~PetscSparseMtrx()
@@ -70,10 +76,10 @@ PetscSparseMtrx :: ~PetscSparseMtrx()
 }
 
 
-SparseMtrx *
-PetscSparseMtrx :: GiveCopy() const
+std::unique_ptr<SparseMtrx>
+PetscSparseMtrx :: clone() const
 {
-    PetscSparseMtrx *answer = new PetscSparseMtrx(nRows, nColumns);
+    std::unique_ptr<PetscSparseMtrx> answer = std::make_unique<PetscSparseMtrx>(nRows, nColumns);
     MatDuplicate( this->mtrx, MAT_COPY_VALUES, & ( answer->mtrx ) );
     answer->symmFlag = this->symmFlag;
     answer->mType    = this->mType;
@@ -84,7 +90,7 @@ PetscSparseMtrx :: GiveCopy() const
     answer->kspInit  = false;
     answer->newValues = this->newValues;
 
-    return answer;
+    return std::move(answer);
 }
 
 void
@@ -126,7 +132,7 @@ PetscSparseMtrx :: times(const FloatArray &x, FloatArray &answer) const
         VecGetArray(globY, & ptr);
         answer.resize(this->nRows);
         for ( int i = 0; i < this->nRows; i++ ) {
-            answer(i) = ptr [ i ];
+            answer[i] = ptr [ i ];
         }
 
         VecRestoreArray(globY, & ptr);
@@ -157,7 +163,7 @@ PetscSparseMtrx :: timesT(const FloatArray &x, FloatArray &answer) const
     VecGetArray(globY, & ptr);
     answer.resize(this->nColumns);
     for ( int i = 0; i < this->nColumns; i++ ) {
-        answer(i) = ptr [ i ];
+        answer[i] = ptr [ i ];
     }
 
     VecRestoreArray(globY, & ptr);
@@ -248,13 +254,13 @@ PetscSparseMtrx :: timesT(const FloatMatrix &B, FloatMatrix &answer) const
     BT.beTranspositionOf(B);
     MatCreateSeqDense(PETSC_COMM_SELF, BT.giveNumberOfRows(), BT.giveNumberOfColumns(), BT.givePointer(), & globB);
     MatMatMult(globB, this->mtrx, MAT_INITIAL_MATRIX, PETSC_DEFAULT, & globC);
-    const double *vals;
     for ( int r = 0; r < nc; r++ ) {
-        MatGetRow(globC, r, NULL, NULL, & vals);
+    const double *vals;
+        MatGetRow(globC, r, nullptr, nullptr, & vals);
         for ( int i = 0; i < nr; i++ ) {
             * aptr++ = vals [ i ];
         }
-        MatRestoreRow(globC, r, NULL, NULL, & vals);
+        MatRestoreRow(globC, r, nullptr, nullptr, & vals);
     }
 
     MatDestroy(& globB);
@@ -289,6 +295,77 @@ PetscSparseMtrx :: addDiagonal(double x, FloatArray &m)
     }
     MatDiagonalSet(this->mtrx, globM, ADD_VALUES);
     VecDestroy(& globM);
+}
+
+int
+PetscSparseMtrx :: buildInternalStructure(EngngModel *eModel, int n, int m, const IntArray &I, const IntArray &J)
+{
+    if ( mtrx ) {
+        MatDestroy(& mtrx);
+    }
+
+    if ( this->kspInit ) {
+        KSPDestroy(& ksp);
+        this->kspInit = false; // force ksp to be initialized
+    }
+
+    this->emodel = eModel;
+    this->di = 0;
+
+    if ( emodel->isParallel() ) {
+        OOFEM_ERROR("Parallel is not supported in manual matrix creation");
+    }
+
+    nRows = geqs = leqs = n;
+    nColumns = m;
+    blocksize = 1;
+
+    int total_nnz;
+    IntArray d_nnz(leqs), d_nnz_sym(leqs);
+    {
+        //determine nonzero structure of matrix
+        std :: vector< IntArray > rows_upper(nRows), rows_lower(nRows);
+
+        for ( int ii : I ) {
+            if ( ii > 0 ) {
+                for ( int jj : J ) {
+                    if ( jj > 0 ) {
+                        if ( jj >= ii ) {
+                            rows_upper [ ii - 1 ].insertSortedOnce(jj - 1);
+                        } else {
+                            rows_lower [ ii - 1 ].insertSortedOnce(jj - 1);
+                        }
+                    }
+                }
+            }
+        }
+
+        total_nnz = 0;
+        for ( int i = 0; i < leqs; i++ ) {
+            d_nnz[i] = rows_upper [ i ].giveSize() + rows_lower [ i ].giveSize();
+        }
+    }
+
+    // create PETSc mat
+    MatCreate(PETSC_COMM_SELF, & mtrx);
+    MatSetSizes(mtrx, nRows, nColumns, nRows, nColumns);
+    MatSetFromOptions(mtrx);
+
+    if ( total_nnz / nColumns > nRows / 10 ) { // More than 10% nnz, then we just force the dense matrix.
+        MatSetType(mtrx, MATDENSE);
+    } else {
+        MatSetType(mtrx, MATSEQAIJ);
+    }
+
+    //The incompatible preallocations are ignored automatically.
+    MatSetUp(mtrx);
+    MatSeqAIJSetPreallocation( mtrx, 0, d_nnz.givePointer() );
+
+    MatSetOption(mtrx, MAT_ROW_ORIENTED, PETSC_FALSE); // To allow the insertion of values using MatSetValues in column major order
+    MatSetOption(mtrx, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
+
+    this->newValues = true;
+    return true;
 }
 
 ///@todo I haven't looked at the parallel code yet (lack of time right now, and i want to see it work first). / Mikael
@@ -373,7 +450,8 @@ PetscSparseMtrx :: buildInternalStructure(EngngModel *eModel, int di, const Unkn
 
         total_nnz = 0;
         for ( int i = 0; i < leqs; i++ ) {
-            d_nnz(i) = rows_upper [ i ].giveSize() + rows_lower [ i ].giveSize();
+            d_nnz[i] = rows_upper [ i ].giveSize() + rows_lower [ i ].giveSize();
+            total_nnz += d_nnz[i];
         }
     }
 
@@ -419,8 +497,8 @@ PetscSparseMtrx :: buildInternalStructure(EngngModel *eModel, int di, const Unkn
     if ( localIS ) {
         ISDestroy(& localIS);
         ISDestroy(& globalIS);
-        localIS = NULL;
-        globalIS = NULL;
+        localIS = nullptr;
+        globalIS = nullptr;
     }
 
     this->emodel = eModel;
@@ -506,16 +584,16 @@ PetscSparseMtrx :: buildInternalStructure(EngngModel *eModel, int di, const Unkn
             }
 
             for ( int i = 0; i < leqs; i++ ) {
-                d_nnz(i) = d_rows_upper [ i ].giveSize() + d_rows_lower [ i ].giveSize();
-                o_nnz(i) = o_rows_upper [ i ].giveSize() + o_rows_lower [ i ].giveSize();
+                d_nnz[i] = d_rows_upper [ i ].giveSize() + d_rows_lower [ i ].giveSize();
+                o_nnz[i] = o_rows_upper [ i ].giveSize() + o_rows_lower [ i ].giveSize();
 
-                d_nnz_sym(i) = d_rows_upper [ i ].giveSize();
-                o_nnz_sym(i) = o_rows_upper [ i ].giveSize();
+                d_nnz_sym[i] = d_rows_upper [ i ].giveSize();
+                o_nnz_sym[i] = o_rows_upper [ i ].giveSize();
             }
         }
 
         //fprintf (stderr,"\n[%d]PetscSparseMtrx: Profile ...",rank);
-        //for (i=0; i<leqs; i++) fprintf(stderr, "%d ", d_nnz(i));
+        //for (i=0; i<leqs; i++) fprintf(stderr, "%d ", d_nnz[i]);
         //fprintf (stderr,"\n[%d]PetscSparseMtrx: Creating MPIAIJ Matrix ...\n",rank);
 
         // create PETSc mat
@@ -802,6 +880,32 @@ PetscSparseMtrx :: at(int i, int j) const
     //return value;
 }
 
+std::unique_ptr<SparseMtrx>
+PetscSparseMtrx :: giveSubMatrix(const IntArray &rows, const IntArray &cols)
+{
+#ifdef __PARALLEL_MODE
+    auto comm = this->emodel->giveParallelComm();
+#else
+    auto comm = PETSC_COMM_SELF;
+#endif
+    IntArray prows = rows, pcols = cols;
+    prows.add(-1);
+    pcols.add(-1);
+
+    std::unique_ptr<PetscSparseMtrx> answer = std::make_unique<PetscSparseMtrx>(prows.giveSize(), pcols.giveSize());
+    answer->emodel = this->emodel;
+    IS is_rows;
+    IS is_cols;
+
+    ISCreateGeneral(comm, prows.giveSize(), prows.givePointer(), PETSC_USE_POINTER, & is_rows);
+    ISCreateGeneral(comm, pcols.giveSize(), pcols.givePointer(), PETSC_USE_POINTER, & is_cols);
+    MatGetSubMatrix(this->mtrx, is_rows, is_cols, MAT_INITIAL_MATRIX, & answer->mtrx);
+    ISDestroy(& is_rows);
+    ISDestroy(& is_cols);
+
+    return std::move(answer);
+}
+
 void
 PetscSparseMtrx :: toFloatMatrix(FloatMatrix &answer) const
 {
@@ -811,29 +915,36 @@ PetscSparseMtrx :: toFloatMatrix(FloatMatrix &answer) const
 void
 PetscSparseMtrx :: printStatistics() const
 {
-    PetscViewerSetFormat(PETSC_VIEWER_STDOUT_SELF, PETSC_VIEWER_ASCII_INFO);
+    PetscViewerPushFormat(PETSC_VIEWER_STDOUT_SELF, PETSC_VIEWER_ASCII_INFO);
     MatView(this->mtrx, PETSC_VIEWER_STDOUT_SELF);
+    PetscViewerPopFormat(PETSC_VIEWER_STDOUT_SELF);
 }
 
 void
 PetscSparseMtrx :: printYourself() const
 {
-    PetscViewerSetFormat(PETSC_VIEWER_STDOUT_SELF, PETSC_VIEWER_ASCII_DENSE);
+    PetscViewerPushFormat(PETSC_VIEWER_STDOUT_SELF, PETSC_VIEWER_ASCII_DENSE);
     MatView(this->mtrx, PETSC_VIEWER_STDOUT_SELF);
+    PetscViewerPopFormat(PETSC_VIEWER_STDOUT_SELF);
 }
 
 void
 PetscSparseMtrx :: printMatlab() const
 {
-    PetscViewerSetFormat(PETSC_VIEWER_STDOUT_SELF, PETSC_VIEWER_ASCII_MATLAB);
+    PetscViewerPushFormat(PETSC_VIEWER_STDOUT_SELF, PETSC_VIEWER_ASCII_MATLAB);
     MatView(this->mtrx, PETSC_VIEWER_STDOUT_SELF);
+    PetscViewerPopFormat(PETSC_VIEWER_STDOUT_SELF);
 }
 
 void
 PetscSparseMtrx :: writeToFile(const char *fname) const
 {
     PetscViewer viewer;
-    PetscViewerASCIIOpen(PETSC_COMM_WORLD, fname, & viewer);
+#ifdef __PARALLEL_MODE
+    PetscViewerASCIIOpen(this->emodel->giveParallelComm(), fname, & viewer);
+#else
+    PetscViewerASCIIOpen(PETSC_COMM_SELF, fname, & viewer);
+#endif
     MatView(this->mtrx, viewer);
     PetscViewerDestroy(& viewer);
 }

@@ -42,48 +42,53 @@
 #include "dictionary.h"
 #include "floatarray.h"
 #include "floatmatrix.h"
-#include "graddpmaterialextensioninterface.h"
+#include "graddamagematerialextensioninterface.h"
 
 namespace oofem {
 class GaussPoint;
 class Domain;
 
+
+#define _IFT_LargeStrainMasterMaterialGrad_Name "lsmastermatgrad"
+
+
 /**
  * This class implements an gradient version of LargeStrainMasterMaterial
  */
-class LargeStrainMasterMaterialGrad : public LargeStrainMasterMaterial, GradDpMaterialExtensionInterface
+class LargeStrainMasterMaterialGrad : public LargeStrainMasterMaterial, GradientDamageMaterialExtensionInterface
 {
 public:
-    LargeStrainMasterMaterialGrad(int n, Domain * d);
-    virtual ~LargeStrainMasterMaterialGrad();
+    LargeStrainMasterMaterialGrad(int n, Domain *d);
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual int hasMaterialModeCapability(MaterialMode mode);
-    virtual Interface *giveInterface(InterfaceType t) {
-        if ( t == GradDpMaterialExtensionInterfaceType ) {
-            return static_cast< GradDpMaterialExtensionInterface * >(this);
+    void initializeFrom(InputRecord &ir) override;
+    bool hasMaterialModeCapability(MaterialMode mode) const override;
+    Interface *giveInterface(InterfaceType t) override {
+        if ( t == GradientDamageMaterialExtensionInterfaceType ) {
+            return static_cast< GradientDamageMaterialExtensionInterface * >( this );
         } else {
-            return NULL;
+            return nullptr;
         }
     }
 
-    virtual void giveStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep);
+    void giveStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) override;
 
-    virtual void givePDGradMatrix_uu(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void givePDGradMatrix_ku(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void givePDGradMatrix_uk(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void givePDGradMatrix_kk(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void givePDGradMatrix_LD(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
+    void giveGradientDamageStiffnessMatrix_uu(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) override;
+    void giveGradientDamageStiffnessMatrix_du(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) override;
+    void giveGradientDamageStiffnessMatrix_ud(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) override;
+    void giveGradientDamageStiffnessMatrix_dd_BB(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) override;
+
+    void computeLocalDamageDrivingVariable(double &answer, GaussPoint *gp, TimeStep *tStep) override;
+    void giveNonlocalInternalForces_N_factor(double &answer, double nlddv, GaussPoint *gp, TimeStep *tStep) override;
+    void giveNonlocalInternalForces_B_factor(FloatArray &answer, const FloatArray &nlddv, GaussPoint *gp, TimeStep *tStep) override;
 
     void give3dKappaMatrix(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
     void give3dGprime(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
     void giveInternalLength(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual const char *giveClassName() const { return "LargeStrainMasterMaterialGrad"; }
+    const char *giveClassName() const override { return "LargeStrainMasterMaterialGrad"; }
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const;
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
 
     virtual void giveFirstPKStressVectorGrad(FloatArray &answer1, double &answer2, GaussPoint *gp, const FloatArray &totalStrain, double nonlocalDamageDrivningVariable, TimeStep *tStep);
 };
-
 } // end namespace oofem
 #endif // misesmat_h

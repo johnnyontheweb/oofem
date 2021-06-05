@@ -37,11 +37,13 @@
 #include "gausspoint.h"
 #include "gaussintegrationrule.h"
 #include "floatmatrix.h"
+#include "floatmatrixf.h"
 #include "floatarray.h"
+#include "floatarrayf.h"
 #include "intarray.h"
 #include "mathfem.h"
 #include "fei2dlinelin.h"
-#include "../sm/CrossSections/structuralinterfacecrosssection.h"
+#include "sm/CrossSections/structuralinterfacecrosssection.h"
 #include "classfactory.h"
 
 #ifdef __OOFEG
@@ -90,7 +92,7 @@ InterfaceElem2dLin :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize( 1 );
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 2) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 2);
         integrationRulesArray [ 0 ]->SetUpPointsOnLine(2, _2dInterface); 
     }
 }
@@ -117,22 +119,22 @@ InterfaceElem2dLin :: computeVolumeAround(GaussPoint *gp)
 void
 InterfaceElem2dLin :: computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
 {
-    static_cast< StructuralInterfaceCrossSection* >(this->giveCrossSection())->giveEngTraction_2d(answer, gp, strain, tStep);
+    answer = static_cast< StructuralInterfaceCrossSection* >(this->giveCrossSection())->giveEngTraction_2d(strain, gp, tStep);
 }
 
 
 void
 InterfaceElem2dLin :: computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
 {
-    static_cast< StructuralInterfaceCrossSection* >(this->giveCrossSection())->give2dStiffnessMatrix_Eng(answer, rMode, gp, tStep);
+    answer = static_cast< StructuralInterfaceCrossSection* >(this->giveCrossSection())->give2dStiffnessMatrix_Eng(rMode, gp, tStep);
 }
 
 
-IRResultType
-InterfaceElem2dLin :: initializeFrom(InputRecord *ir)
+void
+InterfaceElem2dLin :: initializeFrom(InputRecord &ir)
 {
-    this->axisymmode = ir->hasField(_IFT_InterfaceElem2dLin_axisymmode);
-    return StructuralElement :: initializeFrom(ir);
+    this->axisymmode = ir.hasField(_IFT_InterfaceElem2dLin_axisymmode);
+    StructuralElement :: initializeFrom(ir);
 }
 
 

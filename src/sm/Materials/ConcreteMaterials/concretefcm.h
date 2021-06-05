@@ -35,7 +35,7 @@
 #ifndef concretefcm_h
 #define concretefcm_h
 
-#include "../fcm.h"
+#include "sm/Materials/fcm.h"
 #include "randommaterialext.h"
 
 ///@name Input fields for ConcreteFCM
@@ -48,6 +48,7 @@
 #define _IFT_ConcreteFCM_ft "ft"
 #define _IFT_ConcreteFCM_beta "beta"
 #define _IFT_ConcreteFCM_sf "sf"
+#define _IFT_ConcreteFCM_sf_numer "sf_numer"
 #define _IFT_ConcreteFCM_fc "fc"
 #define _IFT_ConcreteFCM_ag "ag"
 #define _IFT_ConcreteFCM_lengthScale "lengthscale"
@@ -68,24 +69,20 @@ namespace oofem {
 class ConcreteFCMStatus : public FCMMaterialStatus, public RandomMaterialStatusExtensionInterface
 {
 public:
-    ConcreteFCMStatus(int n, Domain *d, GaussPoint *g);
-    virtual ~ConcreteFCMStatus();
-    /// Writes information into the output file.
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    ConcreteFCMStatus(GaussPoint *g);
 
-    // definition
-    virtual const char *giveClassName() const { return "ConcreteFCMStatus"; }
+    void printOutputAt(FILE *file, TimeStep *tStep) const override;
 
-    virtual void initTempStatus();
-    virtual void updateYourself(TimeStep *tStep);
+    const char *giveClassName() const override { return "ConcreteFCMStatus"; }
 
-    virtual Interface *giveInterface(InterfaceType it);
+    void initTempStatus() override;
+    void updateYourself(TimeStep *tStep) override;
 
-    // saves current context(state) into stream
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    Interface *giveInterface(InterfaceType it) override;
+
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 };
-
 
 
 /**
@@ -99,43 +96,38 @@ class ConcreteFCM : public FCMMaterial, public RandomMaterialExtensionInterface
 {
 public:
     ConcreteFCM(int n, Domain *d);
-    virtual ~ConcreteFCM() {
-        delete linearElasticMaterial;
-    }
 
-    // identification and auxiliary functions
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual int hasNonLinearBehaviour() { return 1; }
-    virtual const char *giveClassName() const { return "ConcreteFCM"; }
-    virtual const char *giveInputRecordName() const { return _IFT_ConcreteFCM_Name; }
+    void initializeFrom(InputRecord &ir) override;
+    const char *giveClassName() const override { return "ConcreteFCM"; }
+    const char *giveInputRecordName() const override { return _IFT_ConcreteFCM_Name; }
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const { return new ConcreteFCMStatus(1, domain, gp); }
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new ConcreteFCMStatus(gp); }
 
-    virtual double give(int aProperty, GaussPoint *gp);
+    double give(int aProperty, GaussPoint *gp) const override;
 
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 
-    virtual MaterialStatus *giveStatus(GaussPoint *gp) const;
-
+    MaterialStatus *giveStatus(GaussPoint *gp) const override;
 
 protected:
-
     /// Fracture energy
-    double Gf;
-    /// Tensile strenght
-    double Ft;
+    double Gf = 0.;
+    /// Tensile strength
+    double Ft = 0.;
     /// shear retention factor
-    double beta;
+    double beta = 0.;
     /// shear factor
-    double sf;
+    double sf = 0.;
+    /// shear factor for numerical purpose
+    double sf_numer = 0.;
 
     // 3 parameters for collins aggregate interlock:
     /// Collins' aggregate interlock: compressive strength in MPa
-    double fc;
+    double fc = 0.;
     /// Collins' aggregate interlock: aggregate diameter in appropriate units (same as FE mesh)
-    double ag;
+    double ag = 0.;
     /// Collins' aggregate interlock: 1 for meter, 1000 for analysis in mm
-    double lengthScale;
+    double lengthScale = 0.;
 
     /// user-defined softening (traction-COD)
     FloatArray soft_w, soft_function_w;
@@ -145,33 +137,24 @@ protected:
     FloatArray beta_w, beta_function;
 
     /// hardening modulus
-    double H;
+    double H = 0.;
     /// strain at failure
-    double eps_f;
+    double eps_f = 0.;
 
-    /// returns tensile strength (can be random)
-    virtual double giveTensileStrength(GaussPoint *gp) { return this->give(ft_strength, gp); }
+    double giveTensileStrength(GaussPoint *gp, TimeStep *tStep) override { return this->give(ft_strength, gp); }
+    virtual double giveFractureEnergy(GaussPoint *gp, TimeStep *tStep) { return this->give(gf_ID, gp); }
+    double giveCrackingModulus(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep, int i) override;
+    double giveCrackingModulusInTension(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep, int i) override;
+    double computeEffectiveShearModulus(GaussPoint *gp, TimeStep *tStep, int i) override;
+    double computeD2ModulusForCrack(GaussPoint *gp, TimeStep *tStep, int icrack) override;
+    double computeNumerD2ModulusForCrack(GaussPoint *gp, TimeStep *tStep, int icrack) override;
+    double giveNormalCrackingStress(GaussPoint *gp, TimeStep *tStep, double eps_cr, int i) override;
+    double maxShearStress(GaussPoint *gp, TimeStep *tStep, int i) override;
 
-    /// returns fracture energy (can be random)
-    virtual double giveFractureEnergy(GaussPoint *gp) { return this->give(gf_ID, gp); }
+    /// based on the maximum crack opening evaluates the residual strength
+    virtual double computeResidualTensileStrength(GaussPoint *gp, TimeStep *tStep);
 
-    /// returns stiffness in the normal direction of the i-th crack
-    virtual double giveCrackingModulus(MatResponseMode rMode, GaussPoint *gp, int i);
-
-    /// returns Geff which is necessary in the global stiffness matrix
-    virtual double computeEffectiveShearModulus(GaussPoint *gp, int i);
-
-    /// shear modulus for a given crack plane (1, 2, 3)
-    virtual double computeD2ModulusForCrack(GaussPoint *gp, int icrack);
-
-    /// computes normal stress associated with i-th crack direction
-    virtual double giveNormalCrackingStress(GaussPoint *gp, double eps_cr, int i);
-
-    /// computes the maximum value of the shear stress; if the shear stress exceeds this value, it is cropped
-    virtual double maxShearStress(GaussPoint *gp, int i);
-
-    /// checks possible snap-back
-    virtual void checkSnapBack(GaussPoint *gp, int crack);
+    void checkSnapBack(GaussPoint *gp, TimeStep *tStep, int crack) override;
 
     /// type of post-peak behavior in the normal direction to the crack plane
     enum SofteningType { ST_NONE, ST_Exponential, ST_Linear, ST_Hordijk, ST_UserDefinedCrack, ST_LinearHardeningStrain, ST_UserDefinedStrain, ST_Unknown };
@@ -179,11 +162,11 @@ protected:
 
     /// type of reduction of the shear stiffness caused by cracking
     enum ShearRetentionType { SHR_NONE, SHR_Const_ShearRetFactor, SHR_Const_ShearFactorCoeff, SHR_UserDefined_ShearRetFactor, SHR_Unknown };
-    ShearRetentionType shearType;
+    ShearRetentionType shearType = SHR_Unknown;
 
     /// defines the maximum value of shear stress
-    enum ShearStrengthType { SHS_NONE, SHS_Const_Ft, SHS_Collins_Interlock, SHS_Unknown };
-    ShearStrengthType shearStrengthType;
+    enum ShearStrengthType { SHS_NONE, SHS_Const_Ft, SHS_Collins_Interlock, SHS_Residual_Ft, SHS_Unknown };
+    ShearStrengthType shearStrengthType = SHS_Unknown;
 };
 } // end namespace oofem
 #endif // concretefcm_h

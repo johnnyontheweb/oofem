@@ -32,7 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "Elements/3D/q27space.h"
+#include "sm/Elements/3D/q27space.h"
 #include "node.h"
 #include "gausspoint.h"
 #include "gaussintegrationrule.h"
@@ -61,28 +61,17 @@ Q27Space :: Q27Space(int n, Domain *aDomain) : Structural3DElement(n, aDomain), 
 }
 
 
-IRResultType
-Q27Space :: initializeFrom(InputRecord *ir)
+void
+Q27Space :: initializeFrom(InputRecord &ir)
 {
     numberOfGaussPoints = 27;
-    return Structural3DElement :: initializeFrom(ir);
+    Structural3DElement :: initializeFrom(ir);
 }
 
 
 // ******************************
 // ***  Surface load support  ***
 // ******************************
-
-IntegrationRule *
-Q27Space :: GetSurfaceIntegrationRule(int approxOrder)
-{
-    IntegrationRule *iRule = new GaussIntegrationRule(1, this, 1, 1);
-    int npoints = iRule->getRequiredNumberOfIntegrationPoints(_Square, approxOrder);
-    iRule->SetUpPointsOnSquare(npoints, _Unknown);
-    return iRule;
-}
-
-
 
 int
 Q27Space :: computeLoadLSToLRotationMatrix(FloatMatrix &answer, int iSurf, GaussPoint *gp)
@@ -105,22 +94,21 @@ Q27Space :: computeLoadLSToLRotationMatrix(FloatMatrix &answer, int iSurf, Gauss
      */
     FloatArray gc(3);
     FloatArray h1(3), h2(3), nn(3), n(3);
-    IntArray snodes(4);
 
     answer.resize(3, 3);
     answer.zero();
 
-    this->interpolation.computeSurfaceMapping(snodes, dofManArray, iSurf);
+    const auto &snodes = this->interpolation.computeSurfaceMapping(dofManArray, iSurf);
     for ( int i = 1; i <= 4; i++ ) {
-        gc.add( * domain->giveNode( snodes.at(i) )->giveCoordinates() );
+        gc.add( domain->giveNode( snodes.at(i) )->giveCoordinates() );
     }
 
     gc.times(1. / 4.);
     // determine "average normal"
     for ( int i = 1; i <= 4; i++ ) {
         int j = ( i ) % 4 + 1;
-        h1.beDifferenceOf(* domain->giveNode( snodes.at(i) )->giveCoordinates(), gc);
-        h2.beDifferenceOf(* domain->giveNode( snodes.at(j) )->giveCoordinates(), gc);
+        h1.beDifferenceOf(domain->giveNode( snodes.at(i) )->giveCoordinates(), gc);
+        h2.beDifferenceOf(domain->giveNode( snodes.at(j) )->giveCoordinates(), gc);
         n.beVectorProductOf(h1, h2);
         if ( n.computeSquaredNorm() > 1.e-6 ) {
             n.normalize();

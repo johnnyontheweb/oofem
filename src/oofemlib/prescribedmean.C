@@ -42,6 +42,10 @@
 #include "function.h"
 #include <math.h> // for "fabs"
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 namespace oofem
 {
 
@@ -50,11 +54,9 @@ double PrescribedMean :: domainSize;
 
 REGISTER_BoundaryCondition(PrescribedMean);
 
-IRResultType
-PrescribedMean :: initializeFrom(InputRecord *ir)
+void
+PrescribedMean :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;
-
     GeneralBoundaryCondition :: initializeFrom(ir);
 
     IR_GIVE_FIELD(ir, c, _IFT_PrescribedMean_Mean);
@@ -67,17 +69,15 @@ PrescribedMean :: initializeFrom(InputRecord *ir)
     int newdofid = this->domain->giveNextFreeDofID();
     lambdaIDs.clear();
     lambdaIDs.followedBy(newdofid);
-    lambdaDman->appendDof( new MasterDof( lambdaDman, ( DofIDItem )newdofid ));
+    lambdaDman->appendDof( new MasterDof( lambdaDman.get(), ( DofIDItem )newdofid ));
 
     domainSize=-1.;
-
-    return IRRT_OK;
 
 }
 
 void
 PrescribedMean :: assemble(SparseMtrx &answer, TimeStep *tStep, CharType type,
-                           const UnknownNumberingScheme &r_s, const UnknownNumberingScheme &c_s)
+                           const UnknownNumberingScheme &r_s, const UnknownNumberingScheme &c_s, double scale, void*lock)
 {
 
     if ( type != TangentStiffnessMatrix && type != StiffnessMatrix ) {
@@ -95,7 +95,7 @@ PrescribedMean :: assemble(SparseMtrx &answer, TimeStep *tStep, CharType type,
         Element *thisElement = this->giveDomain()->giveElement(elementID);
         FEInterpolation *interpolator = thisElement->giveInterpolation(DofIDItem(dofid));
 
-        IntegrationRule *iRule = (elementEdges) ? (interpolator->giveBoundaryIntegrationRule(3, sides.at(i))) :
+        auto iRule = (elementEdges) ? (interpolator->giveBoundaryIntegrationRule(3, sides.at(i))) :
                                                   (interpolator->giveIntegrationRule(3));
 
         for ( GaussPoint * gp: * iRule ) {
@@ -103,11 +103,11 @@ PrescribedMean :: assemble(SparseMtrx &answer, TimeStep *tStep, CharType type,
             FloatArray N; //, a;
             FloatMatrix temp, tempT;
             double detJ = 0.0;
-            IntArray boundaryNodes, dofids={(DofIDItem) this->dofid}, r_Sideloc, c_Sideloc;
+            IntArray dofids={(DofIDItem) this->dofid}, r_Sideloc, c_Sideloc;
 
             if (elementEdges) {
                 // Compute boundary integral
-                interpolator->boundaryGiveNodes( boundaryNodes, sides.at(i) );
+                auto boundaryNodes = interpolator->boundaryGiveNodes(sides.at(i) );
                 interpolator->boundaryEvalN(N, sides.at(i), lcoords, FEIElementGeometryWrapper(thisElement));
                 detJ = fabs ( interpolator->boundaryGiveTransformationJacobian(sides.at(i), lcoords, FEIElementGeometryWrapper(thisElement)) );
                 // Retrieve locations for dofs on boundary
@@ -132,36 +132,40 @@ PrescribedMean :: assemble(SparseMtrx &answer, TimeStep *tStep, CharType type,
             }
 
             // delta p part:
-            temp = N*detJ*gp->giveWeight()*(1.0/domainSize);
+            temp = N * (scale * detJ * gp->giveWeight() / domainSize);
             tempT.beTranspositionOf(temp);
-
+#ifdef _OPENMP
+            if (lock) omp_set_lock(static_cast<omp_lock_t*>(lock));
+#endif
             answer.assemble(r_Sideloc, c_loc, temp);
             answer.assemble(r_loc, c_Sideloc, tempT);
+#ifdef _OPENMP
+            if (lock) omp_set_lock(static_cast<omp_lock_t*>(lock));
+#endif
         }
-
-        delete iRule;
-
     }
-
 }
 
 void
 PrescribedMean :: assembleVector(FloatArray &answer, TimeStep *tStep,
                                  CharType type, ValueModeType mode,
-                                 const UnknownNumberingScheme &s, FloatArray *eNorm)
+                                 const UnknownNumberingScheme &s, FloatArray *eNorm, 
+                                 void*lock)
 {
 
     if ( type == InternalForcesVector ) {
-        giveInternalForcesVector(answer, tStep, type, mode, s);
+        giveInternalForcesVector(answer, tStep, type, mode, s, eNorm, lock);
     } else if ( type == ExternalForcesVector ) {
-        giveExternalForcesVector(answer, tStep, type, mode, s);
+        giveExternalForcesVector(answer, tStep, type, mode, s, lock);
     }
 }
 
 void
 PrescribedMean :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep,
                                            CharType type, ValueModeType mode,
-                                           const UnknownNumberingScheme &s, FloatArray *eNorm)
+                                           const UnknownNumberingScheme &s, 
+                                           FloatArray *eNorm,
+                                           void*lock)
 {
     computeDomainSize();
 
@@ -176,18 +180,19 @@ PrescribedMean :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep,
         Element *thisElement = this->giveDomain()->giveElement(elementID);
         FEInterpolation *interpolator = thisElement->giveInterpolation(DofIDItem(dofid));
 
-        IntegrationRule *iRule = (elementEdges) ? (interpolator->giveBoundaryIntegrationRule(3, sides.at(i))) :
-                                                  (interpolator->giveIntegrationRule(3));
+        auto iRule = elementEdges ?
+            interpolator->giveBoundaryIntegrationRule(3, sides.at(i)) :
+            interpolator->giveIntegrationRule(3);
 
-        for ( auto &gp: * iRule ) {
+        for ( auto &gp: *iRule ) {
             FloatArray lcoords = gp->giveNaturalCoordinates();
             FloatArray a, N, pressureEqns, lambdaEqns;
-            IntArray boundaryNodes, dofids={(DofIDItem) this->dofid}, locationArray;
+            IntArray dofids={(DofIDItem) this->dofid}, locationArray;
             double detJ = 0.0;
 
             if (elementEdges) {
                 // Compute integral
-                interpolator->boundaryGiveNodes( boundaryNodes, sides.at(i) );
+                auto boundaryNodes = interpolator->boundaryGiveNodes(sides.at(i) );
                 thisElement->computeBoundaryVectorOf(boundaryNodes, dofids, VM_Total, tStep, a);
                 interpolator->boundaryEvalN(N, sides.at(i), lcoords, FEIElementGeometryWrapper(thisElement));
                 detJ = fabs ( interpolator->boundaryGiveTransformationJacobian(sides.at(i), lcoords, FEIElementGeometryWrapper(thisElement)) );
@@ -204,7 +209,7 @@ PrescribedMean :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep,
                 thisElement->giveLocationArray(loc, s, &DofIDStemp);
 
                 locationArray.clear();
-                for (int j=1; j<=DofIDStemp.giveSize(); j++) {
+                for (int j = 1; j <= DofIDStemp.giveSize(); j++) {
                     if ( DofIDStemp.at(j) == dofids.at(1) ) {
                         locationArray.followedBy(loc.at(j));
                     }
@@ -220,14 +225,18 @@ PrescribedMean :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep,
             lambdaEqns.times(detJ*gp->giveWeight()*1.0/domainSize);
             lambdaEqns.at(1) = lambdaEqns.at(1);
 
-
+#ifdef _OPENMP
+            if (lock) omp_set_lock(static_cast<omp_lock_t*>(lock));
+#endif
             // delta p part
             answer.assemble(pressureEqns, locationArray);
 
             // delta lambda part
             answer.assemble(lambdaEqns, lambdaLoc);
+#ifdef _OPENMP
+            if (lock) omp_unset_lock(static_cast<omp_lock_t*>(lock));
+#endif            
         }
-        delete iRule;
     }
 
 }
@@ -235,7 +244,8 @@ PrescribedMean :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep,
 void
 PrescribedMean :: giveExternalForcesVector(FloatArray &answer, TimeStep *tStep,
                                            CharType type, ValueModeType mode,
-                                           const UnknownNumberingScheme &s)
+                                           const UnknownNumberingScheme &s,
+                                           void* lock)
 {
     computeDomainSize();
 
@@ -246,8 +256,13 @@ PrescribedMean :: giveExternalForcesVector(FloatArray &answer, TimeStep *tStep,
     temp.at(1) = c;
 
     lambdaDman->giveLocationArray(lambdaIDs, lambdaLoc, s);
+#ifdef _OPENMP
+    if (lock) omp_set_lock(static_cast<omp_lock_t*>(lock));
+#endif
     answer.assemble(temp, lambdaLoc);
-
+#ifdef _OPENMP
+    if (lock) omp_set_lock(static_cast<omp_lock_t*>(lock));
+#endif
     // Finally, compute value of loadtimefunction
     double factor;
     factor = this->giveTimeFunction()->evaluate(tStep, mode);
@@ -282,15 +297,11 @@ PrescribedMean :: computeDomainSize()
         Element *thisElement = this->giveDomain()->giveElement(elementID);
         FEInterpolation *interpolator = thisElement->giveInterpolation(DofIDItem(dofid));
 
-        IntegrationRule *iRule;
+        auto iRule = elementEdges ?
+            interpolator->giveBoundaryIntegrationRule(3, sides.at(i)) :
+            interpolator->giveIntegrationRule(3);
 
-        if ( elementEdges ) {
-            iRule = interpolator->giveBoundaryIntegrationRule(3, sides.at(i));
-        } else {
-            iRule = interpolator->giveIntegrationRule(3);
-        }
-
-        for ( GaussPoint * gp: * iRule ) {
+        for ( auto &gp: *iRule ) {
             FloatArray lcoords = gp->giveNaturalCoordinates();
 
             double detJ;
@@ -301,12 +312,8 @@ PrescribedMean :: computeDomainSize()
             }
             domainSize = domainSize + detJ*gp->giveWeight();
         }
-
-        delete iRule;
     }
-
     printf("%f\n", domainSize);
-
 }
 
 }

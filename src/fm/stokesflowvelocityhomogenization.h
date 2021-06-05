@@ -47,22 +47,18 @@ namespace oofem
 {
 /**
  * Class for using the stokes flow class as an rve/constitutive model.
- *
  * @author Carl Sandström
- *
  */
 class StokesFlowVelocityHomogenization : public StokesFlow
 {
 public:
-    StokesFlowVelocityHomogenization(int i, EngngModel * _master = NULL);
-    virtual ~StokesFlowVelocityHomogenization();
+    StokesFlowVelocityHomogenization(int i, EngngModel * _master = nullptr);
 
     /** Compute area of domain (includes holes)*/
     double giveAreaOfRVE();
 
-    virtual const char *giveClassName() const { return "StokesFlowVelocityHomogenization"; }
-    virtual const char *giveInputRecordName() const { return _IFT_StokesFlowVelocityHomogenization_Name; }
-
+    const char *giveClassName() const override { return "StokesFlowVelocityHomogenization"; }
+    const char *giveInputRecordName() const { return _IFT_StokesFlowVelocityHomogenization_Name; }
 
     void computeTangent(FloatMatrix &answer, TimeStep *tStep);
     /** Computes the mean velocity and pressure gradient */

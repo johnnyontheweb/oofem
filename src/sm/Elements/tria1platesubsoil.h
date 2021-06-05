@@ -35,7 +35,7 @@
 #ifndef tria1platesubsoil_H
 #define tria1platesubsoil_H
 
-#include "../sm/Elements/structuralelement.h"
+#include "sm/Elements/structuralelement.h"
 #include "zznodalrecoverymodel.h"
 #include "sprnodalrecoverymodel.h"
 #include "nodalaveragingrecoverymodel.h"
@@ -72,37 +72,38 @@ public:
     Tria1PlateSubSoil(int n, Domain * d);
     virtual ~Tria1PlateSubSoil() { }
 
-    virtual FEInterpolation *giveInterpolation() const;
-    virtual FEInterpolation *giveInterpolation(DofIDItem id) const;
+    FEInterpolation *giveInterpolation() const override;
+    FEInterpolation *giveInterpolation(DofIDItem id) const override;
 
-    virtual MaterialMode giveMaterialMode()  { return _2dPlateSubSoil; }
-    virtual int testElementExtension(ElementExtension ext) { return ( ( ext == Element_SurfaceLoadSupport ) ? 1 : 0 ); }
+    MaterialMode giveMaterialMode() override { return _2dPlateSubSoil; }
+    int testElementExtension(ElementExtension ext) override { return ( ( ext == Element_SurfaceLoadSupport ) ? 1 : 0 ); }
 
     // definition & identification
-    virtual const char *giveInputRecordName() const { return _IFT_Tria1PlateSubSoil_Name; }
-    virtual const char *giveClassName() const { return "Tria1PlateSubSoil"; }
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    const char *giveInputRecordName() const override { return _IFT_Tria1PlateSubSoil_Name; }
+    const char *giveClassName() const override { return "Tria1PlateSubSoil"; }
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual int computeNumberOfDofs() { return 3; }
-    virtual void giveDofManDofIDMask(int inode, IntArray &) const;
+    int computeNumberOfDofs() override { return 3; }
+    void giveDofManDofIDMask(int inode, IntArray &) const override;
 
-    virtual void computeMidPlaneNormal(FloatArray &answer, const GaussPoint *gp);
+    void computeMidPlaneNormal(FloatArray &answer, const GaussPoint *gp) override;
 
-    virtual double giveCharacteristicLength(const FloatArray &normalToCrackPlane);
-    virtual double computeVolumeAround(GaussPoint *gp);
+    double giveCharacteristicLength(const FloatArray &normalToCrackPlane) override;
+    double computeVolumeAround(GaussPoint *gp) override;
 
-    virtual void computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep);
-    virtual void computeMassMatrix(FloatMatrix &answer, TimeStep *tStep)
+    void computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep) override;
+    void computeMassMatrix(FloatMatrix &answer, TimeStep *tStep) override
     { computeLumpedMassMatrix(answer, tStep); }
 
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
-    virtual Interface *giveInterface(InterfaceType it);
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
+    Interface *giveInterface(InterfaceType it) override;
 
 protected:
-    virtual void computeGaussPoints();
-    virtual void computeBodyLoadVectorAt(FloatArray &answer, Load *load, TimeStep *tStep, ValueModeType mode);
-    virtual void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int = 1, int = ALL_STRAINS);
+    void computeGaussPoints() override;
+    void computeBodyLoadVectorAt(FloatArray &answer, Load *load, TimeStep *tStep, ValueModeType mode) override;
+    void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int = 1, int = ALL_STRAINS) override;
 
+<<<<<<< HEAD
     virtual void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep);
     virtual void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep);
 	virtual void NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,
@@ -111,15 +112,34 @@ protected:
     virtual void SPRNodalRecoveryMI_giveDofMansDeterminedByPatch(IntArray &answer, int pap);
     virtual int SPRNodalRecoveryMI_giveNumberOfIP() { return this->numberOfGaussPoints; }
     virtual SPRPatchType SPRNodalRecoveryMI_givePatchType() { return SPRPatchType_2dxy; }
+=======
+    void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep) override;
+    void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) override;
+
+    void SPRNodalRecoveryMI_giveSPRAssemblyPoints(IntArray &pap) override;
+    void SPRNodalRecoveryMI_giveDofMansDeterminedByPatch(IntArray &answer, int pap) override;
+    int SPRNodalRecoveryMI_giveNumberOfIP() override { return this->numberOfGaussPoints; }
+    SPRPatchType SPRNodalRecoveryMI_givePatchType() override { return SPRPatchType_2dxy; }
+>>>>>>> bp2/master
     /**
      * @name Surface load support
      */
+    void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer) override;    
+    void computeSurfaceNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords) override;
+    
     //@{
+<<<<<<< HEAD
     virtual void computeSurfaceNMatrixAt(FloatMatrix &answer, int iSurf, GaussPoint *gp);
     virtual void giveSurfaceDofMapping(IntArray &answer, int iSurf) const;
     virtual IntegrationRule *GetSurfaceIntegrationRule(int iSurf);
     virtual double computeSurfaceVolumeAround(GaussPoint *gp, int iSurf);
     virtual int computeLoadLSToLRotationMatrix(FloatMatrix &answer, int iSurf, GaussPoint *gp);
+=======
+    //void computeSurfaceNMatrixAt(FloatMatrix &answer, int iSurf, GaussPoint *gp);
+    //void giveSurfaceDofMapping(IntArray &answer, int iSurf) const override;
+    //double computeSurfaceVolumeAround(GaussPoint *gp, int iSurf) override;
+    //int computeLoadLSToLRotationMatrix(FloatMatrix &answer, int iSurf, GaussPoint *gp) override;
+>>>>>>> bp2/master
     //@}
 	virtual void printOutputAt(FILE *file, TimeStep *tStep);
 };

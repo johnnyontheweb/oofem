@@ -36,7 +36,7 @@
 #define trabbonenl_h
 
 #include "trabbonematerial.h"
-#include "Materials/structuralnonlocalmaterialext.h"
+#include "sm/Materials/structuralnonlocalmaterialext.h"
 #include "nonlocmatstiffinterface.h"
 #include "cltypes.h"
 
@@ -55,24 +55,23 @@ class TrabBoneNLStatus : public TrabBoneMaterialStatus, public StructuralNonloca
 {
 protected:
     /// Equivalent strain for averaging.
-    double localCumPlastStrainForAverage;
+    double localCumPlastStrainForAverage = 0.;
 
 public:
-    TrabBoneNLStatus(int n, Domain * d, GaussPoint * g);
-    virtual ~TrabBoneNLStatus();
+    TrabBoneNLStatus(GaussPoint * g);
 
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    void printOutputAt(FILE *file, TimeStep *tStep) const override;
 
-    double giveLocalCumPlastStrainForAverage()     { return localCumPlastStrainForAverage; }
+    double giveLocalCumPlastStrainForAverage() const { return localCumPlastStrainForAverage; }
     void setLocalCumPlastStrainForAverage(double ls) { localCumPlastStrainForAverage = ls; }
 
-    virtual const char *giveClassName() const { return "TrabBoneNLStatus"; }
+    const char *giveClassName() const override { return "TrabBoneNLStatus"; }
 
-    virtual void initTempStatus();
+    void initTempStatus() override;
 
-    virtual void updateYourself(TimeStep *tStep);
+    void updateYourself(TimeStep *tStep) override;
 
-    virtual Interface *giveInterface(InterfaceType);
+    Interface *giveInterface(InterfaceType) override;
 };
 
 
@@ -82,40 +81,39 @@ public:
 class TrabBoneNL : public TrabBoneMaterial, public StructuralNonlocalMaterialExtensionInterface
 {
 protected:
-    double R;
-    double mParam;
+    double R = 0.;
+    double mParam = 0.;
 
 public:
     TrabBoneNL(int n, Domain * d);
-    virtual ~TrabBoneNL();
 
-    virtual const char *giveClassName() const { return "TrabBoneNL"; }
-    virtual const char *giveInputRecordName() const { return _IFT_TrabBoneNL_Name; }
+    const char *giveClassName() const override { return "TrabBoneNL"; }
+    const char *giveInputRecordName() const override { return _IFT_TrabBoneNL_Name; }
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual Interface *giveInterface(InterfaceType);
+    Interface *giveInterface(InterfaceType) override;
 
-    virtual void computeCumPlastStrain(double &alpha, GaussPoint *gp, TimeStep *tStep);
+    double computeCumPlastStrain(GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual void giveRealStressVector_1d(FloatArray &answer, GaussPoint *gp, const FloatArray &strainVector, TimeStep *tStep);
+    FloatArrayF<1> giveRealStressVector_1d(const FloatArrayF<1> &strainVector, GaussPoint *gp, TimeStep *tStep) const override;
 
-    void computeLocalCumPlastStrain(double &alpha, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
+    double computeLocalCumPlastStrain(const FloatArray &strain, GaussPoint *gp, TimeStep *tStep) const
     {
-        TrabBoneMaterial :: computeCumPlastStrain(alpha, gp, tStep);
+        return TrabBoneMaterial :: computeCumPlastStrain(gp, tStep);
     }
 
-    virtual void updateBeforeNonlocAverage(const FloatArray &strainVector, GaussPoint *gp, TimeStep *tStep);
+    void updateBeforeNonlocAverage(const FloatArray &strainVector, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual double computeWeightFunction(const FloatArray &src, const FloatArray &coord);
+    double computeWeightFunction(const FloatArray &src, const FloatArray &coord) const override;
 
-    virtual int hasBoundedSupport() { return 1; }
+    int hasBoundedSupport() const override { return 1; }
 
-    virtual void giveSupportRadius(double &radius) { radius = this->R; }
+    double giveSupportRadius() const { return this->R; }
 
 protected:
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const { return new TrabBoneNLStatus(1, TrabBoneMaterial :: domain, gp); }
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new TrabBoneNLStatus(gp); }
 };
 } // end namespace oofem
 #endif

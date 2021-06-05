@@ -31,11 +31,6 @@
  *  License along with this library; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
-/*
- * The original idea for this class comes from
- * Dubois-Pelerin, Y.: "Object-Oriented  Finite Elements: Programming concepts and Implementation",
- * PhD Thesis, EPFL, Lausanne, 1992.
- */
 
 #include "floatmatrix.h"
 #include "floatarray.h"
@@ -60,7 +55,7 @@
         } \
     }
 
-#ifdef BOOST_PYTHON
+#ifdef _BOOSTPYTHON_BINDINGS
  #include <boost/python.hpp>
  #include <boost/python/extract.hpp>
 #endif
@@ -213,42 +208,11 @@ bool FloatMatrix :: isFinite() const
     return true;
 }
 
-#ifdef DEBUG
-double &FloatMatrix :: at(int i, int j)
-// Returns the coefficient (i,j) of the receiver. Safer but slower than
-// the inline version of method 'at'.
-{
-    this->checkBounds(i, j);
-    return values [ ( j - 1 ) * nRows + i - 1 ];
-}
-
-double FloatMatrix :: at(int i, int j) const
-// Returns the coefficient (i,j) of the receiver. Safer but slower than
-// the inline version of method 'at'.
-{
-    this->checkBounds(i, j);
-    return values [ ( j - 1 ) * nRows + i - 1 ];
-}
-
-double &FloatMatrix :: operator() (int i, int j)
-{
-    this->checkBounds(i + 1, j + 1);
-    return values [ j * nRows + i ];
-}
-
-double FloatMatrix :: operator() (int i, int j) const
-{
-    this->checkBounds(i + 1, j + 1);
-    return values [ j * nRows + i ];
-}
-#endif
-
-
 void FloatMatrix :: assemble(const FloatMatrix &src, const IntArray &loc)
 {
     int ii, jj, size = src.giveNumberOfRows();
 
-#ifdef DEBUG
+#ifndef NDEBUG
     if ( size != loc.giveSize() ) {
         OOFEM_ERROR("dimensions of 'src' and 'loc' mismatch");
     }
@@ -276,7 +240,7 @@ void FloatMatrix :: assemble(const FloatMatrix &src, const IntArray &rowind, con
     int nr = src.giveNumberOfRows();
     int nc = src.giveNumberOfColumns();
 
-#ifdef DEBUG
+#ifndef NDEBUG
     if ( nr != rowind.giveSize() ) {
         OOFEM_ERROR("row dimensions of 'src' and 'rowind' mismatch");
     }
@@ -333,7 +297,7 @@ void FloatMatrix :: beTranspositionOf(const FloatMatrix &src)
 void FloatMatrix :: beProductOf(const FloatMatrix &aMatrix, const FloatMatrix &bMatrix)
 // Receiver = aMatrix * bMatrix
 {
-#  ifdef DEBUG
+#  ifndef NDEBUG
     if ( aMatrix.nColumns != bMatrix.nRows ) {
         OOFEM_ERROR("error in product A*B : dimensions do not match");
     }
@@ -363,7 +327,7 @@ void FloatMatrix :: beProductOf(const FloatMatrix &aMatrix, const FloatMatrix &b
 void FloatMatrix :: beTProductOf(const FloatMatrix &aMatrix, const FloatMatrix &bMatrix)
 // Receiver = aMatrix^T * bMatrix
 {
-#  ifdef DEBUG
+#  ifndef NDEBUG
     if ( aMatrix.nRows != bMatrix.nRows ) {
         OOFEM_ERROR("error in product A*B : dimensions do not match");
     }
@@ -393,7 +357,7 @@ void FloatMatrix :: beTProductOf(const FloatMatrix &aMatrix, const FloatMatrix &
 void FloatMatrix :: beProductTOf(const FloatMatrix &aMatrix, const FloatMatrix &bMatrix)
 // Receiver = aMatrix * bMatrix^T
 {
-#  ifdef DEBUG
+#  ifndef NDEBUG
     if ( aMatrix.nColumns != bMatrix.nColumns ) {
         OOFEM_ERROR("error in product A*B : dimensions do not match");
     }
@@ -423,7 +387,7 @@ void FloatMatrix :: beProductTOf(const FloatMatrix &aMatrix, const FloatMatrix &
 void FloatMatrix :: addProductOf(const FloatMatrix &aMatrix, const FloatMatrix &bMatrix)
 // Receiver = aMatrix * bMatrix
 {
-#  ifdef DEBUG
+#  ifndef NDEBUG
     if ( aMatrix.nColumns != bMatrix.nRows ) {
         OOFEM_ERROR("error in product A*B : dimensions do not match");
     }
@@ -455,7 +419,7 @@ void FloatMatrix :: addProductOf(const FloatMatrix &aMatrix, const FloatMatrix &
 void FloatMatrix :: addTProductOf(const FloatMatrix &aMatrix, const FloatMatrix &bMatrix)
 // Receiver += aMatrix^T * bMatrix
 {
-#  ifdef DEBUG
+#  ifndef NDEBUG
     if ( aMatrix.nRows != bMatrix.nRows ) {
         OOFEM_ERROR("error in product A*B : dimensions do not match");
     }
@@ -509,17 +473,18 @@ void FloatMatrix :: beNMatrixOf(const FloatArray &n, int nsd)
 }
 
 void FloatMatrix :: beLocalCoordSys(const FloatArray &normal)
-{
+{ //normal should be at the first position, easier for interface material models
     if ( normal.giveSize() == 1 ) {
         this->resize(1, 1);
         this->at(1, 1) = normal(0);
     } else if ( normal.giveSize() == 2 ) {
         this->resize(2, 2);
-        this->at(1, 1) = normal(1);
-        this->at(1, 2) = -normal(0);
-
-        this->at(2, 1) = normal(0);
-        this->at(2, 2) = normal(1);
+        this->at(1, 1) = normal(0);
+        this->at(1, 2) = normal(1);
+        
+        this->at(2, 1) = normal(1);
+        this->at(2, 2) = -normal(0);
+        
     } else if ( normal.giveSize() == 3 ) {
         // Create a permutated vector of n, *always* length 1 and significantly different from n.
         FloatArray b, t = {
@@ -533,18 +498,17 @@ void FloatMatrix :: beLocalCoordSys(const FloatArray &normal)
         b.beVectorProductOf(t, normal);
 
         this->resize(3, 3);
-
-        this->at(1, 1) = t(0);
-        this->at(1, 2) = t(1);
-        this->at(1, 3) = t(2);
-
-        this->at(2, 1) = b(0);
-        this->at(2, 2) = b(1);
-        this->at(2, 3) = b(2);
-
-        this->at(3, 1) = normal(0);
-        this->at(3, 2) = normal(1);
-        this->at(3, 3) = normal(2);
+        this->at(1, 1) = normal.at(1);
+        this->at(1, 2) = normal.at(2);
+        this->at(1, 3) = normal.at(3);
+        
+        this->at(2, 1) = b.at(1);
+        this->at(2, 2) = b.at(2);
+        this->at(2, 3) = b.at(3);
+        
+        this->at(3, 1) = t.at(1);
+        this->at(3, 2) = t.at(2);
+        this->at(3, 3) = t.at(3);
     } else {
         OOFEM_ERROR("Normal needs 1 to 3 components.");
     }
@@ -556,7 +520,7 @@ void FloatMatrix :: setSubMatrix(const FloatMatrix &src, int sr, int sc)
     sc--;
 
     int srcRows = src.giveNumberOfRows(), srcCols = src.giveNumberOfColumns();
-#ifdef DEBUG
+#ifndef NDEBUG
     int nr = sr + srcRows;
     int nc = sc + srcCols;
 
@@ -581,7 +545,7 @@ void FloatMatrix :: setTSubMatrix(const FloatMatrix &src, int sr, int sc)
     sc--;
 
     int srcRows = src.giveNumberOfRows(), srcCols = src.giveNumberOfColumns();
-#ifdef DEBUG
+#ifndef NDEBUG
     int nr = sr + srcCols;
     int nc = sc + srcRows;
 
@@ -644,7 +608,7 @@ void FloatMatrix :: addSubVectorCol(const FloatArray &src, int sr, int sc)
 void FloatMatrix :: setColumn(const FloatArray &src, int c)
 {
     int nr = src.giveSize();
-#ifdef DEBUG
+#ifndef NDEBUG
     if ( this->giveNumberOfRows() != nr || c < 1 || c > this->giveNumberOfColumns() ) {
         OOFEM_ERROR("Size mismatch");
     }
@@ -658,7 +622,7 @@ void FloatMatrix :: setColumn(const FloatArray &src, int c)
 void FloatMatrix :: copyColumn(FloatArray &dest, int c) const
 {
     int nr = this->giveNumberOfRows();
-#ifdef DEBUG
+#ifndef NDEBUG
     if ( c < 1 || c > this->giveNumberOfColumns() ) {
         OOFEM_ERROR("Column outside range (%d)", c);
     }
@@ -833,7 +797,7 @@ void FloatMatrix :: beInverseOf(const FloatMatrix &src)
 {
     double det;
 
-#  ifdef DEBUG
+#  ifndef NDEBUG
     if ( !src.isSquare() ) {
         OOFEM_ERROR("cannot inverse a %d by %d matrix", src.nRows, src.nColumns);
     }
@@ -963,7 +927,7 @@ void FloatMatrix :: beSubMatrixOf(const FloatMatrix &src,
  * input parameters
  */
 {
-#ifdef DEBUG
+#ifndef NDEBUG
     if ( ( topRow < 1 ) || ( bottomRow < 1 ) || ( topCol < 1 ) || ( bottomCol < 1 ) ) {
         OOFEM_ERROR("subindexes size mismatch");
     }
@@ -998,7 +962,7 @@ FloatMatrix :: beSubMatrixOf(const FloatMatrix &src, const IntArray &indxRow, co
  * this(i,j) = src( indxRow(i), indxCol(j) )
  */
 {
-#  ifdef DEBUG
+#  ifndef NDEBUG
     if ( indxRow.maximum() > src.giveNumberOfRows()  ||  indxCol.maximum() > src.giveNumberOfColumns()  ||
          indxRow.minimum() < 1  ||  indxCol.minimum() < 1 ) {
         OOFEM_ERROR("index exceeds source dimensions");
@@ -1028,7 +992,7 @@ void FloatMatrix :: add(const FloatMatrix &aMatrix)
         this->operator = ( aMatrix );
         return;
     }
-#     ifdef DEBUG
+#     ifndef NDEBUG
     if ( ( aMatrix.nRows != nRows || aMatrix.nColumns != nColumns ) && aMatrix.isNotEmpty() ) {
         OOFEM_ERROR("dimensions mismatch : (r1,c1)+(r2,c2) : (%d,%d)+(%d,%d)", nRows, nColumns, aMatrix.nRows, aMatrix.nColumns);
     }
@@ -1060,7 +1024,7 @@ void FloatMatrix :: add(double s, const FloatMatrix &aMatrix)
         this->times(s);
         return;
     }
-#     ifdef DEBUG
+#     ifndef NDEBUG
     if ( ( aMatrix.nRows != nRows || aMatrix.nColumns != nColumns ) && aMatrix.isNotEmpty() ) {
         OOFEM_ERROR("dimensions mismatch : (r1,c1)+(r2,c2) : (%d,%d)+(%d,%d)", nRows, nColumns, aMatrix.nRows, aMatrix.nColumns);
     }
@@ -1086,7 +1050,7 @@ void FloatMatrix :: subtract(const FloatMatrix &aMatrix)
         this->negated();
         return;
     }
-#     ifdef DEBUG
+#     ifndef NDEBUG
     if ( ( aMatrix.nRows != nRows || aMatrix.nColumns != nColumns ) && aMatrix.isNotEmpty() ) {
         OOFEM_ERROR("dimensions mismatch : (r1,c1)-(r2,c2) : (%d,%d)-(%d,%d)", nRows, nColumns, aMatrix.nRows, aMatrix.nColumns);
     }
@@ -1108,7 +1072,7 @@ void FloatMatrix :: subtract(const FloatMatrix &aMatrix)
 bool FloatMatrix :: solveForRhs(const FloatArray &b, FloatArray &answer, bool transpose)
 // solves equation b = this * x
 {
-#  ifdef DEBUG
+#  ifndef NDEBUG
     if ( !this->isSquare() ) {
         OOFEM_ERROR("cannot solve a %d by %d matrix", nRows, nColumns);
     }
@@ -1204,7 +1168,7 @@ void FloatMatrix :: solveForRhs(const FloatMatrix &b, FloatMatrix &answer, bool 
 // gaussian elimination - slow but safe
 //
 {
-#  ifdef DEBUG
+#  ifndef NDEBUG
     if ( !this->isSquare() ) {
         OOFEM_ERROR("cannot solve a %d by %d matrix", nRows, nColumns);
     }
@@ -1327,7 +1291,7 @@ void FloatMatrix :: zero()
 
 void FloatMatrix :: beUnitMatrix()
 {
-#ifdef DEBUG
+#ifndef NDEBUG
     if ( !this->isSquare() ) {
         OOFEM_ERROR("cannot make unit matrix of %d by %d matrix", nRows, nColumns);
     }
@@ -1404,7 +1368,7 @@ void FloatMatrix :: hardResize(int rows, int columns)
 double FloatMatrix :: giveDeterminant() const
 // Returns the determinant of the receiver.
 {
-#  ifdef DEBUG
+#  ifndef NDEBUG
     if ( !this->isSquare() ) {
         OOFEM_ERROR("cannot compute the determinant of a non-square %d by %d matrix", nRows, nColumns);
     }
@@ -1438,7 +1402,7 @@ void FloatMatrix :: beDiagonal(const FloatArray &diag)
 
 double FloatMatrix :: giveTrace() const
 {
-#  ifdef DEBUG
+#  ifndef NDEBUG
     if ( !this->isSquare() ) {
         OOFEM_ERROR("cannot compute the trace of a non-square %d by %d matrix", nRows, nColumns);
     }
@@ -1544,7 +1508,7 @@ void FloatMatrix :: rotatedWith(const FloatMatrix &r, char mode)
 void FloatMatrix :: symmetrized()
 // Initializes the lower half of the receiver to the upper half.
 {
-#  ifdef DEBUG
+#  ifndef NDEBUG
     if ( nRows != nColumns ) {
         OOFEM_ERROR("cannot symmetrize a non-square matrix");
     }
@@ -1627,7 +1591,7 @@ void FloatMatrix :: beMatrixForm(const FloatArray &aArray)
     // Revrites the vector on matrix form (symmetrized matrix used if size is 6),
     // order: 11, 22, 33, 23, 13, 12
     // order: 11, 22, 33, 23, 13, 12, 32, 31, 21
-#  ifdef DEBUG
+#  ifndef NDEBUG
     if ( aArray.giveSize() != 6 && aArray.giveSize() != 9 ) {
         OOFEM_ERROR("matrix dimension is not 3x3");
     }
@@ -1659,7 +1623,7 @@ void FloatMatrix :: beMatrixForm(const FloatArray &aArray)
 void FloatMatrix :: changeComponentOrder()
 {
     // Changes index order between abaqus <-> OOFEM
-//#  ifdef DEBUG
+//#  ifndef NDEBUG
 //    if ( nRows != 6 || nColumns != 6 ) {
 //        OOFEM_ERROR("matrix dimension is not 6x6");
 //    }
@@ -1704,7 +1668,7 @@ void FloatMatrix :: changeComponentOrder()
 
 double FloatMatrix :: computeReciprocalCondition(char p) const
 {
-#  ifdef DEBUG
+#  ifndef NDEBUG
     if ( !this->isSquare() ) {
         OOFEM_ERROR("receiver must be square (is %d by %d)", this->nRows, this->nColumns);
     }
@@ -1742,7 +1706,7 @@ double FloatMatrix :: computeReciprocalCondition(char p) const
 void FloatMatrix :: beMatrixFormOfStress(const FloatArray &aArray)
 {
     // Revrites the  matrix on vector form (symmetrized matrix used), order: 11, 22, 33, 23, 13, 12
-#  ifdef DEBUG
+#  ifndef NDEBUG
     if ( aArray.giveSize() != 6 && aArray.giveSize() != 9 ) {
         OOFEM_ERROR("matrix dimension is not 3x3");
     }
@@ -1894,21 +1858,19 @@ bool FloatMatrix :: jaco_(FloatArray &eval, FloatMatrix &v, int nf)
 
 
     /* Local variables */
-    double ssum, aa, co, si, tt, tol, sum, aij, aji;
-    int ite, i, j, k, ih;
     int neq = this->giveNumberOfRows();
 
     double c_b2 = .10;
     //double c_b27 = .01;
 
     /* Function Body */
-#ifdef DEBUG
+#ifndef NDEBUG
     if ( !isSquare() ) {
         OOFEM_ERROR("Not square matrix");
     }
     // check for symmetry
-    for ( i = 1; i <= neq; i++ ) {
-        for ( j = i + 1; j <= neq; j++ ) {
+    for ( int i = 1; i <= neq; i++ ) {
+        for ( int j = i + 1; j <= neq; j++ ) {
             //if ( this->at(i, j) != this->at(j, i) ) {
             if ( fabs( this->at(i, j) - this->at(j, i) ) > 1.0e-6 ) {
                 OOFEM_ERROR("Not Symmetric matrix");
@@ -1921,14 +1883,14 @@ bool FloatMatrix :: jaco_(FloatArray &eval, FloatMatrix &v, int nf)
     eval.resize(neq);
     v.resize(neq, neq);
 
-    for ( i = 1; i <= neq; i++ ) {
+    for ( int i = 1; i <= neq; i++ ) {
         eval.at(i) = this->at(i, i);
     }
 
-    tol = pow(c_b2, nf);
-    sum = 0.0;
-    for ( i = 1; i <= neq; ++i ) {
-        for ( j = 1; j <= neq; ++j ) {
+    double tol = pow(c_b2, nf);
+    double sum = 0.0;
+    for ( int i = 1; i <= neq; ++i ) {
+        for ( int j = 1; j <= neq; ++j ) {
             sum += fabs( this->at(i, j) );
             v.at(i, j) = 0.0;
         }
@@ -1942,18 +1904,19 @@ bool FloatMatrix :: jaco_(FloatArray &eval, FloatMatrix &v, int nf)
 
 
     /* ---- REDUCE MATRIX TO DIAGONAL ---------------- */
-    ite = 0;
+    int ite = 0;
+    double ssum;
     do {
         ssum = 0.0;
-        for ( j = 2; j <= neq; ++j ) {
-            ih = j - 1;
-            for ( i = 1; i <= ih; ++i ) {
+        for ( int j = 2; j <= neq; ++j ) {
+            int ih = j - 1;
+            for ( int i = 1; i <= ih; ++i ) {
                 if ( ( fabs( this->at(i, j) ) / sum ) > tol ) {
                     ssum += fabs( this->at(i, j) );
                     /* ---- CALCULATE ROTATION ANGLE ----------------- */
-                    aa = atan2( this->at(i, j) * 2.0, eval.at(i) - eval.at(j) ) /  2.0;
-                    si = sin(aa);
-                    co = cos(aa);
+                    double aa = atan2( this->at(i, j) * 2.0, eval.at(i) - eval.at(j) ) /  2.0;
+                    double si = sin(aa);
+                    double co = cos(aa);
                     /*
                      *   // ---- MODIFY "I" AND "J" COLUMNS OF "A" AND "V"
                      *   for (k = 1; k <= neq; ++k) {
@@ -1977,27 +1940,27 @@ bool FloatMatrix :: jaco_(FloatArray &eval, FloatMatrix &v, int nf)
                      *   }
                      */
                     // ---- MODIFY "I" AND "J" COLUMNS OF "A" AND "V"
-                    for ( k = 1; k < i; ++k ) {
-                        tt = this->at(k, i);
-                        this->at(k, i) = co * tt + si *this->at(k, j);
-                        this->at(k, j) = -si * tt + co *this->at(k, j);
+                    for ( int k = 1; k < i; ++k ) {
+                        double tt = this->at(k, i);
+                        this->at(k, i) = co * tt + si * this->at(k, j);
+                        this->at(k, j) = -si * tt + co * this->at(k, j);
                         tt = v.at(k, i);
                         v.at(k, i) = co * tt + si *v.at(k, j);
                         v.at(k, j) = -si * tt + co *v.at(k, j);
                     }
 
                     // diagonal term (i,i)
-                    tt = eval.at(i);
-                    eval.at(i) = co * tt + si *this->at(i, j);
-                    aij = -si * tt + co *this->at(i, j);
+                    double tt = eval.at(i);
+                    eval.at(i) = co * tt + si * this->at(i, j);
+                    double aij = -si * tt + co *this->at(i, j);
                     tt = v.at(i, i);
                     v.at(i, i) = co * tt + si *v.at(i, j);
                     v.at(i, j) = -si * tt + co *v.at(i, j);
 
-                    for ( k = i + 1; k < j; ++k ) {
-                        tt = this->at(i, k);
-                        this->at(i, k) = co * tt + si *this->at(k, j);
-                        this->at(k, j) = -si * tt + co *this->at(k, j);
+                    for ( int k = i + 1; k < j; ++k ) {
+                        double tt = this->at(i, k);
+                        this->at(i, k) = co * tt + si * this->at(k, j);
+                        this->at(k, j) = -si * tt + co * this->at(k, j);
                         tt = v.at(k, i);
                         v.at(k, i) = co * tt + si *v.at(k, j);
                         v.at(k, j) = -si * tt + co *v.at(k, j);
@@ -2005,15 +1968,15 @@ bool FloatMatrix :: jaco_(FloatArray &eval, FloatMatrix &v, int nf)
 
                     // diagonal term (j,j)
                     tt = this->at(i, j);
-                    aji = co * tt + si *eval.at(j);
+                    double aji = co * tt + si *eval.at(j);
                     eval.at(j) = -si * tt + co *eval.at(j);
 
                     tt = v.at(j, i);
                     v.at(j, i) = co * tt + si *v.at(j, j);
                     v.at(j, j) = -si * tt + co *v.at(j, j);
                     //
-                    for ( k = j + 1; k <= neq; ++k ) {
-                        tt = this->at(i, k);
+                    for ( int k = j + 1; k <= neq; ++k ) {
+                        double tt = this->at(i, k);
                         this->at(i, k) = co * tt + si *this->at(j, k);
                         this->at(j, k) = -si * tt + co *this->at(j, k);
                         tt = v.at(k, i);
@@ -2039,8 +2002,8 @@ bool FloatMatrix :: jaco_(FloatArray &eval, FloatMatrix &v, int nf)
     } while ( fabs(ssum) / sum > tol );
 
     // restore original matrix
-    for ( i = 1; i <= neq; i++ ) {
-        for ( j = i; j <= neq; j++ ) {
+    for ( int i = 1; i <= neq; i++ ) {
+        for ( int j = i; j <= neq; j++ ) {
             this->at(i, j) = this->at(j, i);
         }
     }
@@ -2049,7 +2012,7 @@ bool FloatMatrix :: jaco_(FloatArray &eval, FloatMatrix &v, int nf)
 } /* jaco_ */
 
 
-#ifdef BOOST_PYTHON
+#ifdef _BOOSTPYTHON_BINDINGS
 void
 FloatMatrix :: __setitem__(boost :: python :: api :: object t, double val)
 {
@@ -2075,4 +2038,18 @@ std :: ostream &operator << ( std :: ostream & out, const FloatMatrix & x )
     out << "}";
     return out;
 }
+
+FloatMatrix &operator *= ( FloatMatrix & x, const double & a ) {x.times(a); return x;}
+FloatMatrix operator *( const FloatMatrix & a, const FloatMatrix & b ) {FloatMatrix ans; ans.beProductOf (a,b); return ans;}
+FloatArray operator *( const FloatMatrix & a, const FloatArray & b ) {FloatArray ans; ans.beProductOf (a,b); return ans;}
+FloatMatrix operator +( const FloatMatrix & a, const FloatMatrix & b ) {FloatMatrix ans(a); ans.add(b); return ans;}
+FloatMatrix operator -( const FloatMatrix & a, const FloatMatrix & b ) {FloatMatrix ans(a); ans.subtract(b); return ans;}
+FloatMatrix &operator += ( FloatMatrix & a, const FloatMatrix & b ) {a.add(b); return a;}
+FloatMatrix &operator -= ( FloatMatrix & a, const FloatMatrix & b ) {a.subtract(b); return a;}
+
+
+
+
+
+
 } // end namespace oofem

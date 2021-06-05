@@ -9,14 +9,21 @@ targets/
 release/
 debug/
 
+# ignore any files under build directories
+build/
+_build/
+
 # test results
 *.out
 *.vtu
 *.pvd
 *.out.*
+*.out-*
 t3d.bmf*
 perf.data*
 *.orig
+*.vtk
+*_out.*
 
 # documentation aux-files.
 *.aux

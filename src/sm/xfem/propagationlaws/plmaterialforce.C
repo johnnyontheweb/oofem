@@ -15,7 +15,7 @@
 #include "spatiallocalizer.h"
 #include "floatmatrix.h"
 #include "gausspoint.h"
-#include "Materials/structuralms.h"
+#include "sm/Materials/structuralms.h"
 #include "xfem/enrichmentitem.h"
 #include "feinterpol.h"
 #include "xfem/xfemmanager.h"
@@ -36,15 +36,11 @@ PLMaterialForce :: PLMaterialForce():
 PLMaterialForce :: ~PLMaterialForce()
 {}
 
-IRResultType PLMaterialForce :: initializeFrom(InputRecord *ir)
+void PLMaterialForce :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;
-
     IR_GIVE_FIELD(ir, mRadius,                          _IFT_PLMaterialForce_Radius);
     IR_GIVE_FIELD(ir, mIncrementLength,                 _IFT_PLMaterialForce_IncLength);
     IR_GIVE_OPTIONAL_FIELD(ir, mCrackPropThreshold,     _IFT_PLMaterialForce_CrackPropThreshold);
-
-    return IRRT_OK;
 }
 
 void PLMaterialForce :: giveInputRecord(DynamicInputRecord &input)
@@ -71,9 +67,14 @@ bool PLMaterialForce :: propagateInterface(Domain &iDomain, EnrichmentFront &iEn
     // Check if the tip is located in the domain
     SpatialLocalizer *localizer = iDomain.giveSpatialLocalizer();
     FloatArray lCoords, closest;
+//    printf("tipInfo.mGlobalCoord: \n"); tipInfo.mGlobalCoord.printYourself();
+    if ( tipInfo.mGlobalCoord.giveSize() == 0 ) {
+        return false;
+    }
+
     localizer->giveElementClosestToPoint(lCoords, closest, tipInfo.mGlobalCoord);
 
-    if(closest.distance(tipInfo.mGlobalCoord) > 1.0e-9) {
+    if ( distance(closest, tipInfo.mGlobalCoord) > 1.0e-9 ) {
 //        printf("Tip is outside all elements.\n");
         return false;
     }
@@ -90,13 +91,14 @@ bool PLMaterialForce :: propagateInterface(Domain &iDomain, EnrichmentFront &iEn
     }
 
     double forceNorm = matForce.computeNorm();
-//    printf("forceNorm: %e\n", forceNorm);
+//    printf("forceNorm: %e mCrackPropThreshold: %e\n", forceNorm, mCrackPropThreshold);
 
     if(forceNorm < mCrackPropThreshold || forceNorm < 1.0e-20) {
         return false;
     }
 
-//    printf("Propagating crack.\n");
+    printf("forceNorm: %e mCrackPropThreshold: %e\n", forceNorm, mCrackPropThreshold);
+    printf("Propagating crack in PLMaterialForce :: propagateInterface.\n");
 //    printf("Tip coord: "); tipInfo.mGlobalCoord.printYourself();
 
     FloatArray dir(matForce);
@@ -104,7 +106,7 @@ bool PLMaterialForce :: propagateInterface(Domain &iDomain, EnrichmentFront &iEn
 //    printf("dir: "); dir.printYourself();
 
     const double cosAngTol = 1.0/sqrt(2.0);
-    if(tipInfo.mTangDir.dotProduct(dir) < cosAngTol) {
+    if ( tipInfo.mTangDir.dotProduct(dir) < cosAngTol ) {
         // Do not allow sharper turns than 45 degrees
 
         if( tipInfo.mNormalDir.dotProduct(dir) > 0.0 ) {

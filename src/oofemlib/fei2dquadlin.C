@@ -36,34 +36,34 @@
 #include "mathfem.h"
 #include "floatmatrix.h"
 #include "floatarray.h"
+#include "floatmatrixf.h"
+#include "floatarrayf.h"
 #include "gaussintegrationrule.h"
 
 namespace oofem {
 double
 FEI2dQuadLin :: giveArea(const FEICellGeometry &cellgeo) const
 {
-    const FloatArray *node1 = cellgeo.giveVertexCoordinates(1);
-    const FloatArray *node2 = cellgeo.giveVertexCoordinates(2);
-    const FloatArray *node3 = cellgeo.giveVertexCoordinates(3);
-    const FloatArray *node4 = cellgeo.giveVertexCoordinates(4);
+    const auto &node1 = cellgeo.giveVertexCoordinates(1);
+    const auto &node2 = cellgeo.giveVertexCoordinates(2);
+    const auto &node3 = cellgeo.giveVertexCoordinates(3);
+    const auto &node4 = cellgeo.giveVertexCoordinates(4);
 
-    double x13 = node1->at(xind) - node3->at(xind);
-    double y13 = node1->at(yind) - node3->at(yind);
-    double x24 = node2->at(xind) - node4->at(xind);
-    double y24 = node2->at(yind) - node4->at(yind);
+    double x13 = node1.at(xind) - node3.at(xind);
+    double y13 = node1.at(yind) - node3.at(yind);
+    double x24 = node2.at(xind) - node4.at(xind);
+    double y24 = node2.at(yind) - node4.at(yind);
 
     return fabs( 0.5 * ( x13 * y24 - x24 * y13 ) );
 }
 
-void
-FEI2dQuadLin :: evalN(FloatArray &answer, const FloatArray &lcoords, const FEICellGeometry &cellgeo)
+FloatArrayF<4>
+FEI2dQuadLin :: evalN(const FloatArrayF<2> &lcoords)
 {
-    double ksi, eta;
+    double ksi = lcoords[0];
+    double eta = lcoords[1];
 
-    ksi = lcoords.at(1);
-    eta = lcoords.at(2);
-
-    answer = {
+    return {
         ( 1. + ksi ) * ( 1. + eta ) * 0.25,
         ( 1. - ksi ) * ( 1. + eta ) * 0.25,
         ( 1. - ksi ) * ( 1. - eta ) * 0.25,
@@ -71,25 +71,36 @@ FEI2dQuadLin :: evalN(FloatArray &answer, const FloatArray &lcoords, const FEICe
     };
 }
 
+void
+FEI2dQuadLin :: evalN(FloatArray &answer, const FloatArray &lcoords, const FEICellGeometry &cellgeo)
+{
+    answer = evalN({lcoords[0], lcoords[1]});
+}
+
+std::pair<double, FloatMatrixF<2,4>>
+FEI2dQuadLin :: evaldNdx(const FloatArrayF<2> &lcoords, const FEICellGeometry &cellgeo) const
+{
+    auto dndu = this->evaldNdxi(lcoords);
+
+    FloatMatrixF<2,2> jacT;
+    for ( std::size_t i = 0; i < dndu.cols(); i++ ) {
+        double x = cellgeo.giveVertexCoordinates(i+1).at(xind);
+        double y = cellgeo.giveVertexCoordinates(i+1).at(yind);
+
+        jacT(0, 0) += dndu(0, i) * x;
+        jacT(0, 1) += dndu(0, i) * y;
+        jacT(1, 0) += dndu(1, i) * x;
+        jacT(1, 1) += dndu(1, i) * y;
+    }
+    return {det(jacT), dot(inv(jacT), dndu)};
+}
+
 double
 FEI2dQuadLin :: evaldNdx(FloatMatrix &answer, const FloatArray &lcoords, const FEICellGeometry &cellgeo)
 {
-    FloatMatrix jacobianMatrix(2, 2), inv, dn;
-
-    this->giveDerivatives(dn, lcoords);
-    for ( int i = 1; i <= dn.giveNumberOfRows(); i++ ) {
-        double x = cellgeo.giveVertexCoordinates(i)->at(xind);
-        double y = cellgeo.giveVertexCoordinates(i)->at(yind);
-
-        jacobianMatrix.at(1, 1) += dn.at(i, 1) * x;
-        jacobianMatrix.at(1, 2) += dn.at(i, 1) * y;
-        jacobianMatrix.at(2, 1) += dn.at(i, 2) * x;
-        jacobianMatrix.at(2, 2) += dn.at(i, 2) * y;
-    }
-    inv.beInverseOf(jacobianMatrix);
-
-    answer.beProductTOf(dn, inv);
-    return jacobianMatrix.giveDeterminant();
+    auto tmp = evaldNdx(lcoords, cellgeo);
+    answer = transpose(tmp.second);
+    return tmp.first;
 }
 
 void
@@ -103,15 +114,15 @@ FEI2dQuadLin :: local2global(FloatArray &answer, const FloatArray &lcoords, cons
     const double n3 = ( 1. - ksi ) * ( 1. - eta ) * 0.25;
     const double n4 = ( 1. + ksi ) * ( 1. - eta ) * 0.25;
 
-    const FloatArray* const p1 = cellgeo.giveVertexCoordinates(1);
-    const FloatArray* const p2 = cellgeo.giveVertexCoordinates(2);
-    const FloatArray* const p3 = cellgeo.giveVertexCoordinates(3);
-    const FloatArray* const p4 = cellgeo.giveVertexCoordinates(4);
+    const auto &p1 = cellgeo.giveVertexCoordinates(1);
+    const auto &p2 = cellgeo.giveVertexCoordinates(2);
+    const auto &p3 = cellgeo.giveVertexCoordinates(3);
+    const auto &p4 = cellgeo.giveVertexCoordinates(4);
 
-    answer = {n1 * p1->at(xind) + n2 * p2->at(xind) +
-              n3 * p3->at(xind) + n4 * p4->at(xind),
-              n1 * p1->at(yind) + n2 * p2->at(yind) +
-              n3 * p3->at(yind) + n4 * p4->at(yind)} ;
+    answer = {n1 * p1.at(xind) + n2 * p2.at(xind) +
+              n3 * p3.at(xind) + n4 * p4.at(xind),
+              n1 * p1.at(yind) + n2 * p2.at(yind) +
+              n3 * p3.at(yind) + n4 * p4.at(yind)} ;
 }
 
 #define POINT_TOL 1.e-6
@@ -125,15 +136,15 @@ FEI2dQuadLin :: global2local(FloatArray &answer, const FloatArray &coords, const
 
     answer.resize(2);
 
-    x1 = cellgeo.giveVertexCoordinates(1)->at(xind);
-    x2 = cellgeo.giveVertexCoordinates(2)->at(xind);
-    x3 = cellgeo.giveVertexCoordinates(3)->at(xind);
-    x4 = cellgeo.giveVertexCoordinates(4)->at(xind);
+    x1 = cellgeo.giveVertexCoordinates(1).at(xind);
+    x2 = cellgeo.giveVertexCoordinates(2).at(xind);
+    x3 = cellgeo.giveVertexCoordinates(3).at(xind);
+    x4 = cellgeo.giveVertexCoordinates(4).at(xind);
 
-    y1 = cellgeo.giveVertexCoordinates(1)->at(yind);
-    y2 = cellgeo.giveVertexCoordinates(2)->at(yind);
-    y3 = cellgeo.giveVertexCoordinates(3)->at(yind);
-    y4 = cellgeo.giveVertexCoordinates(4)->at(yind);
+    y1 = cellgeo.giveVertexCoordinates(1).at(yind);
+    y2 = cellgeo.giveVertexCoordinates(2).at(yind);
+    y3 = cellgeo.giveVertexCoordinates(3).at(yind);
+    y4 = cellgeo.giveVertexCoordinates(4).at(yind);
 
     a1 = x1 + x2 + x3 + x4;
     a2 = x1 - x2 - x3 + x4;
@@ -251,15 +262,13 @@ FEI2dQuadLin :: edgeEvalN(FloatArray &answer, int iedge, const FloatArray &lcoor
 double
 FEI2dQuadLin :: edgeEvalNormal(FloatArray &answer, int iedge, const FloatArray &lcoords, const FEICellGeometry &cellgeo)
 {
-    int nodeA, nodeB;
-    IntArray edgeNodes;
-    this->computeLocalEdgeMapping(edgeNodes, iedge);
-    nodeA = edgeNodes.at(1);
-    nodeB = edgeNodes.at(2);
+    const auto &edgeNodes = this->computeLocalEdgeMapping(iedge);
+    int nodeA = edgeNodes.at(1);
+    int nodeB = edgeNodes.at(2);
 
     answer = {
-        cellgeo.giveVertexCoordinates(nodeA)->at(yind) - cellgeo.giveVertexCoordinates(nodeB)->at(yind),
-        cellgeo.giveVertexCoordinates(nodeB)->at(xind) - cellgeo.giveVertexCoordinates(nodeA)->at(xind)
+        cellgeo.giveVertexCoordinates(nodeB).at(yind) - cellgeo.giveVertexCoordinates(nodeA).at(yind),
+        cellgeo.giveVertexCoordinates(nodeA).at(xind) - cellgeo.giveVertexCoordinates(nodeB).at(xind)
     };
     return answer.normalize() * 0.5;
 }
@@ -268,8 +277,7 @@ void
 FEI2dQuadLin :: edgeEvaldNds(FloatArray &answer, int iedge,
                              const FloatArray &lcoords, const FEICellGeometry &cellgeo)
 {
-    IntArray edgeNodes;
-    this->computeLocalEdgeMapping(edgeNodes, iedge);
+    const auto &edgeNodes = this->computeLocalEdgeMapping(iedge);
     double l = this->edgeComputeLength(edgeNodes, cellgeo);
 
     answer = { -1.0 / l, 1.0 / l };
@@ -279,55 +287,42 @@ void
 FEI2dQuadLin :: edgeLocal2global(FloatArray &answer, int iedge,
                                  const FloatArray &lcoords, const FEICellGeometry &cellgeo)
 {
-    IntArray edgeNodes;
     FloatArray n;
-    this->computeLocalEdgeMapping(edgeNodes, iedge);
+    const auto &edgeNodes = this->computeLocalEdgeMapping(iedge);
     this->edgeEvalN(n, iedge, lcoords, cellgeo);
 
     answer.resize(2);
-    answer.at(1) = ( n.at(1) * cellgeo.giveVertexCoordinates( edgeNodes.at(1) )->at(xind) +
-                    n.at(2) * cellgeo.giveVertexCoordinates( edgeNodes.at(2) )->at(xind) );
-    answer.at(2) = ( n.at(1) * cellgeo.giveVertexCoordinates( edgeNodes.at(1) )->at(yind) +
-                    n.at(2) * cellgeo.giveVertexCoordinates( edgeNodes.at(2) )->at(yind) );
+    answer.at(1) = n.at(1) * cellgeo.giveVertexCoordinates( edgeNodes.at(1) ).at(xind) +
+                   n.at(2) * cellgeo.giveVertexCoordinates( edgeNodes.at(2) ).at(xind);
+    answer.at(2) = n.at(1) * cellgeo.giveVertexCoordinates( edgeNodes.at(1) ).at(yind) +
+                   n.at(2) * cellgeo.giveVertexCoordinates( edgeNodes.at(2) ).at(yind);
 }
 
-void
-FEI2dQuadLin :: computeLocalEdgeMapping(IntArray &edgeNodes, int iedge)
+IntArray
+FEI2dQuadLin :: computeLocalEdgeMapping(int iedge) const
 {
-    int aNode = 0, bNode = 0;
-    edgeNodes.resize(2);
-
     if ( iedge == 1 ) { // edge between nodes 1 2
-        aNode = 1;
-        bNode = 2;
+        return {1, 2};
     } else if ( iedge == 2 ) { // edge between nodes 2 3
-        aNode = 2;
-        bNode = 3;
+        return {2, 3};
     } else if ( iedge == 3 ) { // edge between nodes 3 4
-        aNode = 3;
-        bNode = 4;
+        return {3, 4};
     } else if ( iedge == 4 ) { // edge between nodes 4 1
-        aNode = 4;
-        bNode = 1;
+        return {4, 1};
     } else {
-        OOFEM_ERROR("wrong egde number (%d)", iedge);
+        throw std::range_error("invalid edge number");
+        return {};
     }
-
-    edgeNodes.at(1) = aNode;
-    edgeNodes.at(2) = bNode;
 }
 
 double
-FEI2dQuadLin :: edgeComputeLength(IntArray &edgeNodes, const FEICellGeometry &cellgeo)
+FEI2dQuadLin :: edgeComputeLength(const IntArray &edgeNodes, const FEICellGeometry &cellgeo) const
 {
-    double dx, dy;
-    int nodeA, nodeB;
+    int nodeA = edgeNodes.at(1);
+    int nodeB = edgeNodes.at(2);
 
-    nodeA = edgeNodes.at(1);
-    nodeB = edgeNodes.at(2);
-
-    dx = cellgeo.giveVertexCoordinates(nodeB)->at(xind) - cellgeo.giveVertexCoordinates(nodeA)->at(xind);
-    dy = cellgeo.giveVertexCoordinates(nodeB)->at(yind) - cellgeo.giveVertexCoordinates(nodeA)->at(yind);
+    double dx = cellgeo.giveVertexCoordinates(nodeB).at(xind) - cellgeo.giveVertexCoordinates(nodeA).at(xind);
+    double dy = cellgeo.giveVertexCoordinates(nodeB).at(yind) - cellgeo.giveVertexCoordinates(nodeA).at(yind);
     return sqrt(dx * dx + dy * dy);
 }
 
@@ -354,101 +349,99 @@ FEI2dQuadLin :: giveJacobianMatrixAt(FloatMatrix &jacobianMatrix, const FloatArr
     }
 }
 
-void
-FEI2dQuadLin :: giveDerivatives(FloatMatrix &dn, const FloatArray &lc)
+    return inside;
+}
+
+FloatMatrixF<2,4> FEI2dQuadLin :: evaldNdxi(const FloatArrayF<2> &lcoords)
 {
     const double &ksi = lc[0];
     const double &eta = lc[1];
 
-    dn.resize(4, 2);
-
+    FloatMatrixF<2,4> answer;
     // dn/dxi
-	dn.at(1, 1) =  0.25 * (1. + eta);
-	dn.at(2, 1) = -0.25 * (1. + eta);
-	dn.at(3, 1) = -0.25 * (1. - eta);
-	dn.at(4, 1) =  0.25 * (1. - eta);
+    answer.at(1, 1) =  0.25 * ( 1. + eta );
+    answer.at(1, 2) = -0.25 * ( 1. + eta );
+    answer.at(1, 3) = -0.25 * ( 1. - eta );
+    answer.at(1, 4) =  0.25 * ( 1. - eta );
 
 	// dn/deta
-	dn.at(1, 2) =  0.25 * (1. + ksi);
-	dn.at(2, 2) =  0.25 * (1. - ksi);
-	dn.at(3, 2) = -0.25 * (1. - ksi);
-	dn.at(4, 2) = -0.25 * (1. + ksi);
+    answer.at(2, 1) =  0.25 * ( 1. + ksi );
+    answer.at(2, 2) =  0.25 * ( 1. - ksi );
+    answer.at(2, 3) = -0.25 * ( 1. - ksi );
+    answer.at(2, 4) = -0.25 * ( 1. + ksi );
+    return answer;
+}
+
+void FEI2dQuadLin :: evaldNdxi(FloatMatrix &answer, const FloatArray &lcoords, const FEICellGeometry &cellgeo)
+{
+    answer = transpose(evaldNdxi({lcoords[0], lcoords[1]}));
 }
 
 double FEI2dQuadLin :: evalNXIntegral(int iEdge, const FEICellGeometry &cellgeo)
 {
-    IntArray eNodes;
-    const FloatArray *node;
-    double x1, x2, y1, y2;
+    const auto &eNodes = this->computeLocalEdgeMapping(iEdge);
 
-    this->computeLocalEdgeMapping(eNodes, iEdge);
+    const auto &node1 = cellgeo.giveVertexCoordinates( eNodes.at(1) );
+    double x1 = node1.at(xind);
+    double y1 = node1.at(yind);
 
-    node = cellgeo.giveVertexCoordinates( eNodes.at(1) );
-    x1 = node->at(xind);
-    y1 = node->at(yind);
-
-    node = cellgeo.giveVertexCoordinates( eNodes.at(2) );
-    x2 = node->at(xind);
-    y2 = node->at(yind);
+    const auto &node2 = cellgeo.giveVertexCoordinates( eNodes.at(2) );
+    double x2 = node2.at(xind);
+    double y2 = node2.at(yind);
 
     return -( x2 * y1 - x1 * y2 );
 }
 
-IntegrationRule *
+std::unique_ptr<IntegrationRule> 
 FEI2dQuadLin :: giveIntegrationRule(int order)
 {
-    IntegrationRule *iRule = new GaussIntegrationRule(1, NULL);
+    auto iRule = std::make_unique<GaussIntegrationRule>(1, nullptr);
     int points = iRule->getRequiredNumberOfIntegrationPoints(_Square, order + 2);
     iRule->SetUpPointsOnSquare(points, _Unknown);
-    return iRule;
+    return std::move(iRule);
 }
 
 
 /*
  * FEI2dQuadlinAxi element
  */
-  
 double
 FEI2dQuadLinAxi :: giveTransformationJacobian(const FloatArray &lcoords, const FEICellGeometry &cellgeo)
 {
-  FloatArray N;
-  this->evalN( N, lcoords, cellgeo);
+    FloatArray N;
+    this->evalN( N, lcoords, cellgeo);
 
-  double r = 0.0;
-  for ( int i = 1; i <= 4; i++ ) {
-    double x  = cellgeo.giveVertexCoordinates(i)->at(1);
-    r += x * N.at(i);
-  }
+    double r = 0.0;
+    for ( int i = 1; i <= 4; i++ ) {
+        double x = cellgeo.giveVertexCoordinates(i).at(1);
+        r += x * N.at(i);
+    }
 
-  return r * FEI2dQuadLin::giveTransformationJacobian(lcoords, cellgeo);
+    return r * FEI2dQuadLin::giveTransformationJacobian(lcoords, cellgeo);
 }
 
 double
 FEI2dQuadLinAxi::edgeGiveTransformationJacobian(int iedge, const FloatArray &lcoords,
                                                 const FEICellGeometry &cellgeo)
 {
-  IntArray edgeNodes;
-  FloatArray n;
-  this->computeLocalEdgeMapping(edgeNodes, iedge);
-  this->edgeEvalN(n, iedge, lcoords, cellgeo);
+    FloatArray n;
+    const auto &edgeNodes = this->computeLocalEdgeMapping(iedge);
+    this->edgeEvalN(n, iedge, lcoords, cellgeo);
 
-  double r = n.at(1)*cellgeo.giveVertexCoordinates(edgeNodes.at(1))->at(1) + n.at(2)*cellgeo.giveVertexCoordinates(edgeNodes.at(2))->at(1);
-  return r * FEI2dQuadLin::edgeGiveTransformationJacobian(iedge, lcoords, cellgeo);
-
+    double r = n.at(1)*cellgeo.giveVertexCoordinates(edgeNodes.at(1)).at(1) + n.at(2)*cellgeo.giveVertexCoordinates(edgeNodes.at(2)).at(1);
+    return r * FEI2dQuadLin::edgeGiveTransformationJacobian(iedge, lcoords, cellgeo);
 }
-  
+
 double
 FEI2dQuadLinAxi::boundaryEdgeGiveTransformationJacobian(int boundary, const FloatArray &lcoords, const FEICellGeometry &cellgeo)
 {
-  return this->edgeGiveTransformationJacobian(boundary, lcoords, cellgeo);
+    return this->edgeGiveTransformationJacobian(boundary, lcoords, cellgeo);
 }
 
 double
 FEI2dQuadLinAxi::boundaryGiveTransformationJacobian(int boundary, const FloatArray &lcoords, const FEICellGeometry &cellgeo)
 {
-  return this->edgeGiveTransformationJacobian(boundary, lcoords, cellgeo);
+    return this->edgeGiveTransformationJacobian(boundary, lcoords, cellgeo);
 }
-
-
 
 } // end namespace oofem

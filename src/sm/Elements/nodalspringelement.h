@@ -35,7 +35,11 @@
 #ifndef nodalspringelement_h
 #define nodalspringelement_h
 
+<<<<<<< HEAD
 #include "../sm/Elements/structuralelement.h"
+=======
+#include "sm/Elements/structuralelement.h"
+>>>>>>> bp2/master
 
 ///@name Input fields for spring element
 //@{
@@ -72,6 +76,7 @@ public:
     NodalSpringElement(int n, Domain * d);
     virtual ~NodalSpringElement() { }
 
+<<<<<<< HEAD
     virtual void computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep);
     virtual void computeMassMatrix(FloatMatrix &answer, TimeStep *tStep)
     { computeLumpedMassMatrix(answer, tStep); }
@@ -90,6 +95,26 @@ public:
     virtual void updateYourself(TimeStep *tStep) { }
     virtual int checkConsistency() { return 1; }
     virtual void printOutputAt(FILE *file, TimeStep *tStep);
+=======
+    void computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep) override;
+    void computeMassMatrix(FloatMatrix &answer, TimeStep *tStep) override
+    { computeLumpedMassMatrix(answer, tStep); }
+    void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep) override;
+    void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep) override
+    { answer.clear(); }
+
+    void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord = 0) override;
+
+    int computeNumberOfDofs() override { return dofMask.giveSize(); }
+    int computeNumberOfGlobalDofs() override;
+
+    void giveDofManDofIDMask(int inode, IntArray &answer) const override;
+
+    void updateInternalState(TimeStep *tStep) override { }
+    void updateYourself(TimeStep *tStep) override { }
+    int checkConsistency() override { return 1; }
+    void printOutputAt(FILE *file, TimeStep *tStep) override;
+>>>>>>> bp2/master
 
 #ifdef __OOFEG
     //void drawRawGeometry(oofegGraphicContext &gc, TimeStep *tStep);
@@ -98,6 +123,7 @@ public:
 #endif
 
     // definition & identification
+<<<<<<< HEAD
     virtual const char *giveInputRecordName() const { return _IFT_NodalSpringElement_Name; }
     virtual const char *giveClassName() const { return "NodalSpringElement"; }
     virtual IRResultType initializeFrom(InputRecord *ir);
@@ -113,6 +139,25 @@ protected:
     { answer.clear(); }
     virtual void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer) { answer.clear(); }
     virtual bool computeGtoLRotationMatrix(FloatMatrix &answer);
+=======
+    const char *giveInputRecordName() const override { return _IFT_NodalSpringElement_Name; }
+    const char *giveClassName() const override { return "NodalSpringElement"; }
+    void initializeFrom(InputRecord &ir) override;
+    Element_Geometry_Type giveGeometryType() const override { return EGT_point; }
+    bool isCast(TimeStep *tStep) override { return true; }
+
+protected:
+    void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep) override
+    { answer.clear(); }
+    void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) override
+    { answer.clear(); }
+
+    void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer,
+                          int lowerIndx = 1, int upperIndx = ALL_STRAINS) override
+    { answer.clear(); }
+    void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer) override { answer.clear(); }
+    bool computeGtoLRotationMatrix(FloatMatrix &answer) override;
+>>>>>>> bp2/master
 };
 } // end namespace oofem
 #endif // nodalspringelement_h

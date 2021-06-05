@@ -32,7 +32,11 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+<<<<<<< HEAD
 #include "../sm/Elements/nodalspringelement.h"
+=======
+#include "sm/Elements/nodalspringelement.h"
+>>>>>>> bp2/master
 #include "floatmatrix.h"
 #include "intarray.h"
 #include "floatarray.h"
@@ -104,11 +108,17 @@ NodalSpringElement :: computeNumberOfGlobalDofs()
 }
 
 
+<<<<<<< HEAD
 IRResultType
 NodalSpringElement :: initializeFrom(InputRecord *ir)
 {
     IRResultType result;                // Required by IR_GIVE_FIELD macro
 
+=======
+void
+NodalSpringElement :: initializeFrom(InputRecord &ir)
+{
+>>>>>>> bp2/master
     IR_GIVE_FIELD(ir, dofMask, _IFT_NodalSpringElement_dofmask);
     IR_GIVE_FIELD(ir, springConstants, _IFT_NodalSpringElement_springConstants);
 
@@ -129,8 +139,11 @@ NodalSpringElement :: initializeFrom(InputRecord *ir)
     activityTimeFunction = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, activityTimeFunction, _IFT_Element_activityTimeFunction);
     IR_GIVE_FIELD(ir, dofManArray, _IFT_Element_nodes);
+<<<<<<< HEAD
     
     return IRRT_OK;
+=======
+>>>>>>> bp2/master
 }
 
 void NodalSpringElement :: printOutputAt(FILE *File, TimeStep *tStep)

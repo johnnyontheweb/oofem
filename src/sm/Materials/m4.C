@@ -33,7 +33,6 @@
  */
 
 #include "m4.h"
-#include "microplane.h"
 #include "floatmatrix.h"
 #include "floatarray.h"
 #include "mathfem.h"
@@ -45,13 +44,6 @@ REGISTER_Material(M4Material);
 M4Material :: M4Material(int n, Domain *d) :
     MicroplaneMaterial_Bazant(n, d)
 { }
-
-
-inline double
-M4Material :: macbra(double x) /* Macauley bracket = positive part of x */
-{
-    return ( max(x, 0.0) );
-}
 
 inline double
 M4Material :: FVplus(double ev, double k1, double c13, double c14, double c15, double Ev)
@@ -109,51 +101,28 @@ M4Material :: FT(double sn, double ev, double k1, double k2, double c10,
 }
 
 
-void
-M4Material :: giveRealMicroplaneStressVector(FloatArray &answer,
-                                             Microplane *mplane,
-                                             const FloatArray &strain,
-                                             TimeStep *tStep)
+MicroplaneState
+M4Material :: giveRealMicroplaneStressVector(GaussPoint *gp, int mnumber,
+                                             const MicroplaneState &strain,
+                                             TimeStep *tStep) const
 {
-    M4MaterialStatus *status = static_cast< M4MaterialStatus * >( this->giveMicroplaneStatus(mplane) );
-    FloatArray previousStress;
-    FloatArray strainIncrement;
-    double EpsN, DEpsN, DEpsL, DEpsM;
-    double EpsV, DEpsV;
-    double SEV, SVdash, EpsD, DEpsD, SED, SEM, SEL, SD;
+    M4MaterialStatus *status = static_cast< M4MaterialStatus * >( this->giveStatus(gp) );
+    double SEV, SVdash, SED, SEM, SEL, SD;
     double SNdash, F;
     double CV, CD;
 
-
-    // size answer
-    answer.resize(4);
-    answer.zero();
-
     // ask status for tempVH parameter
-    previousStress = status->giveStressVector();
-    strainIncrement.beDifferenceOf( strain, status->giveStrainVector() );
-    if ( !previousStress.isNotEmpty() ) {
-        previousStress.resize(4);
-        previousStress.zero();
-    }
+    auto &prevStrain = status->giveMicroplaneStrain(mnumber);
+    auto &previousStress = status->giveMicroplaneStress(mnumber);
 
-    EpsV =  strain.at(1);
-    EpsN =  strain.at(2);
-    DEpsV = strainIncrement.at(1);
-    DEpsN = strainIncrement.at(2);
-    DEpsL = strainIncrement.at(3);
-    DEpsM = strainIncrement.at(4);
-    EpsD = EpsN - EpsV;
-    DEpsD = DEpsN - DEpsV;
-
-    /* previousStress.at(i)...Vector of history parameters
-     * (1)...previous volumetric stress
-     * (2)..previous normal stress for  microplane
-     * (3)..previous l-shear stress for  microplane
-     * (4)..previous m-shear stress for  microplane
-     *
-     */
-
+    double EpsV =  strain.v;
+    double EpsN =  strain.n;
+    double DEpsV = strain.v - prevStrain.v;
+    double DEpsN = strain.n - prevStrain.n;
+    double DEpsL = strain.l - prevStrain.l;
+    double DEpsM = strain.m - prevStrain.m;
+    double EpsD = EpsN - EpsV;
+    double DEpsD = DEpsN - DEpsV;
 
     // SVsum=0.0;
     // novy koncept s odtizenim
@@ -171,59 +140,57 @@ M4Material :: giveRealMicroplaneStressVector(FloatArray &answer,
      * // if (SigD0*DEpsD<0.0) CD = fabs(SigD0/EpsD0);
      */
 
-    SEV = previousStress.at(1) + CV * DEpsV;
+    MicroplaneState answer;
+
+    SEV = previousStress.v + CV * DEpsV;
 
     SVdash = min( max( SEV, this->FVminus(EpsV, k1, k3, k4, E) ), this->FVplus(EpsV, k1, c13, c14, c15, EV) );
 
-    SED = previousStress.at(2) - previousStress.at(1) + CD * DEpsD;
+    SED = previousStress.n - previousStress.v + CD * DEpsD;
     SD = min( max( SED, this->FDminus(EpsD, k1, c7, c8, c9, E) ),
               this->FDplus(EpsD, k1, c5, c6, c7, c20, E) );
 
     SNdash = SVdash + SD;
-    answer.at(2) = min( SNdash, this->FN(EpsN, previousStress.at(1), k1, c1, c2, c3, c4, E, EV) );
+    answer.n = min( SNdash, this->FN(EpsN, previousStress.v, k1, c1, c2, c3, c4, E, EV) );
 
-    SEM = previousStress.at(4) + ET * DEpsM;
-    SEL = previousStress.at(3) + ET * DEpsL;
+    SEM = previousStress.m + ET * DEpsM;
+    SEL = previousStress.l + ET * DEpsL;
 
-    F = this->FT(answer.at(2), EpsV, k1, k2, c10, c11, c12, ET);
+    F = this->FT(answer.n, EpsV, k1, k2, c10, c11, c12, ET);
 
     if ( SEL > F ) {
-        answer.at(3) = F;
+        answer.l = F;
     } else if ( SEL < -F ) {
-        answer.at(3) = -F;
+        answer.l = -F;
     } else {
-        answer.at(3) = SEL;
+        answer.l = SEL;
     }
 
     if ( SEM > F ) {
-        answer.at(4) = F;
+        answer.m = F;
     } else if ( SEM < -F ) {
-        answer.at(4) = -F;
+        answer.m = -F;
     } else {
-        answer.at(4) = SEM;
+        answer.m = SEM;
     }
 
-    answer.at(1) = SVdash;
+    answer.v = SVdash;
 
     // uncomment this
     //stressIncrement = answer;
     //stressIncrement.subtract (previousStress);
-    //status->letStressIncrementVectorBe (stressIncrement);
-    //status->letStrainIncrementVectorBe (strainIncrement);
 
     // update gp
-    status->letTempStrainVectorBe(strain);
-    status->letTempStressVectorBe(answer);
+    status->letTempMicroplaneStrainBe(mnumber, strain);
+    status->letTempMicroplaneStressBe(mnumber, answer);
+    return answer;
 }
 
 
-IRResultType
-M4Material :: initializeFrom(InputRecord *ir)
+void
+M4Material :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
-    result = MicroplaneMaterial_Bazant :: initializeFrom(ir);
-    if ( result != IRRT_OK ) return result;
+    MicroplaneMaterial_Bazant :: initializeFrom(ir);
 
     c1 = 6.20e-1;
     c2 = 2.76;
@@ -258,29 +225,25 @@ M4Material :: initializeFrom(InputRecord *ir)
     EV = E / ( 1 - 2 * nu );
     ED = 5 * E / ( 2 + 3 * mu ) / ( 1 + nu );
     ET = mu * ED;
-
-    return IRRT_OK;
 }
 
 
 void
-M4Material :: updateVolumetricStressTo(Microplane *mPlane, double sigv)
+M4Material :: updateVolumetricStressTo(GaussPoint *gp, int mnumber, double sigv) const
 {
     //FloatArray stressIncrement;
-    FloatArray stress;
-    M4MaterialStatus *status =  static_cast< M4MaterialStatus * >( this->giveStatus(mPlane) );
+    M4MaterialStatus *status = static_cast< M4MaterialStatus * >( this->giveStatus(gp) );
     //stressIncrement = status->giveStressIncrementVector();
     //stressIncrement.at(1) = sigv - status->giveStressVector().at(1);
     //status->letStressIncrementVectorBe (stressIncrement);
-    stress = status->giveTempStressVector();
-    stress.at(1) = sigv;
-    status->letTempStressVectorBe(stress);
+    auto stress = status->giveTempMicroplaneStress(mnumber);
+    stress.v = sigv;
+    status->letTempMicroplaneStressBe(mnumber, stress);
 }
 
 
-void
-M4Material :: giveThermalDilatationVector(FloatArray &answer,
-                                          GaussPoint *gp,  TimeStep *tStep)
+FloatArrayF<6>
+M4Material :: giveThermalDilatationVector(GaussPoint *gp, TimeStep *tStep) const
 //
 // returns a FloatArray(6) of initial strain vector
 // eps_0 = {exx_0, eyy_0, ezz_0, gyz_0, gxz_0, gxy_0}^T
@@ -288,23 +251,25 @@ M4Material :: giveThermalDilatationVector(FloatArray &answer,
 // gp (element) local axes
 //
 {
-    answer.resize(6);
-    answer.zero();
-    answer.at(1) = talpha;
-    answer.at(2) = talpha;
-    answer.at(3) = talpha;
+    return {
+        talpha,
+        talpha,
+        talpha,
+        0.,
+        0.,
+        0.,
+    };
 }
 
 
 ////////////////////////////////////////////////////////////////////////////
 
-M4MaterialStatus :: M4MaterialStatus(int n, Domain *d, GaussPoint *g) :
-    StructuralMaterialStatus(n, d, g)
+M4MaterialStatus :: M4MaterialStatus(GaussPoint *g, int nplanes) :
+    StructuralMaterialStatus(g),
+    microplaneStrain(nplanes), tempMicroplaneStrain(nplanes),
+    microplaneStress(nplanes), tempMicroplaneStress(nplanes)
 { }
 
-
-M4MaterialStatus :: ~M4MaterialStatus()
-{ }
 
 void
 M4MaterialStatus :: initTempStatus()
@@ -316,17 +281,21 @@ void
 M4MaterialStatus :: updateYourself(TimeStep *tStep)
 {
     StructuralMaterialStatus :: updateYourself(tStep);
+    microplaneStrain = tempMicroplaneStrain;
+    microplaneStress = tempMicroplaneStress;
 }
 
-contextIOResultType
-M4MaterialStatus :: saveContext(DataStream &stream, ContextMode mode, void *obj)
+void
+M4MaterialStatus :: saveContext(DataStream &stream, ContextMode mode)
 {
-    return StructuralMaterialStatus :: saveContext(stream, mode, obj);
+    StructuralMaterialStatus :: saveContext(stream, mode);
+    /// @todo, save microplanestress etc.
 }
 
-contextIOResultType
-M4MaterialStatus :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
+void
+M4MaterialStatus :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    return StructuralMaterialStatus :: restoreContext(stream, mode, obj);
+    StructuralMaterialStatus :: restoreContext(stream, mode);
+    /// @todo, save microplanestress etc.
 }
 } // end namespace oofem

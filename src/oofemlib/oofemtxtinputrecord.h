@@ -69,41 +69,37 @@ public:
     OOFEMTXTInputRecord(int linenumber, std :: string source);
     /// Copy constructor.
     OOFEMTXTInputRecord(const OOFEMTXTInputRecord &);
-    /// Destructor.
-    virtual ~OOFEMTXTInputRecord() { }
     /// Assignment operator.
     OOFEMTXTInputRecord &operator = ( const OOFEMTXTInputRecord & );
 
-    virtual InputRecord *GiveCopy() { return new OOFEMTXTInputRecord(*this); }
+    std::unique_ptr<InputRecord> clone() const override { return std::make_unique<OOFEMTXTInputRecord>(*this); }
 
 public:
     /// Sets the record string.
     void setRecordString(std :: string newStr);
     /// Returns record string.
-    virtual std :: string giveRecordAsString() const { return this->record; }
+    std :: string giveRecordAsString() const override { return this->record; }
 
-    void finish(bool wrn = true);
+    void finish(bool wrn = true) override;
 
 public:
-    virtual IRResultType giveRecordKeywordField(std :: string &answer, int &value);
-    virtual IRResultType giveRecordKeywordField(std :: string &answer);
-    virtual IRResultType giveField(int &answer, InputFieldType id);
-    virtual IRResultType giveField(double &answer, InputFieldType id);
-    virtual IRResultType giveField(bool &answer, InputFieldType id);
-    virtual IRResultType giveField(std :: string &answer, InputFieldType id);
-    virtual IRResultType giveField(FloatArray &answer, InputFieldType id);
-    virtual IRResultType giveField(IntArray &answer, InputFieldType id);
-    virtual IRResultType giveField(FloatMatrix &answer, InputFieldType id);
-    virtual IRResultType giveField(std :: vector< std :: string > &answer, InputFieldType id);
-    virtual IRResultType giveField(Dictionary &answer, InputFieldType id);
-    virtual IRResultType giveField(std :: list< Range > &answer, InputFieldType id);
-    virtual IRResultType giveField(ScalarFunction &answer, InputFieldType id);
+    void giveRecordKeywordField(std :: string &answer, int &value) override;
+    void giveRecordKeywordField(std :: string &answer) override;
+    void giveField(int &answer, InputFieldType id) override;
+    void giveField(double &answer, InputFieldType id) override;
+    void giveField(bool &answer, InputFieldType id) override;
+    void giveField(std :: string &answer, InputFieldType id) override;
+    void giveField(FloatArray &answer, InputFieldType id) override;
+    void giveField(IntArray &answer, InputFieldType id) override;
+    void giveField(FloatMatrix &answer, InputFieldType id) override;
+    void giveField(std :: vector< std :: string > &answer, InputFieldType id) override;
+    void giveField(Dictionary &answer, InputFieldType id) override;
+    void giveField(std :: list< Range > &answer, InputFieldType id) override;
+    void giveField(ScalarFunction &answer, InputFieldType id) override;
 
-    virtual bool hasField(InputFieldType id);
-    virtual void printYourself();
+    bool hasField(InputFieldType id) override;
+    void printYourself() override;
 
-    virtual void report_error(const char *_class, const char *proc, InputFieldType id,
-                              IRResultType result, const char *file, int line);
     void setLineNumber(int lineNumber) { this->lineNumber = lineNumber; }
 
 protected:

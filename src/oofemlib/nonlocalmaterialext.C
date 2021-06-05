@@ -82,18 +82,27 @@ NonlocalMaterialExtensionInterface :: NonlocalMaterialExtensionInterface(Domain 
     nlvar = NLVT_Standard;
 
     px = 0.;
+
+    Rf = 0.;
+    exponent = 1.;
+    averType = 0;
+
+    gridSize = 0;
+    initDiag = 0.;
+    order = 1;
+    centDiff = 2;
 }
 
 void
-NonlocalMaterialExtensionInterface :: updateDomainBeforeNonlocAverage(TimeStep *tStep)
+NonlocalMaterialExtensionInterface :: updateDomainBeforeNonlocAverage(TimeStep *tStep) const
 {
-    Domain *d = this->giveDomain();
+    Domain *d = this->domain;
 
     if ( d->giveNonlocalUpdateStateCounter() == tStep->giveSolutionStateCounter() ) {
         return; // already updated
     }
 
-    OOFEM_LOG_DEBUG ("Updating Before NonlocAverage\n");
+    OOFEM_LOG_DEBUG("Updating Before NonlocAverage\n");
     for ( auto &elem : d->giveElements() ) {
         elem->updateBeforeNonlocalAverage(tStep);
     }
@@ -103,15 +112,13 @@ NonlocalMaterialExtensionInterface :: updateDomainBeforeNonlocAverage(TimeStep *
 }
 
 void
-NonlocalMaterialExtensionInterface :: buildNonlocalPointTable(GaussPoint *gp)
+NonlocalMaterialExtensionInterface :: buildNonlocalPointTable(GaussPoint *gp) const
 {
     double elemVolume, integrationVolume = 0.;
 
     NonlocalMaterialStatusExtensionInterface *statusExt =
         static_cast< NonlocalMaterialStatusExtensionInterface * >( gp->giveMaterialStatus()->
-                                                                  giveInterface(NonlocalMaterialStatusExtensionInterfaceType) );
-    std :: list< localIntegrationRecord > *iList;
-
+                                                                   giveInterface(NonlocalMaterialStatusExtensionInterfaceType) );
     if ( !statusExt ) {
         OOFEM_ERROR("local material status encountered");
     }
@@ -120,10 +127,14 @@ NonlocalMaterialExtensionInterface :: buildNonlocalPointTable(GaussPoint *gp)
         return;                                                  // already done
     }
 
-    iList = statusExt->giveIntegrationDomainList();
+    // Compute the volume around the Gauss point and store it in the nonlocal material status
+    // (it will be used by modifyNonlocalWeightFunctionAround)
+    elemVolume = gp->giveElement()->computeVolumeAround(gp);
+    statusExt->setVolumeAround(elemVolume);
+
+    auto iList = statusExt->giveIntegrationDomainList();
 
     FloatArray gpCoords, jGpCoords, shiftedGpCoords;
-    SpatialLocalizer :: elementContainerType elemSet;
     if ( gp->giveElement()->computeGlobalCoordinates( gpCoords, gp->giveNaturalCoordinates() ) == 0 ) {
         OOFEM_ERROR("computeGlobalCoordinates of target failed");
     }
@@ -139,30 +150,31 @@ NonlocalMaterialExtensionInterface :: buildNonlocalPointTable(GaussPoint *gp)
     // If the mesh represents a periodic cell, nonlocal interaction is considered not only for the real neighbors
     // but also for their periodic images, shifted by +px or -px in the x-direction. In the implementation,
     // instead of shifting the potential neighbors, we shift the receiver point gp. In the non-periodic case (typical),
-    // px=0 and the following loop is executed only once.  
+    // px=0 and the following loop is executed only once.
 
     int nx = 0; // typical case
-    if ( px > 0. ) nx = 1; // periodicity taken into account
-
+    if ( px > 0. ) {
+        nx = 1;            // periodicity taken into account
+    }
     for ( int ix = -nx; ix <= nx; ix++ ) { // loop over periodic images shifted in x-direction
-
+        SpatialLocalizer :: elementContainerType elemSet;
         shiftedGpCoords = gpCoords;
-        shiftedGpCoords.at(1) += ix*px;
+        shiftedGpCoords.at(1) += ix * px;
 
-    // ask domain spatial localizer for list of elements with IP within this zone
+        // ask domain spatial localizer for list of elements with IP within this zone
 #ifdef NMEI_USE_ALL_ELEMENTS_IN_SUPPORT
-        this->giveDomain()->giveSpatialLocalizer()->giveAllElementsWithNodesWithinBox(elemSet, shiftedGpCoords, suprad);
+        this->domain->giveSpatialLocalizer()->giveAllElementsWithNodesWithinBox(elemSet, shiftedGpCoords, suprad);
         // insert element containing given gp
         elemSet.insert( gp->giveElement()->giveNumber() );
 #else
-        this->giveDomain()->giveSpatialLocalizer()->giveAllElementsWithIpWithinBox_EvenIfEmpty(elemSet, shiftedGpCoords, suprad);
+        this->domain->giveSpatialLocalizer()->giveAllElementsWithIpWithinBox_EvenIfEmpty(elemSet, shiftedGpCoords, suprad);
 #endif
         // initialize iList
-
-        for ( auto elindx: elemSet ) {
-            Element *ielem = this->giveDomain()->giveElement(elindx);
+        iList->reserve(elemSet.giveSize());
+        for ( auto elindx : elemSet ) {
+            Element *ielem = this->domain->giveElement(elindx);
             if ( regionMap.at( ielem->giveRegionNumber() ) == 0 ) {
-                for ( auto &jGp: *ielem->giveDefaultIntegrationRulePtr() ) {
+                for ( auto &jGp : *ielem->giveDefaultIntegrationRulePtr() ) {
                     if ( ielem->computeGlobalCoordinates( jGpCoords, jGp->giveNaturalCoordinates() ) ) {
                         double weight = this->computeWeightFunction(shiftedGpCoords, jGpCoords);
 
@@ -188,26 +200,26 @@ NonlocalMaterialExtensionInterface :: buildNonlocalPointTable(GaussPoint *gp)
                 }
             }
         } // loop over elements
+        iList->shrink_to_fit();
     }
 
     statusExt->setIntegrationScale(integrationVolume); // store scaling factor
 }
 
 void
-NonlocalMaterialExtensionInterface :: rebuildNonlocalPointTable(GaussPoint *gp, IntArray *contributingElems)
+NonlocalMaterialExtensionInterface :: rebuildNonlocalPointTable(GaussPoint *gp, IntArray *contributingElems) const
 {
     double weight, elemVolume, integrationVolume = 0.;
 
     NonlocalMaterialStatusExtensionInterface *statusExt =
         static_cast< NonlocalMaterialStatusExtensionInterface * >( gp->giveMaterialStatus()->
-                                                                  giveInterface(NonlocalMaterialStatusExtensionInterfaceType) );
-    std :: list< localIntegrationRecord > *iList;
+                                                                   giveInterface(NonlocalMaterialStatusExtensionInterfaceType) );
 
     if ( !statusExt ) {
         OOFEM_ERROR("local material status encountered");
     }
 
-    iList = statusExt->giveIntegrationDomainList();
+    auto iList = statusExt->giveIntegrationDomainList();
     iList->clear();
 
     if ( contributingElems == NULL ) {
@@ -229,10 +241,11 @@ NonlocalMaterialExtensionInterface :: rebuildNonlocalPointTable(GaussPoint *gp, 
         }
 
         // initialize iList
+        iList->reserve(_size);
         for ( int _e = 1; _e <= _size; _e++ ) {
-            Element *ielem = this->giveDomain()->giveElement( contributingElems->at(_e) );
+            Element *ielem = const_cast<NonlocalMaterialExtensionInterface*>(this)->giveDomain()->giveElement( contributingElems->at(_e) );
             if ( regionMap.at( ielem->giveRegionNumber() ) == 0 ) {
-                for ( auto &jGp:* ielem->giveDefaultIntegrationRulePtr() ) {
+                for ( auto &jGp : *ielem->giveDefaultIntegrationRulePtr() ) {
                     if ( ielem->computeGlobalCoordinates( jGpCoords, jGp->giveNaturalCoordinates() ) ) {
                         weight = this->computeWeightFunction(gpCoords, jGpCoords);
 
@@ -263,7 +276,7 @@ NonlocalMaterialExtensionInterface :: rebuildNonlocalPointTable(GaussPoint *gp, 
 #ifdef __PARALLEL_MODE
  #ifdef __VERBOSE_PARALLEL
         fprintf( stderr, "%d(%d):", gp->giveElement()->giveGlobalNumber(), gp->giveNumber() );
-        for ( auto &lir: *iList ) {
+        for ( auto &lir : *iList ) {
             fprintf(stderr, "%d,%d(%e)", lir.nearGp->giveElement()->giveGlobalNumber(), lir.nearGp->giveNumber(), lir.weight);
         }
 
@@ -273,13 +286,285 @@ NonlocalMaterialExtensionInterface :: rebuildNonlocalPointTable(GaussPoint *gp, 
     }
 }
 
+// This is the method used by eikonal nonlocal models to adjust the nonlocal interaction
+// depending on the evolution of some internal variables such as damage
+void
+NonlocalMaterialExtensionInterface :: modifyNonlocalWeightFunctionAround(GaussPoint *gp) const
+{
+    Element *elem = gp->giveElement();
+    FloatArray coords;
+    elem->computeGlobalCoordinates( coords, gp->giveNaturalCoordinates() );
+    int dim = coords.giveSize();
+    if ( dim == 1 ) {
+        modifyNonlocalWeightFunction_1D_Around(gp);
+        return;
+    }
 
-std :: list< localIntegrationRecord > *
-NonlocalMaterialExtensionInterface :: giveIPIntegrationList(GaussPoint *gp)
+#ifdef DEBUG
+    if ( dim != 2 ) {
+        OOFEM_ERROR("NonlocalMaterialExtensionInterface :: modifyNonlocalWeightFunctionAround is implemented only for 1D and 2D problems, sorry.\n");
+    }
+#endif
+
+    // Compute the "speed" at each grid node, depending on damage or a similar variable (note that "speed" will be deleted by grid)
+    FloatMatrix &speed = grid->givePrescribedField();
+    // This is a simple initialization that leads to standard Euclidean distance
+    /*
+     * for (i=1; i<=2*gridSize+1; i++)
+     * for (j=1; j<=2*gridSize+1; j++)pos
+     * speed->at(i,j) = 1.;
+     */
+
+    auto *list = this->giveIPIntegrationList(gp);
+    Element *ngpElem;
+    FloatArray ngpCoords(2);
+
+    // This is the proper initialization for a truly eikonal damage model
+
+    // Loop over neighboring Gauss points - transfer of damage to the grid "speed"
+    double xgp = coords.at(1);
+    double ygp = coords.at(2);
+    int ipos = 0;
+    double xngp, yngp, damgp;
+    for ( auto lip : *list ) {
+        ipos++;
+        // Determine the global coordinates of the neighboring Gauss point
+        ngpElem = ( lip.nearGp )->giveElement();
+        ngpElem->computeGlobalCoordinates( ngpCoords, lip.nearGp->giveNaturalCoordinates() );
+        // Get damage at the neighboring Gauss point
+        xngp = mapToGridCoord(ngpCoords.at(1), xgp);
+        yngp = mapToGridCoord(ngpCoords.at(2), ygp);
+        damgp = this->giveNonlocalMetricModifierAt(lip.nearGp);
+        // For the first neighbor, set damage as initial guess
+        if ( ipos == 1 ) {
+            for ( int i = 1; i <= 2 * gridSize + 1; i++ ) {
+                for ( int j = 1; j <= 2 * gridSize + 1; j++ ) {
+                    minDist2->at(i, j) = dist2FromGridNode(xngp, yngp, j, i);
+                    speed.at(i, j) = damgp;
+                }
+            }
+            // For the other neighbors, check whether distance is smaller and update damage
+        } else {
+            for ( int i = 1; i <= 2 * gridSize + 1; i++ ) {
+                for ( int j = 1; j <= 2 * gridSize + 1; j++ ) {
+                    double dist2 = dist2FromGridNode(xngp, yngp, j, i);
+                    if ( dist2 < minDist2->at(i, j) ) {
+                        minDist2->at(i, j) = dist2;
+                        speed.at(i, j) = damgp;
+                    }
+                }
+            }
+        }
+    }
+
+    // Transform damage to speed
+    for ( int i = 1; i <= 2 * gridSize + 1; i++ ) {
+        for ( int j = 1; j <= 2 * gridSize + 1; j++ ) {
+            speed.at(i, j) = 1. / computeDistanceModifier( speed.at(i, j) );
+        }
+    }
+
+    // Initialize grid for distance evaluation
+    grid->unFreeze();
+
+    // Set the details of the method that should be used by the grid
+    grid->setMethod(order, initDiag, centDiff);
+
+    // Set zero distance at the grid center
+    FloatMatrix center(1, 2);
+    center.at(1, 1) = center.at(1, 2) = ( double ) gridSize + 1;
+    grid->setZeroValues(& center);
+
+    // The fast marching method will be invoked implicitly, by asking for the solution
+
+    double wsum = 0.;
+    // Loop over neighboring Gauss points - evaluation of new weights
+    for ( auto lip : *list ) {
+        // Determine the global coordinates of a neighboring Gauss point
+        ngpElem = ( lip.nearGp )->giveElement();
+        ngpElem->computeGlobalCoordinates( ngpCoords, lip.nearGp->giveNaturalCoordinates() );
+        // Find the nearest node of the grid (transformation from physical coordinates to grid coordinates)
+        int j = mapToGridPoint( ngpCoords.at(1), coords.at(1) );
+        if ( j < 1 ) {
+            j = 1;
+        } else if ( j > 2 * gridSize + 1 ) {
+            j = 2 * gridSize + 1;
+        }
+        int i = mapToGridPoint( ngpCoords.at(2), coords.at(2) );
+        if ( i < 1 ) {
+            i = 1;
+        } else if ( i > 2 * gridSize + 1 ) {
+            i = 2 * gridSize + 1;
+        }
+
+        // Get solution value from the nearest grid point
+        double distance = ( suprad / gridSize ) * grid->giveSolutionValueAt(i, j);
+        if ( distance < 0. ) {
+            printf("Warning\n");
+        }
+        // Compute and store the weight function for that distance
+        // double volumeAround = ngpElem->computeVolumeAround(lip.nearGp); // old style
+        // More efficient:
+        NonlocalMaterialStatusExtensionInterface *statusExt =
+            static_cast< NonlocalMaterialStatusExtensionInterface * >( lip.nearGp->giveMaterialStatus()->
+                                                                       giveInterface(NonlocalMaterialStatusExtensionInterfaceType) );
+        double volumeAround = statusExt->giveVolumeAround();
+        double w = computeWeightFunction(distance) * volumeAround;
+        lip.weight = w;
+        wsum += w;
+    }
+
+    // update the stored sum of nonlocal interaction weights (to be used for potential rescaling)
+    NonlocalMaterialStatusExtensionInterface *statusExt =
+        static_cast< NonlocalMaterialStatusExtensionInterface * >( gp->giveMaterialStatus()->
+                                                                   giveInterface(NonlocalMaterialStatusExtensionInterfaceType) );
+    statusExt->setIntegrationScale(wsum);
+}
+
+// Simple algorithm, limited to 1D, can be used for comparison
+void
+NonlocalMaterialExtensionInterface :: modifyNonlocalWeightFunction_1D_Around(GaussPoint *gp) const
+{
+    auto *list = this->giveIPIntegrationList(gp);
+    std :: vector< localIntegrationRecord > :: iterator postarget;
+
+    // find the current Gauss point (target) in the list of it neighbors
+    for ( auto pos = list->begin(); pos != list->end(); ++pos ) {
+        if ( pos->nearGp == gp ) {
+            postarget = pos;
+        }
+    }
+
+    Element *elem = gp->giveElement();
+    FloatArray coords;
+    elem->computeGlobalCoordinates( coords, gp->giveNaturalCoordinates() );
+    double xtarget = coords.at(1);
+
+    double wsum = 0., xprev, damageprev = 0.;
+
+    // process the list from the target to the end
+    double distance = 0.; // distance modified by damage
+    xprev = xtarget;
+    for ( auto pos = postarget; pos != list->end(); ++pos ) {
+        Element *nearElem = ( pos->nearGp )->giveElement();
+        nearElem->computeGlobalCoordinates( coords, pos->nearGp->giveNaturalCoordinates() );
+        double x = coords.at(1);
+        double damage = this->giveNonlocalMetricModifierAt(pos->nearGp);
+        /*
+         * nonlocStatus = static_cast< IDNLMaterialStatus * >( this->giveStatus(pos->nearGp) );
+         * damage = nonlocStatus->giveTempDamage();
+         * if ( damage == 0. ) {
+         *  damage = nonlocStatus->giveDamage();
+         * }
+         */
+
+        if ( pos != postarget ) {
+            distance += computeModifiedLength(x - xprev, damage, damageprev);
+            //( x - xprev ) * 0.5 * ( computeDistanceModifier(damage) + computeDistanceModifier(damageprev) );
+        }
+
+        double w = computeWeightFunction(distance) * nearElem->computeVolumeAround(pos->nearGp);
+        pos->weight = w;
+        wsum += w;
+        xprev = x;
+        damageprev = damage;
+    }
+
+    // process the list from the target to the beginning
+    distance = 0.;
+    for ( auto pos = postarget; pos != list->begin(); --pos ) {
+        Element *nearElem = ( pos->nearGp )->giveElement();
+        nearElem->computeGlobalCoordinates( coords, pos->nearGp->giveNaturalCoordinates() );
+        double x = coords.at(1);
+        double damage = this->giveNonlocalMetricModifierAt(pos->nearGp);
+        /*
+         * nonlocStatus = static_cast< IDNLMaterialStatus * >( this->giveStatus(pos->nearGp) );
+         * damage = nonlocStatus->giveTempDamage();
+         * if ( damage == 0. ) {
+         *  damage = nonlocStatus->giveDamage();
+         * }
+         */
+
+        if ( pos != postarget ) {
+            distance += computeModifiedLength(xprev - x, damage, damageprev);
+            //distance += ( xprev - x ) * 0.5 * ( computeDistanceModifier(damage) + computeDistanceModifier(damageprev) );
+            double w = computeWeightFunction(distance) * nearElem->computeVolumeAround(pos->nearGp);
+            pos->weight = w;
+            wsum += w;
+        }
+
+        xprev = x;
+        damageprev = damage;
+    }
+
+    // the beginning must be treated separately
+    auto pos = list->begin();
+    if ( pos != postarget ) {
+        Element *nearElem = ( pos->nearGp )->giveElement();
+        nearElem->computeGlobalCoordinates( coords, pos->nearGp->giveNaturalCoordinates() );
+        double x = coords.at(1);
+        double damage = this->giveNonlocalMetricModifierAt(pos->nearGp);
+        /*
+         * nonlocStatus = static_cast< IDNLMaterialStatus * >( this->giveStatus(pos->nearGp) );
+         * damage = nonlocStatus->giveTempDamage();
+         * if ( damage == 0. ) {
+         *  damage = nonlocStatus->giveDamage();
+         * }
+         */
+
+        distance += computeModifiedLength(xprev - x, damage, damageprev);
+        //distance += ( xprev - x ) * 0.5 * ( computeDistanceModifier(damage) + computeDistanceModifier(damageprev) );
+        double w = computeWeightFunction(distance) * nearElem->computeVolumeAround(pos->nearGp);
+        pos->weight = w;
+        wsum += w;
+    }
+
+    // update the stored sum of nonlocal interaction weights (to be used for potential rescaling)
+    NonlocalMaterialStatusExtensionInterface *statusExt =
+        static_cast< NonlocalMaterialStatusExtensionInterface * >( gp->giveMaterialStatus()->
+                                                                   giveInterface(NonlocalMaterialStatusExtensionInterfaceType) );
+    statusExt->setIntegrationScale(wsum);
+}
+
+double
+NonlocalMaterialExtensionInterface :: computeModifiedLength(double length, double dam1, double dam2) const
+{
+    if ( averType == 6 ) { // different (improved) integration scheme
+        return length * 2. / ( 1. / computeDistanceModifier(dam1) + 1. / computeDistanceModifier(dam2) );
+    } else { // standard integration scheme
+        //printf("%g %g %g %g %g %g\n",dam1,dam2,computeDistanceModifier(dam1),computeDistanceModifier(dam2),length,length * 0.5 * ( computeDistanceModifier(dam1) + computeDistanceModifier(dam2) ));
+        return length * 0.5 * ( computeDistanceModifier(dam1) + computeDistanceModifier(dam2) );
+    }
+}
+
+double
+NonlocalMaterialExtensionInterface :: computeDistanceModifier(double damage) const
+{
+    switch ( averType ) {
+    case 2: return 1. / ( Rf / cl + ( 1. - Rf / cl ) * pow(1. - damage, exponent) );
+
+    case 3: if ( damage == 0. ) {
+            return 1.;
+    } else {
+            return 1. / ( 1. - ( 1. - Rf / cl ) * pow(damage, exponent) );
+    }
+
+    case 4: return 1. / pow(Rf / cl, damage);
+
+    case 5: return ( 2. * cl ) / ( cl + Rf + ( cl - Rf ) * cos(M_PI * damage) );
+
+    case 6: return 1. / sqrt(1. - damage);
+
+    default: return 1.;
+    }
+}
+
+std :: vector< localIntegrationRecord > *
+NonlocalMaterialExtensionInterface :: giveIPIntegrationList(GaussPoint *gp) const
 {
     NonlocalMaterialStatusExtensionInterface *statusExt =
         static_cast< NonlocalMaterialStatusExtensionInterface * >( gp->giveMaterialStatus()->
-                                                                  giveInterface(NonlocalMaterialStatusExtensionInterfaceType) );
+                                                                   giveInterface(NonlocalMaterialStatusExtensionInterfaceType) );
 
     if ( !statusExt ) {
         OOFEM_ERROR("local material status encountered");
@@ -293,11 +578,10 @@ NonlocalMaterialExtensionInterface :: giveIPIntegrationList(GaussPoint *gp)
 }
 
 void
-NonlocalMaterialExtensionInterface :: endIPNonlocalAverage(GaussPoint *gp)
+NonlocalMaterialExtensionInterface :: endIPNonlocalAverage(GaussPoint *gp) const
 {
-    NonlocalMaterialStatusExtensionInterface *statusExt =
-        static_cast< NonlocalMaterialStatusExtensionInterface * >( gp->giveMaterialStatus()->
-                                                                  giveInterface(NonlocalMaterialStatusExtensionInterfaceType) );
+    auto statusExt = static_cast< NonlocalMaterialStatusExtensionInterface * >( gp->giveMaterialStatus()->
+                                                                   giveInterface(NonlocalMaterialStatusExtensionInterfaceType) );
 
     if ( !statusExt ) {
         OOFEM_ERROR("local material status encountered");
@@ -309,7 +593,7 @@ NonlocalMaterialExtensionInterface :: endIPNonlocalAverage(GaussPoint *gp)
 }
 
 double
-NonlocalMaterialExtensionInterface :: computeWeightFunction(double distance)
+NonlocalMaterialExtensionInterface :: computeWeightFunction(double distance) const
 {
     if ( weightFun == WFT_UniformOverElement ) { // uniform function over one element
         return 1.;
@@ -366,13 +650,13 @@ NonlocalMaterialExtensionInterface :: computeWeightFunction(double distance)
 }
 
 double
-NonlocalMaterialExtensionInterface :: computeWeightFunction(const FloatArray &src, const FloatArray &coord)
+NonlocalMaterialExtensionInterface :: computeWeightFunction(const FloatArray &src, const FloatArray &coord) const
 {
-    return computeWeightFunction( src.distance(coord) );
+    return computeWeightFunction( distance(src, coord) );
 }
 
 double
-NonlocalMaterialExtensionInterface :: giveIntegralOfWeightFunction(const int spatial_dimension)
+NonlocalMaterialExtensionInterface :: giveIntegralOfWeightFunction(const int spatial_dimension) const
 {
     const double pi = M_PI;
     switch ( weightFun ) {
@@ -382,18 +666,18 @@ NonlocalMaterialExtensionInterface :: giveIntegralOfWeightFunction(const int spa
 
         case 2: return cl * cl * pi / 3.;
 
-        case 3: return cl * cl * cl * pi * 8. / 105.;
+        case 3: return cl * cl * cl * pi * 32. / 105.;
 
         default: return 1.;
         }
 
     case WFT_Gauss:
         switch ( spatial_dimension ) {
-        case 1: return cl *sqrt(pi);
+        case 1: return cl * sqrt(pi);
 
         case 2: return cl * cl * pi;
 
-        case 3: return cl *cl *cl *sqrt(pi *pi *pi) / 4.;
+        case 3: return cl * cl * cl * sqrt(pi * pi * pi);
 
         default: return 1.;
         }
@@ -433,7 +717,7 @@ NonlocalMaterialExtensionInterface :: maxValueOfWeightFunction()
 }
 
 double
-NonlocalMaterialExtensionInterface :: evaluateSupportRadius()
+NonlocalMaterialExtensionInterface :: evaluateSupportRadius() const
 {
     switch ( weightFun ) {
     case WFT_Bell:  return cl;
@@ -451,12 +735,10 @@ NonlocalMaterialExtensionInterface :: evaluateSupportRadius()
 }
 
 
-IRResultType
-NonlocalMaterialExtensionInterface :: initializeFrom(InputRecord *ir)
+void
+NonlocalMaterialExtensionInterface :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;              // Required by IR_GIVE_FIELD macro
-
-    if ( ir->hasField(_IFT_NonlocalMaterialExtensionInterface_regionmap) ) {
+    if ( ir.hasField(_IFT_NonlocalMaterialExtensionInterface_regionmap) ) {
         IR_GIVE_FIELD(ir, regionMap, _IFT_NonlocalMaterialExtensionInterface_regionmap);
         if ( regionMap.giveSize() != this->giveDomain()->giveNumberOfRegions() ) {
             OOFEM_ERROR("regionMap size mismatch");
@@ -531,7 +813,37 @@ NonlocalMaterialExtensionInterface :: initializeFrom(InputRecord *ir)
     px = 0.;
     IR_GIVE_OPTIONAL_FIELD(ir, px, _IFT_NonlocalMaterialExtensionInterface_px);
 
-    return IRRT_OK;
+    // read parameters used by models with variable characteristic length (eikonal nonlocal models)
+    averType = 0;
+    IR_GIVE_OPTIONAL_FIELD(ir, averType, _IFT_NonlocalMaterialExtensionInterface_averagingtype);
+    if ( averType == 2 ) {
+        exponent = 0.5; // default value for averaging type 2
+    }
+
+    if ( averType == 3 ) {
+        exponent = 1.; // default value for averaging type 3
+    }
+
+    if ( averType == 2 || averType == 3 ) {
+        IR_GIVE_OPTIONAL_FIELD(ir, exponent, _IFT_NonlocalMaterialExtensionInterface_exp);
+    }
+
+    if ( averType >= 2 && averType <= 5 ) {
+        IR_GIVE_OPTIONAL_FIELD(ir, Rf, _IFT_NonlocalMaterialExtensionInterface_rf);
+    }
+
+    if ( averType >= 2 && averType <= 6 ) { // eikonal models
+        gridSize = 10; // default value
+        IR_GIVE_OPTIONAL_FIELD(ir, gridSize, _IFT_NonlocalMaterialExtensionInterface_gridsize);
+        grid = std::make_unique<Grid>(2 *gridSize + 1, 2 *gridSize + 1);
+        minDist2 = std::make_unique<FloatMatrix>(2 *gridSize + 1, 2 *gridSize + 1);
+        order = 1; // default value
+        IR_GIVE_OPTIONAL_FIELD(ir, order, _IFT_NonlocalMaterialExtensionInterface_order);
+        initDiag = 0.; // default value
+        IR_GIVE_OPTIONAL_FIELD(ir, initDiag, _IFT_NonlocalMaterialExtensionInterface_initdiag);
+        centDiff = 2; // default value
+        IR_GIVE_OPTIONAL_FIELD(ir, centDiff, _IFT_NonlocalMaterialExtensionInterface_centdiff);
+    }
 }
 
 
@@ -553,6 +865,14 @@ void NonlocalMaterialExtensionInterface :: giveInputRecord(DynamicInputRecord &i
         input.setField(this->zeta, _IFT_NonlocalMaterialExtensionInterface_zeta);
     } else if ( nlvar == NLVT_StressBased ) {
         input.setField(this->beta, _IFT_NonlocalMaterialExtensionInterface_beta);
+    }
+
+    input.setField(this->averType, _IFT_NonlocalMaterialExtensionInterface_averagingtype);
+    if ( averType == 2 || averType == 3 ) {
+        input.setField(this->exponent, _IFT_NonlocalMaterialExtensionInterface_exp);
+    }
+    if ( averType >= 2 && averType <= 5 ) {
+        input.setField(this->Rf, _IFT_NonlocalMaterialExtensionInterface_rf);
     }
 }
 
@@ -577,13 +897,13 @@ void NonlocalMaterialExtensionInterface :: giveInputRecord(DynamicInputRecord &i
  */
 
 void
-NonlocalMaterialExtensionInterface :: applyBarrierConstraints(const FloatArray &gpCoords, const FloatArray &jGpCoords, double &weight)
+NonlocalMaterialExtensionInterface :: applyBarrierConstraints(const FloatArray &gpCoords, const FloatArray &jGpCoords, double &weight) const
 {
     int ib, nbarrier = domain->giveNumberOfNonlocalBarriers();
     bool shieldFlag = false;
 
     for ( ib = 1; ib <= nbarrier; ib++ ) {
-        domain->giveNonlocalBarrier(ib)->applyConstraint(gpCoords, jGpCoords, weight, shieldFlag, this);
+        domain->giveNonlocalBarrier(ib)->applyConstraint(gpCoords, jGpCoords, weight, shieldFlag, *this);
         if ( shieldFlag ) {
             weight = 0.0;
             return;
@@ -592,7 +912,7 @@ NonlocalMaterialExtensionInterface :: applyBarrierConstraints(const FloatArray &
 }
 
 void
-NonlocalMaterialExtensionInterface :: manipulateWeight(double &weight, GaussPoint *gp, GaussPoint *jGp)
+NonlocalMaterialExtensionInterface :: manipulateWeight(double &weight, GaussPoint *gp, GaussPoint *jGp) const
 {
     Element *ielem = jGp->giveElement();
     IntegrationRule *iRule = ielem->giveDefaultIntegrationRulePtr();
@@ -606,7 +926,7 @@ NonlocalMaterialExtensionInterface :: manipulateWeight(double &weight, GaussPoin
 
 
 double
-NonlocalMaterialExtensionInterface :: giveDistanceBasedInteractionRadius(const FloatArray &gpCoords)
+NonlocalMaterialExtensionInterface :: giveDistanceBasedInteractionRadius(const FloatArray &gpCoords) const
 {
     double distance = 1.e10; // Initially distance from the boundary is set to the maximum value
     double temp;
@@ -623,7 +943,7 @@ NonlocalMaterialExtensionInterface :: giveDistanceBasedInteractionRadius(const F
     if ( nlvar == NLVT_DistanceBasedLinear ) {
         if ( distance < zeta * cl0 ) {
             newradius = ( 1. - beta ) / ( zeta * cl0 ) * distance + beta;
-        } else   {
+        } else {
             newradius = 1.;
         }
     } else if ( nlvar == NLVT_DistanceBasedExponential ) {
@@ -636,6 +956,7 @@ NonlocalMaterialExtensionInterface :: giveDistanceBasedInteractionRadius(const F
 NonlocalMaterialStatusExtensionInterface :: NonlocalMaterialStatusExtensionInterface() : Interface(), integrationDomainList()
 {
     integrationScale = 0.;
+    volumeAround = 0.;
 }
 
 NonlocalMaterialStatusExtensionInterface :: ~NonlocalMaterialStatusExtensionInterface()

@@ -42,10 +42,10 @@
 namespace oofem {
 REGISTER_Material(AnisotropicLinearElasticMaterial);
 
-IRResultType
-AnisotropicLinearElasticMaterial :: initializeFrom(InputRecord *ir)
+void
+AnisotropicLinearElasticMaterial :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
+    LinearElasticMaterial :: initializeFrom(ir);
 
     // read the stiffness coefficients arranged by rows from the diagonal to the right (21 values)
     FloatArray stiffness;
@@ -55,14 +55,15 @@ AnisotropicLinearElasticMaterial :: initializeFrom(InputRecord *ir)
     }
 
     // put the stiffness coefficients into a 6x6 matrix
-    int k = 1;
-    for ( int i = 1; i <= 6; i++ ) {
-        stiffmat.at(i, i) = stiffness.at(k++);
+    for ( int k = 1, i = 1; i <= 6; i++ ) {
+        tangent.at(i, i) = stiffness.at(k++);
         for ( int j = i + 1; j <= 6; j++ ) {
-            stiffmat.at(i, j) = stiffmat.at(j, i) = stiffness.at(k++);
+            tangent.at(i, j) = tangent.at(j, i) = stiffness.at(k++);
         }
     }
+    this->computesSubTangents();
 
+<<<<<<< HEAD
     // read the thermal expansion coefficients (3 values)
     IR_GIVE_FIELD(ir, alpha, _IFT_AnisotropicLinearElasticMaterial_talpha);
     if ( alpha.giveSize() == 0 ) {
@@ -70,9 +71,14 @@ AnisotropicLinearElasticMaterial :: initializeFrom(InputRecord *ir)
         alpha.zero();
     } else if ( alpha.giveSize() != 6 ) {
         OOFEM_ERROR( "Incorrect size of talpha - should be 0 or 6, is %d\n", alpha.giveSize() );
+=======
+    FloatArray alpha_input(6);
+    IR_GIVE_FIELD(ir, alpha_input, _IFT_AnisotropicLinearElasticMaterial_talpha);
+    if ( alpha_input.giveSize() != 6 ) {
+        OOFEM_ERROR( "Incorrect size of talpha - should be 6, is %d\n", alpha.giveSize() );
+>>>>>>> bp2/master
     }
-
-    return LinearElasticMaterial :: initializeFrom(ir);
+    alpha = alpha_input;
 }
 
 
@@ -81,10 +87,9 @@ AnisotropicLinearElasticMaterial :: giveInputRecord(DynamicInputRecord &input)
 {
     Material :: giveInputRecord(input);
     FloatArray stiffness(21);
-    int k = 1;
-    for ( int i = 1; i <= 6; i++ ) {
+    for ( int k = 1, i = 1; i <= 6; i++ ) {
         for ( int j = i; j <= 6; j++ ) {
-            stiffness.at(k++) = stiffmat.at(i, j);
+            stiffness.at(k++) = tangent.at(i, j);
         }
     }
     input.setField(stiffness, _IFT_AnisotropicLinearElasticMaterial_stiff);
@@ -92,6 +97,7 @@ AnisotropicLinearElasticMaterial :: giveInputRecord(DynamicInputRecord &input)
     input.setField(alpha, _IFT_AnisotropicLinearElasticMaterial_talpha);
 }
 
+<<<<<<< HEAD
 
 void
 AnisotropicLinearElasticMaterial :: give3dMaterialStiffnessMatrix(FloatMatrix &answer,
@@ -123,4 +129,6 @@ AnisotropicLinearElasticMaterial :: CreateStatus(GaussPoint *gp) const
 {
     return new StructuralMaterialStatus(1, this->giveDomain(), gp);
 }
+=======
+>>>>>>> bp2/master
 } // end namespace oofem

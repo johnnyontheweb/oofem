@@ -58,33 +58,30 @@ class CebFipSlip90MaterialStatus : public StructuralInterfaceMaterialStatus
 {
 protected:
     /// Scalar measure of the largest slip reached in material.
-    double kappa;
+    double kappa = 0.;
     /// Non-equilibrated scalar of the largest slip displacement.
-    double tempKappa;
+    double tempKappa = 0.;
 
 public:
     /// Constructor.
-    CebFipSlip90MaterialStatus(int n, Domain * d, GaussPoint * g);
-    /// Destructor.
-    virtual ~CebFipSlip90MaterialStatus();
+    CebFipSlip90MaterialStatus(GaussPoint * g);
 
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    void printOutputAt(FILE *file, TimeStep *tStep) const override;
 
     /// Returns the last equilibrated scalar measure of the largest strain level.
-    double giveKappa() { return kappa; }
+    double giveKappa() const { return kappa; }
     /// Returns the temp. scalar measure of the largest strain level.
-    double giveTempKappa() { return tempKappa; }
+    double giveTempKappa() const { return tempKappa; }
     /// Sets the temp scalar measure of the largest strain level to given value.
     void setTempKappa(double newKappa) { tempKappa = newKappa; }
 
-    // definition
-    virtual const char *giveClassName() const { return "CebFipSlip90MaterialStatus"; }
+    const char *giveClassName() const override { return "CebFipSlip90MaterialStatus"; }
 
-    virtual void initTempStatus();
-    virtual void updateYourself(TimeStep *tStep);
+    void initTempStatus() override;
+    void updateYourself(TimeStep *tStep) override;
 
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 };
 
 
@@ -98,52 +95,47 @@ class CebFipSlip90Material : public StructuralInterfaceMaterial
 {
 protected:
     /// Max force (stress).
-    double tmax;
+    double tmax = 0.;
     /// Slip valu at begining of yield plateau.
-    double s1;
+    double s1 = 0.;
     /// Slip at end of plateau.
-    double s2;
+    double s2 = 0.;
     /// Slip when residual force/stress activated.
-    double s3;
+    double s3 = 0.;
     /// Residual force/stress.
-    double tres;
+    double tres = 0.;
     /// Alpha coeff.
-    double alpha;
+    double alpha = 0.;
 
 public:
     /// Constructor
     CebFipSlip90Material(int n, Domain * d);
-    /// Destructor
-    virtual ~CebFipSlip90Material();
 
-    virtual int hasNonLinearBehaviour() { return 1; }
+    const char *giveInputRecordName() const override { return _IFT_CebFipSlip90Material_Name; }
+    const char *giveClassName() const override { return "CebFipSlip90Material"; }
 
-    virtual const char *giveInputRecordName() const { return _IFT_CebFipSlip90Material_Name; }
-    virtual const char *giveClassName() const { return "CebFipSlip90Material"; }
+    double giveEngTraction_1d(double jump, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<1,1> give1dStiffnessMatrix_Eng(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual void giveEngTraction_1d(FloatArray &answer, GaussPoint *gp, const FloatArray &jump, TimeStep *tStep);
-    virtual void give1dStiffnessMatrix_Eng(FloatMatrix &answer,  MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
-
-    virtual bool hasAnalyticalTangentStiffness() const { return true; }
+    bool hasAnalyticalTangentStiffness() const override { return true; }
 
     /**
      * Computes the value of bond force/stress, based on given value of slip value.
      * @param kappa Slip value.
      */
-    double computeBondForce(double kappa);
+    double computeBondForce(double kappa) const;
     /**
      * Computes the value of bond force/stress stiffness, based on given value of slip value.
      * @param kappa Slip value.
      */
-    double computeBondForceStiffness(double kappa);
+    double computeBondForceStiffness(double kappa) const;
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const { return new CebFipSlip90MaterialStatus(1, domain, gp); }
-
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new CebFipSlip90MaterialStatus(gp); }
 };
 } // end namespace oofem
 #endif // mat_cebfip90_h

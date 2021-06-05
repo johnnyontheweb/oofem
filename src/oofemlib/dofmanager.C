@@ -322,11 +322,9 @@ int DofManager :: giveNumberOfPrimaryMasterDofs(const IntArray &dofIDArray) cons
 }
 
 
-IRResultType
-DofManager :: initializeFrom(InputRecord *ir)
+void
+DofManager :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                 // Required by IR_GIVE_FIELD macro
-
     delete dofidmask;
     dofidmask = NULL;
     delete dofTypemap;
@@ -348,7 +346,7 @@ DofManager :: initializeFrom(InputRecord *ir)
     int dummy;
     IR_GIVE_OPTIONAL_FIELD(ir, dummy, "ndofs");
 
-    if ( ir->hasField(_IFT_DofManager_dofidmask) ) {
+    if ( ir.hasField(_IFT_DofManager_dofidmask) ) {
         IR_GIVE_FIELD(ir, dofIDArry, _IFT_DofManager_dofidmask);
         this->dofidmask = new IntArray(dofIDArry);
     } else {
@@ -370,7 +368,7 @@ DofManager :: initializeFrom(InputRecord *ir)
     IR_GIVE_OPTIONAL_FIELD(ir, dofTypeMask, _IFT_DofManager_doftypemask);
 
     // read boundary flag
-    if ( ir->hasField(_IFT_DofManager_boundaryflag) ) {
+    if ( ir.hasField(_IFT_DofManager_boundaryflag) ) {
         isBoundaryFlag = true;
     }
 
@@ -378,11 +376,11 @@ DofManager :: initializeFrom(InputRecord *ir)
     partitions.clear();
     IR_GIVE_OPTIONAL_FIELD(ir, partitions, _IFT_DofManager_partitions);
 
-    if ( ir->hasField(_IFT_DofManager_sharedflag) ) {
+    if ( ir.hasField(_IFT_DofManager_sharedflag) ) {
         parallel_mode = DofManager_shared;
-    } else if ( ir->hasField(_IFT_DofManager_remoteflag) ) {
+    } else if ( ir.hasField(_IFT_DofManager_remoteflag) ) {
         parallel_mode = DofManager_remote;
-    } else if ( ir->hasField(_IFT_DofManager_nullflag) ) {
+    } else if ( ir.hasField(_IFT_DofManager_nullflag) ) {
         parallel_mode = DofManager_null;
     } else {
         parallel_mode = DofManager_local;
@@ -450,8 +448,6 @@ DofManager :: initializeFrom(InputRecord *ir)
             }
         }
     }
-
-    return IRRT_OK;
 }
 
 
@@ -540,42 +536,29 @@ void DofManager :: updateYourself(TimeStep *tStep)
 }
 
 
-contextIOResultType DofManager :: saveContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// saves full node context (saves state variables, that completely describe
-// current state)
-//
+void DofManager :: saveContext(DataStream &stream, ContextMode mode)
 {
-    int _val;
-    contextIOResultType iores;
-
-    if ( ( iores = FEMComponent :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-
-    int numberOfDofs = this->giveNumberOfDofs();
-    if ( !stream.write(numberOfDofs) ) {
-        THROW_CIOERR(CIO_IOERR);
-    }
-
-    // store dof types
-    for ( Dof *dof: *this ) {
-        _val = dof->giveDofType();
-        if ( !stream.write(_val) ) {
-            THROW_CIOERR(CIO_IOERR);
-        }
-    }
-
-    // store dof types
-    for ( Dof *dof: *this ) {
-        _val = dof->giveDofID();
-        if ( !stream.write(_val) ) {
-            THROW_CIOERR(CIO_IOERR);
-        }
-    }
+    FEMComponent :: saveContext(stream, mode);
 
     if ( mode & CM_Definition ) {
+        if ( !stream.write(this->giveNumberOfDofs()) ) {
+            THROW_CIOERR(CIO_IOERR);
+        }
+
+        int _val;
+        for ( auto &dof : *this ) {
+            _val = dof->giveDofType();
+            if ( !stream.write(_val) ) {
+                THROW_CIOERR(CIO_IOERR);
+            }
+            _val = dof->giveDofID();
+            if ( !stream.write(_val) ) {
+                THROW_CIOERR(CIO_IOERR);
+            }
+            dof->saveContext(stream, mode);
+        }
+
+        contextIOResultType iores;
         if ( ( iores = loadArray.storeYourself(stream) ) != CIO_OK ) {
             THROW_CIOERR(iores);
         }
@@ -592,7 +575,7 @@ contextIOResultType DofManager :: saveContext(DataStream &stream, ContextMode mo
             THROW_CIOERR(CIO_IOERR);
         }
 
-        _val = ( int ) parallel_mode;
+        _val = parallel_mode;
         if ( !stream.write(_val) ) {
             THROW_CIOERR(CIO_IOERR);
         }
@@ -600,60 +583,43 @@ contextIOResultType DofManager :: saveContext(DataStream &stream, ContextMode mo
         if ( ( iores = partitions.storeYourself(stream) ) != CIO_OK ) {
             THROW_CIOERR(iores);
         }
-    }
-
-    for ( Dof *dof: *this ) {
-        if ( ( iores = dof->saveContext(stream, mode, obj) ) != CIO_OK ) {
-            THROW_CIOERR(iores);
+    } else {
+        for ( auto &dof : *this ) {
+            dof->saveContext(stream, mode);
         }
     }
-
-    return CIO_OK;
 }
 
 
-contextIOResultType DofManager :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// restores full node context (saves state variables, that completely describe
-// current state)
-//
+void DofManager :: restoreContext(DataStream &stream, ContextMode mode)
 {
     contextIOResultType iores;
 
-    if ( ( iores = FEMComponent :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    int _numberOfDofs;
-    if ( !stream.read(_numberOfDofs) ) {
-        THROW_CIOERR(CIO_IOERR);
-    }
-
-    IntArray dtypes(_numberOfDofs);
-    // restore dof types
-    for ( int i = 1; i <= _numberOfDofs; i++ ) {
-        if ( !stream.read(dtypes.at(i)) ) {
-            THROW_CIOERR(CIO_IOERR);
-        }
-    }
-    
-    IntArray dofids(_numberOfDofs);
-    // restore dof ids
-    for ( int i = 1; i <= _numberOfDofs; i++ ) {
-        if ( !stream.read(dofids.at(i)) ) {
-            THROW_CIOERR(CIO_IOERR);
-        }
-    }
-
-    // allocate new ones
-    for ( auto &d: dofArray) { delete d; } ///@todo Smart pointers would be nicer here
-    dofArray.clear();
-    for ( int i = 0; i < _numberOfDofs; i++ ) {
-        Dof *dof = classFactory.createDof( ( dofType ) dtypes(i), (DofIDItem)dofids(i), this );
-        this->appendDof(dof);
-    }
+    FEMComponent :: restoreContext(stream, mode);
 
     if ( mode & CM_Definition ) {
+        int _numberOfDofs;
+        if ( !stream.read(_numberOfDofs) ) {
+            THROW_CIOERR(CIO_IOERR);
+        }
+
+        // allocate new ones
+        for ( auto &d: dofArray) { delete d; } ///@todo Smart pointers would be nicer here
+        dofArray.clear();
+
+        for ( int i = 0; i < _numberOfDofs; i++ ) {
+            int dtype, dofid;
+            if ( !stream.read(dtype) ) {
+                THROW_CIOERR(CIO_IOERR);
+            }
+            if ( !stream.read(dofid) ) {
+                THROW_CIOERR(CIO_IOERR);
+            }
+            Dof *dof = classFactory.createDof( ( dofType ) dtype, (DofIDItem)dofid, this );
+            dof->restoreContext(stream, mode);
+            this->appendDof(dof);
+        }
+
         if ( ( iores = loadArray.restoreYourself(stream) ) != CIO_OK ) {
             THROW_CIOERR(iores);
         }
@@ -679,15 +645,11 @@ contextIOResultType DofManager :: restoreContext(DataStream &stream, ContextMode
         if ( ( iores = partitions.restoreYourself(stream) ) != CIO_OK ) {
             THROW_CIOERR(iores);
         }
-    }
-
-    for ( Dof *dof: *this ) {
-        if ( ( iores = dof->restoreContext(stream, mode, obj) ) != CIO_OK ) {
-            THROW_CIOERR(iores);
+    } else {
+        for ( auto &dof : this->dofArray ) {
+            dof->restoreContext(stream, mode);
         }
     }
-
-    return CIO_OK;
 }
 
 
@@ -702,10 +664,8 @@ void DofManager :: giveUnknownVector(FloatArray &answer, const IntArray &dofIDAr
         if ( pos == this->end() ) {
             if ( padding ) {
                 answer.at(++k) = 0.;
-                continue;
-            } else {
-                continue;
             }
+            continue;
         }
         answer.at(++k) = (*pos)->giveUnknown(mode, tStep);
     }
@@ -730,10 +690,8 @@ void DofManager :: giveUnknownVector(FloatArray &answer, const IntArray &dofIDAr
         if ( pos == this->end() ) {
             if ( padding ) {
                 answer.at(++k) = 0.;
-                continue;
-            } else {
-                continue;
             }
+            continue;
         }
         answer.at(++k) = (*pos)->giveUnknown(field, mode, tStep);
     }

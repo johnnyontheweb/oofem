@@ -32,10 +32,10 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/PlaneStress/linquad3d_planestress.h"
+#include "sm/Elements/PlaneStress/linquad3d_planestress.h"
 #include "classfactory.h"
-#include "../sm/Materials/structuralms.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
+#include "sm/Materials/structuralms.h"
+#include "sm/CrossSections/structuralcrosssection.h"
 #include "gausspoint.h"
 #include "angle.h"
 
@@ -43,7 +43,7 @@
  #include "oofeggraphiccontext.h"
  #include "oofegutils.h"
  #include "connectivitytable.h"
- #include "Materials/rcm2.h"
+ #include "sm/Materials/rcm2.h"
 #endif
 
 namespace oofem {
@@ -102,10 +102,9 @@ LinQuad3DPlaneStress :: computeLocalNodalCoordinates(std::vector< FloatArray > &
 
 
     lxy.resize(4);
-    const FloatArray *nc;
     for ( int i = 0; i < 4; i++ ) {
-        nc = this->giveNode(i + 1)->giveCoordinates();
-        lxy[i].beProductOf(* GtoLRotationMatrix, *nc);
+        const auto &nc = this->giveNode(i + 1)->giveCoordinates();
+        lxy[i].beProductOf(* GtoLRotationMatrix, nc);
     }
 }
 
@@ -134,8 +133,8 @@ LinQuad3DPlaneStress :: computeGtoLRotationMatrix()
         FloatArray e1, e2, e3, help;
 
         // compute e1' = [N2-N1]  and  help = [N3-N1]
-        e1.beDifferenceOf( * this->giveNode(2)->giveCoordinates(),  * this->giveNode(1)->giveCoordinates() );
-        help.beDifferenceOf( * this->giveNode(3)->giveCoordinates(),  * this->giveNode(1)->giveCoordinates() );
+        e1.beDifferenceOf( this->giveNode(2)->giveCoordinates(), this->giveNode(1)->giveCoordinates() );
+        help.beDifferenceOf( this->giveNode(3)->giveCoordinates(), this->giveNode(1)->giveCoordinates() );
 
         // let us normalize e1'
         e1.normalize();
@@ -235,7 +234,7 @@ LinQuad3DPlaneStress :: giveCharacteristicTensor(FloatMatrix &answer, CharTensor
         answer.at(2, 2) = charVect.at(2);
         answer.at(1, 2) = charVect.at(3);
         answer.at(2, 1) = charVect.at(3);
-    } else if ( ( type == LocalMomentumTensor ) || ( type == GlobalMomentumTensor ) ) {
+    } else if ( ( type == LocalMomentTensor ) || ( type == GlobalMomentTensor ) ) {
     } else if ( ( type == LocalStrainTensor ) || ( type == GlobalStrainTensor ) ) {
         //this->computeStrainVector(charVect, gp, tStep);
         charVect = ms->giveStrainVector();
@@ -250,7 +249,7 @@ LinQuad3DPlaneStress :: giveCharacteristicTensor(FloatMatrix &answer, CharTensor
         exit(1);
     }
 
-    if ( ( type == GlobalForceTensor  ) || ( type == GlobalMomentumTensor  ) ||
+    if ( ( type == GlobalForceTensor  ) || ( type == GlobalMomentTensor  ) ||
         ( type == GlobalStrainTensor ) || ( type == GlobalCurvatureTensor ) ) {
         this->computeGtoLRotationMatrix();
         answer.rotatedWith(* GtoLRotationMatrix);

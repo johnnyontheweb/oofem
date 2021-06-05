@@ -42,7 +42,7 @@
 
 #include "nonlocalmaterialext.h"
 
-#include "../sm/Elements/structuralelement.h"
+#include "sm/Elements/structuralelement.h"
 
 #include "floatmatrix.h"
 #include "floatarray.h"
@@ -60,25 +60,13 @@ FRCFCMNL :: FRCFCMNL(int n, Domain *d) : FRCFCM(n, d), StructuralNonlocalMateria
 {}
 
 
-IRResultType
-FRCFCMNL :: initializeFrom(InputRecord *ir)
+void
+FRCFCMNL :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
-    result = FRCFCM :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
-
-    result = StructuralNonlocalMaterialExtensionInterface :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
-
+    FRCFCM :: initializeFrom(ir);
+    StructuralNonlocalMaterialExtensionInterface :: initializeFrom(ir);
     //    IR_GIVE_FIELD(ir, participAngle, _IFT_FRCFCMNL_participAngle);
     participAngle = 90.;
-
-    return IRRT_OK;
 }
 
 
@@ -125,7 +113,7 @@ FRCFCMNL :: giveRealStressVector(FloatArray &answer, GaussPoint *gp,
 
             if ( crackStrain > 0. ) {
                 // get local fiber stress
-                sigma_f_local = this->computeStressInFibersInCracked(gp, crackStrain, iCrack);
+	      sigma_f_local = this->computeStressInFibersInCracked(gp, tStep, crackStrain, iCrack);
                 // set local fiber stress to status
                 status->setTempFiberStressLoc(iCrack, sigma_f_local);
             } else {
@@ -372,7 +360,7 @@ FRCFCMNL :: computeNonlocalStressInFibers(const FloatArray &crackVectorHome, Gau
 
     this->buildNonlocalPointTable(gp);
 
-    std :: list< localIntegrationRecord > *list = this->giveIPIntegrationList(gp); // !
+    auto *list = this->giveIPIntegrationList(gp); // !
 
     // two fiber stresses - from left and right part of the crack - rewrite if it turns out that one stress is fully sufficientaveraged
     double sigma_f_left = 0.;
@@ -526,14 +514,15 @@ FRCFCMNL :: computeNonlocalStressInFibers(const FloatArray &crackVectorHome, Gau
 
 
 double
-FRCFCMNL :: computeNonlocalStressInFibersInUncracked(GaussPoint *gp, TimeStep *tStep) {
+FRCFCMNL :: computeNonlocalStressInFibersInUncracked(GaussPoint *gp, TimeStep *tStep)
+{
     // using "non-local" approach
 
     FRCFCMNLStatus *nonlocStatus;
 
     this->buildNonlocalPointTable(gp);
 
-    std :: list< localIntegrationRecord > *list = this->giveIPIntegrationList(gp); // !
+    auto *list = this->giveIPIntegrationList(gp); // !
 
     FloatArray coordsHome, coordsTarget;
 
@@ -790,37 +779,30 @@ FRCFCMNL :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType ty
 ///////////////////////////////////////////////////////////////////
 
 
-FRCFCMNLStatus :: FRCFCMNLStatus(int n, Domain *d, GaussPoint *gp) :
-    FRCFCMStatus(n, d, gp), StructuralNonlocalMaterialStatusExtensionInterface(),
-    fiberStressLoc(), tempFiberStressLoc(), fiberStressNL(), tempFiberStressNL()
+FRCFCMNLStatus :: FRCFCMNLStatus(GaussPoint *gp) :
+    FRCFCMStatus(gp), StructuralNonlocalMaterialStatusExtensionInterface(),
+    fiberStressLoc(this->nMaxCracks), tempFiberStressLoc(), fiberStressNL(), tempFiberStressNL()
 {
-    fiberStressLoc.resize(this->nMaxCracks);
-    fiberStressLoc.zero();
     tempFiberStressLoc = fiberStressLoc;
     fiberStressNL = fiberStressLoc;
     tempFiberStressNL = fiberStressLoc;
 }
 
 
-FRCFCMNLStatus :: ~FRCFCMNLStatus()
-{}
-
-
-
 void
-FRCFCMNLStatus :: printOutputAt(FILE *file, TimeStep *tStep)
+FRCFCMNLStatus :: printOutputAt(FILE *file, TimeStep *tStep) const
 {
     FRCFCMStatus :: printOutputAt(file, tStep);
 
     fprintf(file, "maxFiberStressLocal: {");
-    for ( int i = 1; i <= this->giveMaxNumberOfCracks(gp); i++ ) {
-        fprintf( file, " %f", this->giveFiberStressLoc(i) );
+    for ( double s: fiberStressLoc ) {
+        fprintf( file, " %f", s );
     }
     fprintf(file, "}\n");
 
     fprintf(file, "maxFiberStressNL: {");
-    for ( int i = 1; i <= this->giveMaxNumberOfCracks(gp); i++ ) {
-        fprintf( file, " %f", this->giveFiberStressNL(i) );
+    for ( double s: fiberStressLoc ) {
+        fprintf( file, " %f", s );
     }
     fprintf(file, "}\n");
 }
@@ -857,20 +839,12 @@ FRCFCMNLStatus :: updateYourself(TimeStep *tStep)
 
 
 
-contextIOResultType
-FRCFCMNLStatus :: saveContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// saves full information stored in this Status
-// no temp variables stored
-//
+void
+FRCFCMNLStatus :: saveContext(DataStream &stream, ContextMode mode)
 {
+    FRCFCMStatus :: saveContext(stream, mode);
+
     contextIOResultType iores;
-
-    // save parent class status
-    if ( ( iores = FRCFCMStatus :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
     if ( ( iores = fiberStressLoc.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
@@ -878,24 +852,14 @@ FRCFCMNLStatus :: saveContext(DataStream &stream, ContextMode mode, void *obj)
     if ( ( iores = fiberStressNL.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    return CIO_OK;
 }
 
-contextIOResultType
-FRCFCMNLStatus :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// restores full information stored in stream to this Status
-//
+void
+FRCFCMNLStatus :: restoreContext(DataStream &stream, ContextMode mode)
 {
+    FRCFCMStatus :: restoreContext(stream, mode);
+
     contextIOResultType iores;
-
-    // read parent class status
-    if ( ( iores = FRCFCMStatus :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-
     if ( ( iores = fiberStressLoc.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
@@ -903,8 +867,6 @@ FRCFCMNLStatus :: restoreContext(DataStream &stream, ContextMode mode, void *obj
     if ( ( iores = fiberStressNL.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    return CIO_OK; // return succes
 }
 
 

@@ -40,8 +40,8 @@
 #define rcsdnl_h
 
 #include "rcsde.h"
-#include "Materials/structuralnonlocalmaterialext.h"
-#include "../sm/Materials/structuralmaterial.h"
+#include "sm/Materials/structuralnonlocalmaterialext.h"
+#include "sm/Materials/structuralmaterial.h"
 ///@name Input fields for RCSDNLMaterial
 //@{
 #define _IFT_RCSDNLMaterial_Name "rcsdnl"
@@ -63,10 +63,9 @@ protected:
     FloatArray nonlocalStrainVector, tempNonlocalStrainVector, localStrainVectorForAverage;
 
 public:
-    RCSDNLMaterialStatus(int n, Domain * d, GaussPoint * g);
-    virtual ~RCSDNLMaterialStatus();
+    RCSDNLMaterialStatus(GaussPoint *gp);
 
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    void printOutputAt(FILE *file, TimeStep *tStep) const override;
 
     const FloatArray &giveNonlocalStrainVector() { return nonlocalStrainVector; }
     const FloatArray &giveTempNonlocalStrainVector() { return tempNonlocalStrainVector; }
@@ -75,18 +74,15 @@ public:
     const FloatArray &giveLocalStrainVectorForAverage() { return localStrainVectorForAverage; }
     void setLocalStrainVectorForAverage(FloatArray ls) { localStrainVectorForAverage = std :: move(ls); }
 
-    // definition
-    virtual const char *giveInputRecordName() const { return _IFT_RCSDNLMaterial_Name; }
-    virtual const char *giveClassName() const { return "RCSDNLMaterialStatus"; }
+    const char *giveClassName() const override { return "RCSDNLMaterialStatus"; }
 
-    virtual void initTempStatus();
-    virtual void updateYourself(TimeStep *);
+    void initTempStatus() override;
+    void updateYourself(TimeStep *tStep) override;
 
-    // saves current context(state) into stream
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 
-    virtual Interface *giveInterface(InterfaceType);
+    Interface *giveInterface(InterfaceType) override;
 };
 
 
@@ -103,30 +99,28 @@ protected:
      * Nondimensional parameter controlling the transition between rc and sd model,
      * with respect to shear stifness degradation.
      */
-    double SDTransitionCoeff2;
+    double SDTransitionCoeff2 = 0.;
     /**
      * Interaction radius, related to the nonlocal characteristic length of material.
      */
-    double R;
+    double R = 0.;
     /**
      * Strain at complete failure. For exponential law, ef is the strain at the intersection
      * of the horizontal axis with the tangent to the softening curve at peak stress.
      */
-    double ef;
+    double ef = 0.;
 
 public:
     RCSDNLMaterial(int n, Domain * d);
-    virtual ~RCSDNLMaterial();
 
-    // identification and auxiliary functions
-    virtual const char *giveClassName() const { return "RCSDNLMaterial"; }
+    const char *giveClassName() const override { return "RCSDNLMaterial"; }
 
-    virtual Interface *giveInterface(InterfaceType t);
+    Interface *giveInterface(InterfaceType t) override;
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual void giveRealStressVector(FloatArray &answer, GaussPoint *,
-                                      const FloatArray &, TimeStep *);
+    void giveRealStressVector(FloatArray &answer, GaussPoint *gp,
+                              const FloatArray &, TimeStep *tStep) override;
 
     /**
      * Implements the service updating local variables in given integration points,
@@ -138,25 +132,25 @@ public:
      * @param gp integration point to update.
      * @param tStep solution step indicating time of update.
      */
-    virtual void updateBeforeNonlocAverage(const FloatArray &strainVector, GaussPoint *gp, TimeStep *tStep);
+    void updateBeforeNonlocAverage(const FloatArray &strainVector, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual double computeWeightFunction(const FloatArray &src, const FloatArray &coord);
-    virtual int hasBoundedSupport() { return 1; }
+    double computeWeightFunction(const FloatArray &src, const FloatArray &coord) const override;
+    int hasBoundedSupport() const override { return 1; }
     /**
      * Determines the width (radius) of limited support of weighting function
      */
-    virtual void giveSupportRadius(double &radius) { radius = this->R; }
+    void giveSupportRadius(double &radius) { radius = this->R; }
 
-    virtual int packUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *ip);
-    virtual int unpackAndUpdateUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *ip);
-    virtual int estimatePackSize(DataStream &buff, GaussPoint *ip);
+    int packUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *ip) override;
+    int unpackAndUpdateUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *ip) override;
+    int estimatePackSize(DataStream &buff, GaussPoint *ip) override;
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const { return new RCSDNLMaterialStatus(1, RCSDEMaterial :: domain, gp); }
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new RCSDNLMaterialStatus(gp); }
 
 protected:
-    virtual double giveCharacteristicElementLength(GaussPoint *gp, const FloatArray &) { return 1.0; }
-    virtual double giveMinCrackStrainsForFullyOpenCrack(GaussPoint *gp, int i);
-    virtual double computeStrength(GaussPoint *, double)  { return this->Ft; }
+    double giveCharacteristicElementLength(GaussPoint *gp, const FloatArray &) override { return 1.0; }
+    double giveMinCrackStrainsForFullyOpenCrack(GaussPoint *gp, int i) override;
+    double computeStrength(GaussPoint *, double) override { return this->Ft; }
 };
 } // end namespace oofem
 #endif // rcsdnl_h

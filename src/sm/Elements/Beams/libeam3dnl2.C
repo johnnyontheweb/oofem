@@ -32,9 +32,9 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/Beams/libeam3dnl2.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Elements/Beams/libeam3dnl2.h"
+#include "sm/CrossSections/structuralcrosssection.h"
+#include "sm/Materials/structuralms.h"
 #include "node.h"
 #include "material.h"
 #include "gausspoint.h"
@@ -424,7 +424,7 @@ LIBeam3dNL2 :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize( 1 );
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 2) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 2);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], 1, this);
     }
 }
@@ -433,27 +433,22 @@ LIBeam3dNL2 :: computeGaussPoints()
 void
 LIBeam3dNL2 :: computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->give3dBeamStiffMtrx(answer, rMode, gp, tStep);
+    answer = this->giveStructuralCrossSection()->give3dBeamStiffMtrx(rMode, gp, tStep);
 }
 
 
 void
 LIBeam3dNL2 :: computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->giveGeneralizedStress_Beam3d(answer, gp, strain, tStep);
+    answer = this->giveStructuralCrossSection()->giveGeneralizedStress_Beam3d(strain, gp, tStep);
 }
 
 
-IRResultType
-LIBeam3dNL2 :: initializeFrom(InputRecord *ir)
+void
+LIBeam3dNL2 :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
     // first call parent
-    result = NLStructuralElement :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    NLStructuralElement :: initializeFrom(ir);
 
     IR_GIVE_FIELD(ir, referenceNode, _IFT_LIBeam3dNL2_refnode);
     if ( referenceNode == 0 ) {
@@ -477,7 +472,6 @@ LIBeam3dNL2 :: initializeFrom(InputRecord *ir)
     tc.beTranspositionOf(lcs);
 
     this->computeQuaternionFromRotMtrx(q, tc);
-    return IRRT_OK;
 }
 
 
@@ -838,43 +832,27 @@ LIBeam3dNL2 :: computeTempCurv(FloatArray &answer, TimeStep *tStep)
 }
 
 
-contextIOResultType
-LIBeam3dNL2 :: saveContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// saves full element context (saves state variables, that completely describe
-// current state)
-//
+void
+LIBeam3dNL2 :: saveContext(DataStream &stream, ContextMode mode)
 {
     contextIOResultType iores;
-    if ( ( iores = NLStructuralElement :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
+    NLStructuralElement :: saveContext(stream, mode);
 
     if ( ( iores = q.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    return CIO_OK;
 }
 
 
-contextIOResultType
-LIBeam3dNL2 :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// restores full element context (saves state variables, that completely describe
-// current state)
-//
+void
+LIBeam3dNL2 :: restoreContext(DataStream &stream, ContextMode mode)
 {
     contextIOResultType iores;
-    if ( ( iores = NLStructuralElement :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
+    NLStructuralElement :: restoreContext(stream, mode);
 
     if ( ( iores = q.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    return CIO_OK;
 }
 
 

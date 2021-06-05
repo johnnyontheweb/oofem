@@ -1,12 +1,17 @@
-cmake_minimum_required (VERSION 2.8.7) # >= 2.8.8 necessary for $<TARGET_OBJECTS:objlib>
+cmake_minimum_required (VERSION 3.1)
 include (CheckSymbolExists)
 include (CheckCXXSymbolExists)
 include (CheckIncludeFiles)
 include (CheckIncludeFileCXX)
 include (CheckCXXSourceCompiles)
 include (GenerateExportHeader)
-include (UsePkgConfig)
 include (ProcessorCount)
+
+# Use ccache if available. Needs to be performed early for it to work with cmake.
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
+endif()
 
 project (oofem CXX C)
 set (oofem_VERSION_MAJOR 2)
@@ -14,8 +19,10 @@ set (oofem_VERSION_MINOR 6)
 set (oofem_VERSION_PATCH 0) # Unused
 set (oofem_HOMEPAGE "http://www.oofem.org")
 set (bp_HOMEPAGE "http://ksm.fsv.cvut.cz/%7Ebp/bp.html")
-set (oofem_COPYRIGHT "Copyright (C) 1994-2014 Borek Patzak")
-set (oofem_EMAIL "info@oofem.org")
+set (oofem_COPYRIGHT "Copyright (C) 1994-2020 Borek Patzak")
+set (oofem_EMAIL "oofem@fsv.cvut.cz")
+
+set(CMAKE_MODULE_PATH  ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 # Default is debug build
 if (NOT CMAKE_BUILD_TYPE)
@@ -32,17 +39,15 @@ if (MSVC)
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W4 -wd4786 -wd4100 -wd4996 -wd4706 -wd4512 -wd4251 -wd4800")
 else ()
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -fPIC")
-endif ()
-# Check with more compilers as time go on
-if (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7)
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_COMPILER_IS_GNUCXX)
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-elseif (MSVC)
-    # Nothing to do for MSVC.
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -fPIC")
 endif ()
 
-set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
+set (CMAKE_CXX_STANDARD 17)
+
+set (CMAKE_CXX_FLAGS_DEBUG "-DDEBUG ${CMAKE_CXX_FLAGS_DEBUG}")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    set (CMAKE_CXX_FLAGS_DEBUG "-O0 -Wsuggest-override ${CMAKE_CXX_FLAGS_DEBUG}")
+endif ()
 set (CMAKE_CXX_FLAGS_PROFILING "${CMAKE_CXX_FLAGS_PROFILING} -O2 -pg")
 
 #######################################################################
@@ -51,29 +56,31 @@ set (CMAKE_CXX_FLAGS_PROFILING "${CMAKE_CXX_FLAGS_PROFILING} -O2 -pg")
 set (SLEPC_DIR CACHE PATH "Manual SLEPc directory")
 set (X11_DIR CACHE PATH "Manual X11 directory (OOFEG)")
 set (TINYXML2_DIR CACHE PATH "Manual TinyXML-2 directory (CEMHYD only)")
-set (MY_PETSC_DIR CACHE PATH "Manual PETSc directory")
-set (MY_PETSC_ARCH CACHE STRING "Manual PETSc arch name (e.g. linux-gnu-cxx-opt)")
+#set (PETSC_DIR CACHE PATH "Manual PETSc directory")
+set (PETSC_ARCH CACHE STRING "Manual PETSc arch name (e.g. linux-gnu-cxx-opt)")
 set (MPI_DIR CACHE PATH "Manual MPI directory")
 set (VTK_DIR CACHE PATH "Manual VTK directory (For binary VTU export)")
 set (LAPACK_DIR CACHE PATH "Manual LAPACK directory")
+set (SUPERLU_MT_DIR CACHE PATH "Manual SuperLU_MT directory")
 set (SPOOLES_DIR CACHE PATH "Manual SPOOLES directory")
 set (PTHREAD_DIR CACHE PATH "Manual PTHREAD include directory")
 set (ELIXIR_DIR CACHE PATH "Manual Elixir directory (OOFEG only)")
 set (CKIT_DIR CACHE PATH "Manual CKit directory (OOFEG only)")
 set (METIS_DIR CACHE PATH "Manual Metis directory (Load balancing)")
 set (PARMETIS_DIR CACHE PATH "Manual ParMetis directory (Load balancing)")
+#intel mkl pardiso
+set (INTEL_MKL_PARDISO_DIR CACHE PATH "Manual mkl pardiso directory (sparse direct solver)")
+#pardiso-project.org
+set (PARDISO_ORG_DIR CACHE PATH "Manual pardiso-project.org directory (sparse direct solver)")
 #set (BOOST_DIR CACHE PATH "Manual Boost directory")
 #set (MEMSTR_DIR CACHE PATH "Manual MemStr directory")
+set (PYBIND_DIR CACHE PATH "Manual pybind11 directory")
 
 #######################################################################
 ######################## Options ######################################
 #######################################################################
 option (USE_OOFEG "Enable OOFEG" OFF)
-if (${CMAKE_VERSION} VERSION_GREATER "2.8.7") # Compability with older version of cmake
     option (USE_SHARED_LIB "Build shared library" ON)
-else ()
-    set (USE_SHARED_LIB OFF)
-endif ()
 
 # Parallel stuff
 option (USE_PARALLEL "Enable parallel support" OFF)
@@ -84,10 +91,12 @@ option (USE_OPENMP "Compile with OpenMP support (for parallel assembly)" OFF)
 option (USE_DSS "Enable DSS module" ON) # No reason to use this
 option (USE_IML "Enable iml++ solvers" ON) # or this
 option (USE_SPOOLES "Enable SPOOLES-solver" ON) # or this
-option (USE_MKLPARDISO "Enable MKLPARDISO solver support" OFF)
-option (USE_PETSC "Enable PETSc support (required for parallel)" OFF)
+option (USE_INTEL_MKLPARDISO "Enable MKLPARDISO solver support" OFF)
+option (USE_PARDISO_ORG "Enable PARDISO-project.org solver support" OFF)
+option (USE_PETSC "Enable PETSc support (specify PETSC_DIR and/or PETSC_ARCH if needed)" OFF)
 option (USE_SLEPC "Enable SLEPc support" OFF)
 option (USE_LAPACK "Use LAPACK" OFF)
+option (USE_SUPERLU_MT "Use SUPERLU_MT" OFF)
 # Other external libraries
 option (USE_TRIANGLE "Compile with Triangle bindings" OFF)
 option (USE_VTK "Enable VTK (for exporting binary VTU-files)" OFF)
@@ -98,9 +107,11 @@ option (USE_FM "Enable fluid mechanics module" ON)
 option (USE_PFEM "Enable PFEM module" OFF)
 option (USE_TM "Enable heat/mass transfer module" ON)
 option (USE_CEMHYD "Enable CemHyd support" OFF)
-#option (USE_BOOST "Enable Boost" OFF)
-option (USE_PYTHON_BINDINGS "Enable Python bidings (OOFEM usable from Python). Implies USE_PYTHON." OFF)
-option (USE_PYTHON "Enable Python to be used inside OOFEM (e.g. userdef Dirichlet BCs)" OFF)
+option (USE_T3D "Enable T3D support" OFF)
+option (USE_BOOSTPYTHON_BINDINGS "Rather obsolete, use USE_PYBIND_BINDINGS. Enable Python bidings using boost (OOFEM callable from Python)." OFF)
+option (USE_PYBIND_BINDINGS "Enable Python Pybind11 bindings (OOFEM callable from Python and vice versa)." OFF)
+option (USE_PYTHON_EXTENSION "Enable Python extension for exposing C++ code to python. Uses Python.h library." OFF)
+option (USE_HDF5 "HDF5 support" OFF)
 # memory stream
 option (USE_MEMSTR "Enable memory stream support" ON)
 
@@ -109,30 +120,34 @@ if (USE_PARALLEL)
     set (USE_MPI ON)
 endif ()
 
+# Enable coverage testing
+if (CMAKE_COMPILER_IS_GNUCC)
+    option(ENABLE_COVERAGE "Enable coverage reporting for gcc/clang" FALSE)
+
+    if (ENABLE_COVERAGE)
+        add_compile_options(--coverage -O0)
+        list (APPEND EXT_LIBS --coverage)
+    endif()
+endif ()
+
 #######################################################################
 ######################## Internal libraries ###########################
 #######################################################################
 # I believe the subdirs should be used when including instead.
+include_directories ("${oofem_SOURCE_DIR}/src")
 include_directories ("${oofem_SOURCE_DIR}/src/oofemlib")
+include_directories ("${oofem_SOURCE_DIR}/src/oofemlib/T3d/src")
 include_directories ("${oofem_BINARY_DIR}")
 include_directories ("${oofem_SOURCE_DIR}/src")
 include_directories ("${oofem_SOURCE_DIR}/src/spectra")
 
 # Is there really any reason not to compile all of them? Some has cross dependencies.
-if (${CMAKE_VERSION} VERSION_LESS "2.8.8")
-    list (APPEND LIBS core)
-else ()
     list (APPEND LIBS $<TARGET_OBJECTS:core>)
-endif ()
 
 if (USE_FM)
     include_directories ("${oofem_SOURCE_DIR}/src/fm")
     add_definitions (-D__FM_MODULE)
-    if (${CMAKE_VERSION} VERSION_LESS "2.8.8")
-        list (APPEND LIBS fm)
-    else ()
         list (APPEND LIBS $<TARGET_OBJECTS:fm>)
-    endif ()
     list (APPEND MODULE_LIST "fm")
     if (USE_PFEM)
         add_definitions (-D__PFEM_MODULE)
@@ -142,11 +157,7 @@ endif ()
 if (USE_TM)
     include_directories ("${oofem_SOURCE_DIR}/src/tm")
     add_definitions (-D__TM_MODULE)
-    if (${CMAKE_VERSION} VERSION_LESS "2.8.8")
-        list (APPEND LIBS tm)
-    else ()
         list (APPEND LIBS $<TARGET_OBJECTS:tm>)
-    endif ()
     list (APPEND MODULE_LIST "tm")
     if (USE_CEMHYD)
         add_definitions (-D__CEMHYD_MODULE)
@@ -157,11 +168,7 @@ endif ()
 if (USE_SM)
     include_directories ("${oofem_SOURCE_DIR}/src/sm")
     add_definitions (-D__SM_MODULE)
-    if (${CMAKE_VERSION} VERSION_LESS "2.8.8")
-        list (APPEND LIBS sm)
-    else ()
         list (APPEND LIBS $<TARGET_OBJECTS:sm>)
-    endif ()
     list (APPEND MODULE_LIST "sm")
 
     if (NOT MSVC AND NOT MINGW)
@@ -178,11 +185,7 @@ endif ()
 
 if (USE_DSS)
     include_directories ("${oofem_SOURCE_DIR}/src/dss")
-    if (${CMAKE_VERSION} VERSION_LESS "2.8.8")
-        list (APPEND LIBS dss)
-    else ()
         list (APPEND LIBS $<TARGET_OBJECTS:dss>)
-    endif ()
     list (APPEND MODULE_LIST "dss")
 endif ()
 
@@ -250,6 +253,32 @@ if (USE_LAPACK)
     add_definitions (-D__LAPACK_MODULE)
 endif ()
 
+
+## There is a conflict on set.h as defined by libstdc and superlu_mt 3.1
+## Therefore it is assumed that superlu include files
+## are included using #include "SUPERLU_MT/include"
+## The ${SUPERLU_MT_DIR} is added into compiler include path
+## Therefore SUPERLU_MT/include has to be manually added pointing to
+## ${SUPERLU_MT__DIR}/src directory
+if (USE_SUPERLU_MT)
+    set (CMAKE_LIBRARY_DIR ${SUPERLU_MT_DIR})
+    #find_package (SuperLU REQUIRED)
+    find_package(BLAS REQUIRED)
+    find_library (SUPERLU_MT_LIB superlu_mt_OPENMP PATH "${SUPERLU_MT_DIR}/lib")
+    list (APPEND EXT_LIBS ${SUPERLU_MT_LIB} ${BLAS_LIBRARIES})
+    #set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${BLAS_LINKER_FLAGS}")
+    list (APPEND MODULE_LIST "SuperLU_MT")
+    include_directories("${SUPERLU_MT_DIR}")
+    set (CMAKE_REQUIRED_INCLUDES "${SUPERLU_MT_DIR}")
+    add_definitions (-D__SuperLU_MT_MODULE)
+    check_include_file_cxx ("${SUPERLU_MT_DIR}/include/slu_mt_ddefs.h" HAVE_SUPERLU_MT_DDEFS_H)
+    if (NOT HAVE_SUPERLU_MT_DDEFS_H)
+        message (FATAL_ERROR "Necessary SUPERLU_MT headers not found; refer to CMakeLists.txt for details")
+    endif ()
+
+
+endif ()
+
 if (USE_VTK)
     set (CMAKE_LIBRARY_DIR ${VTK_DIR})
     find_package (VTK REQUIRED NO_MODULE)
@@ -289,13 +318,28 @@ if (USE_METIS)
     list (APPEND MODULE_LIST "metis")
 endif ()
 
-if (USE_MKLPARDISO)
+if (USE_PARDISO_ORG)
+    if (PARDISO_ORG_DIR)
+        find_library (PARDISO_ORG_LIB pardiso PATH "${PARDISO_ORG_DIR}")
+    else ()
+        find_library (PARDISO_ORG_LIB pardiso)
+    endif ()
+    if (${PARDISO_ORG_LIB} STREQUAL "PARDISO_ORG_LIB-NOTFOUND")
+        message (FATAL_ERROR "Pardiso library not found")
+    endif ()
+    list (APPEND EXT_LIBS ${PARDISO_ORG_LIB} blas lapack gfortran pthread)
+    set (CMAKE_CXX_COMPILE_FLAGS "${CMAKE_CXX_COMPILES_FLAGS} -fopenmp")
+    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fopenmp" ) 
+    list (APPEND MODULE_LIST "pardiso-project.org")
+endif ()
+
+if (USE_INTEL_MKL_PARDISO)
     # Find the actual libraries:
     list(APPEND MKL_LIBS "mkl_core" "mkl_gf_lp64" "mkl_gnu_thread" "pthread")
     foreach (f ${MKL_LIBS})
-        if (MKL_DIR)
-            find_library (${f}_LIB ${f} PATH "${MKL_DIR}/mkl/lib/intel64/" DOC "MKLPARDISO (library)")
-            include_directories ("${MKL_DIR}/mkl/include")
+        if (INTEL_MKL_PARDISO_DIR)
+            find_library (${f}_LIB ${f} PATH "${INTEL_MKL_PARDISO_DIR}/mkl/lib/intel64/" DOC "MKLPARDISO (library)")
+            include_directories ("${INTEL_MKL_PARDISO_DIR}/mkl/include")
         else ()
             find_library (${f}_LIB ${f} HINTS "/opt/intel/composerxe/mkl/lib/intel64/" DOC "MKLPARDISO (library)")
             include_directories ("/opt/intel/composerxe/mkl/include")
@@ -305,19 +349,55 @@ if (USE_MKLPARDISO)
         endif ()
         list (APPEND EXT_LIBS ${${f}_LIB})
     endforeach ()
-
     #list (APPEND EXT_LIBS ${MKLPARDISO_LIB})
     list (APPEND MODULE_LIST "MKLPARDISO")
 endif ()
+
 
 if (USE_SLEPC)
     set (USE_PETSC ON)
 endif ()
 
-if (USE_PETSC)
-    # A real PETScConfig.cmake file would have been nice to use:
-    #find_package (PETSc 3.3 HINTS "${MY_PETSC_DIR}/${MY_PETSC_ARCH}")
 
+if (USE_PETSC)
+    if (NOT "${PETSC_DIR}")
+        # setting defaults for typical linux environments:
+        #file (GLOB paths "/usr/lib/petscdir/*.*.*")
+        #list (GET paths 0 PETSC_DIR)
+        #message ("***************** PETSC_DIR: ${PETSC_DIR}")
+    endif ()
+    if (NOT "${PETSC_ARCH}")
+        #file (GLOB children RELATIVE ${PETSC_DIR} "${PETSC_DIR}/*")
+        #list (GET children 0 PETSC_ARCH)
+        #message ("***************** PETSC_ARCH: ${PETSC_ARCH}")
+    endif ()
+    find_package (PETSc)
+    # find_package(PETSc COMPONENTS CXX)
+    include_directories (${PETSC_INCLUDES})
+    list (APPEND EXT_LIBS ${PETSC_LIBRARIES})
+    list (APPEND MODULE_LIST "PETSc")
+    set (USE_MPI ON)
+    add_definitions (-D__PETSC_MODULE)
+endif ()
+
+if (USE_SLEPC)
+  if (SLEPC_DIR)
+        find_library (SLEPC_LIBS slepc PATH "${SLEPC_DIR}/${PETSC_ARCH}/lib")
+        include_directories ("${SLEPC_DIR}/include")
+        include_directories ("${SLEPC_DIR}/${PETSC_ARCH}/include")
+    else ()
+        find_library (SLEPC_LIBS slepc)
+    endif ()
+    if (${SLEPC_LIBS} STREQUAL "SLEPC_LIBS-NOTFOUND")
+        message (FATAL_ERROR "SLEPc library not found")
+    endif ()
+    list (APPEND EXT_LIBS ${SLEPC_LIBS})
+    list (APPEND MODULE_LIST "slepc")
+    set (USE_PETSC ON)
+endif ()
+
+
+if (USE_PETSC)
     # Have to use pkgconfig information
     #~ find_package (PkgConfig REQUIRED)
     
@@ -389,6 +469,17 @@ if (USE_MPI)
     # Compile and link flags?
 endif ()
 
+if (USE_T3D)
+    add_definitions (-D__T3D)
+    include_directories ("${oofem_SOURCE_DIR}/src/oofemlib/T3d/src")
+    check_include_file_cxx ("${oofem_SOURCE_DIR}/src/oofemlib/T3d/src/t3d.h" HAVE_T3D_H)
+    if ((NOT HAVE_T3D_H))
+        message (FATAL_ERROR "Necessary T3D headers not found")
+    endif ()
+    set (MODULE_LIST ${MODULE_LIST} "T3D")
+    add_definitions(-DT3D_OOFEM)
+endif ()
+
 if (USE_TRIANGLE)
     find_library (TRIANGLE_LIB triangle DOC "Triangle (library)")
     if (${TRIANGLE_LIB} STREQUAL "TRIANGLE_LIB-NOTFOUND")
@@ -397,6 +488,12 @@ if (USE_TRIANGLE)
     add_definitions (-D__TRIANGLE_MODULE)
     list (APPEND EXT_LIBS ${TRIANGLE_LIB})
     list (APPEND MODULE_LIST "Triangle")
+endif ()
+
+if (USE_HDF5)
+    find_package(HDF5 REQUIRED "CXX")
+    include_directories(${HDF5_INCLUDE_DIRS})
+    list (APPEND EXT_LIBS ${HDF5_LIBRARIES} ${HDF5_HL_LIBRARIES})
 endif ()
 
 if (USE_TINYXML)
@@ -461,25 +558,65 @@ endif ()
 # We need the interpreter for the test suite.
 find_package(PythonInterp "2.7")
 
-if (USE_PYTHON_BINDINGS OR USE_PYTHON)
+if (USE_PYTHON_EXTENSION OR USE_BOOSTPYTHON_BINDINGS)
     # PythonLibs in cmake is bugged, have to try and rely on PythonInterp to get the suitable major and minor versions.
-    set (CMAKE_LIBRARY_DIR ${PYTHON_DIR})
-    find_package(PythonInterp "2.7" REQUIRED)
+    #set (CMAKE_LIBRARY_DIR ${PYTHON_DIR})
+    #Print if set up manually
+    message(STATUS "PYTHON_LIBRARY = ${PYTHON_LIBRARY}")
+    message(STATUS "PYTHON_EXECUTABLE = ${PYTHON_EXECUTABLE}")
+    message(STATUS "PYTHON_INCLUDE_DIR = ${PYTHON_INCLUDE_DIR}")     
+    find_package(PythonInterp "3" REQUIRED)
     find_package(PythonLibs "${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}" REQUIRED)
     include_directories (${PYTHON_INCLUDE_DIRS})
     list (APPEND EXT_LIBS ${PYTHON_LIBRARIES})
     list (APPEND MODULE_LIST "Python")
-    add_definitions(-D__PYTHON_MODULE)
+    if(USE_PYTHON_EXTENSION)
+        add_definitions(-D_PYTHON_EXTENSION)    
+    endif ()
 
-    #if (USE_PYTHON_BINDINGS)
+    if(USE_BOOSTPYTHON_BINDINGS)
     # require boost_python also for python stuff by itself
         find_package(Boost COMPONENTS "python-py${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}" REQUIRED)
         include_directories (${Boost_INCLUDE_DIRS})
         list (APPEND EXT_LIBS ${Boost_LIBRARIES})
-        add_definitions(-DBOOST_PYTHON)
-    #endif ()
+        add_definitions(-D_BOOSTPYTHON_BINDINGS)
+endif ()
 endif ()
 
+
+if(WIN32)
+    set(PYTHON_MODULE_EXTENSION ".pyd")
+else()
+    set(PYTHON_MODULE_EXTENSION ".so")
+endif()
+
+
+if (USE_PYBIND_BINDINGS)
+    #build pybind11 bindings
+    find_package(PythonInterp 3.0 REQUIRED)
+    find_package(pybind11 REQUIRED CONFIG)
+    if (PYBIND_DIR)
+        message(STATUS "PYBIND_DIR = ${PYBIND_DIR}")
+        include_directories (${PYBIND_DIR})#Need also to manually set it up since it can be anywhere
+    endif ()
+    include_directories (${pybind11_INCLUDE_DIR})
+    pybind11_add_module(oofempy THIN_LTO ${oofem_SOURCE_DIR}/bindings/python/oofem.cpp ${PYBIND11_HEADERS})
+    target_link_libraries(oofempy PRIVATE liboofem)
+    set_target_properties (oofempy PROPERTIES SUFFIX "${PYTHON_MODULE_EXTENSION}")
+
+    # Make sure pytest is found or produce a fatal error
+    if(NOT PYTEST_FOUND)
+        execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import pytest; print(pytest.__version__)"
+                        RESULT_VARIABLE pytest_not_found OUTPUT_VARIABLE pytest_version ERROR_QUIET)
+        if(pytest_not_found)
+            message(FATAL_ERROR "Running the tests requires pytest. Please install it manually"
+                    " (try: ${PYTHON_EXECUTABLE} -m pip install pytest)")
+        endif()
+        set(PYBIND11_PYTEST_FOUND TRUE CACHE INTERNAL "")
+    add_definitions(-D_PYBIND_BINDINGS)
+    endif()
+    set (USE_SHARED_LIB ON)
+endif()
 
 #######################################################################
 ######################## Configuration ################################
@@ -488,15 +625,13 @@ site_name (HOST_NAME)
 set (HOST_TYPE "${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_SYSTEM_NAME}") # This should be renamed TARGET_TYPE.
 set (BUILDNAME "OOFEM(${MODULE_LIST})-${HOST_TYPE}-${HOST_NAME}")
 
-check_include_file_cxx ("unistd.h" HAVE_UNISTD_H)
 check_include_file_cxx ("execinfo.h" HAVE_EXECINFO_H)
-check_cxx_symbol_exists ("access" "unistd.h" HAVE_ACCESS)
 check_cxx_symbol_exists ("cbrt" "cmath" HAVE_CBRT)
 check_cxx_symbol_exists ("isnan" "cmath" HAVE_ISNAN)
 if (USE_SHARED_LIB)
     set (OOFEM_EXPORT_HEADER "#include \"oofem_export.h\"")
     # For consistant library on linux and windows platforms.
-    add_compiler_export_flags (LIBOOFEM_EXPORT_CFLAGS)
+    #add_compiler_export_flags (LIBOOFEM_EXPORT_CFLAGS)
 else ()
     set (OOFEM_EXPORT_HEADER "#define OOFEM_EXPORT\n#define OOFEM_NO_EXPORT")
 endif ()
@@ -509,12 +644,7 @@ configure_file (
 ######################## Targets ######################################
 #######################################################################
 # Subtargets
-if (${CMAKE_VERSION} VERSION_LESS "2.8.8")
-    # This won't work on windows, but windows users should have newer version than 2.8.7)
-    set (LIB_TYPE SHARED)
-else ()
     set (LIB_TYPE OBJECT)
-endif ()
 add_subdirectory ("${oofem_SOURCE_DIR}/src/oofemlib")
 if (USE_DSS)
     add_subdirectory ("${oofem_SOURCE_DIR}/src/dss")
@@ -529,8 +659,8 @@ if (USE_FM)
     add_subdirectory ("${oofem_SOURCE_DIR}/src/fm")
 endif ()
 set (oofempy)
-if (USE_PYTHON_BINDINGS)
-    set (oofempy ${oofem_SOURCE_DIR}/bindings/python/oofemlib.cpp)
+if (USE_BOOSTPYTHON_BINDINGS)
+    set (oofempy ${oofem_SOURCE_DIR}/bindings/Deprecated/python/oofemlib.cpp)
 endif ()
 
 # Main targets
@@ -584,13 +714,11 @@ endif ()
 if (USE_SHARED_LIB) # Prefer dynamic lib if available.
     add_executable (oofem ${oofem_SOURCE_DIR}/src/main/main.C)
     target_link_libraries (oofem liboofem)
-elseif (${CMAKE_VERSION} VERSION_LESS "2.8.8") # Hackish backwards compatibility 
-    add_executable (oofem ${oofem_SOURCE_DIR}/src/main/main.C)
-    target_link_libraries (oofem ${LIBS} ${EXT_LIBS})
 else ()
     add_executable (oofem ${oofem_SOURCE_DIR}/src/main/main.C ${LIBS})
     target_link_libraries (oofem ${EXT_LIBS})
 endif ()
+
 install (TARGETS oofem DESTINATION bin)
 
 if (USE_OOFEG)
@@ -598,9 +726,6 @@ if (USE_OOFEG)
     if (USE_SHARED_LIB)
         add_executable (oofeg ${oofem_SOURCE_DIR}/src/main/oofeg.C)
         target_link_libraries (oofeg liboofem)
-    elseif (${CMAKE_VERSION} VERSION_LESS "2.8.8") # Hackish backwards compatibility
-        add_executable (oofeg ${oofem_SOURCE_DIR}/src/main/oofeg.C)
-        target_link_libraries (oofeg ${LIBS} ${EXT_LIBS})
     else ()
         add_executable (oofeg ${oofem_SOURCE_DIR}/src/main/oofeg.C ${LIBS})
         target_link_libraries (oofeg ${EXT_LIBS})
@@ -608,15 +733,22 @@ if (USE_OOFEG)
     install(TARGETS oofeg DESTINATION bin)
 endif ()
 
+add_executable(liboofem_benchmark ${oofem_SOURCE_DIR}/src/main/benchmark.C)
+set_target_properties(liboofem_benchmark PROPERTIES EXCLUDE_FROM_ALL TRUE)
+target_link_libraries (liboofem_benchmark liboofem benchmark)
+
 # Example of using liboofem with dynamic input record:
-add_executable(beam01 ${oofem_SOURCE_DIR}/bindings/oofemlib/beam01.C)
-set_target_properties(beam01 PROPERTIES EXCLUDE_FROM_ALL TRUE)
-target_link_libraries (beam01 liboofem)
+add_executable(beam2d_1 ${oofem_SOURCE_DIR}/bindings/oofemlib/beam2d_1.C)
+set_target_properties(beam2d_1 PROPERTIES EXCLUDE_FROM_ALL TRUE)
+target_link_libraries (beam2d_1 liboofem)
 
 #add_executable(hexgrid ${oofem_SOURCE_DIR}/bindings/oofemlib/hexgrid.C)
 #set_target_properties(hexgrid PROPERTIES EXCLUDE_FROM_ALL TRUE)
 #target_link_libraries (hexgrid liboofem)
 
+add_executable(dream3d_analysis ${oofem_SOURCE_DIR}/bindings/oofemlib/dream3d_analysis.C)
+set_target_properties(dream3d_analysis PROPERTIES EXCLUDE_FROM_ALL TRUE)
+target_link_libraries(dream3d_analysis liboofem)
 
 # CppCheck target (not built by default)
 #add_custom_target(cppcheck)
@@ -694,7 +826,7 @@ if (USE_PARALLEL)
     foreach (case ${parallel_tests})
         file (GLOB files "${par_dir}/${case}/${case}.oofem.in.*")
         list (LENGTH files num_files)
-        add_test (NAME "partest_${case}" WORKING_DIRECTORY ${par_dir}/${case} COMMAND "mpirun" "-np" ${num_files} ${oofem_cmd} "-p" "-f" ${case}.oofem.in "-ksp_type" "cg")
+        add_test (NAME "partest_${case}" WORKING_DIRECTORY ${par_dir}/${case} COMMAND "mpirun" "--oversubscribe" "-np" ${num_files} ${oofem_cmd} "-p" "-f" ${case}.oofem.in "-ksp_type" "cg")
     endforeach (case)
     # partest_brazil_2d_nl7 requires more time on testing server than default 1500
     set_tests_properties(partest_brazil_2d_nl7 PROPERTIES TIMEOUT 2500)
@@ -704,49 +836,54 @@ endif ()
 if (USE_SM)
     file (GLOB sm_tests RELATIVE "${oofem_TEST_DIR}/sm" "${oofem_TEST_DIR}/sm/*.in")
     foreach (case ${sm_tests})
-        add_test (NAME "test_${case}" WORKING_DIRECTORY ${oofem_TEST_DIR}/sm COMMAND ${oofem_cmd} "-f" ${case})
+        add_test (NAME "test_sm_${case}" WORKING_DIRECTORY ${oofem_TEST_DIR}/sm COMMAND ${oofem_cmd} "-f" ${case})
+    endforeach (case)
+
+    file (GLOB sm_tests RELATIVE "${oofem_TEST_DIR}/sm" "${oofem_TEST_DIR}/sm/*.sh")
+    foreach (case ${sm_tests})
+        add_test (NAME "test_sm_${case}" WORKING_DIRECTORY ${oofem_TEST_DIR}/sm COMMAND bash ${case} ${oofem_cmd})
     endforeach (case)
 endif ()
 
 if (USE_FM)
     file (GLOB fm_tests RELATIVE "${oofem_TEST_DIR}/fm" "${oofem_TEST_DIR}/fm/*.in")
     foreach (case ${fm_tests})
-        add_test (NAME "test_${case}" WORKING_DIRECTORY ${oofem_TEST_DIR}/fm COMMAND ${oofem_cmd} "-f" ${case})
+        add_test (NAME "test_fm_${case}" WORKING_DIRECTORY ${oofem_TEST_DIR}/fm COMMAND ${oofem_cmd} "-f" ${case})
     endforeach (case)
 endif()
 
 if (USE_TM)
     file (GLOB tm_tests RELATIVE "${oofem_TEST_DIR}/tm" "${oofem_TEST_DIR}/tm/*.in")
     foreach (case ${tm_tests})
-        add_test (NAME "test_${case}" WORKING_DIRECTORY ${oofem_TEST_DIR}/tm COMMAND ${oofem_cmd} "-f" ${case})
+        add_test (NAME "test_tm_${case}" WORKING_DIRECTORY ${oofem_TEST_DIR}/tm COMMAND ${oofem_cmd} "-f" ${case})
     endforeach (case)
 endif()
 
 if (USE_TM AND USE_SM)
     file (GLOB tmsm_tests RELATIVE "${oofem_TEST_DIR}/tmsm" "${oofem_TEST_DIR}/tmsm/*.in")
     foreach (case ${tmsm_tests})
-        add_test (NAME "test_${case}" WORKING_DIRECTORY ${oofem_TEST_DIR}/tmsm COMMAND ${oofem_cmd} "-f" ${case})
+        add_test (NAME "test_tmsm_${case}" WORKING_DIRECTORY ${oofem_TEST_DIR}/tmsm COMMAND ${oofem_cmd} "-f" ${case})
     endforeach (case)
 endif()
 
 if (USE_TM AND USE_FM)
     file (GLOB tmfm_tests RELATIVE "${oofem_TEST_DIR}/tmfm" "${oofem_TEST_DIR}/tmfm/*.in")
     foreach (case ${tmfm_tests})
-        add_test (NAME "test_${case}" WORKING_DIRECTORY ${oofem_TEST_DIR}/tmfm COMMAND ${oofem_cmd} "-f" ${case})
+        add_test (NAME "test_tmfm_${case}" WORKING_DIRECTORY ${oofem_TEST_DIR}/tmfm COMMAND ${oofem_cmd} "-f" ${case})
     endforeach (case)
 endif()
 
 if (USE_TM AND USE_CEMHYD)
     file (GLOB tmcemhyd_tests RELATIVE "${oofem_TEST_DIR}/tmcemhyd" "${oofem_TEST_DIR}/tmcemhyd/*.in")
     foreach (case ${tmcemhyd_tests})
-        add_test (NAME "test_${case}" WORKING_DIRECTORY ${oofem_TEST_DIR}/tmcemhyd COMMAND ${oofem_cmd} "-f" ${case})
+        add_test (NAME "test_tm_${case}" WORKING_DIRECTORY ${oofem_TEST_DIR}/tmcemhyd COMMAND ${oofem_cmd} "-f" ${case})
     endforeach (case)
 endif()
 
 if (USE_FM AND USE_PFEM)
     file (GLOB fmpfem_tests RELATIVE "${oofem_TEST_DIR}/fmpfem" "${oofem_TEST_DIR}/fmpfem/*.in")
     foreach (case ${fmpfem_tests})
-        add_test (NAME "test_${case}" WORKING_DIRECTORY ${oofem_TEST_DIR}/fmpfem COMMAND ${oofem_cmd} "-f" ${case})
+        add_test (NAME "test_fm_${case}" WORKING_DIRECTORY ${oofem_TEST_DIR}/fmpfem COMMAND ${oofem_cmd} "-f" ${case})
     endforeach (case)
 endif()
 
@@ -758,35 +895,35 @@ set (oofem_BENCHMARK_DIR "${oofem_SOURCE_DIR}/tests/benchmark")
 if (USE_TM AND USE_SM AND USE_DSS AND USE_IML)
     file (GLOB tmsmdssiml_benchmark RELATIVE "${oofem_BENCHMARK_DIR}/tmsmdssiml" "${oofem_BENCHMARK_DIR}/tmsmdssiml/*.in")
     foreach (case ${tmsmdssiml_benchmark})
-        add_test (NAME "benchmark_${case}" WORKING_DIRECTORY ${oofem_BENCHMARK_DIR}/tmsmdssiml COMMAND ${oofem_cmd} "-f" ${case})
+        add_test (NAME "benchmark_tmsm_${case}" WORKING_DIRECTORY ${oofem_BENCHMARK_DIR}/tmsmdssiml COMMAND ${oofem_cmd} "-f" ${case})
     endforeach (case)
 endif()
 
 if (USE_FM)
     file (GLOB fm_benchmark RELATIVE "${oofem_BENCHMARK_DIR}/fm" "${oofem_BENCHMARK_DIR}/fm/*.in")
     foreach (case ${fm_benchmark})
-        add_test (NAME "benchmark_${case}" WORKING_DIRECTORY ${oofem_BENCHMARK_DIR}/fm COMMAND ${oofem_cmd} "-f" ${case})
+        add_test (NAME "benchmark_fm_${case}" WORKING_DIRECTORY ${oofem_BENCHMARK_DIR}/fm COMMAND ${oofem_cmd} "-f" ${case})
     endforeach (case)
 endif()
 
 if (USE_SM)
     file (GLOB sm_benchmark RELATIVE "${oofem_BENCHMARK_DIR}/sm" "${oofem_BENCHMARK_DIR}/sm/*.in")
     foreach (case ${sm_benchmark})
-        add_test (NAME "benchmark_${case}" WORKING_DIRECTORY ${oofem_BENCHMARK_DIR}/sm COMMAND ${oofem_cmd} "-f" ${case})
+        add_test (NAME "benchmark_sm_${case}" WORKING_DIRECTORY ${oofem_BENCHMARK_DIR}/sm COMMAND ${oofem_cmd} "-f" ${case})
     endforeach (case)
 endif()
 
 if (USE_TM)
     file (GLOB tm_benchmark RELATIVE "${oofem_BENCHMARK_DIR}/tm" "${oofem_BENCHMARK_DIR}/tm/*.in")
     foreach (case ${tm_benchmark})
-        add_test (NAME "benchmark_${case}" WORKING_DIRECTORY ${oofem_BENCHMARK_DIR}/tm COMMAND ${oofem_cmd} "-f" ${case})
+        add_test (NAME "benchmark_tm_${case}" WORKING_DIRECTORY ${oofem_BENCHMARK_DIR}/tm COMMAND ${oofem_cmd} "-f" ${case})
     endforeach (case)
 endif()
 
 if (USE_FM AND USE_SM AND USE_PFEM)
     file (GLOB fmpfem_benchmark RELATIVE "${oofem_BENCHMARK_DIR}/fmpfem" "${oofem_BENCHMARK_DIR}/fmpfem/*.in")
     foreach (case ${fmpfem_benchmark})
-        add_test (NAME "benchmark_${case}" WORKING_DIRECTORY ${oofem_BENCHMARK_DIR}/fmpfem COMMAND ${oofem_cmd} "-f" ${case})
+        add_test (NAME "benchmark_fm_${case}" WORKING_DIRECTORY ${oofem_BENCHMARK_DIR}/fmpfem COMMAND ${oofem_cmd} "-f" ${case})
     endforeach (case)
 endif()   
   
@@ -806,6 +943,12 @@ else ()
     add_custom_target (partests   COMMAND ${CMAKE_CTEST_COMMAND} "-R" "^partest")
     add_custom_target (benchmarks COMMAND ${CMAKE_CTEST_COMMAND} "-j${N}" "-R" "^benchmark")
 endif ()
+
+######################## Tests of Python bindings ########################################
+if (USE_PYBIND_BINDINGS)
+    add_test (NAME "test_python_pybind11_bindings" WORKING_DIRECTORY ${oofem_SOURCE_DIR}/bindings/python COMMAND ${PYTHON_EXECUTABLE} "-m" "pytest" ${oofem_SOURCE_DIR}/bindings/python)
+    set_tests_properties("test_python_pybind11_bindings" PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}")
+endif()
 
 
 #######################################################################
@@ -849,3 +992,4 @@ set (CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 set(CPACK_DEBIAN_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION}.${CPACK_PACKAGE_VERSION_PATCH}+sid1")
 
 include (CPack)
+

@@ -82,11 +82,14 @@ InternalStateValueType giveInternalStateValueType(InternalStateType type)
     case IST_DeviatoricStrain:
     case IST_PlasticStrainTensor:
     case IST_ThermalStrainTensor:
+    case IST_ElasticStrainTensor:
     case IST_CylindricalStrainTensor:
     case IST_CreepStrainTensor:
     case IST_ShellStrainTensor:
     case IST_CurvatureTensor:
     case IST_CurvatureTensorTemp:
+    case IST_EigenStrainTensor:
+    case IST_CrackStrainTensor:
         return ISVT_TENSOR_S3E;
 
     case IST_StressTensor:
@@ -99,7 +102,8 @@ InternalStateValueType giveInternalStateValueType(InternalStateType type)
     // case IST_ShellCurvatureTensor:
     // case IST_ForceTensorTemp:
     case IST_ShellMomentTensor:
-    case IST_ShellMomentTensorTemp:
+    case IST_MomentTensor:
+    case IST_MomentTensorTemp:
 
     ///@todo Should be have these are S3E or just S3?
     case IST_AutogenousShrinkageTensor:
@@ -117,6 +121,8 @@ InternalStateValueType giveInternalStateValueType(InternalStateType type)
 
     case IST_DeformationGradientTensor:
     case IST_FirstPKStressTensor:
+    case IST_MacroSlipGradient:
+    case IST_ReinfMembraneStress:
     //case IST_MaterialOrientation:
         return ISVT_TENSOR_G;
 
@@ -141,6 +147,7 @@ InternalStateValueType giveInternalStateValueType(InternalStateType type)
     case IST_HumidityFlow:
     case IST_CrackDirs:
     case IST_CrackStatuses:
+    case IST_CrackStatusesTemp:
     case IST_CrackVector:
     case IST_2ndCrackVector:
     case IST_3rdCrackVector:      
@@ -150,6 +157,11 @@ InternalStateValueType giveInternalStateValueType(InternalStateType type)
     case IST_PrincStressVector1:
     case IST_PrincStressVector2:
     case IST_PrincStressVector3:
+    case IST_PrincStressVector1:
+    case IST_PrincStressVector2:
+    case IST_PrincStressVector3:
+    case IST_MacroSlipVector:
+    case IST_TransferStress:
         return ISVT_VECTOR;
 
     case IST_MaxEquivalentStrainLevel:
@@ -202,7 +214,12 @@ InternalStateValueType giveInternalStateValueType(InternalStateType type)
     case IST_ResidualTensileStrength:
     case IST_CrackIndex:
     case IST_FiberStressNL:
-    case IST_FiberStressLocal:     
+    case IST_FiberStressLocal:
+    case IST_CrackSlip:
+    case IST_EquivalentTime:
+    case IST_MoistureContent:
+    case IST_IncrementCreepModulus:
+    case IST_InternalSource:
         return ISVT_SCALAR;
 
     default:
@@ -233,7 +250,7 @@ int giveInternalStateTypeSize(InternalStateValueType valType)
 
 InternalStateValueType giveInternalStateValueType(UnknownType type)
 {
-    if ( type == DisplacementVector || type == EigenVector || type == VelocityVector || type == DirectorField ) {
+    if ( type == DisplacementVector || type == EigenVector || type == VelocityVector || type == DirectorField || type == MacroSlipVector ) {
         return ISVT_VECTOR;
     } else if ( type == FluxVector || type == PressureVector || type == Temperature || type == Humidity || type == DeplanationFunction ) {
         return ISVT_SCALAR;
@@ -244,23 +261,23 @@ InternalStateValueType giveInternalStateValueType(UnknownType type)
 }
 
 
-ContextIOERR :: ContextIOERR(contextIOResultType e, const char *file, int line)
+ContextIOERR :: ContextIOERR(contextIOResultType e, const char *file, int line) :
+    error(e),
+    msg(nullptr),
+    file(file),
+    line(line)
 {
-    error = e;
-    this->file = file;
-    this->line = line;
-    this->msg = NULL;
+    this->full_message = "ContextIOERR " + std::to_string(error) + " at line " + std::to_string(line) + " in file \"" + file + "\"";
 }
 
-ContextIOERR :: ContextIOERR(contextIOResultType e, const char *msg, const char *file, int line)
+ContextIOERR :: ContextIOERR(contextIOResultType e, const char *msg, const char *file, int line) :
+    error(e),
+    msg(msg),
+    file(file),
+    line(line)
 {
-    error = e;
-    this->file = file;
-    this->line = line;
-    this->msg  = msg;
+    this->full_message = "ContextIOERR " + std::to_string(error) + " at line " + std::to_string(line) + " in file \"" + file + "\":" + this->msg;
 }
-
-ContextIOERR :: ~ContextIOERR() { }
 
 
 void

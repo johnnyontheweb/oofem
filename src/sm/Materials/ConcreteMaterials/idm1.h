@@ -50,9 +50,9 @@
 #define IDM_USE_MAPPEDSTRAIN
 
 #include "material.h"
-#include "Materials/linearelasticmaterial.h"
-#include "Materials/isodamagemodel.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Materials/linearelasticmaterial.h"
+#include "sm/Materials/isodamagemodel.h"
+#include "sm/Materials/structuralms.h"
 #include "randommaterialext.h"
 #include "materialmapperinterface.h"
 
@@ -118,20 +118,11 @@ class IsotropicDamageMaterial1Status : public IsotropicDamageMaterialStatus, pub
 {
 public:
     /// Constructor
-    IsotropicDamageMaterial1Status(int n, Domain *d, GaussPoint *g);
-    /// Destructor
-    virtual ~IsotropicDamageMaterial1Status() { }
+    IsotropicDamageMaterial1Status(GaussPoint *g);
 
-    // definition
-    virtual const char *giveClassName() const { return "IsotropicDamageMaterial1Status"; }
+    const char *giveClassName() const override { return "IsotropicDamageMaterial1Status"; }
 
-    virtual void initTempStatus();
-    virtual void updateYourself(TimeStep *tStep);
-
-    virtual Interface *giveInterface(InterfaceType it);
-
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    Interface *giveInterface(InterfaceType it) override;
 };
 
 /**
@@ -146,11 +137,11 @@ class IsotropicDamageMaterial1 : public IsotropicDamageMaterial,
 {
 protected:
     /// Equivalent strain at stress peak (or a similar parameter).
-    double e0;
+    double e0 = 0.;
     /// Determines ductility -> corresponds to fracturing strain.
-    double ef;
+    double ef = 0.;
     /// Determines ductility -> corresponds to crack opening in the cohesive crack model.
-    double wf;
+    double wf = 0.;
 
     /**
      * Determines the softening -> corresponds to the initial fracture energy. For a linear law, it is the area
@@ -158,22 +149,22 @@ protected:
      * and a tangent to the softening part of the curve at the peak stress. For a bilinear law,
      * gf corresponds to area bounded by elasticity and the first linear softening line projected to zero stress.
      */
-    double gf;
+    double gf = 0.;
 
     /// Determines the softening for the bilinear law -> corresponds to the total fracture energy.
-    double gft;
+    double gft = 0.;
 
     /// Determines the softening for the bilinear law -> corresponds to the strain at the knee point.
-    double ek;
+    double ek = 0.;
 
     /// Determines the softening for the bilinear law -> corresponds to the crack opening at the knee point.
-    double wk;
+    double wk = 0.;
 
     /// Determines the softening for the bilinear law -> corresponds to the stress at the knee point.
-    double sk;
+    double sk = 0.;
 
     /// Parameters used in Hordijk's softening law
-    double c1, c2;
+    double c1 = 3., c2 = 6.93;  // default value of Hordijk parameter
 
     /** Type characterizing the algorithm used to compute equivalent strain measure.
      *  Note that the assigned numbers to enum values have to correspond to values
@@ -192,46 +183,46 @@ protected:
         EST_Unknown = 100
     };
     /// Parameter specifying the definition of equivalent strain.
-    EquivStrainType equivStrainType;
+    EquivStrainType equivStrainType = EST_Unknown;
 
     /// Parameter used in Mises definition of equivalent strain.
-    double k;
+    double k = 0.;
 
     /// Parameter used in Griffith's criterion
-    double griff_n;
+    double griff_n = 8.;
 
     /// Temporary parameter reading type of softening law, used in other isotropic damage material models.
-    int damageLaw;
+    int damageLaw = 0;
 
     /** Type characterizing the formula for the damage law. For example, linear softening can be specified
      *   with fracturing strain or crack opening.
      */
-    enum SofteningType { ST_Unknown, ST_Exponential, ST_Linear, ST_Mazars, ST_Smooth, ST_SmoothExtended, ST_Exponential_Cohesive_Crack, ST_Linear_Cohesive_Crack, ST_BiLinear_Cohesive_Crack, ST_Disable_Damage, ST_PowerExponential, ST_DoubleExponential, ST_Hordijk_Cohesive_Crack };
+    enum SofteningType { ST_Unknown, ST_Exponential, ST_Linear, ST_Mazars, ST_Smooth, ST_SmoothExtended, ST_Exponential_Cohesive_Crack, ST_Linear_Cohesive_Crack, ST_BiLinear_Cohesive_Crack, ST_Disable_Damage, ST_PowerExponential, ST_DoubleExponential, ST_Hordijk_Cohesive_Crack, ST_ModPowerExponential };
 
     /// Parameter specifying the type of softening (damage law).
-    SofteningType softType;
+    SofteningType softType = ST_Unknown;
 
     /// Parameters used in Mazars damage law.
-    double At, Bt;
+    double At = 0., Bt = 0.;
     /// Parameter used in "smooth damage law".
-    double md;
+    double md = 1.;
 
     /// Parameters used if softType = 7 (extended smooth damage law)
-    double e1, e2, s1, nd;
+    double e1 = 0., e2 = 0., s1 = 0., nd = 0.;
     /// Check possible snap back flag
-    int checkSnapBack;
+    int checkSnapBack = 0;
 
     /// auxiliary input variablesfor softType == ST_SmoothExtended
-    double ep, ft;
+    double ep = 0., ft = 0.;
 
     /// Parameters used by the model with permanent strain
-    double ps_alpha, ps_H;
+    double ps_alpha = 0., ps_H = 0.;
 
     /// Method used for evaluation of characteristic element size
-    ElementCharSizeMethod ecsMethod;
+    ElementCharSizeMethod ecsMethod = ECSM_Unknown;
 
     /// Cached source element set used to map internal variables (adaptivity), created on demand
-    Set *sourceElemSet;
+    Set *sourceElemSet = nullptr;
 
 #ifdef IDM_USE_MMAClosestIPTransfer
     /// Mapper used to map internal variables in adaptivity.
@@ -251,17 +242,15 @@ protected:
 #endif
 
 public:
-
     /// Constructor
     IsotropicDamageMaterial1(int n, Domain *d);
     /// Destructor
     virtual ~IsotropicDamageMaterial1();
 
-    // identification and auxiliary functions
-    virtual const char *giveClassName() const { return "IsotropicDamageMaterial1"; }
-    virtual const char *giveInputRecordName() const { return _IFT_IsotropicDamageMaterial1_Name; }
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    const char *giveClassName() const override { return "IsotropicDamageMaterial1"; }
+    const char *giveInputRecordName() const override { return _IFT_IsotropicDamageMaterial1_Name; }
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
     /**
      * Computes invariants I1 and J2 of the strain tensor
      * from the strain components stored in a vector.
@@ -271,11 +260,11 @@ public:
      */
     static void computeStrainInvariants(const FloatArray &strainVector, double &I1e, double &J2e);
 
-    bool isCrackBandApproachUsed() { return ( this->softType == ST_Exponential_Cohesive_Crack || this->softType == ST_Linear_Cohesive_Crack || this->softType == ST_BiLinear_Cohesive_Crack || this->gf != 0. ); }
-    virtual void computeEquivalentStrain(double &kappa, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep);
+    bool isCrackBandApproachUsed() const { return ( this->softType == ST_Exponential_Cohesive_Crack || this->softType == ST_Linear_Cohesive_Crack || this->softType == ST_BiLinear_Cohesive_Crack || this->gf != 0. ); }
+    double computeEquivalentStrain(const FloatArray &strain, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual void computeEta(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep);
-    virtual void computeDamageParam(double &omega, double kappa, const FloatArray &strain, GaussPoint *gp);
+    void computeEta(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep) const override;
+    double computeDamageParam(double kappa, const FloatArray &strain, GaussPoint *gp) const override;
     /**
      * computes the value of damage parameter omega,
      * based on a given value of equivalent strain,
@@ -285,7 +274,7 @@ public:
      * @param kappa Equivalent strain measure.
      * @param gp Integration point.
      */
-    void computeDamageParamForCohesiveCrack(double &omega, double kappa, GaussPoint *gp);
+    double computeDamageParamForCohesiveCrack(double kappa, GaussPoint *gp) const;
     /**
      * Returns the value of damage parameter
      * corresponding to a given value
@@ -295,7 +284,7 @@ public:
      * @param kappa Equivalent strain measure.
      * @param gp Integration point.
      */
-    double damageFunction(double kappa, GaussPoint *gp);
+    double damageFunction(double kappa, GaussPoint *gp) const;
     /**
      * Returns the value of compliance parameter
      * corresponding to a given value
@@ -316,7 +305,7 @@ public:
      * @param kappa Equivalent strain measure.
      * @param gp Integration point.
      */
-    double damageFunctionPrime(double kappa, GaussPoint *gp);
+    double damageFunctionPrime(double kappa, GaussPoint *gp) const override;
     /**
      * Returns the value of compliance parameter
      * corresponding to a given value
@@ -329,22 +318,22 @@ public:
      * @param kappa Equivalent strain measure.
      * @param gp Integration point.
      */
-    double complianceFunction(double kappa, GaussPoint *gp);
+    double complianceFunction(double kappa, GaussPoint *gp) const;
 
-    double evaluatePermanentStrain(double kappa, double omega);
+    double evaluatePermanentStrain(double kappa, double omega) const override;
 
-    virtual Interface *giveInterface(InterfaceType it);
+    Interface *giveInterface(InterfaceType it) override;
 
-    virtual int MMI_map(GaussPoint *gp, Domain *oldd, TimeStep *tStep);
-    virtual int MMI_update(GaussPoint *gp, TimeStep *tStep, FloatArray *estrain = NULL);
-    virtual int MMI_finish(TimeStep *tStep);
+    int MMI_map(GaussPoint *gp, Domain *oldd, TimeStep *tStep) override;
+    int MMI_update(GaussPoint *gp, TimeStep *tStep, FloatArray *estrain = nullptr) override;
+    int MMI_finish(TimeStep *tStep) override;
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const;
-    virtual MaterialStatus *giveStatus(GaussPoint *gp) const;
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
+    MaterialStatus *giveStatus(GaussPoint *gp) const override;
 
-    virtual double give(int aProperty, GaussPoint *gp);
+    double give(int aProperty, GaussPoint *gp) const override;
 
-    virtual bool isCharacteristicMtrxSymmetric(MatResponseMode rMode) { return false; }
+    bool isCharacteristicMtrxSymmetric(MatResponseMode rMode) const override { return false; }
 
 protected:
     /**
@@ -355,7 +344,7 @@ protected:
      * @param totalStrainVector Current total strain vector.
      * @param gp Integration point.
      */
-    virtual void initDamaged(double kappa, FloatArray &totalStrainVector, GaussPoint *gp);
+    void initDamaged(double kappa, FloatArray &totalStrainVector, GaussPoint *gp) const override;
 };
 } // end namespace oofem
 #endif // idm1_h

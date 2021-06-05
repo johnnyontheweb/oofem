@@ -46,11 +46,10 @@
 #include "classfactory.h"
 #include "dof.h"
 #include "oofemtxtinputrecord.h"
-#include "irresulttype.h"
 #ifdef __SM_MODULE
- #include "../sm/EngineeringModels/structengngmodel.h"
- #include "../sm/Elements/Beams/beam2d.h"
- #include "../sm/Elements/Beams/beam3d.h"
+ #include "sm/EngineeringModels/structengngmodel.h"
+ #include "sm/Elements/Beams/beam2d.h"
+ #include "sm/Elements/Beams/beam3d.h"
 #endif
 
 namespace oofem {
@@ -68,7 +67,6 @@ NodeErrorCheckingRule :: NodeErrorCheckingRule(const std :: string &line, double
   ErrorCheckingRule(tol)
 {
 /*
-  IRResultType result;
   char unknown;
   std :: string  kwd;
   OOFEMTXTInputRecord rec (0, line), *ptr = &rec;
@@ -111,7 +109,7 @@ bool
 NodeErrorCheckingRule :: check(Domain *domain, TimeStep *tStep)
 {
     // Rule doesn't apply yet.
-    if ( (tStep->giveNumber() != tstep ) || (tStep->giveVersion() != tsubstep) )  {
+    if ( tStep->giveNumber() != tstep || tStep->giveVersion() != tsubstep )  {
         return true;
     }
 
@@ -170,7 +168,7 @@ bool
 ElementErrorCheckingRule :: check(Domain *domain, TimeStep *tStep)
 {
     // Rule doesn't apply yet.
-     if ( (tStep->giveNumber() != tstep ) || (tStep->giveVersion() != tsubstep) )  {
+     if ( tStep->giveNumber() != tstep || tStep->giveVersion() != tsubstep )  {
         return true;
     }
 
@@ -231,7 +229,7 @@ bool
 BeamElementErrorCheckingRule :: check(Domain *domain, TimeStep *tStep)
 {
     // Rule doesn't apply yet.
-    if ( (tStep->giveNumber() != tstep ) || (tStep->giveVersion() != tsubstep) )  {
+    if ( tStep->giveNumber() != tstep || tStep->giveVersion() != tsubstep )  {
         return true;
     }
 
@@ -252,12 +250,17 @@ BeamElementErrorCheckingRule :: check(Domain *domain, TimeStep *tStep)
     if (ist == BET_localEndDisplacement) {
       element->computeVectorOf(VM_Total, tStep, val);
     } else if (ist ==  BET_localEndForces) {
+#ifdef __SM_MODULE 
       if(Beam2d* b = dynamic_cast<Beam2d*>(element)) b->giveEndForcesVector(val, tStep);
       else if(Beam3d* b = dynamic_cast<Beam3d*>(element)) b->giveEndForcesVector(val, tStep);
       else {
         OOFEM_WARNING("Element %d has no beam interface.", number);
         return false;
       }
+#else
+        OOFEM_WARNING("Element %d has no beam interface.", number);
+        return false;
+#endif
     }
 
     if ( component > val.giveSize() || component < 1 ) {
@@ -299,7 +302,7 @@ bool
 ReactionErrorCheckingRule :: check(Domain *domain, TimeStep *tStep)
 {
     // Rule doesn't apply yet.
-    if ( (tStep->giveNumber() != tstep ) || (tStep->giveVersion() != tsubstep) )  {
+    if ( tStep->giveNumber() != tstep || tStep->giveVersion() != tsubstep )  {
         return true;
     }
 
@@ -414,21 +417,19 @@ EigenValueErrorCheckingRule :: check(Domain *domain, TimeStep *tStep)
 
 ErrorCheckingExportModule :: ErrorCheckingExportModule(int n, EngngModel *e) : ExportModule(n, e)
 {
-    allPassed = true;
-    writeChecks = false;
 }
 
-IRResultType
-ErrorCheckingExportModule :: initializeFrom(InputRecord *ir)
+void
+ErrorCheckingExportModule :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
+    ExportModule :: initializeFrom(ir);
 
     allPassed = true;
     this->errorCheckingRules.clear();
 
     filename = std::string("");
 
-    if ( ir->hasField(_IFT_ErrorCheckingExportModule_filename) ) {
+    if ( ir.hasField(_IFT_ErrorCheckingExportModule_filename) ) {
         IR_GIVE_FIELD(ir, this->filename, _IFT_ErrorCheckingExportModule_filename);
     }
     else {
@@ -438,13 +439,12 @@ ErrorCheckingExportModule :: initializeFrom(InputRecord *ir)
     // Reads all the rules;
     std :: ifstream inputStream(this->filename);
     if ( !inputStream ) {
-        OOFEM_WARNING("Couldn't open file '%s'\n", this->filename.c_str());
-        return IRRT_BAD_FORMAT;
+        throw ValueInputException(ir, _IFT_ErrorCheckingExportModule_filename, "Couldn't open file");
     }
     double tol = 0.;
     if ( this->scanToErrorChecks(inputStream,  tol) ) {
         for (;;) {
-            std :: unique_ptr< ErrorCheckingRule > rule(this->giveErrorCheck(inputStream, tol));
+            std :: unique_ptr< ErrorCheckingRule > rule = this->giveErrorCheck(inputStream, tol);
             if ( !rule ) {
                 break;
             }
@@ -453,7 +453,7 @@ ErrorCheckingExportModule :: initializeFrom(InputRecord *ir)
     }
 
     this->writeIST.clear();
-    writeChecks = ir->hasField(_IFT_ErrorCheckingExportModule_writeIST);
+    writeChecks = ir.hasField(_IFT_ErrorCheckingExportModule_writeIST);
     if ( writeChecks ) {
         IR_GIVE_FIELD(ir, this->writeIST, _IFT_ErrorCheckingExportModule_writeIST);
     }
@@ -461,8 +461,6 @@ ErrorCheckingExportModule :: initializeFrom(InputRecord *ir)
     if ( errorCheckingRules.size() == 0 && !writeChecks ) {
         OOFEM_WARNING("No rules found (possibly wrong file or syntax).");
     }
-
-    return ExportModule :: initializeFrom(ir);
 }
 
 void
@@ -558,7 +556,7 @@ ErrorCheckingExportModule :: scanToErrorChecks(std :: ifstream &stream, double &
     return false;
 }
 
-ErrorCheckingRule *
+std::unique_ptr<ErrorCheckingRule>
 ErrorCheckingExportModule :: giveErrorCheck(std :: ifstream &stream, double errorTolerance)
 {
     std :: string line;
@@ -568,25 +566,27 @@ ErrorCheckingExportModule :: giveErrorCheck(std :: ifstream &stream, double erro
             return NULL;
         }
         if ( line.size() > 2 && line[0] == '#' && line[1] != '#' ) {
+            if (line.compare(0, 5, "#TIME") != 0 ) {
             break;
         }
     }
+    }
 
     if ( line.compare(0, 5, "#NODE") == 0 ) {
-        return new NodeErrorCheckingRule(line, errorTolerance);
+        return std::make_unique<NodeErrorCheckingRule>(line, errorTolerance);
     } else if ( line.compare(0, 8, "#ELEMENT") == 0 ) {
-        return new ElementErrorCheckingRule(line, errorTolerance);
+        return std::make_unique<ElementErrorCheckingRule>(line, errorTolerance);
     } else if ( line.compare(0, 13, "#BEAM_ELEMENT") == 0 ) {
-        return new BeamElementErrorCheckingRule(line, errorTolerance);
+        return std::make_unique<BeamElementErrorCheckingRule>(line, errorTolerance);
     } else if ( line.compare(0, 9, "#REACTION") == 0 ) {
-        return new ReactionErrorCheckingRule(line, errorTolerance);
+        return std::make_unique<ReactionErrorCheckingRule>(line, errorTolerance);
     } else if ( line.compare(0, 10, "#LOADLEVEL") == 0 ) {
-        return new LoadLevelErrorCheckingRule(line, errorTolerance);
+        return std::make_unique<LoadLevelErrorCheckingRule>(line, errorTolerance);
     } else if ( line.compare(0, 7, "#EIGVAL") == 0 ) {
-        return new EigenValueErrorCheckingRule(line, errorTolerance);
+        return std::make_unique<EigenValueErrorCheckingRule>(line, errorTolerance);
     } else {
         OOFEM_ERROR("Unsupported rule '%s'", line.c_str());
-        return NULL;
+        return nullptr;
     }
 }
 

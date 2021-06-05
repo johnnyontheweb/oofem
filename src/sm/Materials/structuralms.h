@@ -62,7 +62,7 @@ class Domain;
  * - printingYourself()
  * - updating Yourself after a new equilibrium state has been reached.
  */
-class StructuralMaterialStatus : public MaterialStatus, public MaterialStatusMapperInterface
+class OOFEM_EXPORT StructuralMaterialStatus : public MaterialStatus, public MaterialStatusMapperInterface
 {
 protected:
     /// Equilibrated strain vector in reduced form
@@ -88,18 +88,16 @@ protected:
     FloatArray tempFVector;
 
 public:
-    /// Constructor. Creates new StructuralMaterialStatus with number n, belonging to domain d and IntegrationPoint g.
-    StructuralMaterialStatus(int n, Domain * d, GaussPoint * g);
-    /// Destructor
-    virtual ~StructuralMaterialStatus();
+    /// Constructor. Creates new StructuralMaterialStatus with IntegrationPoint g.
+    StructuralMaterialStatus(GaussPoint * g);
 
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    void printOutputAt(FILE *file, TimeStep *tStep) const override;
 
-    virtual void initTempStatus();
-    virtual void updateYourself(TimeStep *tStep);
+    void initTempStatus() override;
+    void updateYourself(TimeStep *tStep) override;
 
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 
     /// Returns the const pointer to receiver's strain vector.
     const FloatArray &giveStrainVector() const { return strainVector; }
@@ -142,11 +140,11 @@ public:
     /// Assigns tempFVector to given vector v
     void letTempFVectorBe(const FloatArray &v) { tempFVector = v; }
 
-    virtual const char *giveClassName() const { return "StructuralMaterialStatus"; }
+    const char *giveClassName() const override { return "StructuralMaterialStatus"; }
 
     /// Functions for MaterialStatusMapperInterface
-    virtual void copyStateVariables(const MaterialStatus &iStatus);
-    virtual void addStateVariables(const MaterialStatus &iStatus);
+    void copyStateVariables(const MaterialStatus &iStatus) override;
+    void addStateVariables(const MaterialStatus &iStatus) override;
 };
 } // end namespace oofem
 #endif // structuralms_h

@@ -36,7 +36,7 @@
 #define mazarsmodelnl_h
 
 #include "mazarsmodel.h"
-#include "Materials/structuralnonlocalmaterialext.h"
+#include "sm/Materials/structuralnonlocalmaterialext.h"
 
 ///@name Input fields for MazarsNLMaterial
 //@{
@@ -54,30 +54,26 @@ class MazarsNLMaterialStatus : public MazarsMaterialStatus, public StructuralNon
 {
 protected:
     /// Equivalent strain for averaging.
-    double localEquivalentStrainForAverage;
+    double localEquivalentStrainForAverage = 0.;
 
 public:
     /// Constructor
-    MazarsNLMaterialStatus(int n, Domain * d, GaussPoint * g);
-    /// Destructor
-    virtual ~MazarsNLMaterialStatus();
+    MazarsNLMaterialStatus(GaussPoint * g);
 
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    void printOutputAt(FILE *file, TimeStep *tStep) const override;
 
     /// Returns the local equivalent strain to be averaged.
     double giveLocalEquivalentStrainForAverage() { return localEquivalentStrainForAverage; }
     /// Sets the local equivalent strain for average to given value.
     void setLocalEquivalentStrainForAverage(double ls) { localEquivalentStrainForAverage = ls; }
 
-    // definition
-    virtual const char *giveInputRecordName() const { return _IFT_MazarsNLMaterial_Name; }
-    virtual const char *giveClassName() const { return "MazarsNLMaterialStatus"; }
+    const char *giveClassName() const override { return "MazarsNLMaterialStatus"; }
 
-    virtual void initTempStatus();
-    virtual void updateYourself(TimeStep *tStep);
+    void initTempStatus() override;
+    void updateYourself(TimeStep *tStep) override;
 
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 
     /**
      * Interface requesting service.
@@ -90,7 +86,7 @@ public:
      * returning adress of component or using pointer conversion from receiver to base class
      * NonlocalMaterialStatusExtension. If no nonlocal extension exists, NULL pointer is returned.
      */
-    virtual Interface *giveInterface(InterfaceType it);
+    Interface *giveInterface(InterfaceType it) override;
 };
 
 
@@ -102,21 +98,18 @@ class MazarsNLMaterial : public MazarsMaterial, public StructuralNonlocalMateria
 {
 protected:
     /// Interaction radius, related to the nonlocal characteristic length of material.
-    double R;
+    double R = 0.;
 
 public:
     /// Constructor
     MazarsNLMaterial(int n, Domain * d);
-    /// Destructor
-    virtual ~MazarsNLMaterial();
 
-    // identification and auxiliary functions
-    virtual const char *giveClassName() const { return "MazarsNLMaterial"; }
+    const char *giveClassName() const override { return "MazarsNLMaterial"; }
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual Interface *giveInterface(InterfaceType it);
+    void initializeFrom(InputRecord &ir) override;
+    Interface *giveInterface(InterfaceType it) override;
 
-    virtual void computeEquivalentStrain(double &kappa, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep);
+    double computeEquivalentStrain(const FloatArray &strain, GaussPoint *gp, TimeStep *tStep) const override;
     /**
      * Computes the equivalent local strain measure from given strain vector (full form).
      * @param[out] kappa Return parameter, containing the corresponding equivalent strain
@@ -124,25 +117,25 @@ public:
      * @param gp Integration point.
      * @param tStep Time step.
      */
-    void computeLocalEquivalentStrain(double &kappa, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
-    { MazarsMaterial :: computeEquivalentStrain(kappa, strain, gp, tStep); }
+    double computeLocalEquivalentStrain(const FloatArray &strain, GaussPoint *gp, TimeStep *tStep) const
+    { return MazarsMaterial :: computeEquivalentStrain(strain, gp, tStep); }
 
-    virtual void updateBeforeNonlocAverage(const FloatArray &strainVector, GaussPoint *gp, TimeStep *tStep);
-    virtual double computeWeightFunction(const FloatArray &src, const FloatArray &coord);
-    virtual int hasBoundedSupport() { return 1; }
+    void updateBeforeNonlocAverage(const FloatArray &strainVector, GaussPoint *gp, TimeStep *tStep) const override;
+    double computeWeightFunction(const FloatArray &src, const FloatArray &coord) const override;
+    int hasBoundedSupport() const override { return 1; }
     /**
      * Determines the width (radius) of limited support of weighting function
      */
-    virtual void giveSupportRadius(double &radius) { radius = this->R; }
+    virtual double giveSupportRadius() const { return this->R; }
 
-    virtual int packUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *ip);
-    virtual int unpackAndUpdateUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *ip);
-    virtual int estimatePackSize(DataStream &buff, GaussPoint *ip);
+    int packUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *ip) override;
+    int unpackAndUpdateUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *ip) override;
+    int estimatePackSize(DataStream &buff, GaussPoint *ip) override;
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const { return new MazarsNLMaterialStatus(1, MazarsMaterial :: domain, gp); }
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new MazarsNLMaterialStatus(gp); }
 
 protected:
-    void initDamaged(double kappa, FloatArray &totalStrainVector, GaussPoint *gp);
+    void initDamaged(double kappa, FloatArray &totalStrainVector, GaussPoint *gp) const override;
 };
 } // end namespace oofem
 #endif // mazarsmodelnl_h

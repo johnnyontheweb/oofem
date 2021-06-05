@@ -57,10 +57,10 @@ GPInitModule :: ~GPInitModule()
 { }
 
 
-IRResultType
-GPInitModule :: initializeFrom(InputRecord *ir)
+void
+GPInitModule :: initializeFrom(InputRecord &ir)
 {
-    return InitModule :: initializeFrom(ir);
+    InitModule :: initializeFrom(ir);
 }
 
 
@@ -82,7 +82,6 @@ GPInitModule :: doInit()
         // loop over Gauss points
         for ( auto &gp: *elem->giveDefaultIntegrationRulePtr() ) {
             Material *mat = elem->giveCrossSection()->giveMaterial(gp);
-            MaterialStatus *status = static_cast< MaterialStatus * >( gp->giveMaterialStatus() );
             if ( fscanf(initStream, "%d %d", & ie, & ig) != 2 ) {
                 OOFEM_ERROR("initStream reading error");
             }
@@ -123,7 +122,7 @@ GPInitModule :: doInit()
                 mat->setIPValue(value, gp, vartype);
             }
             // restore consistency (compute dependent internal variables)
-            status->restoreConsistency();
+            mat->restoreConsistency(gp);
 
         }
     }

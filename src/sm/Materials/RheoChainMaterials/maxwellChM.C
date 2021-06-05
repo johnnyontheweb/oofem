@@ -45,16 +45,14 @@ MaxwellChainMaterial :: MaxwellChainMaterial(int n, Domain *d) : RheoChainMateri
 { }
 
 
-void
-MaxwellChainMaterial :: computeCharCoefficients(FloatArray &answer, double tPrime, GaussPoint *gp, TimeStep *tStep)
+FloatArray
+MaxwellChainMaterial :: computeCharCoefficients(double tPrime, GaussPoint *gp, TimeStep *tStep) const
 {
-    int i, j, r, rSize;
-    double taui, tauj, sum, tti, ttj, sumRhs;
     FloatArray rhs(this->nUnits), discreteRelaxFunctionVal;
     FloatMatrix A(this->nUnits, this->nUnits);
 
     const FloatArray &rTimes = this->giveDiscreteTimes();
-    rSize = rTimes.giveSize();
+    int rSize = rTimes.giveSize();
 
     // compute discrete values of the relaxation function at times rTimes
     // from the creep function (by numerically solving integral equations)
@@ -64,20 +62,21 @@ MaxwellChainMaterial :: computeCharCoefficients(FloatArray &answer, double tPrim
                                             rTimes,
                                             tPrime,
                                             tPrime,
-					    gp,
-					    tStep);
+                                            gp,
+                                            tStep);
 
     // assemble the matrix of the set of linear equations
     // for computing the optimal moduli
-    for ( i = 1; i <= this->nUnits; i++ ) {
-        taui = this->giveCharTime(i);
-        for ( j = 1; j <= this->nUnits; j++ ) {
-            tauj = this->giveCharTime(j);
-            for ( sum = 0., r = 1; r <= rSize; r++ ) {
-                tti = pow( ( tPrime + rTimes.at(r) ) / taui, giveCharTimeExponent(i) ) -
-                pow( tPrime / taui, giveCharTimeExponent(i) );
-                ttj = pow( ( tPrime + rTimes.at(r) ) / tauj, giveCharTimeExponent(j) ) -
-                pow( tPrime / tauj, giveCharTimeExponent(j) );
+    for ( int i = 1; i <= this->nUnits; i++ ) {
+        double taui = this->giveCharTime(i);
+        for ( int j = 1; j <= this->nUnits; j++ ) {
+            double tauj = this->giveCharTime(j);
+            double sum = 0;
+            for ( int r = 1; r <= rSize; r++ ) {
+                double tti = pow( ( tPrime + rTimes.at(r) ) / taui, giveCharTimeExponent(i) ) -
+                             pow( tPrime / taui, giveCharTimeExponent(i) );
+                double ttj = pow( ( tPrime + rTimes.at(r) ) / tauj, giveCharTimeExponent(j) ) -
+                             pow( tPrime / tauj, giveCharTimeExponent(j) );
                 sum += exp(-tti - ttj);
             }
 
@@ -85,8 +84,9 @@ MaxwellChainMaterial :: computeCharCoefficients(FloatArray &answer, double tPrim
         }
 
         // assemble rhs
-        for ( sumRhs = 0., r = 1; r <= rSize; r++ ) {
-            tti = pow( ( tPrime + rTimes.at(r) ) / taui, giveCharTimeExponent(i) ) -
+        double sumRhs = 0;
+        for ( int r = 1; r <= rSize; r++ ) {
+            double tti = pow( ( tPrime + rTimes.at(r) ) / taui, giveCharTimeExponent(i) ) -
             pow( tPrime / taui, giveCharTimeExponent(i) );
             sumRhs += exp(-tti) * discreteRelaxFunctionVal.at(r);
         }
@@ -95,13 +95,15 @@ MaxwellChainMaterial :: computeCharCoefficients(FloatArray &answer, double tPrim
     }
 
     // solve the linear system
+    FloatArray answer;
     A.solveForRhs(rhs, answer);
+    return answer;
 }
 
 
 
 double
-MaxwellChainMaterial :: giveEModulus(GaussPoint *gp, TimeStep *tStep)
+MaxwellChainMaterial :: giveEModulus(GaussPoint *gp, TimeStep *tStep) const
 {
     /*
      * This function returns the incremental modulus for the given time increment.
@@ -109,28 +111,28 @@ MaxwellChainMaterial :: giveEModulus(GaussPoint *gp, TimeStep *tStep)
      *
      * Note: time -1 refers to the previous time.
      */
-    double lambdaMu, Emu, deltaYmu;
     double E = 0.0;
 
     ///@warning THREAD UNSAFE!
 
-    if (  (tStep->giveIntrinsicTime() < this->castingTime)  ) {
+    // the viscoelastic material does not exist yet
+    if  ( ! Material :: isActivated( tStep ) ) {
       OOFEM_ERROR("Attempted to evaluate E modulus at time lower than casting time");
     }
 
-    double tPrime = relMatAge + ( tStep->giveTargetTime() - 0.5 * tStep->giveTimeIncrement() ) / timeFactor;
+    double tPrime = this->relMatAge - this->castingTime + ( tStep->giveTargetTime() - 0.5 * tStep->giveTimeIncrement() ) / timeFactor;
     this->updateEparModuli(tPrime, gp, tStep);
 
     for ( int mu = 1; mu <= nUnits; mu++ ) {
-        deltaYmu = tStep->giveTimeIncrement() / timeFactor / this->giveCharTime(mu);
+        double deltaYmu = tStep->giveTimeIncrement() / timeFactor / this->giveCharTime(mu);
         if ( deltaYmu <= 0.0 ) {
             deltaYmu = 1.e-3;
         }
 
         deltaYmu = pow( deltaYmu, this->giveCharTimeExponent(mu) );
 
-        lambdaMu = ( 1.0 - exp(-deltaYmu) ) / deltaYmu;
-        Emu = this->giveEparModulus(mu); // previously updated by updateEparModuli
+        double lambdaMu = ( 1.0 - exp(-deltaYmu) ) / deltaYmu;
+        double Emu = this->giveEparModulus(mu); // previously updated by updateEparModuli
         E += lambdaMu * Emu;
     }
 
@@ -142,22 +144,18 @@ MaxwellChainMaterial :: giveEModulus(GaussPoint *gp, TimeStep *tStep)
 
 void
 MaxwellChainMaterial :: giveEigenStrainVector(FloatArray &answer,
-                                              GaussPoint *gp, TimeStep *tStep, ValueModeType mode)
+                                              GaussPoint *gp, TimeStep *tStep, ValueModeType mode) const
 //
 // computes the strain due to creep at constant stress during the increment
 // (in fact, the INCREMENT of creep strain is computed for mode == VM_Incremental)
 //
 {
-    int mu;
-    double E;
-    double deltaYmu;
     FloatArray help, reducedAnswer;
-    //FloatArray *sigmaMu;
     FloatArray sigmaMu;
     FloatMatrix B;
     MaxwellChainMaterialStatus *status = static_cast< MaxwellChainMaterialStatus * >( this->giveStatus(gp) );
 
-    if (  (tStep->giveIntrinsicTime() < this->castingTime)  ) {
+    if ( ! Material :: isActivated( tStep ) ) {
       OOFEM_ERROR("Attempted to evaluate creep strain for time lower than casting time");
     }
 
@@ -166,8 +164,8 @@ MaxwellChainMaterial :: giveEigenStrainVector(FloatArray &answer,
         reducedAnswer.resize( B.giveNumberOfRows() );
         reducedAnswer.zero();
 
-        for ( mu = 1; mu <= nUnits; mu++ ) {
-            deltaYmu = tStep->giveTimeIncrement() / timeFactor / this->giveCharTime(mu);
+        for ( int mu = 1; mu <= nUnits; mu++ ) {
+            double deltaYmu = tStep->giveTimeIncrement() / timeFactor / this->giveCharTime(mu);
             deltaYmu = pow( deltaYmu, this->giveCharTimeExponent(mu) );
 
             sigmaMu  = status->giveHiddenVarsVector(mu); // JB
@@ -179,11 +177,11 @@ MaxwellChainMaterial :: giveEigenStrainVector(FloatArray &answer,
             }
         }
 
-	E = this->giveEModulus(gp, tStep);
+        double E = this->giveEModulus(gp, tStep);
         // E = this->giveIncrementalModulus(gp, tStep);
         reducedAnswer.times(1.0 / E);
 
-        answer =  reducedAnswer;
+        answer = reducedAnswer;
     } else {
         /* error - total mode not implemented yet */
         OOFEM_ERROR("mode is not supported");
@@ -207,8 +205,6 @@ MaxwellChainMaterial :: computeHiddenVars(GaussPoint *gp, TimeStep *tStep)
     /*
      * Updates hidden variables used to effectively trace the load history
      */
-
-    double deltaYmu, Emu, lambdaMu;
     FloatArray help, deltaEps0, help1;
     FloatArray muthHiddenVarsVector;
 
@@ -216,6 +212,17 @@ MaxwellChainMaterial :: computeHiddenVars(GaussPoint *gp, TimeStep *tStep)
     MaxwellChainMaterialStatus *status =
         static_cast< MaxwellChainMaterialStatus * >( this->giveStatus(gp) );
 
+    
+    // goes there if the viscoelastic material does not exist yet
+    if (  ! Material :: isActivated( tStep ) )  {
+        help.resize(StructuralMaterial :: giveSizeOfVoigtSymVector( gp->giveMaterialMode() ) );
+        help.zero();
+        for ( int mu = 1; mu <= nUnits; mu++ ) {
+            status->letTempHiddenVarsVectorBe(mu, help);
+        }
+        return;
+    }
+    
     this->giveUnitStiffnessMatrix(Binv, gp, tStep);
     help = status->giveTempStrainVector();
     help.subtract( status->giveStrainVector() );
@@ -229,15 +236,16 @@ MaxwellChainMaterial :: computeHiddenVars(GaussPoint *gp, TimeStep *tStep)
     help1.beProductOf(Binv, help);
 
     ///@warning THREAD UNSAFE!
-    double tPrime = relMatAge + ( tStep->giveTargetTime() - 0.5 * tStep->giveTimeIncrement() ) / timeFactor;
-    this->updateEparModuli(tPrime, gp, tStep);
+    // redundant two subsequent lines?
+    //    double tPrime = relMatAge - this->castingTime + ( tStep->giveTargetTime() - 0.5 * tStep->giveTimeIncrement() ) / timeFactor;
+    //    this->updateEparModuli(tPrime, gp, tStep);
 
     for ( int mu = 1; mu <= nUnits; mu++ ) {
-        deltaYmu = tStep->giveTimeIncrement() / timeFactor / this->giveCharTime(mu);
+        double deltaYmu = tStep->giveTimeIncrement() / timeFactor / this->giveCharTime(mu);
         deltaYmu = pow( deltaYmu, this->giveCharTimeExponent(mu) );
 
-        lambdaMu = ( 1.0 - exp(-deltaYmu) ) / deltaYmu;
-        Emu = this->giveEparModulus(mu);
+        double lambdaMu = ( 1.0 - exp(-deltaYmu) ) / deltaYmu;
+        double Emu = this->giveEparModulus(mu);
 
         muthHiddenVarsVector = status->giveHiddenVarsVector(mu);
         help = help1;
@@ -255,29 +263,25 @@ MaxwellChainMaterial :: computeHiddenVars(GaussPoint *gp, TimeStep *tStep)
 
 MaterialStatus *
 MaxwellChainMaterial :: CreateStatus(GaussPoint *gp) const
-/*
- * creates a new material status corresponding to this class
- */
 {
-    return new MaxwellChainMaterialStatus(1, this->giveDomain(), gp, nUnits);
+    return new MaxwellChainMaterialStatus(gp, nUnits);
 }
 
 
-IRResultType
-MaxwellChainMaterial :: initializeFrom(InputRecord *ir)
+void
+MaxwellChainMaterial :: initializeFrom(InputRecord &ir)
 {
-    return RheoChainMaterial :: initializeFrom(ir);
+    RheoChainMaterial :: initializeFrom(ir);
 }
 
 /****************************************************************************************/
 
-MaxwellChainMaterialStatus :: MaxwellChainMaterialStatus(int n, Domain *d,
-                                                         GaussPoint *g, int nunits) :
-    RheoChainMaterialStatus(n, d, g, nunits) { }
+MaxwellChainMaterialStatus :: MaxwellChainMaterialStatus(GaussPoint *g, int nunits) :
+    RheoChainMaterialStatus(g, nunits) { }
 
 
 void
-MaxwellChainMaterialStatus :: printOutputAt(FILE *file, TimeStep *tStep)
+MaxwellChainMaterialStatus :: printOutputAt(FILE *file, TimeStep *tStep) const
 {
     RheoChainMaterialStatus :: printOutputAt(file, tStep);
 }
@@ -295,28 +299,15 @@ MaxwellChainMaterialStatus :: initTempStatus()
     RheoChainMaterialStatus :: initTempStatus();
 }
 
-contextIOResultType
-MaxwellChainMaterialStatus :: saveContext(DataStream &stream, ContextMode mode, void *obj)
+void
+MaxwellChainMaterialStatus :: saveContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-
-    if ( ( iores = RheoChainMaterialStatus :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    return CIO_OK;
+    RheoChainMaterialStatus :: saveContext(stream, mode);
 }
 
-
-contextIOResultType
-MaxwellChainMaterialStatus :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
+void
+MaxwellChainMaterialStatus :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores = RheoChainMaterialStatus :: restoreContext(stream, mode, obj);
-
-    if ( iores != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    return CIO_OK;
+    RheoChainMaterialStatus :: restoreContext(stream, mode);
 }
 } // end namespace oofem

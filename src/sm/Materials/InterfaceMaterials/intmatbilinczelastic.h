@@ -55,25 +55,20 @@ namespace oofem {
  */
 class IntMatBilinearCZElasticStatus : public StructuralInterfaceMaterialStatus
 {
-protected:
-
 public:
     /// Constructor
-    IntMatBilinearCZElasticStatus(int n, Domain * d, GaussPoint * g);
-    /// Destructor
-    virtual ~IntMatBilinearCZElasticStatus();
+    IntMatBilinearCZElasticStatus(GaussPoint * g);
 
-    double giveDamage() { return 0.0; } // no damage in this model
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    double giveDamage() const override { return 0.0; } // no damage in this model
+    void printOutputAt(FILE *file, TimeStep *tStep) const override;
 
-    // definition
-    virtual const char *giveClassName() const { return "IntMatBilinearCZElasticStatus"; }
+    const char *giveClassName() const override { return "IntMatBilinearCZElasticStatus"; }
 
-    virtual void initTempStatus();
-    virtual void updateYourself(TimeStep *tStep);
+    void initTempStatus() override;
+    void updateYourself(TimeStep *tStep) override;
 
-    //virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    //virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    //void saveContext(DataStream &stream, ContextMode mode) override;
+    //void restoreContext(DataStream &stream, ContextMode mode) override;
 };
 
 
@@ -85,7 +80,7 @@ public:
  * tractions in normal and tangent direction.
  *
  * The behaviour of the model is elastic, described by normal and shear stiffness components.
- * Isotropic damage is initiated  when the stress reaches the tensile strength. Damage evolution
+ * Isotropic damage is initiated when the stress reaches the tensile strength. Damage evolution
  * is governed by normal component of generalized strain vector (normal relative displacement)
  * by an exponential softening law.
  */
@@ -93,44 +88,38 @@ class IntMatBilinearCZElastic : public StructuralInterfaceMaterial
 {
 protected:
     /// Material parameters
-    double kn0;
-    double ks0;
-    double knc;   // stiffness in compression
-    double GIc;
-    double sigfn;
-    double sigfs;
+    double kn0 = 0.;
+    double ks0 = 0.;
+    double knc = 0.;   // stiffness in compression
+    double GIc = 0.;
+    double sigfn = 0.;
+    double sigfs = 0.;
 
-    double gn0;   // normal jump at damage initiation
-    double gs0;   // shear jump at damage initiations
-    double gnmax; // max normal jump
+    double gn0 = 0.;   // normal jump at damage initiation
+    double gs0 = 0.;   // shear jump at damage initiations
+    double gnmax = 0.; // max normal jump
 
-    double kn1;   // slope during softening part
+    double kn1 = 0.;   // slope during softening part
 
-    virtual int checkConsistency();
+    int checkConsistency() override;
     void give3dInterfaceMaterialStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode,
                                                 GaussPoint *gp, TimeStep *tStep);
 public:
     /// Constructor
     IntMatBilinearCZElastic(int n, Domain * d);
-    /// Destructor
-    virtual ~IntMatBilinearCZElastic();
 
-    virtual int hasNonLinearBehaviour() { return 1; }
+    const char *giveClassName() const override { return "IntMatBilinearCZElastic"; }
+    const char *giveInputRecordName() const override { return _IFT_IntMatBilinearCZElastic_Name; }
 
-    virtual const char *giveClassName() const { return "IntMatBilinearCZElastic"; }
-    virtual const char *giveInputRecordName() const { return _IFT_IntMatBilinearCZElastic_Name; }
+    FloatArrayF<3> giveFirstPKTraction_3d(const FloatArrayF<3> &jump, const FloatMatrixF<3,3> &F, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<3,3> give3dStiffnessMatrix_dTdj(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual void giveFirstPKTraction_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &jumpVector,
-                                        const FloatMatrix &F, TimeStep *tStep);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual void give3dStiffnessMatrix_dTdj(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep);
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
-
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const { return new StructuralInterfaceMaterialStatus(1, domain, gp); }
-    void printYourself();
-    virtual bool hasAnalyticalTangentStiffness() const { return true; }
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new StructuralInterfaceMaterialStatus(gp); }
+    void printYourself() override;
+    bool hasAnalyticalTangentStiffness() const override { return true; }
 };
 } // end namespace oofem
 #endif // isointerfacedamage01_h

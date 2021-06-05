@@ -58,23 +58,22 @@ class B3SolidMaterialStatus : public KelvinChainMaterialStatus
 {
 protected:
     /// Microprestresses
-    double microprestress_old;
-    double microprestress_new;
+    double microprestress_old = 0.;
+    double microprestress_new = 0.;
 
 public:
-    B3SolidMaterialStatus(int n, Domain *d, GaussPoint *g, int nunits);
-    virtual ~B3SolidMaterialStatus() { }
+    B3SolidMaterialStatus(GaussPoint *g, int nunits);
 
-    virtual void updateYourself(TimeStep *tStep);
+    void updateYourself(TimeStep *tStep) override;
 
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 
     double giveMPS() const { return microprestress_old; }
     void setMPS(double src) { microprestress_new = src; }
 
     // definition
-    virtual const char *giveClassName() const { return "B3SolidMaterialStatus"; }
+    const char *giveClassName() const override { return "B3SolidMaterialStatus"; }
 };
 
 
@@ -86,88 +85,84 @@ public:
 class B3SolidMaterial : public KelvinChainMaterial
 {
 protected:
-    double t0;
-    double w, E28, q1, q2, q3, q4, q5; // predicted data
+    double t0 = 0.;
+    double w = 0., E28 = 0., q1 = 0., q2 = 0., q3 = 0., q4 = 0., q5 = 0.; // predicted data
 
     /// constant equal to one day in time units of analysis (eg. 86400 if the analysis runs in seconds)
-    double lambda0;
+    double lambda0 = 0.;
 
-    enum b3ShModeType { B3_NoShrinkage, B3_AverageShrinkage, B3_PointShrinkage } shMode;
+    enum b3ShModeType { B3_NoShrinkage, B3_AverageShrinkage, B3_PointShrinkage } shMode = B3_NoShrinkage;
     /// Additional parameters for average cross section shrinkage
-    double EpsSinf, kt, ks, vs, hum;
+    double EpsSinf = 0., kt = 0., ks = 0., vs = 0., hum = 0.;
     /// Additional parameters for free shrinkage at material point
-    double es0, r, rprime, at;
+    double es0 = 0., r = 0., rprime = 0., at = 0.;
     // Additional parameters for sorption isotherm (used to compute relative humidity from water content)
-    double w_h;    ///< Constant water content (obtained from experiments) w_h [Pedersen, 1990]
-    double n;      ///< Constant-exponent (obtained from experiments) n [Pedersen, 1990]
-    double a;      ///< Constant (obtained from experiments) A [Pedersen, 1990]
-    double EspringVal; ///< elastic modulus of the aging spring (first member of Kelvin chain if retardation spectrum is used)
+    double w_h = 0.;    ///< Constant water content (obtained from experiments) w_h [Pedersen, 1990]
+    double n = 0.;      ///< Constant-exponent (obtained from experiments) n [Pedersen, 1990]
+    double a = 0.;      ///< Constant (obtained from experiments) A [Pedersen, 1990]
+    mutable double EspringVal = 0.; ///< elastic modulus of the aging spring (first member of Kelvin chain if retardation spectrum is used)
     /**
      * If 0, analysis of retardation spectrum is used for evaluation of Kelvin units moduli (default).
      * If 1, least-squares method is used for evaluation of Kelvin units moduli.
      */
-    int EmoduliMode;
+    int EmoduliMode = 0;
     /**
      * If 1, computation exploiting Microprestress solidification theory is done.
      * Default value is 0 = without external fields it can be used for basic creep.
      */
-    int MicroPrestress;
-    double c0;  ///< MPS constant c0 [MPa^-1 * day^-1]
-    double c1;  ///< MPS constant c1 (=C1*R*T/M)
-    double tS0; ///< MPS tS0 - necessary for the initial value of microprestress (age when the load is applied)
-    double kSh; ///< MPS shrinkage parameter. Either this or inithum and finalhum must be given in input record
+    int MicroPrestress = 0;
+    double c0 = 0.;  ///< MPS constant c0 [MPa^-1 * day^-1]
+    double c1 = 0.;  ///< MPS constant c1 (=C1*R*T/M)
+    double tS0 = 0.; ///< MPS tS0 - necessary for the initial value of microprestress (age when the load is applied)
+    double kSh = 0.; ///< MPS shrinkage parameter. Either this or inithum and finalhum must be given in input record
 
 
 public:
-    B3SolidMaterial(int n, Domain *d) : KelvinChainMaterial(n, d) {
-        shMode = B3_NoShrinkage;
-    }
-    virtual ~B3SolidMaterial() { }
+    B3SolidMaterial(int n, Domain *d) : KelvinChainMaterial(n, d) {}
 
-    virtual void giveRealStressVector(FloatArray &answer, GaussPoint *gp,
-                                      const FloatArray &reducedStrain, TimeStep *tStep);
-    //virtual void updateYourself(GaussPoint *gp, TimeStep *tStep);
+    void giveRealStressVector(FloatArray &answer, GaussPoint *gp,
+                              const FloatArray &reducedStrain, TimeStep *tStep) override;
 
-    virtual void giveShrinkageStrainVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep, ValueModeType mode);
+    void giveShrinkageStrainVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep, ValueModeType mode) const override;
 
-    virtual const char *giveClassName() const { return "B3SolidMaterial"; }
-    virtual const char *giveInputRecordName() const { return _IFT_B3SolidMaterial_Name; }
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    const char *giveClassName() const override { return "B3SolidMaterial"; }
+    const char *giveInputRecordName() const override { return _IFT_B3SolidMaterial_Name; }
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const;
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
 
     /// Evaluation of the compliance function of the non-aging solidifying constituent.
-    virtual double computeCreepFunction(double t, double t_prime, GaussPoint *gp, TimeStep *tStep);
+    double computeCreepFunction(double t, double t_prime, GaussPoint *gp, TimeStep *tStep) const override;
 
 protected:
-    virtual int hasIncrementalShrinkageFormulation() { return 1; }
+    bool hasIncrementalShrinkageFormulation() const override { return true; }
 
-    void computeTotalAverageShrinkageStrainVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep);
+    void computeTotalAverageShrinkageStrainVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep) const;
 
     /// Evaluation of the shrinkageStrainVector. Shrinkage is fully dependent on humidity rate in given GP
-    void computePointShrinkageStrainVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep);
+    void computePointShrinkageStrainVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep) const;
 
     void predictParametersFrom(double, double, double, double, double, double, double);
 
     /// Evaluation of the relative volume of the solidified material.
-    double computeSolidifiedVolume(TimeStep *tStep);
+    double computeSolidifiedVolume(TimeStep *tStep) const;
 
     /// Evaluation of the flow term viscosity.
-    double computeFlowTermViscosity(GaussPoint *gp, TimeStep *tStep);
+    double computeFlowTermViscosity(GaussPoint *gp, TimeStep *tStep) const;
 
-    double inverse_sorption_isotherm(double w);
+    double inverse_sorption_isotherm(double w) const;
 
     /// Evaluation of characteristic moduli of the non-aging Kelvin chain.
-    virtual void computeCharCoefficients(FloatArray &answer, double tPrime, GaussPoint *gp, TimeStep *tStep);
+    FloatArray computeCharCoefficients(double tPrime, GaussPoint *gp, TimeStep *tStep) const override;
 
     /// Update of partial moduli of individual chain units
-    virtual void updateEparModuli(double tPrime, GaussPoint *gp, TimeStep *tStep);
+    void updateEparModuli(double tPrime, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual void computeCharTimes();
+    void computeCharTimes() override;
 
-    virtual double giveEModulus(GaussPoint *gp, TimeStep *tStep);
+    double giveEModulus(GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual void giveEigenStrainVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep, ValueModeType mode);
+    void giveEigenStrainVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep, ValueModeType mode) const override;
 
     /**
      * Computes microprestress at given time step and GP.
@@ -176,16 +171,16 @@ protected:
      * @param option If 0, microprestress is evaluated in the middle of the time step (used for stiffnesses).
      * If 1, MPS is evaluated at the end of the time step. (Used for updating).
      */
-    double computeMicroPrestress(GaussPoint *gp, TimeStep *tStep, int option);
+    double computeMicroPrestress(GaussPoint *gp, TimeStep *tStep, int option) const;
 
     /// Computes initial value of the MicroPrestress
-    double giveInitMicroPrestress(void);
+    double giveInitMicroPrestress() const;
 
     /// Computes relative humidity at given time step and GP
-    double giveHumidity(GaussPoint *gp, TimeStep *tStep);
+    double giveHumidity(GaussPoint *gp, TimeStep *tStep) const;
 
     /// Computes relative humidity increment at given time step and GP
-    double giveHumidityIncrement(GaussPoint *gp, TimeStep *tStep);
+    double giveHumidityIncrement(GaussPoint *gp, TimeStep *tStep) const;
 };
 } // end namespace oofem
 #endif // b3solidmat_h

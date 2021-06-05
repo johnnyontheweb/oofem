@@ -23,11 +23,10 @@ PrescribedGradientBCWeakDirichlet :: ~PrescribedGradientBCWeakDirichlet()
     // TODO Auto-generated destructor stub
 }
 
-IRResultType PrescribedGradientBCWeakDirichlet :: initializeFrom(InputRecord *ir)
+void PrescribedGradientBCWeakDirichlet :: initializeFrom(InputRecord &ir)
 {
+    PrescribedGradientBCWeak :: initializeFrom(ir);
     mMeshIsPeriodic = false;
-
-    return PrescribedGradientBCWeak :: initializeFrom(ir);
 }
 
 void PrescribedGradientBCWeakDirichlet :: postInitialize()
@@ -50,7 +49,7 @@ void PrescribedGradientBCWeakDirichlet :: checkIfCorner(bool &oIsCorner, bool &o
     oDuplicatable = false;
 
     FloatArray cornerPos = mLC;
-    if ( iPos.distance(cornerPos) < iNodeDistTol ) {
+    if ( distance(iPos, cornerPos) < iNodeDistTol ) {
         oIsCorner = true;
         oDuplicatable = true;
     }
@@ -58,7 +57,7 @@ void PrescribedGradientBCWeakDirichlet :: checkIfCorner(bool &oIsCorner, bool &o
     cornerPos = {
         mUC [ 0 ], mLC [ 1 ]
     };
-    if ( iPos.distance(cornerPos) < iNodeDistTol ) {
+    if ( distance(iPos, cornerPos) < iNodeDistTol ) {
         oIsCorner = true;
         oDuplicatable = true;
     }
@@ -66,7 +65,7 @@ void PrescribedGradientBCWeakDirichlet :: checkIfCorner(bool &oIsCorner, bool &o
     cornerPos = {
         mUC [ 0 ], mUC [ 1 ]
     };
-    if ( iPos.distance(cornerPos) < iNodeDistTol ) {
+    if ( distance(iPos, cornerPos) < iNodeDistTol ) {
         oIsCorner = true;
         oDuplicatable = true;
     }
@@ -74,7 +73,7 @@ void PrescribedGradientBCWeakDirichlet :: checkIfCorner(bool &oIsCorner, bool &o
     cornerPos = {
         mLC [ 0 ], mUC [ 1 ]
     };
-    if ( iPos.distance(cornerPos) < iNodeDistTol ) {
+    if ( distance(iPos, cornerPos) < iNodeDistTol ) {
         oIsCorner = true;
         oDuplicatable = true;
     }

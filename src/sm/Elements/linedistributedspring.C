@@ -32,9 +32,15 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+<<<<<<< HEAD
 #include "../sm/Elements/linedistributedspring.h"
 #include "../sm/Materials/structuralms.h"
 #include "../sm/CrossSections/structuralcrosssection.h"
+=======
+#include "sm/Elements/linedistributedspring.h"
+#include "sm/Materials/structuralms.h"
+#include "sm/CrossSections/structuralcrosssection.h"
+>>>>>>> bp2/master
 #include "fei3dlinelin.h"
 #include "node.h"
 #include "material.h"
@@ -79,7 +85,11 @@ LineDistributedSpring :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize( 1 );
+<<<<<<< HEAD
         integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 5) );
+=======
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 5);
+>>>>>>> bp2/master
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], numberOfGaussPoints, this);
     }
 }
@@ -150,10 +160,17 @@ LineDistributedSpring::giveInternalForcesVector(FloatArray &answer,
 
 
   
+<<<<<<< HEAD
 IRResultType
 LineDistributedSpring :: initializeFrom(InputRecord *ir)
 {
     IRResultType result;                // Required by IR_GIVE_FIELD macro
+=======
+void
+LineDistributedSpring :: initializeFrom(InputRecord &ir)
+{
+    StructuralElement::initializeFrom(ir);
+>>>>>>> bp2/master
 
     IR_GIVE_FIELD (ir, dofs, _IFT_LineDistributedSpring_Dofs);
     IR_GIVE_FIELD (ir, springStiffnesses, _IFT_LineDistributedSpring_Stifnesses);
@@ -161,8 +178,11 @@ LineDistributedSpring :: initializeFrom(InputRecord *ir)
     if (dofs.giveSize() != springStiffnesses.giveSize()) {
       OOFEM_ERROR ("dofs and k params size mismatch");
     }
+<<<<<<< HEAD
     // from element
     return StructuralElement::initializeFrom(ir);
+=======
+>>>>>>> bp2/master
 }
 
 int
@@ -222,8 +242,12 @@ LineDistributedSpring :: computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *
 int
 LineDistributedSpring :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep)
 {
+<<<<<<< HEAD
   //return StructuralElement :: giveIPValue(answer, gp, type, tStep);
 	return 0;
+=======
+  return StructuralElement :: giveIPValue(answer, gp, type, tStep);
+>>>>>>> bp2/master
 }
 
 Interface *

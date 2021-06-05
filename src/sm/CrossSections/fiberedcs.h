@@ -35,8 +35,8 @@
 #ifndef fiberedcs_h
 #define fiberedcs_h
 
-#include "../sm/CrossSections/structuralcrosssection.h"
-#include "../sm/Materials/structuralmaterial.h"
+#include "sm/CrossSections/structuralcrosssection.h"
+#include "sm/Materials/structuralmaterial.h"
 #include "element.h"
 #include "dictionary.h"
 #include "floatarray.h"
@@ -92,126 +92,102 @@ protected:
     IntArray fiberMaterials; ///< Material of each fiber.
     FloatArray fiberThicks; ///< Thickness for each fiber.
     FloatArray fiberWidths; ///< Width for each fiber.
-    int numberOfFibers;     ///< Number of fibers.
-    double thick; ///< Total thickness.
-    double width; ///< Total width.
-    double area;  ///< Total area.
+    int numberOfFibers = 0;     ///< Number of fibers.
+    double thick = 0.; ///< Total thickness.
+    double width = 0.; ///< Total width.
+    double area = 0.;  ///< Total area.
     FloatArray fiberYcoords, fiberZcoords;
 
 public:
-    FiberedCrossSection(int n, Domain * d) : StructuralCrossSection(n, d), fiberMaterials(), fiberThicks(), fiberWidths(),
-        fiberYcoords(), fiberZcoords()
-    {
-        thick = 0.;
-        width = 0.;
-        area = -1.0;
-    }
+    FiberedCrossSection(int n, Domain * d) : StructuralCrossSection(n, d)
+    { }
 
-    virtual ~FiberedCrossSection()  { }
-
-    virtual void giveRealStress_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep);
-    virtual void giveRealStress_PlaneStrain(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep);
-    virtual void giveRealStress_PlaneStress(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep);
-    virtual void giveRealStress_1d(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep);
-    virtual void giveRealStress_Warping(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep);
-
-    virtual void giveStiffnessMatrix_3d(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void giveStiffnessMatrix_PlaneStress(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void giveStiffnessMatrix_PlaneStrain(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void giveStiffnessMatrix_1d(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
+    FloatArrayF<6> giveRealStress_3d(const FloatArrayF<6> &reducedStrain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<4> giveRealStress_PlaneStrain(const FloatArrayF<4> &reducedStrain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<3> giveRealStress_PlaneStress(const FloatArrayF<3> &reducedStrain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<1> giveRealStress_1d(const FloatArrayF<1> &reducedStrain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<2> giveRealStress_Warping(const FloatArrayF<2> &reducedStrain, GaussPoint *gp, TimeStep *tStep) const override;
 
 
-    virtual void giveGeneralizedStress_Beam2d(FloatArray &answer, GaussPoint *gp, const FloatArray &generalizedStrain, TimeStep *tStep);
-    virtual void giveGeneralizedStress_Beam3d(FloatArray &answer, GaussPoint *gp, const FloatArray &generalizedStrain, TimeStep *tStep);
-    virtual void giveGeneralizedStress_Plate(FloatArray &answer, GaussPoint *gp, const FloatArray &generalizedStrain, TimeStep *tStep);
-    virtual void giveGeneralizedStress_Shell(FloatArray &answer, GaussPoint *gp, const FloatArray &generalizedStrain, TimeStep *tStep);
-    virtual void giveGeneralizedStress_MembraneRot(FloatArray &answer, GaussPoint *gp, const FloatArray &generalizedStrain, TimeStep *tStep);
-    virtual void giveGeneralizedStress_PlateSubSoil(FloatArray &answer, GaussPoint *gp, const FloatArray &generalizedStrain, TimeStep *tStep);
+    FloatMatrixF<6,6> giveStiffnessMatrix_3d(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<3,3> giveStiffnessMatrix_PlaneStress(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<4,4> giveStiffnessMatrix_PlaneStrain(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<1,1> giveStiffnessMatrix_1d(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual void giveCharMaterialStiffnessMatrix(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
+    FloatArrayF<3> giveGeneralizedStress_Beam2d(const FloatArrayF<3> &generalizedStrain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<6> giveGeneralizedStress_Beam3d(const FloatArrayF<6> &generalizedStrain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<5> giveGeneralizedStress_Plate(const FloatArrayF<5> &generalizedStrain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<8> giveGeneralizedStress_Shell(const FloatArrayF<8> &generalizedStrain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<4> giveGeneralizedStress_MembraneRot(const FloatArrayF<4> &generalizedStrain, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatArrayF<3> giveGeneralizedStress_PlateSubSoil(const FloatArrayF<3> &generalizedStrain, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual void give2dBeamStiffMtrx(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void give3dBeamStiffMtrx(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void give2dPlateStiffMtrx(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void give3dShellStiffMtrx(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void giveMembraneRotStiffMtrx(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void give2dPlateSubSoilStiffMtrx(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
+    void giveCharMaterialStiffnessMatrix(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) override;
 
-    virtual bool isCharacteristicMtrxSymmetric(MatResponseMode mode);
-    virtual double give(int aProperty, GaussPoint *gp)
+    FloatMatrixF<3,3> give2dBeamStiffMtrx(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<6,6> give3dBeamStiffMtrx(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<5,5> give2dPlateStiffMtrx(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<8,8> give3dShellStiffMtrx(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<4,4> giveMembraneRotStiffMtrx(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<3,3> give2dPlateSubSoilStiffMtrx(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
+
+    bool isCharacteristicMtrxSymmetric(MatResponseMode mode) const override;
+    double give(int aProperty, GaussPoint *gp) const override
     {
         OOFEM_ERROR("not implemented yet");
         return 0.0;
-    };
-    virtual FloatArray *imposeStressConstrainsOnGradient(GaussPoint *gp, FloatArray *gradientStressVector3d);
-    virtual FloatArray *imposeStrainConstrainsOnGradient(GaussPoint *gp, FloatArray *gradientStrainVector3d);
+    }
+    FloatArray *imposeStressConstrainsOnGradient(GaussPoint *gp, FloatArray *gradientStressVector3d) override;
+    FloatArray *imposeStrainConstrainsOnGradient(GaussPoint *gp, FloatArray *gradientStrainVector3d) override;
 
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 
-    /**
-     * Method for computing 1d fiber stiffness matrix of receiver.
-     * Default implementation computes 3d stiffness matrix using give3dMaterialStiffnessMatrix and
-     * reduces it to 1d fiber stiffness using reduce method described above.
-     * However, this reduction is quite time consuming and if it is possible,
-     * it is recommended to overload this method and provide direct method for computing
-     * particular stiffness matrix.
-     * @param fiberMatrix Stiffness matrix.
-     * @param mode Material response mode.
-     * @param layerGp Integration point.
-     * @param tStep Time step (most models are able to respond only when tStep is current time step).
-     */
-    void giveFiberMaterialStiffnessMatrix(FloatMatrix &fiberMatrix, MatResponseMode mode, GaussPoint *layerGp, TimeStep *tStep);
-
-    virtual double give(CrossSectionProperty a, GaussPoint *gp);
+    double give(CrossSectionProperty a, GaussPoint *gp) const override;
 
     // identification and auxiliary functions
-    virtual const char *giveInputRecordName() const { return _IFT_FiberedCrossSection_Name; }
-    virtual const char *giveClassName() const { return "FiberedCrossSection"; }
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    const char *giveInputRecordName() const override { return _IFT_FiberedCrossSection_Name; }
+    const char *giveClassName() const override { return "FiberedCrossSection"; }
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual void createMaterialStatus(GaussPoint &iGP); // ES
+    void createMaterialStatus(GaussPoint &iGP) override; // ES
 
-    virtual void printYourself();
+    void printYourself() override;
     double computeIntegralThickWidth();
-    MaterialMode giveCorrespondingSlaveMaterialMode(MaterialMode);
-    GaussPoint *giveSlaveGaussPoint(GaussPoint *gp, int);
+    static MaterialMode giveCorrespondingSlaveMaterialMode(MaterialMode);
+    GaussPoint *giveSlaveGaussPoint(GaussPoint *gp, int) const;
 
-    virtual contextIOResultType saveIPContext(DataStream &stream, ContextMode mode, GaussPoint *gp);
-    virtual contextIOResultType restoreIPContext(DataStream &stream, ContextMode mode, GaussPoint *gp);
+    void saveIPContext(DataStream &stream, ContextMode mode, GaussPoint *gp) override;
+    void restoreIPContext(DataStream &stream, ContextMode mode, GaussPoint *gp) override;
 
-    virtual int checkConsistency();
+    int checkConsistency() override;
 
-    virtual int packUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *ip)
+    int packUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *ip) override
     {
         OOFEM_ERROR("not implemented");
         return 0;
     }
 
-    virtual int unpackAndUpdateUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *ip)
+    int unpackAndUpdateUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *ip) override
     {
         OOFEM_ERROR("not implemented");
         return 0;
     }
 
-    virtual int estimatePackSize(DataStream &buff, GaussPoint *ip)
+    int estimatePackSize(DataStream &buff, GaussPoint *ip) override
     {
         OOFEM_ERROR("not implemented");
         return 0;
     }
 
-
-    virtual void giveFirstPKStresses(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedFIncrement, TimeStep *tStep)
+    void giveFirstPKStresses(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedFIncrement, TimeStep *tStep) override
     { OOFEM_ERROR("not implemented"); }
-    virtual void giveCauchyStresses(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedFIncrement, TimeStep *tStep)
+    void giveCauchyStresses(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedFIncrement, TimeStep *tStep) override
     { OOFEM_ERROR("not implemented"); }
-    virtual void giveStiffnessMatrix_dPdF(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
+    void giveStiffnessMatrix_dPdF(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) override
     { OOFEM_ERROR("not implemented"); }
-    virtual void giveStiffnessMatrix_dCde(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
+    void giveStiffnessMatrix_dCde(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) override
     { OOFEM_ERROR("not implemented"); }
-
-
-protected:
-    double giveArea();
+    
+    Material *giveMaterial(IntegrationPoint *ip) const override;
 };
 
 /**

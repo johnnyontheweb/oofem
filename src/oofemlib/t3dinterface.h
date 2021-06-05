@@ -36,6 +36,9 @@
 #define t3dinterface_h
 
 #include "mesherinterface.h"
+#include "element.h"
+
+#define _IFT_T3DInterface_Name "t3d"
 
 namespace oofem {
 #define BMF_FILENAME "t3d.bmf"
@@ -57,7 +60,13 @@ public:
     /// Destructor
     virtual ~T3DInterface() { }
 
-    virtual returnCode createMesh(TimeStep *tStep, int domainNumber, int domainSerNum, Domain **dNew);
+    returnCode createMesh(TimeStep *tStep, int domainNumber, int domainSerNum, Domain **dNew) override;
+    int t3d_2_OOFEM(const char *t3dOutFile, Domain **dNew);
+   // Used by HTS elemnt to mesh one element in order to export the HTS element into vtk
+    int createInput(Element *e, char *t3dInFile);
+    int createVTKExportMesh(const char *t3dOutFile,std::vector<FloatArray> &nodeCoords, std::vector<IntArray> &cellNodes, IntArray &cellTypes );
+   // udes in Quasicontinuum    
+    int createQCInterpolationMesh(const char *t3dOutFile,std::vector<FloatArray> &nodeCoords, std::vector<IntArray> &cellNodes, IntArray &cellTypes );
 
 protected:
     /// Creates the mesher input, containing the required mesh density information.

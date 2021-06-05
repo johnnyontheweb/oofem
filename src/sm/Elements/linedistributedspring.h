@@ -35,7 +35,11 @@
 #ifndef linedistributedspring_H
 #define linedistributedspring_H
 
+<<<<<<< HEAD
 #include "../sm/Elements/structuralelement.h"
+=======
+#include "sm/Elements/structuralelement.h"
+>>>>>>> bp2/master
 #include "zznodalrecoverymodel.h"
 #include "sprnodalrecoverymodel.h"
 
@@ -66,6 +70,7 @@ public:
     LineDistributedSpring(int n, Domain * d);
     virtual ~LineDistributedSpring() { }
 
+<<<<<<< HEAD
     virtual FEInterpolation *giveInterpolation() const;
     virtual FEInterpolation *giveInterpolation(DofIDItem id) const;
 
@@ -104,6 +109,46 @@ protected:
     virtual void SPRNodalRecoveryMI_giveDofMansDeterminedByPatch(IntArray &answer, int pap);
     virtual int SPRNodalRecoveryMI_giveNumberOfIP() { return this->numberOfGaussPoints; }
     virtual SPRPatchType SPRNodalRecoveryMI_givePatchType() { return SPRPatchType_2dxy; }
+=======
+    FEInterpolation *giveInterpolation() const override;
+    FEInterpolation *giveInterpolation(DofIDItem id) const override;
+
+    MaterialMode giveMaterialMode() override { return _Unknown; }
+
+    // definition & identification
+    const char *giveInputRecordName() const override { return _IFT_LineDistributedSpring_Name; }
+    const char *giveClassName() const override { return "LineDistributedSpring"; }
+    void initializeFrom(InputRecord &ir) override;
+
+    int computeNumberOfDofs() override { return this->dofs.giveSize(); }
+    void giveDofManDofIDMask(int inode, IntArray &) const override;
+
+    double computeVolumeAround(GaussPoint *gp) override;
+
+    void computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep) override;
+    void computeMassMatrix(FloatMatrix &answer, TimeStep *tStep) override
+    { computeLumpedMassMatrix(answer, tStep); }
+    void giveInternalForcesVector(FloatArray &answer,
+                                  TimeStep *tStep, int useUpdatedGpRecord) override;
+
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
+    Interface *giveInterface(InterfaceType it) override;
+    int checkConsistency() override;
+    void printOutputAt(FILE *File, TimeStep *tStep) override;
+
+protected:
+    void computeGaussPoints() override;
+    void computeBodyLoadVectorAt(FloatArray &answer, Load *load, TimeStep *tStep, ValueModeType mode) override;
+    void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int = 1, int = ALL_STRAINS) override;
+
+    void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep) override;
+    void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) override;
+
+    void SPRNodalRecoveryMI_giveSPRAssemblyPoints(IntArray &pap) override;
+    void SPRNodalRecoveryMI_giveDofMansDeterminedByPatch(IntArray &answer, int pap) override;
+    int SPRNodalRecoveryMI_giveNumberOfIP() override { return this->numberOfGaussPoints; }
+    SPRPatchType SPRNodalRecoveryMI_givePatchType() override { return SPRPatchType_2dxy; }
+>>>>>>> bp2/master
 };
 } // end namespace oofem
 #endif // linedistributedspring_H

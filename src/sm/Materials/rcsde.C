@@ -37,7 +37,7 @@
 #include "floatmatrix.h"
 #include "floatarray.h"
 #include "mathfem.h"
-#include "Materials/isolinearelasticmaterial.h"
+#include "sm/Materials/isolinearelasticmaterial.h"
 #include "datastream.h"
 #include "contextioerr.h"
 #include "classfactory.h"
@@ -47,18 +47,12 @@ namespace oofem {
 REGISTER_Material(RCSDEMaterial);
 
 RCSDEMaterial :: RCSDEMaterial(int n, Domain *d) : RCM2Material(n, d)
-    //
-    // constructor
-    //
 {
     linearElasticMaterial = new IsotropicLinearElasticMaterial(n, d);
 }
 
 
 RCSDEMaterial :: ~RCSDEMaterial()
-//
-// destructor
-//
 {
     delete linearElasticMaterial;
 }
@@ -104,7 +98,7 @@ RCSDEMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint *gp,
         this->giveRealPrincipalStressVector3d(princStress, gp, principalStrain, tempCrackDirs, tStep);
         princStress.resize(6);
         tempCrackDirs = status->giveTempCrackDirs();
-        this->transformStressVectorTo(answer, tempCrackDirs, princStress, 1);
+        answer = this->transformStressVectorTo(tempCrackDirs, princStress, 1);
 
         StructuralMaterial :: giveReducedSymVectorForm( reducedSpaceStressVector, answer, gp->giveMaterialMode() );
         status->letTempStressVectorBe(reducedSpaceStressVector);
@@ -257,18 +251,16 @@ RCSDEMaterial :: computeCurrEquivStrain(GaussPoint *gp, const FloatArray &reduce
 }
 
 
-IRResultType
-RCSDEMaterial :: initializeFrom(InputRecord *ir)
+void
+RCSDEMaterial :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
+    RCM2Material :: initializeFrom(ir);
     IR_GIVE_FIELD(ir, SDTransitionCoeff, _IFT_RCSDEMaterial_sdtransitioncoeff);
-    return RCM2Material :: initializeFrom(ir);
 }
 
 
 double
-RCSDEMaterial :: give(int aProperty, GaussPoint *gp)
+RCSDEMaterial :: give(int aProperty, GaussPoint *gp) const
 // Returns the value of the property aProperty (e.g. the Young's modulus
 // 'E') of the receiver.
 {
@@ -453,22 +445,13 @@ RCSDEMaterial :: giveNormalCrackingStress(GaussPoint *gp, double crackStrain, in
 
 
 
-RCSDEMaterialStatus :: RCSDEMaterialStatus(int n, Domain *d, GaussPoint *g) :
-    RCM2MaterialStatus(n, d, g), Ds0()
-{
-    maxEquivStrain = tempMaxEquivStrain = 0.0;
-    damageCoeff = tempDamageCoeff = 1.0;
-    transitionEps = epsF2 = 0.0;
-    rcsdMode = tempRcsdMode = rcMode;
-}
-
-
-RCSDEMaterialStatus :: ~RCSDEMaterialStatus()
-{ }
+RCSDEMaterialStatus :: RCSDEMaterialStatus(GaussPoint *g) :
+    RCM2MaterialStatus(g)
+{}
 
 
 void
-RCSDEMaterialStatus :: printOutputAt(FILE *file, TimeStep *tStep)
+RCSDEMaterialStatus :: printOutputAt(FILE *file, TimeStep *tStep) const
 {
     char s [ 11 ];
 
@@ -544,21 +527,10 @@ RCSDEMaterialStatus :: updateYourself(TimeStep *tStep)
 }
 
 
-contextIOResultType
-RCSDEMaterialStatus :: saveContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// saves full information stored in this Status
-// no temp variables stored
-//
+void
+RCSDEMaterialStatus :: saveContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-
-    // save parent class status
-    if ( ( iores = RCM2MaterialStatus :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    // write a raw data
+    RCM2MaterialStatus :: saveContext(stream, mode);
 
     if ( !stream.write(maxEquivStrain) ) {
         THROW_CIOERR(CIO_IOERR);
@@ -581,28 +553,18 @@ RCSDEMaterialStatus :: saveContext(DataStream &stream, ContextMode mode, void *o
         THROW_CIOERR(CIO_IOERR);
     }
 
+    contextIOResultType iores;
     if ( ( iores = Ds0.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    return CIO_OK;
 }
 
 
-contextIOResultType
-RCSDEMaterialStatus :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// restores full information stored in stream to this Status
-//
+void
+RCSDEMaterialStatus :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
+    RCM2MaterialStatus :: restoreContext(stream, mode);
 
-    // read parent class status
-    if ( ( iores = RCM2MaterialStatus :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    // read raw data
     if ( !stream.read(maxEquivStrain) ) {
         THROW_CIOERR(CIO_IOERR);
     }
@@ -625,10 +587,9 @@ RCSDEMaterialStatus :: restoreContext(DataStream &stream, ContextMode mode, void
         THROW_CIOERR(CIO_IOERR);
     }
 
+    contextIOResultType iores;
     if ( ( iores = Ds0.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    return CIO_OK; // return succes
 }
 } // end namespace oofem

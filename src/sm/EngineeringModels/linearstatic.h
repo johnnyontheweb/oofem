@@ -35,9 +35,10 @@
 #ifndef linearstatic_h
 #define linearstatic_h
 
-#include "../sm/EngineeringModels/structengngmodel.h"
+#include "sm/EngineeringModels/structengngmodel.h"
 #include "sparselinsystemnm.h"
 #include "sparsemtrxtype.h"
+#include "unknownnumberingscheme.h"
 
 #define _IFT_LinearStatic_Name "linearstatic"
 
@@ -72,31 +73,41 @@ protected:
     std :: unique_ptr< SparseLinearSystemNM > nMethod;
 
     int initFlag;
+    EModelDefaultEquationNumbering equationNumbering;
 
 public:
-    LinearStatic(int i, EngngModel * _master = NULL);
+    LinearStatic(int i, EngngModel *master = nullptr);
     virtual ~LinearStatic();
 
-    virtual void solveYourself();
-    virtual void solveYourselfAt(TimeStep *tStep);
+    void solveYourself() override;
+    void solveYourselfAt(TimeStep *tStep) override;
 
-    virtual double giveUnknownComponent(ValueModeType type, TimeStep *tStep, Domain *d, Dof *dof);
-    virtual contextIOResultType saveContext(DataStream *stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream *stream, ContextMode mode, void *obj = NULL);
+    double giveUnknownComponent(ValueModeType type, TimeStep *tStep, Domain *d, Dof *dof) override;
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 
-    virtual void updateDomainLinks();
+    void updateDomainLinks() override;
 
+<<<<<<< HEAD
     virtual TimeStep *giveNextStep();
     virtual NumericalMethod *giveNumericalMethod(MetaStep *mStep);
 	virtual void terminate(TimeStep *tStep);
     virtual IRResultType initializeFrom(InputRecord *ir);
+=======
+    TimeStep *giveNextStep() override;
+    NumericalMethod *giveNumericalMethod(MetaStep *mStep) override;
+
+    void initializeFrom(InputRecord &ir) override;
+
+    virtual UnknownNumberingScheme &giveEquationNumbering() { return equationNumbering; }
+>>>>>>> bp2/master
 
     // identification
     virtual const char *giveInputRecordName() const { return _IFT_LinearStatic_Name; }
-    virtual const char *giveClassName() const { return "LinearStatic"; }
-    virtual fMode giveFormulation() { return TL; }
+    const char *giveClassName() const override { return "LinearStatic"; }
+    fMode giveFormulation() override { return TL; }
 
-    virtual int estimateMaxPackSize(IntArray &commMap, DataStream &buff, int packUnpackType);
+    int estimateMaxPackSize(IntArray &commMap, DataStream &buff, int packUnpackType) override;
 };
 } // end namespace oofem
 #endif // linearstatic_h

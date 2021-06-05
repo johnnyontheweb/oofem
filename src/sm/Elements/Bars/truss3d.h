@@ -35,8 +35,8 @@
 #ifndef truss3d_h
 #define truss3d_h
 
-#include "../sm/Elements/nlstructuralelement.h"
-#include "../sm/ErrorEstimators/directerrorindicatorrc.h"
+#include "sm/Elements/nlstructuralelement.h"
+#include "sm/ErrorEstimators/directerrorindicatorrc.h"
 #include "zznodalrecoverymodel.h"
 #include "nodalaveragingrecoverymodel.h"
 
@@ -66,53 +66,53 @@ public:
     Truss3d(int n, Domain * d);
     virtual ~Truss3d() { }
 
-    virtual FEInterpolation *giveInterpolation() const;
+    FEInterpolation *giveInterpolation() const override;
 
-    virtual double computeLength();
+    double computeLength() override;
 
-	virtual void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep);
-    virtual void computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep);
-    virtual void computeMassMatrix(FloatMatrix &answer, TimeStep *tStep) { this->computeLumpedMassMatrix(answer, tStep); }
-	void giveEndForcesVector(FloatArray &answer, TimeStep *tStep);
-    virtual int giveLocalCoordinateSystem(FloatMatrix &answer);
+    void computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep) override;
+    void computeMassMatrix(FloatMatrix &answer, TimeStep *tStep) override
+    { this->computeLumpedMassMatrix(answer, tStep); }
+	virtual void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep);    int giveLocalCoordinateSystem(FloatMatrix &answer) override;
 
-    virtual int computeNumberOfDofs() { return 6; }
-    virtual void giveDofManDofIDMask(int inode, IntArray &) const;
+    int computeNumberOfDofs() override { return 6; }
+    void giveDofManDofIDMask(int inode, IntArray &) const override;
 
 
     // characteristic length (for crack band approach)
-    virtual double giveCharacteristicLength(const FloatArray &normalToCrackPlane)
+    double giveCharacteristicLength(const FloatArray &normalToCrackPlane) override
     { return this->computeLength(); }
 
-    virtual double computeVolumeAround(GaussPoint *gp);
+    double computeVolumeAround(GaussPoint *gp) override;
 
-    virtual int testElementExtension(ElementExtension ext) { return ( ext == Element_EdgeLoadSupport ); }
+    int testElementExtension(ElementExtension ext) override { return ( ext == Element_EdgeLoadSupport ); }
 
-    virtual Interface *giveInterface(InterfaceType it);
+    Interface *giveInterface(InterfaceType it) override;
 
-    virtual void NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node, InternalStateType type, TimeStep *tStep);
+    void NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node, InternalStateType type, TimeStep *tStep) override;
 
 #ifdef __OOFEG
-    virtual void drawRawGeometry(oofegGraphicContext &gc, TimeStep *tStep);
-    virtual void drawDeformedGeometry(oofegGraphicContext &gc, TimeStep *tStep, UnknownType);
+    void drawRawGeometry(oofegGraphicContext &gc, TimeStep *tStep) override;
+    void drawDeformedGeometry(oofegGraphicContext &gc, TimeStep *tStep, UnknownType) override;
 #endif
 
     // definition & identification
-    virtual const char *giveInputRecordName() const { return _IFT_Truss3d_Name; }
-    virtual const char *giveClassName() const { return "Truss3d"; }
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual MaterialMode giveMaterialMode() { return _1dMat; }
-    virtual void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep);
-    virtual void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep);
+    const char *giveInputRecordName() const override { return _IFT_Truss3d_Name; }
+    const char *giveClassName() const override { return "Truss3d"; }
+    void initializeFrom(InputRecord &ir) override;
+    MaterialMode giveMaterialMode() override { return _1dMat; }
+    void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep) override;
+    void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) override;
 
 protected:
     // edge load support
-    virtual void giveEdgeDofMapping(IntArray &answer, int iEdge) const;
-    virtual double computeEdgeVolumeAround(GaussPoint *gp, int);
-    virtual int computeLoadLEToLRotationMatrix(FloatMatrix &answer, int, GaussPoint *gp);
-    virtual void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int = 1, int = ALL_STRAINS);
-    virtual void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer);
-    virtual void computeGaussPoints();
+    void giveEdgeDofMapping(IntArray &answer, int iEdge) const override;
+    double computeEdgeVolumeAround(GaussPoint *gp, int) override;
+    int computeLoadLEToLRotationMatrix(FloatMatrix &answer, int, GaussPoint *gp) override;
+    void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int = 1, int = ALL_STRAINS) override;
+    void computeBHmatrixAt(GaussPoint *gp, FloatMatrix &answer) override;
+    void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer) override;
+    void computeGaussPoints() override;
 
 private:
 	void computeLocalForceLoadVector(FloatArray &answer, TimeStep *tStep, ValueModeType mode);

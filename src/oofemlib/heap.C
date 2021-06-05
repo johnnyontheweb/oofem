@@ -4,7 +4,6 @@
 #include <mathfem.h>
 
 namespace oofem {
-  
 #define MIN(a, b) ( ( a ) > ( b ) ? ( b ) : ( a ) )
 
 Heap :: Heap(int N) {

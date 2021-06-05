@@ -32,10 +32,17 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+<<<<<<< HEAD
 #include "../sm/EngineeringModels/qclinearstatic.h"
 #include "../sm/Quasicontinuum/fullsolveddomain.h"
 #include "../sm/Elements/structuralelement.h"
 #include "../sm/Elements/structuralelementevaluator.h"
+=======
+#include "sm/EngineeringModels/qclinearstatic.h"
+#include "sm/Quasicontinuum/fullsolveddomain.h"
+#include "sm/Elements/structuralelement.h"
+#include "sm/Elements/structuralelementevaluator.h"
+>>>>>>> bp2/master
 #include "nummet.h"
 #include "timestep.h"
 #include "element.h"
@@ -51,12 +58,21 @@
 #include "dof.h"
 #include "crosssection.h"
 
+<<<<<<< HEAD
 #include "../sm/Quasicontinuum/quasicontinuum.h"
 #include "../sm/Quasicontinuum/fullsolveddomain.h"
 #include "../sm/Quasicontinuum/geometrygenerator.h"
 #include "unknownnumberingscheme.h"
 
 #include "../sm/Quasicontinuum/quasicontinuumnumberingscheme.h"
+=======
+#include "sm/Quasicontinuum/quasicontinuum.h"
+#include "sm/Quasicontinuum/fullsolveddomain.h"
+#include "sm/Quasicontinuum/geometrygenerator.h"
+#include "unknownnumberingscheme.h"
+
+#include "sm/Quasicontinuum/quasicontinuumnumberingscheme.h"
+>>>>>>> bp2/master
 
  #include "t3dinterface.h"
 #ifdef __T3D
@@ -75,12 +91,16 @@ REGISTER_EngngModel(QClinearStatic);
 
 QClinearStatic :: QClinearStatic(int i, EngngModel *_master) : LinearStatic(i, _master), loadVector(), displacementVector()
 {
+<<<<<<< HEAD
     qcEquationNumbering = new QuasicontinuumNumberingscheme();
+=======
+>>>>>>> bp2/master
 }
 
 
 QClinearStatic :: ~QClinearStatic()
 {
+<<<<<<< HEAD
     delete qcEquationNumbering;
 }
 
@@ -91,6 +111,14 @@ QClinearStatic :: initializeFrom(InputRecord *ir)
 {
     IRResultType result;                // Required by IR_GIVE_FIELD macro
 
+=======
+}
+
+
+void
+QClinearStatic :: initializeFrom(InputRecord &ir)
+{
+>>>>>>> bp2/master
     LinearStatic :: initializeFrom(ir);
 
     IR_GIVE_FIELD(ir, qcApproach, _IFT_QuasiContinuum_approach);
@@ -159,8 +187,11 @@ QClinearStatic :: initializeFrom(InputRecord *ir)
             OOFEM_ERROR("Invalid input field \"GenInterpElem\". Value: %d is not supported", generateInterpolationElements);
         }
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> bp2/master
         // test of combination of input geometry generating
 #if DEBUG
         if  ( generateParticles == 1 && generateLinks != 1 ) {
@@ -176,8 +207,11 @@ QClinearStatic :: initializeFrom(InputRecord *ir)
         generateInterpolationElements = 0;
     }
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> bp2/master
 #ifdef __PARALLEL_MODE
     if ( isParallel() ) {
         commBuff = new CommunicatorBuff( this->giveNumberOfProcesses() );
@@ -186,9 +220,12 @@ QClinearStatic :: initializeFrom(InputRecord *ir)
     }
 
 #endif
+<<<<<<< HEAD
 
 
     return IRRT_OK;
+=======
+>>>>>>> bp2/master
 }
 
 
@@ -212,7 +249,11 @@ QClinearStatic :: postInitialize()
     if ( qcApproach > 0 ) {
         createInterpolationMeshNodes( this->giveDomain(1) );
         setRepNodesInVerticesOfInterpolationMesh( this->giveDomain(1) );
+<<<<<<< HEAD
         qc.setupInterpolationMesh(this->giveDomain(1), generateInterpolationElements, interpolationElementsMaterialNumber, & interpolationMeshNodes);
+=======
+        qc.setupInterpolationMesh(this->giveDomain(1), generateInterpolationElements, interpolationElementsMaterialNumber, interpolationMeshNodes);
+>>>>>>> bp2/master
         qc.createInterpolationElements( this->giveDomain(1) );
         qc.addCrosssectionToInterpolationElements( this->giveDomain(1) );
     }
@@ -229,7 +270,10 @@ QClinearStatic :: postInitialize()
 
     EngngModel :: postInitialize();
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> bp2/master
     //  apply QC
 
     if ( qcApproach == 0 ) {  //A0 - fully solved model
@@ -283,27 +327,45 @@ QClinearStatic :: postInitialize()
 }
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> bp2/master
 void QClinearStatic :: solveYourself()
 {
     LinearStatic :: solveYourself();
 }
 
+<<<<<<< HEAD
 void QClinearStatic :: solveYourselfAt(TimeStep *tStep)
 {
     // initialize node eq numbering (for actived nodes only)
     if ( !qcEquationNumbering->giveIsInitializedFlag() ) {
         qcEquationNumbering->init(this->giveDomain(1), activatedNodeList, tStep);
+=======
+
+void QClinearStatic :: solveYourselfAt(TimeStep *tStep)
+{
+    // initialize node eq numbering (for actived nodes only)
+    if ( !qcEquationNumbering.giveIsInitializedFlag() ) {
+        qcEquationNumbering.init(this->giveDomain(1), activatedNodeList, tStep);
+>>>>>>> bp2/master
     }
     LinearStatic :: solveYourselfAt(tStep);
 }
 
 
+<<<<<<< HEAD
 IRResultType
 QClinearStatic :: initializeFullSolvedDomain(InputRecord *ir)
 {
     IRResultType result;                // Required by IR_GIVE_FIELD macro
 
+=======
+void
+QClinearStatic :: initializeFullSolvedDomain(InputRecord &ir)
+{
+>>>>>>> bp2/master
     IR_GIVE_OPTIONAL_FIELD(ir, FullSolvedDomainNodes, _IFT_FullSolvedDomain_nodes);
     IR_GIVE_OPTIONAL_FIELD(ir, FullSolvedDomainElements, _IFT_FullSolvedDomain_elements);
     IR_GIVE_OPTIONAL_FIELD(ir, FullSolvedDomainRadius, _IFT_FullSolvedDomain_radius);
@@ -317,6 +379,7 @@ QClinearStatic :: initializeFullSolvedDomain(InputRecord *ir)
         OOFEM_ERROR("invalid format of FullSolvedDomainBox");
     }
 #endif
+<<<<<<< HEAD
 
     return IRRT_OK;
 }
@@ -325,6 +388,15 @@ bool
 QClinearStatic :: nodeInFullSolvedDomainTest(Node *n)
 {
     FloatArray *coordinates = n->giveCoordinates();
+=======
+}
+
+
+bool
+QClinearStatic :: nodeInFullSolvedDomainTest(Node *n)
+{
+    const auto &coordinates = n->giveCoordinates();
+>>>>>>> bp2/master
     // is tested node in FullSolvedDomainNodes
     if ( FullSolvedDomainNodes.giveSize() != 0 ) {
         for ( int i = 1; i <= FullSolvedDomainNodes.giveSize(); i++ ) {
@@ -350,9 +422,15 @@ QClinearStatic :: nodeInFullSolvedDomainTest(Node *n)
         for ( int i = 0; i <= FullSolvedDomainRadius.giveSize() / 4 - 1; i++ ) {
             FloatArray vector;
             vector.resize(3);
+<<<<<<< HEAD
             vector.at(1) = coordinates->at(1) - FullSolvedDomainRadius.at(4 * i + 1);
             vector.at(2) = coordinates->at(2) - FullSolvedDomainRadius.at(4 * i + 2);
             vector.at(3) = coordinates->at(3) - FullSolvedDomainRadius.at(4 * i + 3);
+=======
+            vector.at(1) = coordinates.at(1) - FullSolvedDomainRadius.at(4 * i + 1);
+            vector.at(2) = coordinates.at(2) - FullSolvedDomainRadius.at(4 * i + 2);
+            vector.at(3) = coordinates.at(3) - FullSolvedDomainRadius.at(4 * i + 3);
+>>>>>>> bp2/master
             if ( vector.computeNorm() <= FullSolvedDomainRadius.at(4 * i + 4) ) {
                 return true;
             }
@@ -372,15 +450,24 @@ QClinearStatic :: nodeInFullSolvedDomainTest(Node *n)
             B.at(2) = FullSolvedDomainBox.at(6 * i + 5);
             B.at(3) = FullSolvedDomainBox.at(6 * i + 4);
 
+<<<<<<< HEAD
             if ( ( A.at(1) <= coordinates->at(1) ) && ( coordinates->at(1) <= B.at(1) ) && \
                  ( A.at(2) <= coordinates->at(2) ) && ( coordinates->at(2) <= B.at(2) ) && \
                  ( A.at(3) <= coordinates->at(3) ) && ( coordinates->at(3) <= B.at(3) ) ) {
+=======
+            if ( ( A.at(1) <= coordinates.at(1) ) && ( coordinates.at(1) <= B.at(1) ) && \
+                 ( A.at(2) <= coordinates.at(2) ) && ( coordinates.at(2) <= B.at(2) ) && \
+                 ( A.at(3) <= coordinates.at(3) ) && ( coordinates.at(3) <= B.at(3) ) ) {
+>>>>>>> bp2/master
                 return true;
             }
         }
     }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> bp2/master
     return false;
 }
 
@@ -426,6 +513,10 @@ QClinearStatic :: setQCNodeType(Domain *d)
     }
 }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> bp2/master
 void
 QClinearStatic :: updateNodeTypes(Domain *d)
 {
@@ -460,12 +551,20 @@ QClinearStatic :: createInterpolationMeshNodes(Domain *d)
     }
 }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> bp2/master
 std :: vector< IntArray >
 QClinearStatic :: generateInterpolationMesh(Domain *d)
 {
     std :: vector< IntArray >newMeshNodes;
 #ifdef __T3D
+<<<<<<< HEAD
     T3DInterface *t3dInterface = new T3DInterface( this->giveDomain(1) );
+=======
+    T3DInterface *t3dInterface( this->giveDomain(1) );
+>>>>>>> bp2/master
 #endif
     std :: vector< FloatArray >nodeCoords;
     std :: vector< IntArray >meshNodes;
@@ -498,24 +597,40 @@ QClinearStatic :: generateInterpolationMesh(Domain *d)
     if ( generateInterpolationElements == 1 || generateInterpolationElements == 2 ) {
         // create interpolation mesh from t3d output file
 #ifdef __T3D
+<<<<<<< HEAD
         t3dInterface->createQCInterpolationMesh(t3dOutFile, nodeCoords, meshNodes, cellTypes);
+=======
+        t3dInterface.createQCInterpolationMesh(t3dOutFile, nodeCoords, meshNodes, cellTypes);
+>>>>>>> bp2/master
 #endif
 
         // map mesh to position of particles
         newMeshNodes = this->transformMeshToParticles(this->giveDomain(1), nodeCoords, meshNodes);
 
         // degenerated elements have been removed
+<<<<<<< HEAD
         // check if mesch is consistent after removal. ??km?? TO DO ?? How to check it?
+=======
+        // check if mesh is consistent after removal. ??km?? TO DO ?? How to check it?
+>>>>>>> bp2/master
     }
     return newMeshNodes;
 }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> bp2/master
 std :: vector< IntArray >
 QClinearStatic :: loadInterpolationMesh(Domain *d)
 {
     std :: vector< IntArray >newMeshNodes;
     //#ifdef __T3D
+<<<<<<< HEAD
     T3DInterface *t3dInterface = new T3DInterface( this->giveDomain(1) );
+=======
+    T3DInterface t3dInterface( this->giveDomain(1) );
+>>>>>>> bp2/master
     //#endif
     std :: vector< FloatArray >nodeCoords;
     std :: vector< IntArray >meshNodes;
@@ -527,14 +642,22 @@ QClinearStatic :: loadInterpolationMesh(Domain *d)
 
     // create interpolation mesh from given t3d output file
     //#ifdef __T3D
+<<<<<<< HEAD
     t3dInterface->createQCInterpolationMesh(t3dOutFile, nodeCoords, meshNodes, cellTypes);
+=======
+    t3dInterface.createQCInterpolationMesh(t3dOutFile, nodeCoords, meshNodes, cellTypes);
+>>>>>>> bp2/master
     //#endif
 
     // map mesh to position of particles
     newMeshNodes = this->transformMeshToParticles(this->giveDomain(1), nodeCoords, meshNodes);
 
     // degenerated elements have been removed
+<<<<<<< HEAD
     // check if mesch is consistent after removal. ??km?? TO DO ?? How to check it?
+=======
+    // check if mesh is consistent after removal. ??km?? TO DO ?? How to check it?
+>>>>>>> bp2/master
     return newMeshNodes;
 }
 
@@ -576,7 +699,11 @@ QClinearStatic :: transformMeshToParticles(Domain *d, std :: vector< FloatArray 
             //        OOFEM_WARNING(" ");
         }
 
+<<<<<<< HEAD
         nodeCoords [ i - 1 ] = * nearestParticle->giveCoordinates();
+=======
+        nodeCoords [ i - 1 ] = nearestParticle->giveCoordinates();
+>>>>>>> bp2/master
         newNodeNumbers [ i - 1 ] =  nearestParticle->giveNumber();
     }
 
@@ -633,6 +760,7 @@ QClinearStatic :: transformMeshToParticles(Domain *d, std :: vector< FloatArray 
                  newNodeNumbers.at(n3) == newNodeNumbers.at(n4) ) {
                 continue; // skip degenerate element
             } else {                                            // check degeneration to negative volume
+<<<<<<< HEAD
                 double x1 = d->giveDofManager( newNodeNumbers.at(n1) )->giveCoordinates()->at(1);
                 double y1 = d->giveDofManager( newNodeNumbers.at(n1) )->giveCoordinates()->at(2);
                 double z1 = d->giveDofManager( newNodeNumbers.at(n1) )->giveCoordinates()->at(3);
@@ -645,6 +773,20 @@ QClinearStatic :: transformMeshToParticles(Domain *d, std :: vector< FloatArray 
                 double x4 = d->giveDofManager( newNodeNumbers.at(n4) )->giveCoordinates()->at(1);
                 double y4 = d->giveDofManager( newNodeNumbers.at(n4) )->giveCoordinates()->at(2);
                 double z4 = d->giveDofManager( newNodeNumbers.at(n4) )->giveCoordinates()->at(3);
+=======
+                double x1 = d->giveDofManager( newNodeNumbers.at(n1) )->giveCoordinate(1);
+                double y1 = d->giveDofManager( newNodeNumbers.at(n1) )->giveCoordinate(2);
+                double z1 = d->giveDofManager( newNodeNumbers.at(n1) )->giveCoordinate(3);
+                double x2 = d->giveDofManager( newNodeNumbers.at(n2) )->giveCoordinate(1);
+                double y2 = d->giveDofManager( newNodeNumbers.at(n2) )->giveCoordinate(2);
+                double z2 = d->giveDofManager( newNodeNumbers.at(n2) )->giveCoordinate(3);
+                double x3 = d->giveDofManager( newNodeNumbers.at(n3) )->giveCoordinate(1);
+                double y3 = d->giveDofManager( newNodeNumbers.at(n3) )->giveCoordinate(2);
+                double z3 = d->giveDofManager( newNodeNumbers.at(n3) )->giveCoordinate(3);
+                double x4 = d->giveDofManager( newNodeNumbers.at(n4) )->giveCoordinate(1);
+                double y4 = d->giveDofManager( newNodeNumbers.at(n4) )->giveCoordinate(2);
+                double z4 = d->giveDofManager( newNodeNumbers.at(n4) )->giveCoordinate(3);
+>>>>>>> bp2/master
                 double detJ = ( x4 - x1 ) * ( y2 - y1 ) * ( z3 - z1 ) - ( x4 - x1 ) * ( y3 - y1 ) * ( z2 - z1 ) + ( x3 - x1 ) * ( y4 - y1 ) * ( z2 - z1 ) - ( x2 - x1 ) * ( y4 - y1 ) * ( z3 - z1 ) + ( x2 - x1 ) * ( y3 - y1 ) * ( z4 - z1 ) - ( x3 - x1 ) * ( y2 - y1 ) * ( z4 - z1 );
                 if ( detJ <= 0 ) {
                     OOFEM_WARNING("%d-th interpolation element degenerates to negative volume", i);
@@ -664,6 +806,10 @@ QClinearStatic :: transformMeshToParticles(Domain *d, std :: vector< FloatArray 
     return newMeshNodes;
 }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> bp2/master
 double
 QClinearStatic :: computeTotalVolumeOfInterpolationMesh(Domain *d)
 // TO DO: computeVolumeAreaOrLength() is not working
@@ -707,6 +853,7 @@ QClinearStatic :: findNearestParticle(Domain *d, FloatArray coords)
 {
     // TO DO: use octree here
     double minDistance = 1.0e100;
+<<<<<<< HEAD
     double distance;
     DofManager *p;
     // loop over all particles (nodes in existing domain)
@@ -714,6 +861,14 @@ QClinearStatic :: findNearestParticle(Domain *d, FloatArray coords)
         distance = coords.distance( d->giveDofManager(i)->giveCoordinates() );
         if ( distance < minDistance ) {
             minDistance = distance;
+=======
+    DofManager *p = nullptr;
+    // loop over all particles (nodes in existing domain)
+    for ( int i = 1; i <= d->giveNumberOfDofManagers(); i++ ) {
+        double dist = distance(coords, d->giveDofManager(i)->giveCoordinates() );
+        if ( dist < minDistance ) {
+            minDistance = dist;
+>>>>>>> bp2/master
             p = d->giveDofManager(i);
         }
     }
@@ -721,6 +876,7 @@ QClinearStatic :: findNearestParticle(Domain *d, FloatArray coords)
         return p;
     } else {
         OOFEM_ERROR( "Neares particle for point [%d, %d] not found", coords.at(1), coords.at(2) );
+<<<<<<< HEAD
         return NULL;
     }
 }
@@ -731,6 +887,17 @@ QClinearStatic :: giveFullSolvedDomain()
     QCFullsolveddomain *p;
     p = & Fullsolveddomain;
     return p;
+=======
+        return nullptr;
+    }
+}
+
+
+QCFullsolveddomain *
+QClinearStatic :: giveFullSolvedDomain()
+{
+    return &Fullsolveddomain;
+>>>>>>> bp2/master
 }
 
 
@@ -747,6 +914,10 @@ QClinearStatic :: setActivatedNodeList(IntArray nodeList, Domain *d)
     }
 }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> bp2/master
 void
 QClinearStatic :: setActivatedElementList(IntArray elemList)
 {
@@ -759,4 +930,8 @@ QClinearStatic :: setActivatedElementList(IntArray elemList)
         }
     }
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> bp2/master
 } // end namespace oofem

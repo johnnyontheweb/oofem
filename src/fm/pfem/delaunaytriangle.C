@@ -36,6 +36,7 @@
 #include "dofmanager.h"
 #include "math.h"
 #include "octreelocalizert.h"
+#include "octreelocalizertutil.h"
 #include "mathfem.h"
 
 namespace oofem {
@@ -137,7 +138,7 @@ DelaunayTriangle :: giveEdgeLength(int nodeA, int nodeB)
     DofManager *dmanA = domain->giveDofManager( giveNode(nodeA) );
     DofManager *dmanB = domain->giveDofManager( giveNode(nodeB) );
 
-    return dmanA->giveCoordinates()->distance( dmanB->giveCoordinates() );
+    return distance(*dmanA->giveCoordinates(), *dmanB->giveCoordinates());
 }
 } // end namespace oofem
 

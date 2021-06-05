@@ -44,26 +44,25 @@
 #include <memory>
 
 namespace oofem {
+REGISTER_GeneralizedEigenValueSolver(InverseIteration, GES_InverseIt);
+
 
 InverseIteration :: InverseIteration(Domain *d, EngngModel *m) :
-    SparseGeneralEigenValueSystemNM(d, m)
+    SparseGeneralEigenValueSystemNM(d, m),
+    nitem(100)
 {
-    nitem = 100; // max number of iterations
 }
 
 
-InverseIteration :: ~InverseIteration() { }
-
 NM_Status
-InverseIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatrix &_r, double rtol, int nroot)
+InverseIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &eigv, FloatMatrix &r, double rtol, int nroot)
 {
 	FILE *outStream;
     if ( a.giveNumberOfColumns() != b.giveNumberOfColumns() ) {
         OOFEM_ERROR("matrices size mismatch");
     }
 
-    // SparseLinearSystemNM *solver = GiveClassFactory().createSparseLinSolver(ST_Direct, domain, engngModel);
-	std::unique_ptr< SparseLinearSystemNM > solver(GiveClassFactory().createSparseLinSolver(ST_Direct, domain, engngModel));
+    auto solver = GiveClassFactory().createSparseLinSolver(ST_Direct, domain, engngModel);
    
     int nn = a.giveNumberOfColumns();
     int nc = min(2 * nroot, nroot + 8);
@@ -172,11 +171,11 @@ InverseIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Float
     order.enumerate(w.giveSize());
     std :: sort(order.begin(), order.end(), [&w](int a, int b) { return w.at(a) < w.at(b); });
 
-    _eigv.resize(nroot);
-    _r.resize(nn, nroot);
+    eigv.resize(nroot);
+    r.resize(nn, nroot);
     for ( int i = 1; i <= nroot; i++ ) {
-        _eigv.at(i) = w.at(order.at(i));
-        _r.setColumn(x[order.at(i) - 1], i);
+        eigv.at(i) = w.at(order.at(i));
+        r.setColumn(x[order.at(i) - 1], i);
     }
 
     if ( it < nitem ) {

@@ -45,7 +45,6 @@
 
 #include "oofemcfg.h"
 #include "interfacetype.h"
-#include "irresulttype.h"
 #include "contextioresulttype.h"
 #include "contextmode.h"
 
@@ -90,7 +89,7 @@ public:
      */
     FEMComponent(int n, Domain * d) : number(n), domain(d) { }
     /// Virtual destructor.
-    virtual ~FEMComponent() { }
+    virtual ~FEMComponent() = default;
 
     /// @return Class name of the receiver.
     virtual const char *giveClassName() const = 0;
@@ -127,9 +126,8 @@ public:
      * @see IR_GIVE_FIELD
      * @see IR_GIVE_OPTIONAL_FIELD
      * @param ir Input record to initialize from.
-     * @return IRResultType
      */
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    virtual void initializeFrom(InputRecord &ir);
     /**
      * Setups the input record string of receiver.
      * @param input Dynamic input record to be filled by receiver.
@@ -139,21 +137,17 @@ public:
      * Stores receiver state to output stream.
      * @param stream Output stream.
      * @param mode Determines amount of info required in stream (state, definition, ...).
-     * @param obj Special parameter, used only to send particular integration point to material class version of this method.
-     * @return contextIOResultType.
      * @exception throws an ContextIOERR exception if error encountered.
      */
-	virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    virtual void saveContext(DataStream &stream, ContextMode mode);
     /**
      * Restores the receiver state previously written in stream.
      * @see saveContext
      * @param stream Input stream.
      * @param mode Determines amount of info available in stream (state, definition, ...).
-     * @param obj Special parameter for sending extra information.
-     * @return contextIOResultType.
      * @exception throws an ContextIOERR exception if error encountered.
      */
-	virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    virtual void restoreContext(DataStream &stream, ContextMode mode);
     /**
      * Allows programmer to test some internal data, before computation begins.
      * For example, one may use this function, to ensure that element has material with
@@ -176,7 +170,7 @@ public:
      * @see InterfaceType
      * @return Requested interface if implemented, otherwise NULL.
      */
-    virtual Interface *giveInterface(InterfaceType t) { return NULL; }
+    virtual Interface *giveInterface(InterfaceType t) { return nullptr; }
 
     /// Returns string for prepending output (used by error reporting macros).
     std :: string errorInfo(const char *func) const;

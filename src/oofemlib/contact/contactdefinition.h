@@ -69,7 +69,7 @@ private:
     std :: vector< ContactElement *> masterElementList;
     int numberOfConstraintEq; // used when creating new dofs
     
-    ContactMaterial *contactMaterial;
+    //ContactMaterial *contactMaterial;
     
 public:
     /// Constructor.
@@ -82,9 +82,9 @@ public:
 
     virtual void createContactDofs();
 
-    virtual IRResultType initializeFrom(InputRecord *ir) { return IRRT_OK; }
+    virtual void initializeFrom(InputRecord &ir) { }
 
-    virtual int instanciateYourself(DataReader *dr);
+    virtual int instanciateYourself(DataReader &dr);
     virtual const char *giveClassName() const { return "ContactDefinition"; }
     //virtual const char *giveInputRecordName() const { return _IFT_ContactDefinition_Name; }
     ContactManager *giveContactManager() { return this->cMan; }

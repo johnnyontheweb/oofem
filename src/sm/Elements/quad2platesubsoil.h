@@ -35,12 +35,19 @@
 #ifndef quad2platesubsoil_H
 #define quad2platesubsoil_H
 
+<<<<<<< HEAD
 #include "../sm/Elements/structuralelement.h"
 #include "../sm/Elements/quad1platesubsoil.h"
 
 #define _IFT_Quad2PlateSubSoil_Name "quad2platesubsoil"
 #define _IFT_Quad2PlateSubSoil_lcs "lcs1"
 #define _IFT_Quad2PlateSubSoil_macroelem "macroelem"
+=======
+#include "sm/Elements/structuralelement.h"
+#include "sm/Elements/quad1platesubsoil.h"
+
+#define _IFT_Quad2PlateSubSoil_Name "quad2platesubsoil"
+>>>>>>> bp2/master
 
 namespace oofem {
 class FEI2dQuadQuad;
@@ -59,15 +66,19 @@ class Quad2PlateSubSoil : public Quad1PlateSubSoil
 {
 protected:
     static FEI2dQuadQuad interp_quad;
+<<<<<<< HEAD
 	// 1st local axis
 	FloatArray la1;
 	// macro element number
 	int macroElem;
+=======
+>>>>>>> bp2/master
 
 public:
     Quad2PlateSubSoil(int n, Domain * d);
     virtual ~Quad2PlateSubSoil() { }
 
+<<<<<<< HEAD
     virtual FEInterpolation *giveInterpolation() const;
     virtual FEInterpolation *giveInterpolation(DofIDItem id) const;
 
@@ -85,6 +96,30 @@ protected:
 		InternalStateType type, TimeStep *tStep);
     virtual void SPRNodalRecoveryMI_giveSPRAssemblyPoints(IntArray &pap);
     virtual void SPRNodalRecoveryMI_giveDofMansDeterminedByPatch(IntArray &answer, int pap);
+=======
+    FEInterpolation *giveInterpolation() const override;
+    FEInterpolation *giveInterpolation(DofIDItem id) const override;
+
+    // definition & identification
+    const char *giveInputRecordName() const override { return _IFT_Quad2PlateSubSoil_Name; }
+    const char *giveClassName() const override { return "Quad2PlateSubSoil"; }
+    void initializeFrom(InputRecord &ir) override;
+
+    int computeNumberOfDofs() override { return 8; }
+
+protected:
+    void computeGaussPoints() override;
+    void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int = 1, int = ALL_STRAINS) override;
+
+    void SPRNodalRecoveryMI_giveSPRAssemblyPoints(IntArray &pap) override;
+    void SPRNodalRecoveryMI_giveDofMansDeterminedByPatch(IntArray &answer, int pap) override;
+    /**
+     * @name Surface load support
+     */
+    void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer) override;    
+    void computeSurfaceNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords) override;
+    
+>>>>>>> bp2/master
 };
 } // end namespace oofem
 #endif // quad2platesubsoil_H

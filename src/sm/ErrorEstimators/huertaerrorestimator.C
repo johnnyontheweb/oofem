@@ -32,9 +32,9 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/ErrorEstimators/huertaerrorestimator.h"
-#include "../sm/EngineeringModels/adaptnlinearstatic.h"
-#include "../sm/EngineeringModels/adaptlinearstatic.h"
+#include "sm/ErrorEstimators/huertaerrorestimator.h"
+#include "sm/EngineeringModels/adaptnlinearstatic.h"
+#include "sm/EngineeringModels/adaptlinearstatic.h"
 #include "domain.h"
 #include "node.h"
 #include "element.h"
@@ -70,6 +70,7 @@
 
 #include <vector>
 #include <string>
+#include <memory>
 
 
 namespace oofem {
@@ -124,7 +125,7 @@ static FloatArray exactCoarseError;
 
 //static FloatArray uNormArray;
 
-static DynamicDataReader refinedReader;
+static DynamicDataReader refinedReader("huerta");
 
 static int impCSect, perCSect;
 static FloatArray impPos;
@@ -435,7 +436,8 @@ HuertaErrorEstimator :: estimateError(EE_ErrorMode err_mode, TimeStep *tStep)
                     // it would be much cleaner to call restore from engng model
                     while ( tStepNumber < curNumber ) {
                         try {
-                            model->restoreContext(NULL, CM_State, ( void * ) & tStepNumber);
+                            FileDataStream stream(model->giveContextFileName(tStepNumber, 0), false);
+                            model->restoreContext(stream, CM_State );
                         } catch(ContextIOERR & c) {
                             c.print();
                             exit(1);
@@ -554,17 +556,16 @@ RemeshingCriteria *
 HuertaErrorEstimator :: giveRemeshingCrit()
 {
     if ( !this->rc ) {
-        this->rc.reset( new HuertaRemeshingCriteria(1, this) );
+        this->rc = std::make_unique<HuertaRemeshingCriteria>(1, this);
     }
 
     return this->rc.get();
 }
 
 
-IRResultType
-HuertaErrorEstimator :: initializeFrom(InputRecord *ir)
+void
+HuertaErrorEstimator :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                       // Required by IR_GIVE_FIELD macro
     int n, level, wErrorFlag = 0;
 
     ErrorEstimator :: initializeFrom(ir);
@@ -636,8 +637,8 @@ HuertaErrorEstimator :: initializeFrom(InputRecord *ir)
 }
 
 
-contextIOResultType
-HuertaErrorEstimator :: saveContext(DataStream &stream, ContextMode mode, void *obj)
+void
+HuertaErrorEstimator :: saveContext(DataStream &stream, ContextMode mode)
 {
     contextIOResultType iores;
     TimeStep *tStep = this->domain->giveEngngModel()->giveCurrentStep();
@@ -647,9 +648,7 @@ HuertaErrorEstimator :: saveContext(DataStream &stream, ContextMode mode, void *
     }
 
     // save parent class status
-    if ( ( iores = ErrorEstimator :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
+    ErrorEstimator :: saveContext(stream, mode);
 
     if ( ( iores = this->eNorms.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
@@ -659,20 +658,16 @@ HuertaErrorEstimator :: saveContext(DataStream &stream, ContextMode mode, void *
     if ( !stream.write(stateCounter) ) {
         THROW_CIOERR(CIO_IOERR);
     }
-
-    return CIO_OK;
 }
 
 
-contextIOResultType
-HuertaErrorEstimator :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
+void
+HuertaErrorEstimator :: restoreContext(DataStream &stream, ContextMode mode)
 {
     contextIOResultType iores;
 
     // read parent class status
-    if ( ( iores = ErrorEstimator :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
+    ErrorEstimator :: restoreContext(stream, mode);
 
     if ( ( iores = eNorms.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
@@ -682,8 +677,6 @@ HuertaErrorEstimator :: restoreContext(DataStream &stream, ContextMode mode, voi
     if ( !stream.read(stateCounter) ) {
         THROW_CIOERR(CIO_IOERR);
     }
-
-    return CIO_OK;
 }
 
 
@@ -982,10 +975,9 @@ HuertaRemeshingCriteria :: estimateMeshDensities(TimeStep *tStep)
 }
 
 
-IRResultType
-HuertaRemeshingCriteria :: initializeFrom(InputRecord *ir)
+void
+HuertaRemeshingCriteria :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
     double coeff;
     int noRemeshFlag = 0, wErrorFlag = 0;
 
@@ -1008,8 +1000,6 @@ HuertaRemeshingCriteria :: initializeFrom(InputRecord *ir)
     if ( coeff > 0.0 && coeff <= 1.0 ) {
         this->refineCoeff = coeff;
     }
-
-    return IRRT_OK;
 }
 
 
@@ -1081,7 +1071,7 @@ void
 HuertaErrorEstimatorInterface :: setupRefinedElementProblem1D(Element *element, RefinedElement *refinedElement,
                                                               int level, int nodeId, IntArray &localNodeIdArray, IntArray &globalNodeIdArray,
                                                               HuertaErrorEstimatorInterface :: SetupMode mode, TimeStep *tStep, int nodes,
-                                                              FloatArray **corner, FloatArray &midNode,
+                                                              FloatArray *corner, FloatArray &midNode,
                                                               int &localNodeId, int &localElemId, int &localBcId,
                                                               IntArray &controlNode, IntArray &controlDof,
                                                               HuertaErrorEstimator :: AnalysisMode aMode, const char *edgetype)
@@ -1145,7 +1135,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem1D(Element *element, 
     if ( mode == HuertaErrorEstimatorInterface :: NodeMode ) {
         double x, y, z, u, du = 1.0 / ( level + 1 );
         double xc, yc, zc, xm, ym, zm;
-        int idof, sideNumBc, bcId, bcDofId;
+        int sideNumBc, bcId, bcDofId;
         IntArray sideBcDofId, dofIdArray, *loadArray;
         FloatMatrix *lcs;
         bool hasBc;
@@ -1153,9 +1143,9 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem1D(Element *element, 
         element->giveElementDofIDMask(dofIdArray);
 
         for ( int inode = startNode; inode <= endNode; inode++ ) {
-            xc = corner [ inode - 1 ]->at(1);
-            yc = corner [ inode - 1 ]->at(2);
-            zc = corner [ inode - 1 ]->at(3);
+            xc = corner [ inode - 1 ].at(1);
+            yc = corner [ inode - 1 ].at(2);
+            zc = corner [ inode - 1 ].at(3);
 
             xm = midNode.at(1);
             ym = midNode.at(2);
@@ -1176,7 +1166,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem1D(Element *element, 
             for ( int m = 0; m < level + 2; m++, u += du, pos++ ) {
                 nd = connectivity->at(pos);
                 if ( localNodeIdArray.at(nd) == 0 ) {
-                    DynamicInputRecord *ir = new DynamicInputRecord();
+                    auto ir = std::make_unique<DynamicInputRecord>();
 
                     localNodeIdArray.at(nd) = ++localNodeId;
                     globalNodeIdArray.at(localNodeId) = nd;
@@ -1257,7 +1247,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem1D(Element *element, 
                                     // I rely on the fact that bc dofs to be reproduced are ordered with respect to the dof ordering of the corner node
 
                                     bcId = 1;
-                                    for ( idof = 1; idof <= dofs; idof++ ) {
+                                    for ( int idof = 1; idof <= dofs; idof++ ) {
                                         bcDofId = 0;
                                         if ( bcId <= sideNumBc ) {
                                             auto nodeDof = node->giveDofWithID( sideBcDofId.at(bcId) );
@@ -1284,7 +1274,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem1D(Element *element, 
                         }
                     }
 
-                    refinedReader.insertInputRecord(DataReader :: IR_dofmanRec, ir);
+                    refinedReader.insertInputRecord(DataReader :: IR_dofmanRec, std::move(ir));
                 }
             }
         }
@@ -1307,7 +1297,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem1D(Element *element, 
             hasLoad = refinedElement->giveBoundaryLoadArray1D(inode, element, boundaryLoadArray);
 
             for ( int m = 0; m < level + 1; m++ ) {
-                DynamicInputRecord *ir = new DynamicInputRecord();
+                auto ir = std::make_unique<DynamicInputRecord>();
                 localElemId++;
                 ir->setRecordKeywordField(edgetype, localElemId);
 
@@ -1352,7 +1342,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem1D(Element *element, 
                     }
                 }
 
-                refinedReader.insertInputRecord(DataReader :: IR_elemRec, ir);
+                refinedReader.insertInputRecord(DataReader :: IR_elemRec, std::move(ir));
             }
         }
     }
@@ -1372,9 +1362,9 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem1D(Element *element, 
             GaussPoint gp(&ir, 1, {}, 1.0, mmode);
 
             for ( int inode = startNode; inode <= endNode; inode++ ) {
-                xc = corner [ inode - 1 ]->at(1);
-                yc = corner [ inode - 1 ]->at(2);
-                zc = corner [ inode - 1 ]->at(3);
+                xc = corner [ inode - 1 ].at(1);
+                yc = corner [ inode - 1 ].at(2);
+                zc = corner [ inode - 1 ].at(3);
 
                 xm = midNode.at(1);
                 ym = midNode.at(2);
@@ -1429,11 +1419,11 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem1D(Element *element, 
 
                             // first loadtime function must be constant 1.0
                             for ( int idof = 1; idof <= dofs; idof++ ) {
-                                DynamicInputRecord *ir = new DynamicInputRecord();
+                                auto ir = std::make_unique<DynamicInputRecord>();
                                 ir->setRecordKeywordField(_IFT_BoundaryCondition_Name, ++localBcId);
                                 ir->setField(1, _IFT_GeneralBoundaryCondition_timeFunct);
                                 ir->setField(uFine.at(idof), _IFT_BoundaryCondition_PrescribedValue);
-                                refinedReader.insertInputRecord(DataReader :: IR_bcRec, ir);
+                                refinedReader.insertInputRecord(DataReader :: IR_bcRec, std::move(ir));
                             }
                         }
                     }
@@ -1491,7 +1481,7 @@ void
 HuertaErrorEstimatorInterface :: setupRefinedElementProblem2D(Element *element, RefinedElement *refinedElement,
                                                               int level, int nodeId, IntArray &localNodeIdArray, IntArray &globalNodeIdArray,
                                                               HuertaErrorEstimatorInterface :: SetupMode mode, TimeStep *tStep, int nodes,
-                                                              FloatArray **corner, FloatArray *midSide, FloatArray &midNode,
+                                                              FloatArray *corner, FloatArray *midSide, FloatArray &midNode,
                                                               int &localNodeId, int &localElemId, int &localBcId,
                                                               IntArray &controlNode, IntArray &controlDof,
                                                               HuertaErrorEstimator :: AnalysisMode aMode, const char *quadtype)
@@ -1571,7 +1561,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem2D(Element *element, 
     }
 
     if ( mode == HuertaErrorEstimatorInterface :: NodeMode ) {
-        int s1, s2, idof, index;
+        int s1, s2, index;
         double x, y, z, u, v, du = 1.0 / ( level + 1 ), dv = 1.0 / ( level + 1 );
         double xc, yc, zc, xs1, ys1, zs1, xs2, ys2, zs2, xm, ym, zm;
         int bcId, bcDofId;
@@ -1590,9 +1580,9 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem2D(Element *element, 
                 s2 = nodes;
             }
 
-            xc = corner [ inode - 1 ]->at(1);
-            yc = corner [ inode - 1 ]->at(2);
-            zc = corner [ inode - 1 ]->at(3);
+            xc = corner [ inode - 1 ].at(1);
+            yc = corner [ inode - 1 ].at(2);
+            zc = corner [ inode - 1 ].at(3);
 
             xs1 = midSide [ s1 - 1 ].at(1);
             ys1 = midSide [ s1 - 1 ].at(2);
@@ -1623,7 +1613,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem2D(Element *element, 
                 for ( m = 0; m < level + 2; m++, u += du, pos++ ) {
                     nd = connectivity->at(pos);
                     if ( localNodeIdArray.at(nd) == 0 ) {
-                        DynamicInputRecord *ir = new DynamicInputRecord();
+                        auto ir = std::make_unique<DynamicInputRecord>();
                         ir->setRecordKeywordField("node", localNodeId);
 
                         localNodeIdArray.at(nd) = ++localNodeId;
@@ -1683,7 +1673,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem2D(Element *element, 
                         if ( bc == 1 ) {
                             if ( aMode == HuertaErrorEstimator :: HEE_linear ) {
                                 FloatArray bcs(dofs);
-                                for ( idof = 0; idof < dofs; idof++ ) {
+                                for ( int idof = 0; idof < dofs; idof++ ) {
                                     bcs.at(idof) = ++localBcId;
                                 }
                                 ir->setField(bcs, "bc");
@@ -1729,7 +1719,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem2D(Element *element, 
 
                                         const IntArray &sideBcDofId = sideBcDofIdList[index-1];
                                         bcId = 1;
-                                        for ( idof = 1; idof <= dofs; idof++ ) {
+                                        for ( int idof = 1; idof <= dofs; idof++ ) {
                                             bcDofId = 0;
                                             if ( bcId <= sideNumBc.at(index) ) {
                                                 auto nodeDof = node->giveDofWithID( sideBcDofId.at(bcId) );
@@ -1755,7 +1745,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem2D(Element *element, 
                             }
                         }
 
-                        refinedReader.insertInputRecord(DataReader :: IR_dofmanRec, ir);
+                        refinedReader.insertInputRecord(DataReader :: IR_dofmanRec, std::move(ir));
                     }
                 }
             }
@@ -1782,7 +1772,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem2D(Element *element, 
 
             for ( n = 0; n < level + 1; n++ ) {
                 for ( m = 0; m < level + 1; m++ ) {
-                    DynamicInputRecord *ir = new DynamicInputRecord();
+                    auto ir = std::make_unique<DynamicInputRecord>();
                     ir->setRecordKeywordField(quadtype, localElemId);
 
                     localElemId++;
@@ -1845,7 +1835,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem2D(Element *element, 
                         }
                     }
 
-                    refinedReader.insertInputRecord(DataReader :: IR_elemRec, ir);
+                    refinedReader.insertInputRecord(DataReader :: IR_elemRec, std::move(ir));
                 }
             }
         }
@@ -1855,10 +1845,9 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem2D(Element *element, 
 
     if ( mode == HuertaErrorEstimatorInterface :: BCMode ) {
         if ( aMode == HuertaErrorEstimator :: HEE_linear ) {
-            int s1, s2, idof;
+            int s1, s2;
             double u, v, du = 1.0 / ( level + 1 ), dv = 1.0 / ( level + 1 );
             double xc, yc, zc, xs1, ys1, zs1, xs2, ys2, zs2, xm, ym, zm;
-            GaussPoint *gp;
             FloatArray globCoord(3);
             FloatMatrix Nmatrix;
             FloatArray uCoarse, uFine;
@@ -1867,7 +1856,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem2D(Element *element, 
 
             // create a fictitious integration point
             IntegrationRule ir(0, element);
-            gp = new GaussPoint( &ir, 1, {}, 1.0, mmode);
+            GaussPoint gp( &ir, 1, {}, 1.0, mmode);
 
             for ( inode = startNode; inode <= endNode; inode++ ) {
                 s1 = inode;
@@ -1875,9 +1864,9 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem2D(Element *element, 
                     s2 = nodes;
                 }
 
-                xc = corner [ inode - 1 ]->at(1);
-                yc = corner [ inode - 1 ]->at(2);
-                zc = corner [ inode - 1 ]->at(3);
+                xc = corner [ inode - 1 ].at(1);
+                yc = corner [ inode - 1 ].at(2);
+                zc = corner [ inode - 1 ].at(3);
 
                 xs1 = midSide [ s1 - 1 ].at(1);
                 ys1 = midSide [ s1 - 1 ].at(2);
@@ -1950,30 +1939,26 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem2D(Element *element, 
                                 // this effectively rewrites the local coordinates of the fictitious integration point
                                 FloatArray lcoord;
                                 element->computeLocalCoordinates(lcoord, globCoord);
-                                gp->setNaturalCoordinates(lcoord);
+                                gp.setNaturalCoordinates(lcoord);
                                 // get N matrix at the fictitious integration point
-                                this->HuertaErrorEstimatorI_computeNmatrixAt(gp, Nmatrix);
+                                this->HuertaErrorEstimatorI_computeNmatrixAt(&gp, Nmatrix);
                                 // get displacement at the fictitious integration point
                                 uFine.beProductOf(Nmatrix, uCoarse);
 
                                 // first loadtime function must be constant 1.0
-                                for ( idof = 1; idof <= dofs; idof++ ) {
-                                    DynamicInputRecord *ir = new DynamicInputRecord();
+                                for ( int idof = 1; idof <= dofs; idof++ ) {
+                                    auto ir = std::make_unique<DynamicInputRecord>();
                                     ir->setRecordKeywordField("BoundaryCondition", ++localBcId);
                                     ir->setField(1, "Function");
                                     ir->setField(uFine.at(idof), "prescribedvalue");
-                                    refinedReader.insertInputRecord(DataReader :: IR_bcRec, ir);
+                                    refinedReader.insertInputRecord(DataReader :: IR_bcRec, std::move(ir));
                                 }
                             }
                         }
                     }
                 }
             }
-
-            delete gp;
         } else {
-            int idof;
-
             for ( inode = startNode; inode <= endNode; inode++ ) {
                 connectivity = refinedElement->giveFineNodeArray(inode);
                 refinedElement->giveBoundaryFlagArray(inode, element, boundary);
@@ -2022,7 +2007,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem2D(Element *element, 
 #endif
 
                             if ( bc == 1 ) {
-                                for ( idof = 1; idof <= dofs; idof++ ) {
+                                for ( int idof = 1; idof <= dofs; idof++ ) {
                                     localBcId++;
                                     controlNode.at(localBcId) = -localNodeIdArray.at(nd);
                                     controlDof.at(localBcId) = idof;
@@ -2033,8 +2018,6 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem2D(Element *element, 
                 }
             }
         }
-
-        return;
     }
 }
 
@@ -2044,7 +2027,7 @@ void
 HuertaErrorEstimatorInterface :: setupRefinedElementProblem3D(Element *element, RefinedElement *refinedElement,
                                                               int level, int nodeId, IntArray &localNodeIdArray, IntArray &globalNodeIdArray,
                                                               HuertaErrorEstimatorInterface :: SetupMode mode, TimeStep *tStep, int nodes,
-                                                              FloatArray **corner, FloatArray *midSide, FloatArray *midFace, FloatArray &midNode,
+                                                              FloatArray *corner, FloatArray *midSide, FloatArray *midFace, FloatArray &midNode,
                                                               int &localNodeId, int &localElemId, int &localBcId,
                                                               int hexaSideNode [ 1 ] [ 3 ], int hexaFaceNode [ 1 ] [ 3 ],
                                                               IntArray &controlNode, IntArray &controlDof,
@@ -2149,7 +2132,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem3D(Element *element, 
     }
 
     if ( mode == HuertaErrorEstimatorInterface :: NodeMode ) {
-        int s1, s2, s3, f1, f2, f3, idof, index;
+        int s1, s2, s3, f1, f2, f3, index;
         double x, y, z, u, v, w, du = 1.0 / ( level + 1 ), dv = 1.0 / ( level + 1 ), dw = 1.0 / ( level + 1 );
         double xc, yc, zc, xm, ym, zm;
         double xs1, ys1, zs1, xs2, ys2, zs2, xs3, ys3, zs3;
@@ -2173,9 +2156,9 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem3D(Element *element, 
             f2 = hexaFaceNode [ inode - 1 ] [ 1 ];
             f3 = hexaFaceNode [ inode - 1 ] [ 2 ];
 
-            xc = corner [ inode - 1 ]->at(1);
-            yc = corner [ inode - 1 ]->at(2);
-            zc = corner [ inode - 1 ]->at(3);
+            xc = corner [ inode - 1 ].at(1);
+            yc = corner [ inode - 1 ].at(2);
+            zc = corner [ inode - 1 ].at(3);
 
             xs1 = midSide [ s1 - 1 ].at(1);
             ys1 = midSide [ s1 - 1 ].at(2);
@@ -2224,7 +2207,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem3D(Element *element, 
                     for ( m = 0; m < level + 2; m++, u += du, pos++ ) {
                         nd = connectivity->at(pos);
                         if ( localNodeIdArray.at(nd) == 0 ) {
-                            DynamicInputRecord *ir = new DynamicInputRecord();
+                            auto ir = std::make_unique<DynamicInputRecord>();
                             ir->setRecordKeywordField("node", localNodeId);
 
                             localNodeIdArray.at(nd) = ++localNodeId;
@@ -2295,7 +2278,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem3D(Element *element, 
                             if ( bc == 1 ) {
                                 if ( aMode == HuertaErrorEstimator :: HEE_linear ) {
                                     FloatArray bcs(dofs);
-                                    for ( idof = 0; idof < dofs; idof++ ) {
+                                    for ( int idof = 0; idof < dofs; idof++ ) {
                                         bcs.at(idof) = ++localBcId;
                                     }
                                     ir->setField(bcs, "bc");
@@ -2346,7 +2329,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem3D(Element *element, 
 
                                                 const IntArray &sideBcDofId = sideBcDofIdList[index-1];
                                                 bcId = 1;
-                                                for ( idof = 1; idof <= dofs; idof++ ) {
+                                                for ( int idof = 1; idof <= dofs; idof++ ) {
                                                     bcDofId = 0;
                                                     if ( bcId <= sideNumBc.at(index) ) {
                                                         Dof *nodeDof = node->giveDofWithID( sideBcDofId.at(bcId) );
@@ -2381,7 +2364,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem3D(Element *element, 
 
                                                 const IntArray &faceBcDofId = faceBcDofIdList[index-1];
                                                 bcId = 1;
-                                                for ( idof = 1; idof <= dofs; idof++ ) {
+                                                for ( int idof = 1; idof <= dofs; idof++ ) {
                                                     bcDofId = 0;
                                                     if ( bcId <= faceNumBc.at(index) ) {
                                                         Dof *nodeDof = node->giveDofWithID( faceBcDofId.at(bcId) );
@@ -2408,7 +2391,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem3D(Element *element, 
                                 }
                             }
 
-                            refinedReader.insertInputRecord(DataReader :: IR_dofmanRec, ir);
+                            refinedReader.insertInputRecord(DataReader :: IR_dofmanRec, std::move(ir));
                         }
                     }
                 }
@@ -2437,7 +2420,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem3D(Element *element, 
             for ( k = 0; k < level + 1; k++ ) {
                 for ( n = 0; n < level + 1; n++ ) {
                     for ( m = 0; m < level + 1; m++ ) {
-                        DynamicInputRecord *ir = new DynamicInputRecord();
+                        auto ir = std::make_unique<DynamicInputRecord>();
 
                         localElemId++;
 
@@ -2516,7 +2499,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem3D(Element *element, 
                             }
                         }
 
-                        refinedReader.insertInputRecord(DataReader :: IR_elemRec, ir);
+                        refinedReader.insertInputRecord(DataReader :: IR_elemRec, std::move(ir));
                     }
                 }
             }
@@ -2527,7 +2510,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem3D(Element *element, 
 
     if ( mode == HuertaErrorEstimatorInterface :: BCMode ) {
         if ( aMode == HuertaErrorEstimator :: HEE_linear ) {
-            int s1, s2, s3, f1, f2, f3, idof;
+            int s1, s2, s3, f1, f2, f3;
             double u, v, w, du = 1.0 / ( level + 1 ), dv = 1.0 / ( level + 1 ), dw = 1.0 / ( level + 1 );
             double xc, yc, zc, xm, ym, zm;
             double xs1, ys1, zs1, xs2, ys2, zs2, xs3, ys3, zs3;
@@ -2549,9 +2532,9 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem3D(Element *element, 
                 f2 = hexaFaceNode [ inode - 1 ] [ 1 ];
                 f3 = hexaFaceNode [ inode - 1 ] [ 2 ];
 
-                xc = corner [ inode - 1 ]->at(1);
-                yc = corner [ inode - 1 ]->at(2);
-                zc = corner [ inode - 1 ]->at(3);
+                xc = corner [ inode - 1 ].at(1);
+                yc = corner [ inode - 1 ].at(2);
+                zc = corner [ inode - 1 ].at(3);
 
                 xs1 = midSide [ s1 - 1 ].at(1);
                 ys1 = midSide [ s1 - 1 ].at(2);
@@ -2660,12 +2643,12 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem3D(Element *element, 
                                     uFine.beProductOf(Nmatrix, uCoarse);
 
                                     // first loadtime function must be constant 1.0
-                                    for ( idof = 1; idof <= dofs; idof++ ) {
-                                        DynamicInputRecord *ir = new DynamicInputRecord();
+                                    for ( int idof = 1; idof <= dofs; idof++ ) {
+                                        auto ir = std::make_unique<DynamicInputRecord>();
                                         ir->setRecordKeywordField("boundarycondition", ++localBcId);
                                         ir->setField(1, "Function");
                                         ir->setField(uFine.at(idof), "prescribedvalue");
-                                        refinedReader.insertInputRecord(DataReader :: IR_bcRec, ir);
+                                        refinedReader.insertInputRecord(DataReader :: IR_bcRec, std::move(ir));
                                     }
                                 }
                             }
@@ -2675,8 +2658,6 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem3D(Element *element, 
             }
 
         } else {
-            int idof;
-
             for ( inode = startNode; inode <= endNode; inode++ ) {
                 connectivity = refinedElement->giveFineNodeArray(inode);
                 refinedElement->giveBoundaryFlagArray(inode, element, boundary);
@@ -2734,7 +2715,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem3D(Element *element, 
 #endif
 
                                 if ( bc == 1 ) {
-                                    for ( idof = 1; idof <= dofs; idof++ ) {
+                                    for ( int idof = 1; idof <= dofs; idof++ ) {
                                         localBcId++;
                                         controlNode.at(localBcId) = -localNodeIdArray.at(nd);
                                         controlDof.at(localBcId) = idof;
@@ -2763,10 +2744,11 @@ HuertaErrorEstimator :: solveRefinedElementProblem(int elemId, IntArray &localNo
     Element *element;
     RefinedElement *refinedElement;
     HuertaErrorEstimatorInterface *interface;
-    EngngModel *problem, *refinedProblem;
+    EngngModel *problem;
+    std::unique_ptr<EngngModel> refinedProblem;
     int localNodeId, localElemId, localBcId, localf;
     int mats, csects, loads, funcs, nlbarriers;
-    int inode, idof, dofs, pos, ielem, size;
+    int inode, dofs, pos, ielem, size;
     IntArray dofIdArray;
     FloatArray nodeSolution, uCoarse, elementVector, patchVector, coarseVector;
     FloatArray elementError, patchError, coarseSolution;
@@ -2911,7 +2893,7 @@ HuertaErrorEstimator :: solveRefinedElementProblem(int elemId, IntArray &localNo
 #ifdef TIME_INFO
     timer.startTimer();
 #endif
-    refinedProblem = InstanciateProblem(& refinedReader, _processor, contextFlag);
+    refinedProblem = InstanciateProblem(refinedReader, _processor, contextFlag);
     refinedReader.finish();
 #ifdef TIME_INFO
     timer.stopTimer();
@@ -2936,9 +2918,9 @@ HuertaErrorEstimator :: solveRefinedElementProblem(int elemId, IntArray &localNo
         refinedProblem->solveYourself();
         refinedProblem->terminateAnalysis();
     } else {
-        AdaptiveNonLinearStatic *prob = dynamic_cast< AdaptiveNonLinearStatic * >(refinedProblem);
+        AdaptiveNonLinearStatic *prob = dynamic_cast< AdaptiveNonLinearStatic * >(refinedProblem.get());
         if ( prob ) {
-            static_cast< AdaptiveNonLinearStatic * >(refinedProblem)->initializeAdaptiveFrom(problem);
+            prob->initializeAdaptiveFrom(problem);
         } else {
             OOFEM_ERROR("Refined problem must be of the type AdaptiveNonLinearStatic");
         }
@@ -2969,7 +2951,7 @@ HuertaErrorEstimator :: solveRefinedElementProblem(int elemId, IntArray &localNo
     for ( inode = 1; inode <= localNodeId; inode++ ) {
         node = refinedDomain->giveNode(inode);
         node->giveUnknownVector(nodeSolution, dofIdArray, VM_Total, refinedTStep);
-        for ( idof = 1; idof <= dofs; idof++, pos++ ) {
+        for ( int idof = 1; idof <= dofs; idof++, pos++ ) {
             double sol = nodeSolution.at(idof);
             nodeDof = node->giveDofWithID(dofIdArray.at(idof));
             if ( nodeDof->hasBc(refinedTStep) == 0 ) {
@@ -3115,7 +3097,7 @@ HuertaErrorEstimator :: solveRefinedElementProblem(int elemId, IntArray &localNo
     // be carefull to not overwrite data needed in further calculations
     // pos = 1;
     // for(inode = 1; inode <= localNodeId; inode++){
-    //  for(idof = 1; idof <= dofs; idof++, pos++)primaryUnknownError.at((globalNodeIdArray.at(inode) - 1) * dofs + idof) =
+    //  for(int idof = 1; idof <= dofs; idof++, pos++)primaryUnknownError.at((globalNodeIdArray.at(inode) - 1) * dofs + idof) =
     //   elementError.at(pos) * (1.0 - coeff) + patchError.at(pos);
     // }
 
@@ -3179,8 +3161,6 @@ HuertaErrorEstimator :: solveRefinedElementProblem(int elemId, IntArray &localNo
                     et_solve,
                     et_error);
 #endif
-
-    delete refinedProblem;
 }
 
 
@@ -3193,7 +3173,8 @@ HuertaErrorEstimator :: solveRefinedPatchProblem(int nodeId, IntArray &localNode
     Element *element;
     RefinedElement *refinedElement;
     HuertaErrorEstimatorInterface *interface;
-    EngngModel *problem, *refinedProblem;
+    EngngModel *problem;
+    std::unique_ptr<EngngModel> refinedProblem;
     int localNodeId, localElemId, localBcId, localf;
     int mats, csects, loads, funcs, nlbarriers;
     int inode, elemId, ielem, elems, skipped = 0;
@@ -3445,7 +3426,7 @@ HuertaErrorEstimator :: solveRefinedPatchProblem(int nodeId, IntArray &localNode
 #ifdef TIME_INFO
     timer.startTimer();
 #endif
-    refinedProblem = InstanciateProblem(& refinedReader, _processor, contextFlag);
+    refinedProblem = InstanciateProblem(refinedReader, _processor, contextFlag);
     refinedReader.finish();
 #ifdef TIME_INFO
     timer.stopTimer();
@@ -3465,9 +3446,9 @@ HuertaErrorEstimator :: solveRefinedPatchProblem(int nodeId, IntArray &localNode
         refinedProblem->solveYourself();
         refinedProblem->terminateAnalysis();
     } else {
-        AdaptiveNonLinearStatic *prob = dynamic_cast< AdaptiveNonLinearStatic * >(refinedProblem);
+        AdaptiveNonLinearStatic *prob = dynamic_cast< AdaptiveNonLinearStatic * >(refinedProblem.get());
         if ( prob ) {
-            static_cast< AdaptiveNonLinearStatic * >(refinedProblem)->initializeAdaptiveFrom(problem);
+            prob->initializeAdaptiveFrom(problem);
         } else {
             OOFEM_ERROR("Refined problem must be of the type AdaptiveNonLinearStatic");
         }
@@ -3506,8 +3487,6 @@ HuertaErrorEstimator :: solveRefinedPatchProblem(int nodeId, IntArray &localNode
                     et_solve,
                     et_error);
 #endif
-
-    delete refinedProblem;
 }
 
 
@@ -3524,10 +3503,10 @@ HuertaErrorEstimator :: solveRefinedWholeProblem(IntArray &localNodeIdArray, Int
     Element *element;
     RefinedElement *refinedElement;
     HuertaErrorEstimatorInterface *interface;
-    EngngModel *refinedProblem;
+    std::unique_ptr<EngngModel> refinedProblem;
     int localNodeId, localElemId, localBcId, localf;
     int mats, csects, loads, funcs, nlbarriers;
-    int inode, idof, dofs, elemId, ielem, elems, size;
+    int inode, dofs, elemId, ielem, elems, size;
     IntArray dofIdArray;
     FloatArray nodeSolution, uCoarse, errorVector, coarseVector, fineVector;
     FloatArray fineSolution, coarseSolution, errorSolution;
@@ -3671,7 +3650,7 @@ HuertaErrorEstimator :: solveRefinedWholeProblem(IntArray &localNodeIdArray, Int
  #ifdef TIME_INFO
     timer.startTimer();
  #endif
-    refinedProblem = InstanciateProblem(& refinedReader, _processor, contextFlag);
+    refinedProblem = InstanciateProblem(refinedReader, _processor, contextFlag);
  #ifdef TIME_INFO
     timer.stopTimer();
     et_init = timer.getUtime();
@@ -3718,7 +3697,7 @@ HuertaErrorEstimator :: solveRefinedWholeProblem(IntArray &localNodeIdArray, Int
     for ( inode = 1; inode <= localNodeId; inode++ ) {
         node = refinedDomain->giveNode(inode);
         node->giveUnknownVector(nodeSolution, dofIdArray, VM_Total, refinedTStep);
-        for ( idof = 1; idof <= dofs; idof++, pos++ ) {
+        for ( int idof = 1; idof <= dofs; idof++, pos++ ) {
             fineSolution.at(pos) = nodeSolution.at(idof);
             nodeDof = node->giveDofWithID(dofIdArray.at(idof));
             if ( nodeDof->hasBc(refinedTStep) == 0 ) {
@@ -3868,8 +3847,6 @@ HuertaErrorEstimator :: solveRefinedWholeProblem(IntArray &localNodeIdArray, Int
                     et_solve,
                     et_error);
  #endif
-
-    delete refinedProblem;
 }
 #endif
 
@@ -3881,12 +3858,12 @@ void
 HuertaErrorEstimator :: extractVectorFrom(Element *element, FloatArray &vector, FloatArray &answer,
                                           int dofs, TimeStep *tStep)
 {
-    int inode, idof, pos, p = 0;
+    int p = 0;
 
     answer.resize(element->giveNumberOfDofManagers() * dofs);
-    for ( inode = 1; inode <= element->giveNumberOfNodes(); inode++ ) {
-        pos = ( element->giveDofManager(inode)->giveNumber() - 1 ) * dofs;
-        for ( idof = 1; idof <= dofs; idof++ ) {
+    for ( int inode = 1; inode <= element->giveNumberOfNodes(); inode++ ) {
+        int pos = ( element->giveDofManager(inode)->giveNumber() - 1 ) * dofs;
+        for ( int idof = 1; idof <= dofs; idof++ ) {
             answer.at(++p) = vector.at(pos + idof);
         }
     }
@@ -3907,7 +3884,6 @@ HuertaErrorEstimator :: setupRefinedProblemProlog(const char *problemName, int p
     double rtolv = -1.0, minStepLength = 0.0, initialStepLength = -1.0, stepLength = -1.0, psi = 1.0;
     IntArray ddm, hpc;
     FloatArray ddv, hpcw;
-    IRResultType result;                           // Required by IR_GIVE_FIELD macro
 
 #if defined ( USE_OUTPUT_FILE ) || defined ( USE_CONTEXT_FILE )
     sprintf(line, "/home/dr/Huerta/%s_%d.out", problemName, problemId);
@@ -3927,18 +3903,17 @@ HuertaErrorEstimator :: setupRefinedProblemProlog(const char *problemName, int p
     refinedReader.setDescription(line);
 
     if ( dynamic_cast< AdaptiveLinearStatic * >(problem) ) {
-        DynamicInputRecord *ir = new DynamicInputRecord();
+        auto ir = std::make_unique<DynamicInputRecord>();
         ir->setRecordKeywordField(_IFT_LinearStatic_Name, 0);
         ir->setField(1, _IFT_EngngModel_nsteps);
         ir->setField(renumber, _IFT_EngngModel_renumberFlag);
 #ifdef USE_CONTEXT_FILE
         ir->setField(contextOutputStep, _IFT_EngngModel_contextoutputstep);
 #endif
-        refinedReader.insertInputRecord(DataReader :: IR_emodelRec, ir);
+        refinedReader.insertInputRecord(DataReader :: IR_emodelRec, std::move(ir));
     } else if ( dynamic_cast< AdaptiveNonLinearStatic * >(problem) ) {
-        InputRecord *ir;
         nmstep = tStep->giveMetaStepNumber();
-        ir = problem->giveMetaStep(nmstep)->giveAttributesRecord();
+        auto &ir = problem->giveMetaStep(nmstep)->giveAttributesRecord();
 
         IR_GIVE_OPTIONAL_FIELD(ir, stiffMode, _IFT_NonLinearStatic_stiffmode);
         IR_GIVE_OPTIONAL_FIELD(ir, controlMode, _IFT_NonLinearStatic_controlmode);
@@ -3982,7 +3957,7 @@ HuertaErrorEstimator :: setupRefinedProblemProlog(const char *problemName, int p
         }
 
         if ( problemId != 0 ) {
-            DynamicInputRecord *ir = new DynamicInputRecord();
+            auto ir = std::make_unique<DynamicInputRecord>();
 
             int bcSize = controlNode.giveSize(), ddActiveSize = 0;
 
@@ -4054,7 +4029,7 @@ HuertaErrorEstimator :: setupRefinedProblemProlog(const char *problemName, int p
                 ir->setField(0.1, "requiredError");
                 ir->setField(0.01, "minelemsize");
 
-                refinedReader.insertInputRecord(DataReader :: IR_emodelRec, ir);
+                refinedReader.insertInputRecord(DataReader :: IR_emodelRec, std::move(ir));
 
                 // IMPORTANT: the total number of steps should be equal to the current step number
                 //            (to enable skipUpdate)
@@ -4062,16 +4037,16 @@ HuertaErrorEstimator :: setupRefinedProblemProlog(const char *problemName, int p
 
                 // create fictitious metasteps
                 for ( i = 1; i < nmstep; i++ ) {
-                    DynamicInputRecord *ir_meta = new DynamicInputRecord();
+                    auto ir_meta = std::make_unique<DynamicInputRecord>();
                     ir_meta->setRecordKeywordField(_IFT_MetaStep_Name, i);
                     ir_meta->setField(problem->giveMetaStep(i)->giveNumberOfSteps(), _IFT_MetaStep_nsteps);
                     ir_meta->setField(rtolv, "rtolv");
-                    refinedReader.insertInputRecord(DataReader :: IR_mstepRec, ir_meta);
+                    refinedReader.insertInputRecord(DataReader :: IR_mstepRec, std::move(ir_meta));
                     nsteps += problem->giveMetaStep(i)->giveNumberOfSteps();
                 }
 
                 // create active metastep
-                ir = new DynamicInputRecord();
+                ir = std::make_unique<DynamicInputRecord>();
                 ir->setRecordKeywordField(_IFT_MetaStep_Name, nmstep);
                 ir->setField(tStep->giveNumber() - nsteps, _IFT_MetaStep_nsteps);
                 ir->setField(rtolv, "rtolv");
@@ -4127,7 +4102,7 @@ HuertaErrorEstimator :: setupRefinedProblemProlog(const char *problemName, int p
             // use last funcs to control dd
             ir->setField(funcs, _IFT_NRSolver_ddfunc);
 
-            refinedReader.insertInputRecord(DataReader :: IR_mstepRec, ir);
+            refinedReader.insertInputRecord(DataReader :: IR_mstepRec, std::move(ir));
         } else {
             // it makes not too much sense to solve exact problem from beginning if adaptive restart is used
             // because the mesh may be already derefined in regions of no interest (but anyway ...)
@@ -4139,7 +4114,7 @@ HuertaErrorEstimator :: setupRefinedProblemProlog(const char *problemName, int p
             // do not prescribe skipUpdate here !!!
 
             // HUHU dodelat metasteps, dodelat paralelni zpracovani
-            DynamicInputRecord *ir = new DynamicInputRecord();
+            auto ir = std::make_unique<DynamicInputRecord>();
             ir->setRecordKeywordField("nonlinearstatic", 0);
             ir->setField( ( int ) ( problem->giveCurrentStep()->giveTargetTime() + 1.5 ), "nsteps" );
             ir->setField(renumber, "renumber");
@@ -4197,22 +4172,22 @@ HuertaErrorEstimator :: setupRefinedProblemProlog(const char *problemName, int p
                 break;
             }
 
-            refinedReader.insertInputRecord(DataReader :: IR_emodelRec, ir);
+            refinedReader.insertInputRecord(DataReader :: IR_emodelRec, std::move(ir));
         }
     } else {
         OOFEM_ERROR("Unsupported analysis type");
     }
 
-    DynamicInputRecord *ir = new DynamicInputRecord();
+    auto ir = std::make_unique<DynamicInputRecord>();
     ir->setField(this->domain->giveNumberOfSpatialDimensions(), _IFT_Domain_numberOfSpatialDimensions);
     if ( this->domain->isAxisymmetric() ) {
         ir->setField(_IFT_Domain_axisymmetric);
     }
 
 
-    refinedReader.insertInputRecord(DataReader :: IR_domainCompRec, ir);
+    refinedReader.insertInputRecord(DataReader :: IR_domainCompRec, std::move(ir));
 
-    ir = new DynamicInputRecord();
+    ir = std::make_unique<DynamicInputRecord>();
     ir->setRecordKeywordField(_IFT_OutputManager_Name, 0);
 #ifdef USE_OUTPUT_FILE
     ir->setField(_IFT_OutputManager_tstepall);
@@ -4220,9 +4195,9 @@ HuertaErrorEstimator :: setupRefinedProblemProlog(const char *problemName, int p
     ir->setField(_IFT_OutputManager_elementall);
 #endif
 
-    refinedReader.insertInputRecord(DataReader :: IR_outManRec, ir);
+    refinedReader.insertInputRecord(DataReader :: IR_outManRec, std::move(ir));
 
-    ir = new DynamicInputRecord();
+    ir = std::make_unique<DynamicInputRecord>();
     ir->setRecordKeywordField("", 0);
     ir->setField(nodes, _IFT_Domain_ndofman);
     ir->setField(elems, _IFT_Domain_nelem);
@@ -4230,7 +4205,7 @@ HuertaErrorEstimator :: setupRefinedProblemProlog(const char *problemName, int p
     ir->setField(csects, _IFT_Domain_nmat);
     ir->setField(loads, _IFT_Domain_nbc);
     ir->setField(funcs, _IFT_Domain_nfunct);
-    refinedReader.insertInputRecord(DataReader :: IR_domainCompRec, ir);
+    refinedReader.insertInputRecord(DataReader :: IR_domainCompRec, std::move(ir));
 }
 
 
@@ -4243,21 +4218,21 @@ HuertaErrorEstimator :: setupRefinedProblemEpilog1(int csects, int mats, int loa
     /* copy csects, mats, loads */
 
     for ( int i = 1; i <= csects; i++ ) {
-        DynamicInputRecord *ir = new DynamicInputRecord();
+        auto ir = std::make_unique<DynamicInputRecord>();
         domain->giveCrossSection(i)->giveInputRecord(* ir);
-        refinedReader.insertInputRecord(DataReader :: IR_crosssectRec, ir);
+        refinedReader.insertInputRecord(DataReader :: IR_crosssectRec, std::move(ir));
     }
 
     for ( int i = 1; i <= mats; i++ ) {
-        DynamicInputRecord *ir = new DynamicInputRecord();
+        auto ir = std::make_unique<DynamicInputRecord>();
         domain->giveMaterial(i)->giveInputRecord(* ir);
-        refinedReader.insertInputRecord(DataReader :: IR_matRec, ir);
+        refinedReader.insertInputRecord(DataReader :: IR_matRec, std::move(ir));
     }
 
     for ( int i = 1; i <= loads; i++ ) {
-        DynamicInputRecord *ir = new DynamicInputRecord();
+        auto ir = std::make_unique<DynamicInputRecord>();
         domain->giveLoad(i)->giveInputRecord(* ir);
-        refinedReader.insertInputRecord(DataReader :: IR_bcRec, ir);
+        refinedReader.insertInputRecord(DataReader :: IR_bcRec, std::move(ir));
     }
 }
 
@@ -4271,17 +4246,17 @@ HuertaErrorEstimator :: setupRefinedProblemEpilog2(int funcs)
     /* copy tfuncs */
 
     for ( int i = 1; i <= funcs; i++ ) {
-        DynamicInputRecord *ir = new DynamicInputRecord();
+        auto ir = std::make_unique<DynamicInputRecord>();
         domain->giveFunction(i)->giveInputRecord(* ir);
-        refinedReader.insertInputRecord(DataReader :: IR_funcRec, ir);
+        refinedReader.insertInputRecord(DataReader :: IR_funcRec, std::move(ir));
     }
 
     if ( this->mode == HEE_nlinear ) {
-        DynamicInputRecord *ir = new DynamicInputRecord();
+        auto ir = std::make_unique<DynamicInputRecord>();
         ir->setRecordKeywordField(_IFT_HeavisideTimeFunction_Name, funcs + 1);
         ir->setField(this->domain->giveEngngModel()->giveCurrentStep()->giveTargetTime() - 0.1, _IFT_HeavisideTimeFunction_origin);
         ir->setField(1., _IFT_HeavisideTimeFunction_value);
-        refinedReader.insertInputRecord(DataReader :: IR_funcRec, ir);
+        refinedReader.insertInputRecord(DataReader :: IR_funcRec, std::move(ir));
     }
 }
 } // end namespace oofem

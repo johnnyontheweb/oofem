@@ -32,9 +32,9 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/PlaneStress/planstrssxfem.h"
-#include "../sm/Materials/structuralmaterial.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
+#include "sm/Elements/PlaneStress/planstrssxfem.h"
+#include "sm/Materials/structuralmaterial.h"
+#include "sm/CrossSections/structuralcrosssection.h"
 #include "xfem/xfemelementinterface.h"
 #include "xfem/enrichmentfunction.h"
 #include "xfem/enrichmentitem.h"
@@ -295,18 +295,11 @@ void PlaneStress2dXfem :: drawScalar(oofegGraphicContext &gc, TimeStep *tStep)
 #endif
 
 
-IRResultType
-PlaneStress2dXfem :: initializeFrom(InputRecord *ir)
+void
+PlaneStress2dXfem :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;
-
-    result = PlaneStress2d :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
-
-    result = XfemStructuralElementInterface :: initializeCZFrom(ir);
-    return result;
+    PlaneStress2d :: initializeFrom(ir);
+    XfemStructuralElementInterface :: initializeCZFrom(ir);
 }
 
 MaterialMode PlaneStress2dXfem :: giveMaterialMode()
@@ -338,7 +331,7 @@ PlaneStress2dXfem :: giveCompositeExportData(std::vector< VTKPiece > &vtkPieces,
         // Node coordinates
         std :: vector< FloatArray >nodeCoords;
         for(int i = 1; i <= 4; i++) {
-            FloatArray &x = *(giveDofManager(i)->giveCoordinates());
+            const auto &x = giveDofManager(i)->giveCoordinates();
             nodeCoords.push_back(x);
 
             vtkPieces[0].setNodeCoords(i, x);
@@ -359,7 +352,7 @@ PlaneStress2dXfem :: giveCompositeExportData(std::vector< VTKPiece > &vtkPieces,
 
 
         // Export nodal variables from primary fields
-        vtkPieces[0].setNumberOfPrimaryVarsToExport(primaryVarsToExport.giveSize(), numTotalNodes);
+        vtkPieces[0].setNumberOfPrimaryVarsToExport(primaryVarsToExport, numTotalNodes);
 
         for ( int fieldNum = 1; fieldNum <= primaryVarsToExport.giveSize(); fieldNum++ ) {
             UnknownType type = ( UnknownType ) primaryVarsToExport.at(fieldNum);
@@ -392,7 +385,7 @@ PlaneStress2dXfem :: giveCompositeExportData(std::vector< VTKPiece > &vtkPieces,
                             u = {uTemp[0], uTemp[1], 0.0};
                         }
 
-                        vtkPieces[0].setPrimaryVarInNode(fieldNum, nodeInd, u);
+                        vtkPieces[0].setPrimaryVarInNode(type, nodeInd, u);
                 } else {
                     printf("fieldNum: %d\n", fieldNum);
                     // TODO: Implement
@@ -407,11 +400,11 @@ PlaneStress2dXfem :: giveCompositeExportData(std::vector< VTKPiece > &vtkPieces,
 
 
         // Export nodal variables from internal fields
-        vtkPieces[0].setNumberOfInternalVarsToExport(0, numTotalNodes);
+        vtkPieces[0].setNumberOfInternalVarsToExport(internalVarsToExport, numTotalNodes);
 
 
         // Export cell variables
-        vtkPieces[0].setNumberOfCellVarsToExport(cellVarsToExport.giveSize(), 1);
+        vtkPieces[0].setNumberOfCellVarsToExport(cellVarsToExport, 1);
         for ( int i = 1; i <= cellVarsToExport.giveSize(); i++ ) {
             InternalStateType type = ( InternalStateType ) cellVarsToExport.at(i);
             FloatArray average;
@@ -438,7 +431,7 @@ PlaneStress2dXfem :: giveCompositeExportData(std::vector< VTKPiece > &vtkPieces,
                 }
             }
 
-            vtkPieces[0].setCellVar( i, 1, averageVoigt );
+            vtkPieces[0].setCellVar( type, 1, averageVoigt );
         }
 
 
@@ -473,7 +466,7 @@ PlaneStress2dXfem :: giveCompositeExportData(std::vector< VTKPiece > &vtkPieces,
 
                             for(int elNodeInd = 1; elNodeInd <= nDofMan; elNodeInd++) {
                                 DofManager *dMan = giveDofManager(elNodeInd);
-                                ei->evalLevelSetNormalInNode(levelSetInNode, dMan->giveGlobalNumber(), *(dMan->giveCoordinates()) );
+                                ei->evalLevelSetNormalInNode(levelSetInNode, dMan->giveGlobalNumber(), dMan->giveCoordinates() );
 
                                 levelSet += N.at(elNodeInd)*levelSetInNode;
                             }
@@ -487,7 +480,7 @@ PlaneStress2dXfem :: giveCompositeExportData(std::vector< VTKPiece > &vtkPieces,
 
                             for(int elNodeInd = 1; elNodeInd <= nDofMan; elNodeInd++) {
                                 DofManager *dMan = giveDofManager(elNodeInd);
-                                ei->evalLevelSetTangInNode(levelSetInNode, dMan->giveGlobalNumber(), *(dMan->giveCoordinates()) );
+                                ei->evalLevelSetTangInNode(levelSetInNode, dMan->giveGlobalNumber(), dMan->giveCoordinates() );
 
                                 levelSet += N.at(elNodeInd)*levelSetInNode;
                             }

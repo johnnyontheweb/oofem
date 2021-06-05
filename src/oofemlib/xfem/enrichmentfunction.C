@@ -37,16 +37,15 @@
 #include "mathfem.h"
 #include "feinterpol.h"
 #include "classfactory.h"
-#include "dynamicdatareader.h"
+#include "dynamicinputrecord.h"
 
 namespace oofem {
 REGISTER_EnrichmentFunction(DiscontinuousFunction)
 REGISTER_EnrichmentFunction(HeavisideFunction)
 REGISTER_EnrichmentFunction(RampFunction)
 
-IRResultType EnrichmentFunction :: initializeFrom(InputRecord *ir)
+void EnrichmentFunction :: initializeFrom(InputRecord &ir)
 {
-    return IRRT_OK;
 }
 
 void EnrichmentFunction :: giveInputRecord(DynamicInputRecord &input)
