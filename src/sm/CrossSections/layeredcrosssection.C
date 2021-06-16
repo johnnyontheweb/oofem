@@ -120,11 +120,11 @@ LayeredCrossSection :: giveRealStress_PlaneStress(FloatArray &answer, GaussPoint
     answer.resize(3);
     answer.zero();
     
-    double layerThick, layerZCoord, top, bottom, layerZeta;
+    double layerThick; // , layerZCoord, layerZeta, top, bottom,
     FloatArray layerStrain, reducedLayerStress;
    
-    bottom = this->give(CS_BottomZCoord, masterGp);
-    top = this->give(CS_TopZCoord, masterGp);
+    // bottom = this->give(CS_BottomZCoord, masterGp);
+    // top = this->give(CS_TopZCoord, masterGp);
     
     StructuralElement *element = dynamic_cast< StructuralElement * >( masterGp->giveElement() );
     
@@ -136,14 +136,14 @@ LayeredCrossSection :: giveRealStress_PlaneStress(FloatArray &answer, GaussPoint
         
         // resolve current layer z-coordinate
         layerThick = this->layerThicks.at(layer);
-        layerZeta = layerGp->giveNaturalCoordinate(3);
-        layerZCoord = 0.5 * ( ( 1. - layerZeta ) * bottom + ( 1. + layerZeta ) * top );
+        //layerZeta = layerGp->giveNaturalCoordinate(3);
+        //layerZCoord = 0.5 * ( ( 1. - layerZeta ) * bottom + ( 1. + layerZeta ) * top );
 
         // Compute the layer stress
         interface->computeStrainVectorInLayer(layerStrain, strain, masterGp, layerGp, tStep);
         dynamic_cast< StructuralMaterial * >(layerMat)->giveRealStressVector_PlaneStress(reducedLayerStress, layerGp, layerStrain, tStep);
         answer.at(1) += reducedLayerStress.at(1) * layerThick;
-        answer.at(2) += reducedLayerStress.at(2) * layerThick * layerZCoord;
+        answer.at(2) += reducedLayerStress.at(2) * layerThick; //* layerZCoord;
         answer.at(3) += reducedLayerStress.at(3) * layerThick * ( 5. / 6. );
     }
     
@@ -219,7 +219,8 @@ LayeredCrossSection :: giveStiffnessMatrix_PlaneStress(FloatMatrix &answer, MatR
         subAnswer.times(layerThick);
         answer.add(subAnswer);
     }
-    answer.times(1./totThick);
+    answer.at(3, 3) *= (5. / 6.);
+    // answer.times(1./totThick);
 }
 
 
@@ -755,6 +756,11 @@ void
 LayeredCrossSection :: give3dBeamStiffMtrx(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
 {
     OOFEM_ERROR("Not implemented");
+    //FloatMatrix d = this->giveStiffnessMatrix_PlaneStress(rMode, gp, tStep);
+    //FloatMatrix de = this->giveStiffnessMatrix_PlaneStress(ElasticStiffness, gp, tStep);
+    //answer = assemble<4, 4>(d, { 0, 1, 2 }, { 0, 1, 2 });
+    //answer.at(4, 4) = 2.0 * de.at(3, 3); //this->give(CS_DrillingStiffness, gp);
+    //return ds;
 }
 
 
@@ -1161,7 +1167,7 @@ LayeredCrossSection :: giveCorrespondingSlaveMaterialMode(MaterialMode masterMod
         return _PlateLayer;
     } else if ( masterMode == _2dBeam ) {
         return _2dBeamLayer;
-    } else if ( masterMode == _PlaneStress ) {
+    } else if ((masterMode == _PlaneStress) || (masterMode == _PlaneStressRot)) {
         return _PlaneStress;    
     } else if ( masterMode == _3dShell ) {
         return _PlateLayer;
