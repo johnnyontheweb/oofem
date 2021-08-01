@@ -32,15 +32,15 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Materials/structuralms.h"
-#include "../sm/Materials/structuralmaterial.h"
+#include "sm/Materials/structuralms.h"
+#include "sm/Materials/structuralmaterial.h"
 #include "contextioerr.h"
-#include "../sm/Elements/nlstructuralelement.h"
+#include "sm/Elements/nlstructuralelement.h"
 #include "gausspoint.h"
 
 namespace oofem {
-StructuralMaterialStatus :: StructuralMaterialStatus(int n, Domain *d, GaussPoint *g) :
-    MaterialStatus(n, d, g), strainVector(), stressVector(),
+StructuralMaterialStatus :: StructuralMaterialStatus(GaussPoint *g) :
+    MaterialStatus(g), strainVector(), stressVector(),
     tempStressVector(), tempStrainVector(), FVector(), tempFVector()
 {
     int rsize = StructuralMaterial :: giveSizeOfVoigtSymVector( gp->giveMaterialMode() );
@@ -56,38 +56,51 @@ StructuralMaterialStatus :: StructuralMaterialStatus(int n, Domain *d, GaussPoin
         return;
     }
     if ( NLStructuralElement * el = dynamic_cast< NLStructuralElement * >( gp->giveElement() ) ) {
-        if ( el->giveGeometryMode() == 1  ) { // if large def, initialize F and P
-            PVector.resize(9);
-            FVector.resize(9);
-            FVector.at(1) = FVector.at(2) = FVector.at(3) = 1.;
-        }
-        tempPVector = PVector;
-        tempFVector = FVector;
+      if ( el->giveGeometryMode() == 1  ) { // if large def, initialize F and P
+	PVector.resize(9);
+	FVector.resize(9);
+	FVector.at(1) = FVector.at(2) = FVector.at(3) = 1.;
+	tempPVector = PVector;
+	tempFVector = FVector;
+	
+      }
     }
+
 }
 
 
-StructuralMaterialStatus :: ~StructuralMaterialStatus() { }
-
-
-void StructuralMaterialStatus :: printOutputAt(FILE *File, TimeStep *tStep)
+void StructuralMaterialStatus :: printOutputAt(FILE *File, TimeStep *tStep) const
 // Prints the strains and stresses on the data file.
 {
     FloatArray helpVec;
 
     MaterialStatus :: printOutputAt(File, tStep);
-
-    fprintf(File, "  strains ");
-    StructuralMaterial :: giveFullSymVectorForm( helpVec, strainVector, gp->giveMaterialMode() );
-    for ( auto &var : helpVec ) {
+    NLStructuralElement * el = static_cast< NLStructuralElement * >( gp->giveElement());
+    if ( el->giveGeometryMode() == 1) {
+      fprintf(File, "  F ");
+      StructuralMaterial :: giveFullVectorFormF( helpVec, FVector, gp->giveMaterialMode() );
+      for ( auto &var : helpVec ) {
         fprintf( File, " %.4e", var );
-    }
+      }
 
-    fprintf(File, "\n              stresses");
-    StructuralMaterial :: giveFullSymVectorForm( helpVec, stressVector, gp->giveMaterialMode() );
-
-    for ( auto &var : helpVec ) {
+      fprintf(File, "\n  P");
+      StructuralMaterial :: giveFullVectorForm( helpVec, PVector, gp->giveMaterialMode() );
+      for ( auto &var : helpVec ) {
         fprintf( File, " %.4e", var );
+      }
+    } else {
+      fprintf(File, "  strains ");
+      StructuralMaterial :: giveFullSymVectorForm( helpVec, strainVector, gp->giveMaterialMode() );
+      for ( auto &var : helpVec ) {
+        fprintf( File, " %.4e", var );
+      }
+      
+      fprintf(File, "\n              stresses");
+      StructuralMaterial :: giveFullSymVectorForm( helpVec, stressVector, gp->giveMaterialMode() );
+      
+      for ( auto &var : helpVec ) {
+        fprintf( File, " %.4e", var );
+      }
     }
     fprintf(File, "\n");
 }
@@ -129,18 +142,12 @@ void StructuralMaterialStatus :: initTempStatus()
 }
 
 
-contextIOResultType
-StructuralMaterialStatus :: saveContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// saves full ms context (saves state variables, that completely describe
-// current state)
+void
+StructuralMaterialStatus :: saveContext(DataStream &stream, ContextMode mode)
 {
+    MaterialStatus :: saveContext(stream, mode);
+
     contextIOResultType iores;
-
-    if ( ( iores = MaterialStatus :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
     if ( ( iores = strainVector.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
@@ -148,24 +155,15 @@ StructuralMaterialStatus :: saveContext(DataStream &stream, ContextMode mode, vo
     if ( ( iores = stressVector.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    return CIO_OK;
 }
 
 
-contextIOResultType
-StructuralMaterialStatus :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// restores full material context (saves state variables, that completely describe
-// current state)
-//
+void
+StructuralMaterialStatus :: restoreContext(DataStream &stream, ContextMode mode)
 {
+    MaterialStatus :: restoreContext(stream, mode);
+
     contextIOResultType iores;
-
-    if ( ( iores = MaterialStatus :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
     if ( ( iores = strainVector.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
@@ -173,14 +171,11 @@ StructuralMaterialStatus :: restoreContext(DataStream &stream, ContextMode mode,
     if ( ( iores = stressVector.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    return CIO_OK;
 }
 
 void StructuralMaterialStatus :: copyStateVariables(const MaterialStatus &iStatus)
 {
-    MaterialStatus &tmpStat = const_cast< MaterialStatus & >(iStatus);
-    const StructuralMaterialStatus &structStatus = dynamic_cast< StructuralMaterialStatus & >(tmpStat);
+    const StructuralMaterialStatus &structStatus = static_cast< const StructuralMaterialStatus & >(iStatus);
 
     strainVector = structStatus.giveStrainVector();
     stressVector = structStatus.giveStressVector();

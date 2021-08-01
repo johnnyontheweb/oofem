@@ -37,15 +37,19 @@
 
 #include "exportmodule.h"
 #include "floatarray.h"
+#include <iostream>
+#include <fstream>
 
 ///@name Input fields for Homogenization export module
 //@{
 #define _IFT_HOMExportModule_Name "hom"
 #define _IFT_HOMExportModule_ISTs "ists" /// List of internal state types used for output
+#define _IFT_HOMExportModule_reactions "reactions" /// Whether to export reactions
 #define _IFT_HOMExportModule_scale "scale" ///[optional] Scales the output variables
-//#define _IFT_HOMExportModule_matnum "matnum" ///[optional] If specified, only these materials are used
+#define _IFT_HOMExportModule_strain_energy "strain_energy" ///[optional] Strain energy through the integration over strain energy densities in integration points
 //@}
 
+using namespace std;
 namespace oofem {
 /**
  * Represents HOM (Homogenization) export module. It averages internal variables over the whole domain
@@ -61,23 +65,35 @@ protected:
     /// Scale of all homogenized values.
     double scale;
     /// Stream for file.
-    FILE *stream;
-    /// Material numbers over which averaging is performed. - replaced by 'regionsets'
-    //IntArray matnum;
+    std::ofstream stream;
     /// Internal states to export
     IntArray ists;
+    /// List of elements
+    IntArray elements;
+    /// Last averaged stress
+    std::vector< FloatArray > lastStress;
+    /// Last averaged stress-dependent strain
+    std::vector< FloatArray > lastStrainStressDep;
+    /// Reactions to export
+    bool reactions;
+    /// Allow calculation of strain energy, evaluated from mid-point rule (exact for linear elastic problems with zero initial stress/strain field). Allows only non-growing domains. 
+    bool strainEnergy;
+    // Sum of strain energy (total) and stress-dependent strain energy
+    double strainEnergySumStressDep;
 
 public:
     /// Constructor. Creates empty Output Manager.
     HOMExportModule(int n, EngngModel * e);
     /// Destructor.
     virtual ~HOMExportModule();
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void doOutput(TimeStep *tStep, bool forcedOutput = false);
-    virtual void initialize();
-    virtual void terminate();
-    virtual const char *giveClassName() const { return "HOMExportModule"; }
-    virtual const char *giveInputRecordName() const { return _IFT_HOMExportModule_Name; }
+    void initializeFrom(InputRecord &ir) override;
+    void doOutput(TimeStep *tStep, bool forcedOutput = false) override;
+    //returns averaged property
+    void average(FloatArray &answer, double &volTot, int ist, bool subtractStressDepStrain, TimeStep *tStep);
+    void initialize() override;
+    void terminate() override;
+    const char *giveClassName() const override { return "HOMExportModule"; }
+    const char *giveInputRecordName() const { return _IFT_HOMExportModule_Name; }
 };
 } // end namespace oofem
 

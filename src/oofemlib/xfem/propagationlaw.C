@@ -51,6 +51,7 @@
 namespace oofem {
 REGISTER_PropagationLaw(PLDoNothing)
 REGISTER_PropagationLaw(PLCrackPrescribedDir)
+REGISTER_PropagationLaw(PLnodeRadius)
 
 PropagationLaw :: PropagationLaw() { }
 
@@ -62,16 +63,12 @@ void PLDoNothing :: giveInputRecord(DynamicInputRecord &input)
     input.setRecordKeywordField(this->giveInputRecordName(), number);
 }
 
-IRResultType PLCrackPrescribedDir :: initializeFrom(InputRecord *ir)
+void PLCrackPrescribedDir :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;
-
     IR_GIVE_FIELD(ir, mAngle, _IFT_PLCrackPrescribedDir_Dir);
     IR_GIVE_FIELD(ir, mIncrementLength, _IFT_PLCrackPrescribedDir_IncLength);
 
     //    printf("In PLCrackPrescribedDir :: initializeFrom: mAngle: %e mIncrementLength: %e\n", mAngle, mIncrementLength);
-
-    return IRRT_OK;
 }
 
 void PLCrackPrescribedDir :: giveInputRecord(DynamicInputRecord &input)
@@ -114,4 +111,60 @@ bool PLCrackPrescribedDir :: propagateInterface(Domain &iDomain, EnrichmentFront
 
     return true;
 }
+
+void PLnodeRadius :: initializeFrom(InputRecord &ir)
+{
+    IR_GIVE_FIELD(ir, mRadius, _IFT_PLnodeRadius_Radius);
+
+    //printf("In PLnodeRadius :: initializeFrom: mRadius: %e \n", mRadius);
+}
+
+void PLnodeRadius :: giveInputRecord(DynamicInputRecord &input)
+{
+    int number = 1;
+    input.setRecordKeywordField(this->giveInputRecordName(), number);
+
+    input.setField(mRadius, _IFT_PLnodeRadius_Radius);
+}
+
+bool PLnodeRadius :: propagateInterface(Domain &iDomain, EnrichmentFront &iEnrFront, TipPropagation &oTipProp)
+{
+    if ( !iEnrFront.propagationIsAllowed() ) {
+        printf("EnrichmentFront.propagationIsAllowed is false \n");
+        return false;
+    }
+    
+    const TipInfo &tipInfo = iEnrFront.giveTipInfo();   // includes the dofman numbers which represent the boundary of the EI. 
+    //tipInfo.mTipDofManNumbers.printYourself();
+        
+    // No listbased tip (or EI) present, so nothing to propagate. 
+    if ( tipInfo.mTipDofManNumbers.giveSize() == 0 ) {
+        printf("No dofmans in tip; nothing to propagate. \n");
+        return false;  
+    }
+    
+    // Localise nodes within certain radius from tip nodes
+    oTipProp.mPropagationDofManNumbers.clear();
+    SpatialLocalizer *localizer = iDomain.giveSpatialLocalizer();
+    
+    for ( int i = 1 ; i <= tipInfo.mTipDofManNumbers.giveSize() ; i++ ) {
+        
+        //DofManager *dofMan  = iDomain.giveDofManager(tipInfo.mTipDofManNumbers.at(i));
+        //const FloatArray gCoords = dofMan->giveCoordinates();
+        Node *iNode = iDomain.giveNode(tipInfo.mTipDofManNumbers.at(i));
+        const auto &gCoords = iNode->giveCoordinates();
+        
+        std :: list< int > nodeList;
+        localizer->giveAllNodesWithinBox(nodeList,gCoords,mRadius);
+        for ( int jNode : nodeList ) {
+            //printf("nodeList node %d \n",jNode);
+            oTipProp.mPropagationDofManNumbers.insertSortedOnce(jNode);
+        }
+        
+    }
+    //oTipProp.mPropagationDofManNumbers.printYourself(" The following noded will be propagated to:");
+    
+    return true;
+}
+
 } // end namespace oofem

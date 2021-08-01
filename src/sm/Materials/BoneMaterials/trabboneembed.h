@@ -35,13 +35,15 @@
 #ifndef trabboneembed_h
 #define trabboneembed_h
 
-#include "../sm/Materials/structuralmaterial.h"
+#include "sm/Materials/structuralmaterial.h"
+#include "floatarrayf.h"
 #include "floatarray.h"
+#include "floatmatrixf.h"
 #include "floatmatrix.h"
 #include "cltypes.h"
 #include "matconst.h"
 #include "matstatus.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Materials/structuralms.h"
 #include "cltypes.h"
 
 ///@name Input fields for TrabBoneEmbed
@@ -58,37 +60,34 @@ namespace oofem {
 class TrabBoneEmbedStatus : public StructuralMaterialStatus
 {
 protected:
-    double tempAlpha, alpha;
-    double tempDam, dam;
-    double tempPSED, psed;
-    double tempTSED, tsed;
-    FloatMatrix smtrx, matConstD;
-    FloatArray densStress, tempPlasDef, plasDef, tempIncPlasDef;
+    double tempAlpha = 0., alpha = 0.;
+    double tempDam = 0., dam = 0.;
+    double tempPSED = 0., psed = 0.;
+    double tempTSED = 0., tsed = 0.;
+
+    FloatMatrixF<6,6> smtrx, matConstD;
+    FloatArrayF<6> densStress, tempPlasDef, plasDef, tempIncPlasDef;
 
 public:
-    TrabBoneEmbedStatus(int n, Domain * d, GaussPoint * g);
-    virtual ~TrabBoneEmbedStatus();
+    TrabBoneEmbedStatus(GaussPoint * g);
 
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    void printOutputAt(FILE *file, TimeStep *tStep) const override;
 
-    double giveTempTSED();
-
+    double giveTempTSED() const { return tempTSED; }
     void setTempDam(double da) { tempDam = da; }
     void setTempTSED(double tse) { tempTSED = tse; }
     void setTempAlpha(double al) { tempAlpha = al; }
-    void setTempPlasDef(FloatArray epsip) { tempPlasDef = epsip; }
-    void setSmtrx(FloatMatrix smt) { smtrx = smt; }
+    void setTempPlasDef(const FloatArrayF<6> &epsip) { tempPlasDef = epsip; }
 
-    const FloatArray &givePlasDef() const { return plasDef; }
+    const FloatArrayF<6> &givePlasDef() const { return plasDef; }
 
-    // definition
-    virtual const char *giveClassName() const { return "TrabBoneEmbedStatus"; }
+    const char *giveClassName() const override { return "TrabBoneEmbedStatus"; }
 
-    virtual void initTempStatus();
-    virtual void updateYourself(TimeStep *tStep);
+    void initTempStatus() override;
+    void updateYourself(TimeStep *tStep) override;
 
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 };
 
 
@@ -98,37 +97,35 @@ public:
 class TrabBoneEmbed : public StructuralMaterial
 {
 protected:
-    double eps0, nu0;
+    double eps0 = 0., nu0 = 0.;
 
 public:
     TrabBoneEmbed(int n, Domain * d);
 
-    void performPlasticityReturn(GaussPoint *gp, const FloatArray &totalStrain);
+    void performPlasticityReturn(GaussPoint *gp, const FloatArrayF<6> &totalStrain) const;
 
-    double computeDamageParam(double alpha, GaussPoint *gp);
+    double computeDamageParam(double alpha, GaussPoint *gp) const;
 
-    double computeDamage(GaussPoint *gp, TimeStep *tStep);
+    double computeDamage(GaussPoint *gp, TimeStep *tStep) const;
 
-    virtual void computeCumPlastStrain(double &alpha, GaussPoint *gp, TimeStep *tStep);
+    virtual double computeCumPlastStrain(GaussPoint *gp, TimeStep *tStep) const;
 
     /// Constructs the anisotropic compliance tensor.
-    void constructIsoComplTensor(FloatMatrix &answer, const double eps0, const double nu0);
+    static FloatMatrixF<6,6> constructIsoComplTensor(double eps0, double nu0);
 
-    virtual void give3dMaterialStiffnessMatrix(FloatMatrix &answer,
-                                               MatResponseMode mode, GaussPoint *gp,
-                                               TimeStep *tStep);
+    FloatMatrixF<6,6> give3dMaterialStiffnessMatrix(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual void giveRealStressVector_3d(FloatArray &answer, GaussPoint *gp,
-                                         const FloatArray &reducedStrain, TimeStep *tStep);
+    FloatArrayF<6> giveRealStressVector_3d(const FloatArrayF<6> &strain, GaussPoint *gp,
+                                           TimeStep *tStep) const override;
 
-    virtual const char *giveInputRecordName() const { return _IFT_TrabBoneEmbed_Name; }
-    virtual const char *giveClassName() const { return "TrabBoneEmbed"; }
+    const char *giveInputRecordName() const override { return _IFT_TrabBoneEmbed_Name; }
+    const char *giveClassName() const override { return "TrabBoneEmbed"; }
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const;
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
 
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 };
 } // end namespace oofem
 #endif

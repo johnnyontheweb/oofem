@@ -46,7 +46,7 @@ class StructuralElement;
 ///@todo The need for this is just due to some other design choices. 
 class LastEquilibratedInternalForceAssembler : public InternalForceAssembler
 {
-    virtual void vectorFromElement(FloatArray &vec, Element &element, TimeStep *tStep, ValueModeType mode) const;
+    void vectorFromElement(FloatArray &vec, Element &element, TimeStep *tStep, ValueModeType mode) const override;
 };
 
 /**
@@ -56,7 +56,7 @@ class LastEquilibratedInternalForceAssembler : public InternalForceAssembler
 class LinearizedDilationForceAssembler : public VectorAssembler
 {
 public:
-    virtual void vectorFromElement(FloatArray &vec, Element &element, TimeStep *tStep, ValueModeType mode) const;
+    void vectorFromElement(FloatArray &vec, Element &element, TimeStep *tStep, ValueModeType mode) const override;
 };
 
 /**
@@ -66,7 +66,7 @@ public:
 class InitialStressMatrixAssembler : public MatrixAssembler
 {
 public:
-    virtual void matrixFromElement(FloatMatrix &mat, Element &element, TimeStep *tStep) const;
+    void matrixFromElement(FloatMatrix &mat, Element &element, TimeStep *tStep) const override;
 };
 
 
@@ -96,7 +96,7 @@ protected:
      * @param tStep Time step.
      * @param id Domain number.
      */
-    void printReactionForces(TimeStep *tStep, int id);
+    void printReactionForces(TimeStep *tStep, int id, FILE *out);
 
     /**
      * Computes the contribution external loading to reaction forces in given domain. Default implementations adds the
@@ -106,14 +106,6 @@ protected:
      * @param di Domain number.
      */
     virtual void computeExternalLoadReactionContribution(FloatArray &reactions, TimeStep *tStep, int di);
-    /**
-     * Evaluates the nodal representation of internal forces by assembling contributions from individual elements.
-     * @param answer Vector of nodal internal forces.
-     * @param normFlag True if element by element norm of internal forces (internalForcesEBENorm) is to be computed.
-     * @param di Domain number.
-     * @param tStep Solution step.
-     */
-    virtual void giveInternalForces(FloatArray &answer, bool normFlag, int di, TimeStep *tStep);
 
     /**
      * Updates nodal values
@@ -124,15 +116,17 @@ protected:
      */
     void updateInternalState(TimeStep *tStep);
 
+    void printOutputAt(FILE *file, TimeStep *tStep) override;
+
 public:
     /// Creates new StructuralEngngModel with number i, associated to domain d.
-    StructuralEngngModel(int i, EngngModel * _master = NULL);
+    StructuralEngngModel(int i, EngngModel *master = nullptr);
     /// Destructor.
     virtual ~StructuralEngngModel();
 
-    virtual void updateYourself(TimeStep *tStep);
+    void updateYourself(TimeStep *tStep) override;
 
-    virtual int checkConsistency();
+    int checkConsistency() override;
 
     /**
      * Computes reaction forces. The implementation assumes, that real
@@ -150,8 +144,8 @@ public:
      * Terminates the solution of time step. Default implementation calls prinOutput() service and if specified,
      * context of whole domain is stored and output for given time step is printed.
      */
-    virtual void terminate(TimeStep *tStep);
-    
+    void terminate(TimeStep *tStep) override;
+
     /**
      * Builds the reaction force table. For each prescribed equation number it will find
      * corresponding node and dof number. The entries in the restrDofMans, restrDofs, and eqn
@@ -165,11 +159,13 @@ public:
      */
     void buildReactionTable(IntArray &restrDofMans, IntArray &restrDofs, IntArray &eqn, TimeStep *tStep, int di);
 
+    void updateInternalRHS(FloatArray &answer, TimeStep *tStep, Domain *d, FloatArray *eNorm) override;
+
 #ifdef __OOFEG
     /**
      * Shows the sparse structure of required matrix, type == 1 stiffness.
      */
-    void showSparseMtrxStructure(int type, oofegGraphicContext &gc, TimeStep *tStep);
+    void showSparseMtrxStructure(int type, oofegGraphicContext &gc, TimeStep *tStep) override;
 #endif
 };
 } // end namespace oofem

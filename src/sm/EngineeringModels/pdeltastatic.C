@@ -32,9 +32,9 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/EngineeringModels/PDeltaStatic.h"
-#include "../sm/Elements/structuralelement.h"
-#include "../sm/Elements/structuralelementevaluator.h"
+#include "sm/EngineeringModels/PDeltaStatic.h"
+#include "sm/Elements/structuralelement.h"
+#include "sm/Elements/structuralelementevaluator.h"
 #include "nummet.h"
 #include "timestep.h"
 #include "element.h"
@@ -75,10 +75,10 @@ NumericalMethod *PDeltaStatic :: giveNumericalMethod(MetaStep *mStep)
     if ( !nMethod ) {
         if ( isParallel() ) {
             if ( ( solverType == ST_Petsc ) || ( solverType == ST_Feti ) ) {
-                nMethod.reset( classFactory.createSparseLinSolver(solverType, this->giveDomain(1), this) );
+                nMethod = classFactory.createSparseLinSolver(solverType, this->giveDomain(1), this);
             }
         } else {
-            nMethod.reset( classFactory.createSparseLinSolver(solverType, this->giveDomain(1), this) );
+            nMethod = classFactory.createSparseLinSolver(solverType, this->giveDomain(1), this);
         }
         if ( !nMethod ) {
             OOFEM_ERROR("linear solver creation failed for lstype %d", solverType);
@@ -89,15 +89,10 @@ NumericalMethod *PDeltaStatic :: giveNumericalMethod(MetaStep *mStep)
     return nMethod.get();
 }
 
-IRResultType
-PDeltaStatic :: initializeFrom(InputRecord *ir)
+void
+PDeltaStatic :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
-    result = StructuralEngngModel :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    StructuralEngngModel :: initializeFrom(ir);
 
     // int val = 0;
     // IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_EngngModel_lstype);
@@ -119,8 +114,6 @@ PDeltaStatic :: initializeFrom(InputRecord *ir)
     }
 
 #endif
-	
-    return IRRT_OK;
 }
 
 
@@ -205,7 +198,7 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
         //
         // first step  assemble stiffness Matrix
         //
-        stiffnessMatrix.reset( classFactory.createSparseMtrx(sparseMtrxType) );
+        stiffnessMatrix = classFactory.createSparseMtrx(sparseMtrxType);
         if ( !stiffnessMatrix ) {
             OOFEM_ERROR("sparse matrix creation failed");
         }
@@ -217,7 +210,7 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 
         initFlag = 0;
 
-		initialStressMatrix.reset(classFactory.createSparseMtrx(sparseMtrxType));
+		initialStressMatrix = classFactory.createSparseMtrx(sparseMtrxType);
 		initialStressMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
     }
 
@@ -302,7 +295,7 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 
 		//stiffnessMatrix->add(1, *initialStressMatrix); // without "-" if ->times(-1.0) is not used.
 		std::unique_ptr< SparseMtrx > Kiter;
-		Kiter.reset(stiffnessMatrix->GiveCopy());
+		Kiter = stiffnessMatrix->clone();
 		Kiter->add(1, *initialStressMatrix);
 
 //#ifdef DEBUG
@@ -346,87 +339,41 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 //	return res;
 //}
 
-contextIOResultType PDeltaStatic :: saveContext(DataStream *stream, ContextMode mode, void *obj)
+void PDeltaStatic :: saveContext(DataStream &stream, ContextMode mode)
 //
 // saves state variable - displacement vector
 //
 {
     contextIOResultType iores;
-    int closeFlag = 0;
     FILE *file = NULL;
 
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, this->giveCurrentStep()->giveNumber(),
-                                    this->giveCurrentStep()->giveVersion(), contextMode_write) ) {
-            THROW_CIOERR(CIO_IOERR); // override
-        }
+    StructuralEngngModel::saveContext(stream, mode);
 
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
-
-    if ( ( iores = StructuralEngngModel :: saveContext(stream, mode) ) != CIO_OK ) {
+    if ( ( iores = displacementVector.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    if ( ( iores = displacementVector.storeYourself(*stream) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete stream;
-        stream = NULL;
-    }
-
-    return CIO_OK;
 }
 
 
-contextIOResultType PDeltaStatic :: restoreContext(DataStream *stream, ContextMode mode, void *obj)
+void PDeltaStatic :: restoreContext(DataStream &stream, ContextMode mode)
 //
 // restore state variable - displacement vector
 //
 {
     contextIOResultType iores;
-    int closeFlag = 0;
-    int istep, iversion;
-    FILE *file = NULL;
 
-    this->resolveCorrespondingStepNumber(istep, iversion, obj);
+    StructuralEngngModel::restoreContext(stream, mode);
 
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, istep, iversion, contextMode_read) ) {
-            THROW_CIOERR(CIO_IOERR); // override
-        }
-
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
-
-    if ( ( iores = StructuralEngngModel :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
+    if ( ( iores = displacementVector.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    if ( ( iores = displacementVector.restoreYourself(*stream) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete stream;
-        stream = NULL;
-    }
-
-    return CIO_OK;
 }
 
 void
 PDeltaStatic::terminate(TimeStep *tStep)
 {
 	StructuralEngngModel::terminate(tStep);
-	this->printReactionForces(tStep, 1);
+	this->printReactionForces(tStep, 1, this->giveOutputStream());
 	fflush(this->giveOutputStream());
 }
 

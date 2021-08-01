@@ -71,7 +71,7 @@ protected:
 	RSpecComboType modalCombo;
 	double csi;
 	ResponseSpectrum *rs=NULL;
-	NodalRecoveryModel* smoother=NULL;
+	std::unique_ptr <NodalRecoveryModel> smoother=NULL;
 	IntArray internalVarsToExport;
 	Set* elemSet=NULL;
 
@@ -89,11 +89,11 @@ public:
     NodalRecoveryModule(int n, EngngModel *e);
     /// Destructor.
     virtual ~NodalRecoveryModule();
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void doOutput(TimeStep *tStep, bool forcedOutput = false);
-    virtual void initialize();
-    virtual void terminate();
-    virtual const char *giveClassName() const { return "NodalRecoveryModule"; }
+    void initializeFrom(InputRecord &ir) override;
+    void doOutput(TimeStep *tStep, bool forcedOutput = false) override;
+    void initialize() override;
+    void terminate() override;
+    const char *giveClassName() const override { return "NodalRecoveryModule"; }
     virtual const char *giveInputRecordName() const { return _IFT_NodalRecoveryModule_Name; }
 
 	static int checkValidType(const char* name) { return 1; };

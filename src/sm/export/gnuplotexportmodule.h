@@ -59,6 +59,8 @@
 #define _IFT_GnuplotExportModule_materialforceradii "matforceradii"
 // Export length of cracks
 #define _IFT_GnuplotExportModule_cracklength "cracklength"
+// Special output for interface elements
+#define _IFT_GnuplotExportModule_interface_el "interfaceel"
 //@}
 
 namespace oofem {
@@ -87,13 +89,13 @@ public:
     GnuplotExportModule(int n, EngngModel *e);
     virtual ~GnuplotExportModule();
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void doOutput(TimeStep *tStep, bool forcedOutput = false);
-    virtual void initialize();
-    virtual void terminate();
+    void initializeFrom(InputRecord &ir) override;
+    void doOutput(TimeStep *tStep, bool forcedOutput = false) override;
+    void initialize() override;
+    void terminate() override;
 
-    virtual const char *giveClassName() const { return "GnuplotExportModule"; }
-    virtual const char *giveInputRecordName() const { return _IFT_GnuplotExportModule_Name; }
+    const char *giveClassName() const override { return "GnuplotExportModule"; }
+    const char *giveInputRecordName() const { return _IFT_GnuplotExportModule_Name; }
 
     /**
      * XFEM output
@@ -126,6 +128,11 @@ public:
      */
     void outputNodeDisp(DofManager &iDMan, TimeStep *tStep);
 
+    /**
+     * Custom output for interface elements
+     */
+    void outputInterfaceEl(Domain &d, TimeStep *tStep);
+
     static void WritePointsToGnuplot(const std :: string &iName, const std :: vector< std::vector<FloatArray> > &iPoints);
 
 protected:
@@ -135,6 +142,7 @@ protected:
     bool mExportMesh;
     bool mExportXFEM;
     bool mExportCrackLength;
+    bool mExportInterfaceEl;
 
     int mMonitorNodeIndex;
     std::vector<FloatArray> mMonitorNodeDispHist;

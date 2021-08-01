@@ -35,11 +35,13 @@
 #ifndef nldeidynamic_h
 #define nldeidynamic_h
 
-#include "../sm/EngineeringModels/structengngmodel.h"
+#include "sm/EngineeringModels/structengngmodel.h"
 #include "floatarray.h"
 #include "floatmatrix.h"
 #include "sparselinsystemnm.h"
 #include "sparsemtrxtype.h"
+
+#include <memory>
 
 #define LOCAL_ZERO_MASS_REPLACEMENT 1
 
@@ -123,41 +125,40 @@ protected:
     /// Product of p^tM^(-1)p; where p is reference load vector.
     double pMp;
 
-    SparseMtrx *massMatrixConsistent;
     LinSystSolverType solverType;
     SparseMtrxType sparseMtrxType;
-    SparseLinearSystemNM *nMethod;
+    std::unique_ptr<SparseLinearSystemNM> nMethod;
 
 public:
-    NlDEIDynamic(int i, EngngModel * _master = NULL);
+    NlDEIDynamic(int i, EngngModel *master = nullptr);
 
     virtual ~NlDEIDynamic();
 
-    virtual void solveYourself();
-    virtual void solveYourselfAt(TimeStep *tStep);
+    void solveYourself() override;
+    void solveYourselfAt(TimeStep *tStep) override;
 
-    virtual void updateYourself(TimeStep *tStep);
-    virtual double giveUnknownComponent(ValueModeType type, TimeStep *tStep, Domain *d, Dof *dof);
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    void updateYourself(TimeStep *tStep) override;
+    double giveUnknownComponent(ValueModeType type, TimeStep *tStep, Domain *d, Dof *dof) override;
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual TimeStep *giveNextStep();
-    virtual NumericalMethod *giveNumericalMethod(MetaStep *mStep);
+    TimeStep *giveNextStep() override;
+    NumericalMethod *giveNumericalMethod(MetaStep *mStep) override;
 
-    virtual contextIOResultType saveContext(DataStream *stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream *stream, ContextMode mode, void *obj = NULL);
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 
-    virtual void terminate(TimeStep *tStep);
+    void terminate(TimeStep *tStep) override;
 
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    void printOutputAt(FILE *file, TimeStep *tStep) override;
 
-    virtual void printDofOutputAt(FILE *stream, Dof *iDof, TimeStep *tStep);
+    void printDofOutputAt(FILE *stream, Dof *iDof, TimeStep *tStep) override;
 
     // identification
-    virtual const char *giveInputRecordName() const { return _IFT_NlDEIDynamic_Name; }
-    virtual const char *giveClassName() const { return "NlDEIDynamic"; }
-    virtual fMode giveFormulation() { return TL; }
+    const char *giveInputRecordName() const { return _IFT_NlDEIDynamic_Name; }
+    const char *giveClassName() const override { return "NlDEIDynamic"; }
+    fMode giveFormulation() override { return TL; }
 
-    virtual int giveNumberOfFirstStep(bool force = false) { return 0; }
+    int giveNumberOfFirstStep(bool force = false) override { return 0; }
 
 protected:
     /**
@@ -181,7 +182,7 @@ protected:
     void computeMassMtrx2(FloatMatrix &mass, double &maxOm, TimeStep *tStep);
 
 public:
-    virtual int estimateMaxPackSize(IntArray &commMap, DataStream &buff, int packUnpackType);
+    int estimateMaxPackSize(IntArray &commMap, DataStream &buff, int packUnpackType) override;
 };
 } // end namespace oofem
 #endif // nldeidynamic_h

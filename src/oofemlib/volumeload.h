@@ -62,17 +62,17 @@ public:
      * @param coords Global coordinates, which are used to evaluate components values.
      * @param mode Determines response mode-
      */
-    virtual void computeValueAt(FloatArray &answer, TimeStep *tStep, const FloatArray &coords, ValueModeType mode);
+    void computeValueAt(FloatArray &answer, TimeStep *tStep, const FloatArray &coords, ValueModeType mode) override;
 
-    virtual bcValType giveBCValType() const { return ForceLoadBVT; }
-    virtual bcGeomType giveBCGeoType() const { return BodyLoadBGT; }
+    bcValType giveBCValType() const override { return ForceLoadBVT; }
+    bcGeomType giveBCGeoType() const override { return BodyLoadBGT; }
 
     void setVolumeLoadComponents(FloatArray newComponents);
 
-    virtual const char *giveClassName() const { return "VolumeLoad"; }
-    virtual const char *giveInputRecordName() const { return _IFT_VolumeLoad_Name; }
+    const char *giveClassName() const override { return "VolumeLoad"; }
+    const char *giveInputRecordName() const override { return _IFT_VolumeLoad_Name; }
 
-	virtual VolumeType giveVolumeType() { return General; }
+    virtual VolumeType giveVolumeType() { return General; }
 };
 } // end namespace oofem
 #endif // VolumeLoad_h

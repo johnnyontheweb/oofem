@@ -44,15 +44,32 @@
 #include "floatarray.h"
 #include "intarray.h"
 
+#ifdef __PARALLEL_MODE
 #include "processcomm.h"
 #include "datastream.h"
 #include "communicator.h"
 #include "domaintransactionmanager.h"
 #include "nonlocalmatwtp.h"
+#endif
 
 namespace oofem {
   //#define __VERBOSE_PARALLEL
   //#define LoadBalancer_debug_print
+
+#ifndef __PARALLEL_MODE
+
+LoadBalancer :: LoadBalancer(Domain *d)  : wtpList()
+{
+    domain = d;
+}
+
+void LoadBalancer::migrateLoad(Domain *d) {}
+void LoadBalancer::printStatistics() const {}
+void LoadBalancer::initializeFrom(InputRecord &ir) { }
+void LoadBalancerMonitor::initializeFrom(InputRecord &ir) { }
+
+#else
+
 
 LoadBalancer :: LoadBalancer(Domain *d)  : wtpList()
 {
@@ -60,17 +77,13 @@ LoadBalancer :: LoadBalancer(Domain *d)  : wtpList()
 }
 
 
-IRResultType
-LoadBalancer :: initializeFrom(InputRecord *ir)
+void
+LoadBalancer :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                 // Required by IR_GIVE_FIELD macro
-
     IntArray wtp;
     IR_GIVE_OPTIONAL_FIELD(ir, wtp, _IFT_LoadBalancer_wtp);
 
     this->initializeWtp(wtp);
-
-    return IRRT_OK;
 }
 
 void
@@ -84,7 +97,7 @@ LoadBalancer :: initializeWtp(IntArray &wtp)
         for ( int iwtp: wtp ) {
             std :: unique_ptr< WorkTransferPlugin > plugin;
             if ( iwtp == 1 ) {
-                plugin.reset( new NonlocalMaterialWTP(this) );
+                plugin = std::make_unique<NonlocalMaterialWTP>(this);
             } else {
                 OOFEM_ERROR("Unknown work transfer plugin type");
             }
@@ -343,7 +356,7 @@ LoadBalancer :: unpackMigratingData(Domain *d, ProcessCommunicator &pc)
              * }
              */
             _newentry = true;
-            dofman = classFactory.createDofManager(_type.c_str(), 0, d);
+            dofman = classFactory.createDofManager(_type.c_str(), 0, d).release(); ///@todo Unsafe! Find a better way to preserve ownership.
 
             dofman->setGlobalNumber(_globnum);
             // unpack dofman state (this is the local dofman, not available on remote)
@@ -373,8 +386,7 @@ LoadBalancer :: unpackMigratingData(Domain *d, ProcessCommunicator &pc)
              * }
              */
             _newentry = true;
-            dofman = classFactory.createDofManager(_type.c_str(), 0, d);
-
+            dofman = classFactory.createDofManager(_type.c_str(), 0, d).release(); ///@todo Unsafe! Find a better way to preserve ownership.
 
             dofman->setGlobalNumber(_globnum);
             // unpack dofman state (this is the local dofman, not available on remote)
@@ -408,7 +420,7 @@ LoadBalancer :: unpackMigratingData(Domain *d, ProcessCommunicator &pc)
             break;
         }
 
-        elem = classFactory.createElement(_type.c_str(), 0, d);
+        elem = classFactory.createElement(_type.c_str(), 0, d).release(); ///@todo Unsafe! Find a better way to preserve ownership.
         elem->restoreContext(*pcbuff, CM_Definition | CM_State);
         elem->initForNewStep();
         dtm->addElementTransaction(DomainTransactionManager :: DTT_ADD, elem->giveGlobalNumber(), elem);
@@ -532,10 +544,9 @@ LoadBalancer :: printStatistics() const
 }
 
 
-IRResultType
-LoadBalancerMonitor :: initializeFrom(InputRecord *ir)
+void
+LoadBalancerMonitor :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                 // Required by IR_GIVE_FIELD macro
     int nproc = emodel->giveNumberOfProcesses();
     int nodeWeightMode = 0;
 
@@ -560,29 +571,7 @@ LoadBalancerMonitor :: initializeFrom(InputRecord *ir)
         OOFEM_ERROR("unsupported node weight type, using default value");
         staticNodeWeightFlag = false;
     }
-
-    return IRRT_OK;
 }
 
-
-/*
- * void
- * LoadBalancer::migrateLoad () {}
- *
- * IRResultType
- * LoadBalancer::initializeFrom (InputRecord* ir) {
- *
- * return IRRT_OK;
- * }
- *
- * IRResultType
- * LoadBalancerMonitor::initializeFrom (InputRecord* ir) {return IRRT_OK;}
- */
-
-
-
-LoadBalancer :: WorkTransferPlugin :: WorkTransferPlugin(LoadBalancer *_lb) {
-    lb = _lb;
-}
-LoadBalancer :: WorkTransferPlugin :: ~WorkTransferPlugin() { }
+#endif // end __PARALLEL_MODE
 } // end namespace oofem

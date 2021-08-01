@@ -69,13 +69,13 @@ class GaussPoint;
 class FluidMaterialEvaluator : public EngngModel
 {
 protected:
-    double deltaT; ///< Time increment.
+    double deltaT = 1.; ///< Time increment.
 
-    int ndim; /// Number of spatial dimensions.
+    int ndim = 3; /// Number of spatial dimensions.
     IntArray cmpntFunctions; /// Time functions controlling each component of the deviatoric part of the stress.
-    int volFunction; /// Time function controlling the volumetric/pressure part
+    int volFunction = 0; /// Time function controlling the volumetric/pressure part
     IntArray sControl, eControl;
-    bool pressureControl;
+    bool pressureControl = false;
 
     IntArray vars;
 
@@ -84,19 +84,18 @@ protected:
     std :: ofstream outfile;
 
 public:
-    FluidMaterialEvaluator(int i, EngngModel * _master = NULL);
-    virtual ~FluidMaterialEvaluator();
+    FluidMaterialEvaluator(int i, EngngModel * _master = nullptr);
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual void solveYourself();
+    void solveYourself() override;
 
-    virtual int checkConsistency();
-    virtual void doStepOutput(TimeStep *tStep);
-    virtual TimeStep *giveNextStep();
+    int checkConsistency() override;
+    void doStepOutput(TimeStep *tStep) override;
+    TimeStep *giveNextStep() override;
 
-    virtual const char *giveClassName() const { return "FluidMaterialEvaluator"; }
-    virtual const char *giveInputRecordName() const { return _IFT_FluidMaterialEvaluator_Name; }
+    const char *giveClassName() const override { return "FluidMaterialEvaluator"; }
+    const char *giveInputRecordName() const { return _IFT_FluidMaterialEvaluator_Name; }
 };
 } // end namespace oofem
 

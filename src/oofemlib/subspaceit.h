@@ -32,10 +32,6 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-//   ****************************************
-//   *** CLASS SUBSPACE ITERATION  SOLVER ***
-//   ****************************************
-
 
 #ifndef subspaceit_h
 #define subspaceit_h
@@ -43,6 +39,8 @@
 #include "sparsegeneigenvalsystemnm.h"
 #include "sparsemtrx.h"
 #include "floatarray.h"
+
+#define _IFT_SubspaceIteration_Name "subspaceit"
 
 namespace oofem {
 class Domain;
@@ -86,18 +84,18 @@ class EngngModel;
  *      EIGV(NROOT)  -  VLASTNI CISLA
  *      R(NN,NROOT)  -  VLASTNI VEKTORY
  */
-
 class OOFEM_EXPORT SubspaceIteration : public SparseGeneralEigenValueSystemNM
 {
 private:
+    /// Max number of iterations
     int nitem;
 
 public:
     SubspaceIteration(Domain * d, EngngModel * m);
-    virtual ~SubspaceIteration();
+    virtual ~SubspaceIteration() {}
 
-    virtual NM_Status solve(SparseMtrx &A, SparseMtrx &B, FloatArray &x, FloatMatrix &v, double rtol, int nroot);
-    virtual const char *giveClassName() const { return "SubspaceIterationSolver"; }
+    NM_Status solve(SparseMtrx &A, SparseMtrx &B, FloatArray &x, FloatMatrix &v, double rtol, int nroot) override;
+    const char *giveClassName() const override { return "SubspaceIterationSolver"; }
 };
 } // end namespace oofem
 #endif // subspaceit_h

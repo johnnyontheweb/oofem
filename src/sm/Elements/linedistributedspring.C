@@ -32,9 +32,9 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/linedistributedspring.h"
-#include "../sm/Materials/structuralms.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
+#include "sm/Elements/linedistributedspring.h"
+#include "sm/Materials/structuralms.h"
+#include "sm/CrossSections/structuralcrosssection.h"
 #include "fei3dlinelin.h"
 #include "node.h"
 #include "material.h"
@@ -79,7 +79,7 @@ LineDistributedSpring :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize( 1 );
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 5) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 5);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], numberOfGaussPoints, this);
     }
 }
@@ -150,10 +150,10 @@ LineDistributedSpring::giveInternalForcesVector(FloatArray &answer,
 
 
   
-IRResultType
-LineDistributedSpring :: initializeFrom(InputRecord *ir)
+void
+LineDistributedSpring :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
+    StructuralElement::initializeFrom(ir);
 
     IR_GIVE_FIELD (ir, dofs, _IFT_LineDistributedSpring_Dofs);
     IR_GIVE_FIELD (ir, springStiffnesses, _IFT_LineDistributedSpring_Stifnesses);
@@ -161,8 +161,6 @@ LineDistributedSpring :: initializeFrom(InputRecord *ir)
     if (dofs.giveSize() != springStiffnesses.giveSize()) {
       OOFEM_ERROR ("dofs and k params size mismatch");
     }
-    // from element
-    return StructuralElement::initializeFrom(ir);
 }
 
 int

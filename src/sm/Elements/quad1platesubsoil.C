@@ -32,9 +32,9 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/quad1platesubsoil.h"
-#include "../sm/Materials/structuralms.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
+#include "sm/Elements/quad1platesubsoil.h"
+#include "sm/Materials/structuralms.h"
+#include "sm/CrossSections/structuralcrosssection.h"
 #include "fei2dquadlin.h"
 #include "node.h"
 #include "material.h"
@@ -55,7 +55,7 @@ FEI2dQuadLin Quad1PlateSubSoil :: interp_lin(1, 2);
 
 Quad1PlateSubSoil :: Quad1PlateSubSoil(int n, Domain *aDomain) :
     StructuralElement(n, aDomain), ZZNodalRecoveryModelInterface(this),
-	SPRNodalRecoveryModelInterface() // , NodalAveragingRecoveryModelInterface()
+    SPRNodalRecoveryModelInterface() // , NodalAveragingRecoveryModelInterface()
 {
     numberOfGaussPoints = 4;
     numberOfDofMans = 4;
@@ -79,7 +79,7 @@ Quad1PlateSubSoil :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize( 1 );
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 5) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 5);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], numberOfGaussPoints, this);
     }
 }
@@ -88,7 +88,7 @@ Quad1PlateSubSoil :: computeGaussPoints()
 void
 Quad1PlateSubSoil :: computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode)
 {
-  OOFEM_ERROR("Body load not supported, use surface load instead");
+    OOFEM_ERROR("Body load not supported, use surface load instead");
 }
 
 
@@ -118,31 +118,29 @@ Quad1PlateSubSoil :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int l
 void
 Quad1PlateSubSoil :: computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->giveGeneralizedStress_PlateSubSoil(answer, gp, strain, tStep);
+    answer = this->giveStructuralCrossSection()->giveGeneralizedStress_PlateSubSoil(strain, gp, tStep);
 }
 
 
 void
 Quad1PlateSubSoil :: computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->give2dPlateSubSoilStiffMtrx(answer, rMode, gp, tStep);
+    answer = this->giveStructuralCrossSection()->give2dPlateSubSoilStiffMtrx(rMode, gp, tStep);
 }
 
 
-IRResultType
-Quad1PlateSubSoil :: initializeFrom(InputRecord *ir)
+void
+Quad1PlateSubSoil :: initializeFrom(InputRecord &ir)
 {
     this->numberOfGaussPoints = 4;
-	IRResultType result = StructuralElement::initializeFrom(ir);
-	// optional record for 1st local axes - here it is not used, unuseful
-	la1.resize(3);
-	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
-	IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_Quad1PlateSubSoil_lcs);
+    StructuralElement :: initializeFrom(ir);
+    // optional record for 1st local axes - here it is not used, unuseful
+    la1.resize(3);
+    la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
+    IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_Quad1PlateSubSoil_lcs);
 
-	this->macroElem = 0;
-	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_Quad1PlateSubSoil_macroelem);
-
-	return IRRT_OK;
+    this->macroElem = 0;
+    IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_Quad1PlateSubSoil_macroelem);
 }
 
 
@@ -164,8 +162,8 @@ void
 Quad1PlateSubSoil :: computeMidPlaneNormal(FloatArray &answer, const GaussPoint *gp)
 {
     FloatArray u, v;
-    u.beDifferenceOf( * this->giveNode(2)->giveCoordinates(), * this->giveNode(1)->giveCoordinates() );
-    v.beDifferenceOf( * this->giveNode(3)->giveCoordinates(), * this->giveNode(1)->giveCoordinates() );
+    u.beDifferenceOf( this->giveNode(2)->giveCoordinates(), this->giveNode(1)->giveCoordinates() );
+    v.beDifferenceOf( this->giveNode(3)->giveCoordinates(), this->giveNode(1)->giveCoordinates() );
 
     answer.beVectorProductOf(u, v);
     answer.normalize();
@@ -186,10 +184,8 @@ Quad1PlateSubSoil :: giveCharacteristicLength(const FloatArray &normalToCrackPla
 double
 Quad1PlateSubSoil :: computeVolumeAround(GaussPoint *gp)
 {
-    double detJ, weight;
-
-    weight = gp->giveWeight();
-    detJ = fabs( this->interp_lin.giveTransformationJacobian( gp->giveNaturalCoordinates(), FEIElementGeometryWrapper(this) ) );
+    double weight = gp->giveWeight();
+    double detJ = fabs( this->interp_lin.giveTransformationJacobian( gp->giveNaturalCoordinates(), FEIElementGeometryWrapper(this) ) );
     return detJ * weight;
 }
 
@@ -227,9 +223,9 @@ Quad1PlateSubSoil :: giveInterface(InterfaceType interface)
         return static_cast< ZZNodalRecoveryModelInterface * >(this);
     } else if ( interface == SPRNodalRecoveryModelInterfaceType ) {
         return static_cast< SPRNodalRecoveryModelInterface * >(this);
-	//} else if (interface == NodalAveragingRecoveryModelInterfaceType) {
-	// return static_cast< NodalAveragingRecoveryModelInterface * >(this);
-	}
+    //} else if (interface == NodalAveragingRecoveryModelInterfaceType) {
+    // return static_cast< NodalAveragingRecoveryModelInterface * >(this);
+    }
 
     return NULL;
 }
@@ -262,48 +258,55 @@ Quad1PlateSubSoil :: SPRNodalRecoveryMI_giveDofMansDeterminedByPatch(IntArray &a
     }
 }
 
-
 void
-Quad1PlateSubSoil :: computeSurfaceNMatrixAt(FloatMatrix &answer, int iSurf, GaussPoint *sgp)
+Quad1PlateSubSoil ::computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer)
+// Returns the [1x4] displacement interpolation matrix {N}
 {
-  this->computeNmatrixAt(sgp->giveNaturalCoordinates(), answer);
+    FloatArray N(4);
+    giveInterpolation()->evalN(N, iLocCoord, FEIElementGeometryWrapper(this) );
+    answer.beNMatrixOf(N, 1);
 }
 
+
 void
-Quad1PlateSubSoil :: giveSurfaceDofMapping(IntArray &answer, int iSurf) const
+Quad1PlateSubSoil ::computeSurfaceNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords)
 {
-    answer.resize(4);
-    answer.zero();
-    if ( iSurf == 1 ) {
-        for (int i = 1; i<=4; i++) {
-            answer.at(i) = i;
-        }
+    if (boundaryID == 1) {
+        this->computeNmatrixAt(lcoords, answer);
     } else {
-        OOFEM_ERROR("wrong surface number");
+        OOFEM_ERROR("computeSurfaceNMatrix: Only one surface is supported with id=1");
     }
 }
 
-IntegrationRule *
-Quad1PlateSubSoil :: GetSurfaceIntegrationRule(int approxOrder)
-{
-    IntegrationRule *iRule = new GaussIntegrationRule(1, this, 1, 1);
-    int npoints = iRule->getRequiredNumberOfIntegrationPoints(_Square, approxOrder);
-    iRule->SetUpPointsOnSquare(npoints, _Unknown);
-    return iRule;
-}
-
-double
-Quad1PlateSubSoil :: computeSurfaceVolumeAround(GaussPoint *gp, int iSurf)
-{
-    return this->computeVolumeAround(gp);
-}
 
 
-int
-Quad1PlateSubSoil :: computeLoadLSToLRotationMatrix(FloatMatrix &answer, int isurf, GaussPoint *gp)
-{
-    return 0;
-}
+// void
+// Quad1PlateSubSoil :: giveSurfaceDofMapping(IntArray &answer, int iSurf) const
+// {
+//     answer.resize(4);
+//     answer.zero();
+//     if ( iSurf == 1 ) {
+//         for (int i = 1; i <= 4; i++) {
+//             answer.at(i) = i;
+//         }
+//     } else {
+//         OOFEM_ERROR("wrong surface number");
+//     }
+// }
+
+
+// double
+// Quad1PlateSubSoil :: computeSurfaceVolumeAround(GaussPoint *gp, int iSurf)
+// {
+//     return this->computeVolumeAround(gp);
+// }
+
+
+// int
+// Quad1PlateSubSoil :: computeLoadLSToLRotationMatrix(FloatMatrix &answer, int isurf, GaussPoint *gp)
+// {
+//     return 0;
+// }
 
 void
 Quad1PlateSubSoil :: printOutputAt(FILE *file, TimeStep *tStep)

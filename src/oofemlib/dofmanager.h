@@ -40,6 +40,7 @@
 
 #include "femcmpnn.h"
 #include "intarray.h"
+#include "floatarray.h"
 #include "valuemodetype.h"
 #include "doftype.h"
 #include "dofiditem.h"
@@ -113,6 +114,9 @@ enum dofManagerParallelMode {
 class OOFEM_EXPORT DofManager : public FEMComponent
 {
 protected:
+    /// Array storing nodal coordinates.
+    FloatArray coordinates;
+
     /// Array of DOFs.
     std::vector< Dof * > dofArray;
     /// List of applied loads.
@@ -375,13 +379,22 @@ public:
 
     /**@name Position query functions */
     //@{
-    virtual bool hasCoordinates() { return false; }
     /// @return The i-th coordinate.
-    virtual double giveCoordinate(int i) { return 0.0; }
+    double giveCoordinate(int i) const {
+        if ( i > this->coordinates.giveSize() ) {
+            return 0.;
+        }
+        return this->coordinates.at(i);
+    }
     /// @return Pointer to node coordinate array.
-    virtual FloatArray *giveCoordinates() { return NULL; }
+    const FloatArray &giveCoordinates() const { return this->coordinates; }
     //@}
 
+    /// Set coordinates
+    void setCoordinates(const FloatArray &coords) {
+        this->coordinates = coords;
+    }
+    
     /**@name Functions necessary for dof creation. All optional. */
     //@{
     /**
@@ -414,7 +427,7 @@ public:
     std :: map< int, int > *giveIcMap() { return dofICmap; }
     //@}
 
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    void printOutputAt(FILE *file, TimeStep *tStep) override;
     /**
      * Updates receiver after equilibrium in time step has been reached.
      * @param tStep Active time step.
@@ -439,13 +452,13 @@ public:
      * @return If receiver contains only primary DOFs, false is returned.
      */
     virtual bool giveMasterDofMans(IntArray &masters);
-	virtual void givePrimaryDofs(IntArray &primary);
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    virtual void givePrimaryDofs(IntArray &primary);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual void printYourself();
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void printYourself() override;
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 
     /// Returns true if dof of given type is allowed to be associated to receiver
     virtual bool isDofTypeCompatible(dofType type) const { return false; }
@@ -460,7 +473,7 @@ public:
      * these relations to reflect updated numbering. The renumbering function is passed, which is supposed
      * to return an updated number of specified entity type based on old number.
      */
-    virtual void updateLocalNumbering(EntityRenumberingFunctor &f);
+    void updateLocalNumbering(EntityRenumberingFunctor &f) override;
 
     /**@name Advanced functions */
     //@{
@@ -534,10 +547,10 @@ public:
     int givePartitionsConnectivitySize();
     /// Returns true if receiver is locally maintained.
     bool isLocal();
-	/// Returns true if receiver is shared.
-	bool isShared() { return parallel_mode == DofManager_shared; }
-	/// Returns true if receiver is shared.
-	bool isNull() { return parallel_mode == DofManager_null; }
+    /// Returns true if receiver is shared.
+    bool isShared() { return parallel_mode == DofManager_shared; }
+    /// Returns true if receiver is shared.
+    bool isNull() { return parallel_mode == DofManager_null; }
 };
 } // end namespace oofem
 #endif // dofmanager_h

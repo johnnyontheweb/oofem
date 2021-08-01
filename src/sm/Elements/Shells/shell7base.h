@@ -35,8 +35,9 @@
 #ifndef Shell7Base_h
 #define Shell7Base_h
 
-#include "CrossSections/layeredcrosssection.h"
-#include "Elements/nlstructuralelement.h"
+#include "sm/CrossSections/layeredcrosssection.h"
+#include "sm/Elements/nlstructuralelement.h"
+#include "eleminterpmapperinterface.h"
 #include "nodalaveragingrecoverymodel.h"
 #include "vtkxmlexportmodule.h"
 #include "zznodalrecoverymodel.h"
@@ -45,6 +46,12 @@
 #include "fracturemanager.h"
 #include "cltypes.h"
 #include <vector>
+#include "sm/EngineeringModels/structengngmodel.h"
+
+///@name Input fields for shell7base
+//@{
+#define _IFT_Shell7base_recoverStress "recoverstress"
+//@}
 
 namespace oofem {
 class BoundaryLoad;
@@ -63,37 +70,43 @@ class Shell7Base : public NLStructuralElement, public NodalAveragingRecoveryMode
 {
 public:
     Shell7Base(int n, Domain *d); // constructor
-    virtual ~Shell7Base() {}
-    virtual void giveDofManDofIDMask(int inode, IntArray &) const;
-    virtual int computeGlobalCoordinates(FloatArray &answer, const FloatArray &lcoords);
+
+    void giveDofManDofIDMask(int inode, IntArray &) const override;
+    int computeGlobalCoordinates(FloatArray &answer, const FloatArray &lcoords) override;
     virtual int computeGlobalCoordinatesOnEdge(FloatArray &answer, const FloatArray &lcoords, const int iEdge);
-    virtual int computeNumberOfDofs() { return this->giveNumberOfDofs(); }
-    virtual int checkConsistency();
-    virtual void postInitialize();
+    int computeNumberOfDofs() override { return this->giveNumberOfDofs(); }
+    int checkConsistency() override;
+    void postInitialize() override;
+    void printOutputAt(FILE *file, TimeStep *tStep) override;
 
     // Definition & identification
-    virtual const char *giveClassName() const { return "Shell7Base"; }
-    virtual MaterialMode giveMaterialMode() { return _3dMat; }
+    const char *giveClassName() const override { return "Shell7Base"; }
+    MaterialMode giveMaterialMode() override { return _3dMat; }
 
 
     // Element specific
-    virtual int giveNumberOfDofs();
+    virtual int giveNumberOfInPlaneIP() { return numInPlaneIP; };
+    int giveNumberOfDofs() override;
     virtual int giveNumberOfEdgeDofs() = 0;
     virtual int giveNumberOfEdgeDofManagers() = 0;
-    virtual Element *ZZNodalRecoveryMI_giveElement() { return this; }
-    void evalInitialCovarBaseVectorsAt(const FloatArray &lCoords, FloatMatrix &Gcov);
+    FloatMatrixF<3,3> evalInitialCovarBaseVectorsAt(const FloatArrayF<3> &lCoords);
 
-    static void giveGeneralizedStrainComponents(FloatArray genEps, FloatArray &dphidxi1, FloatArray &dphidxi2, FloatArray &dmdxi1,
-                                         FloatArray &dmdxi2, FloatArray &m, double &dgamdxi1, double &dgamdxi2, double &gam);
-    static void giveDualBase(FloatMatrix &base1, FloatMatrix &base2);
+    static void giveGeneralizedStrainComponents(FloatArray genEps, FloatArrayF<3> &dphidxi1, FloatArrayF<3> &dphidxi2, FloatArrayF<3> &dmdxi1,
+                                         FloatArrayF<3> &dmdxi2, FloatArrayF<3> &m, double &dgamdxi1, double &dgamdxi2, double &gam);
+    static FloatMatrixF<3,3> giveDualBase(FloatMatrixF<3,3> &base1);
+    LayeredCrossSection *giveLayeredCS() { return this->layeredCS; }
 
     // Overloaded, as the element is using enhanced approximation 
-    void computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, int boundary, CharType type, ValueModeType mode, TimeStep *tStep, bool global);
+    void computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, int boundary, CharType type, ValueModeType mode, TimeStep *tStep, bool global) override;
+
 protected:
-    virtual Interface *giveInterface(InterfaceType it);
+    // Recover transverse stresses using momentum balance, cf. Främby, Fagerström & Bouzoulis, 'Adaptive modelling of delamination initiation and propagation using an equivalent single-layer shell approach', IJNME, 2016
+    bool recoverStress;
+
+    Interface *giveInterface(InterfaceType it) override;
     LayeredCrossSection *layeredCS;
 
-    static FEI3dTrQuad  interpolationForCZExport;
+    static FEI3dTrQuad interpolationForCZExport;
     static FEI3dWedgeQuad interpolationForExport;
 
     FEInterpolation3d *fei;
@@ -101,9 +114,9 @@ protected:
     virtual const IntArray &giveOrderingDofTypes() const = 0;
     virtual const IntArray &giveOrderingNodes() const = 0;
     virtual const IntArray &giveOrderingEdgeNodes() const = 0;
-    
-    std :: vector< FloatArray >initialNodeDirectors;
-    FloatArray &giveInitialNodeDirector(int i) {
+
+    std :: vector< FloatArrayF<3> >initialNodeDirectors;
+    FloatArrayF<3> &giveInitialNodeDirector(int i) {
         return this->initialNodeDirectors [ i - 1 ];
     }
 
@@ -118,16 +131,14 @@ protected:
     }
 
     // Element specific methods
-    virtual void computeGaussPoints() = 0;
+    int numInPlaneIP;
+    void computeGaussPoints() override = 0;
     virtual double computeVolumeAroundLayer(GaussPoint *mastergp, int layer) = 0;
     virtual double computeAreaAround(GaussPoint *gp, double xi) = 0;
-    virtual void giveSurfaceDofMapping(IntArray &answer, int iSurf) const = 0;
-    virtual void giveEdgeDofMapping(IntArray &answer, int iEdge) const = 0;
+    void giveSurfaceDofMapping(IntArray &answer, int iSurf) const override = 0;
+    void giveEdgeDofMapping(IntArray &answer, int iEdge) const override = 0;
 
-
-    virtual IRResultType initializeFrom(InputRecord *ir);
-
-
+    void initializeFrom(InputRecord &ir) override;
 
     // Integration
     virtual double edgeComputeLengthAround(GaussPoint *gp, const int iedge);
@@ -135,39 +146,37 @@ protected:
 
     // Base vectors and directors
     virtual void setupInitialNodeDirectors();
-    void evalInitialDirectorAt(const FloatArray &lCoords, FloatArray &answer);
+    FloatArrayF<3> evalInitialDirectorAt(const FloatArrayF<3> &lCoords);
 
 
 
-    void evalInitialContravarBaseVectorsAt(const FloatArray &lCoords, FloatMatrix &Gcon);
+    FloatMatrixF<3,3> evalInitialContravarBaseVectorsAt(const FloatArrayF<3> &lCoords);
 
-    
-    
-    virtual void evalCovarBaseVectorsAt(const FloatArray &lCoords, FloatMatrix &gcov, FloatArray &genEps, TimeStep *tStep);
+    virtual FloatMatrixF<3,3> evalCovarBaseVectorsAt(const FloatArrayF<3> &lCoords, FloatArray &genEps, TimeStep *tStep);
 
-    virtual void evalCovarNormalAt(FloatArray &nCov, const FloatArray &lCoords, FloatArray &genEpsC, TimeStep *tStep);
-    virtual void evalInitialCovarNormalAt(FloatArray &nCov, const FloatArray &lCoords);
-    
-    void edgeEvalInitialDirectorAt(const FloatArray &lCoords, FloatArray &answer, const int iEdge);
+    virtual FloatArrayF<3> evalCovarNormalAt(const FloatArrayF<3> &lCoords, FloatArray &genEpsC, TimeStep *tStep);
+    virtual FloatArrayF<3> evalInitialCovarNormalAt(const FloatArrayF<3> &lCoords);
 
-    void edgeEvalInitialCovarBaseVectorsAt(const FloatArray &lCoords, const int iedge, FloatArray &G1, FloatArray &G3);
+    FloatArrayF<3> edgeEvalInitialDirectorAt(const FloatArrayF<1> &lCoords, const int iEdge);
 
-    void edgeEvalCovarBaseVectorsAt(const FloatArray &lCoords, const int iedge, FloatMatrix &gcov, TimeStep *tStep);
+    std::pair<FloatArrayF<3>, FloatArrayF<3>> edgeEvalInitialCovarBaseVectorsAt(const FloatArrayF<1> &lCoords, const int iedge);
 
-    virtual double giveGlobalZcoord(const FloatArray &lCoords);
+    FloatMatrixF<3,3> edgeEvalCovarBaseVectorsAt(const FloatArrayF<3> &lCoords, const int iedge, TimeStep *tStep);
+
+    virtual double giveGlobalZcoord(const FloatArrayF<3> &lCoords);
     virtual double giveGlobalZcoordInLayer(double xi, int layer);
 
-    FloatMatrix giveAxialMatrix(const FloatArray &vec);
+    FloatMatrixF<3,3> giveAxialMatrix(const FloatArrayF<3> &vec);
 
     // Stress and strain
-    void computeFAt(const FloatArray &lCoords, FloatMatrix &answer, FloatArray &genEps, TimeStep *tStep);
-    void computeStressMatrix(FloatMatrix &answer, FloatArray &genEps, GaussPoint *gp, Material *mat, TimeStep *tStep);
+    FloatMatrixF<3,3> computeFAt(const FloatArrayF<3> &lCoords, FloatArray &genEps, TimeStep *tStep);
+    FloatMatrixF<3,3> computeStressMatrix(FloatArray &genEps, GaussPoint *gp, Material *mat, TimeStep *tStep);
 
     virtual void computeCauchyStressVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep);
 
     // Mass matrices
-    virtual void computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep);
-    virtual void computeMassMatrix(FloatMatrix &answer, TimeStep *tStep);    // analytically integrated through the thickness
+    void computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep) override;
+    void computeMassMatrix(FloatMatrix &answer, TimeStep *tStep) override;    // analytically integrated through the thickness
     virtual void computeMassMatrixNum(FloatMatrix &answer, TimeStep *tStep); // numerical integration in B_X
     virtual void giveMassFactorsAt(GaussPoint *gp, FloatArray &answer, double &gam);
     void computeConvectiveMassForce(FloatArray &answer, TimeStep *tStep);
@@ -175,24 +184,23 @@ protected:
 
 
     // Tangent matrices
-    virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep);
+    void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep) override;
     virtual void computeBulkTangentMatrix(FloatMatrix &answer, FloatArray &solVec, TimeStep *tStep);
     void computeLinearizedStiffness(GaussPoint * gp,  StructuralMaterial * mat, TimeStep * tStep, FloatMatrix A [ 3 ] [ 3 ]);
     void computePressureTangentMatrix(FloatMatrix &answer, Load *load, const int iSurf, TimeStep *tStep);
-    void computeLambdaGMatrices(FloatMatrix lambda [ 3 ], FloatArray &genEps, double zeta);
-    void computeLambdaNMatrix(FloatMatrix &lambda, FloatArray &genEps, double zeta);
+    std::array<FloatMatrixF<3,18>, 3> computeLambdaGMatrices(FloatArray &genEps, double zeta);
+    FloatMatrixF<3,7> computeLambdaNMatrix(FloatArray &genEps, double zeta);
 
     // Internal forces
-    virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord = 0);
+    void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord = 0) override;
     void computeSectionalForces(FloatArray &answer, TimeStep *tStep, FloatArray &solVec, int useUpdatedGpRecord = 0);  
     void computeSectionalForcesAt(FloatArray &sectionalForces, IntegrationPoint *ip, Material *mat, TimeStep *tStep, FloatArray &genEpsC, double zeta);
 
     // External forces
-    virtual void computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode);
+    void computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode) override;
     void computePressureForce(FloatArray &answer, FloatArray solVec, const int iSurf, BoundaryLoad *surfLoad, TimeStep *tStep, ValueModeType mode);
     void computePressureForceAt(GaussPoint *gp, FloatArray &answer, const int iSurf, FloatArray genEps, BoundaryLoad *surfLoad, TimeStep *tStep, ValueModeType mode);
     virtual void computeTractionForce(FloatArray &answer, const int iedge, BoundaryLoad *edgeLoad, TimeStep *tStep, ValueModeType mode, bool map2elementDOFs=false);
-
 
 
     // Solution vectors
@@ -206,61 +214,72 @@ protected:
 
     //void giveInitialSolutionVector(FloatArray &answer);
     void giveUpdatedSolutionVector(FloatArray &answer, TimeStep *tStep);
-    void giveUnknownsAt(const FloatArray &lcoords, FloatArray &solVec, FloatArray &x, FloatArray &m, double &gam, TimeStep *tStep);
+    void giveUnknownsAt(const FloatArrayF<3> &lcoords, const FloatArray &solVec, FloatArrayF<3> &x, FloatArrayF<3> &m, double &gam, TimeStep *tStep);
 
     // Nodal averaging interface:
-    virtual void NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node, InternalStateType type, TimeStep *tStep);
-    virtual void NodalAveragingRecoveryMI_computeSideValue(FloatArray &answer, int side, InternalStateType type, TimeStep *tStep);
+    void NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node, InternalStateType type, TimeStep *tStep) override;
 
     // ZZ recovery
-    virtual void ZZNodalRecoveryMI_ComputeEstimatedInterpolationMtrx(FloatArray &answer, GaussPoint *gp, InternalStateType type);
+    void ZZNodalRecoveryMI_ComputeEstimatedInterpolationMtrx(FloatArray &answer, GaussPoint *gp, InternalStateType type);
     void NodalRecoveryMI_computeNValProduct(FloatMatrix &answer, int layer, InternalStateType type, TimeStep *tStep);
     void NodalRecoveryMI_computeNNMatrix(FloatArray &answer, int layer, InternalStateType type);
     void NodalRecoveryMI_recoverValues(std::vector<FloatArray> &recoveredValues, int layer, InternalStateType type, TimeStep *tStep);
 
     // VTK interface
-    virtual void vtkEvalInitialGlobalCoordinateAt(const FloatArray &localCoords, int layer, FloatArray &globalCoords);
-    virtual void vtkEvalUpdatedGlobalCoordinateAt(const FloatArray &localCoords, int layer, FloatArray &globalCoords, TimeStep *tStep);
-    
-    virtual void vtkEvalInitialGlobalCZCoordinateAt(const FloatArray &localCoords, int interface, FloatArray &globalCoords);
-    
-    virtual void giveCompositeExportData(std::vector< VTKPiece > &vtkPieces, IntArray &primaryVarsToExport, IntArray &internalVarsToExport, IntArray cellVarsToExport, TimeStep *tStep );
+    virtual FloatArrayF<3> vtkEvalInitialGlobalCoordinateAt(const FloatArrayF<3> &localCoords, int layer);
+    virtual FloatArrayF<3> vtkEvalUpdatedGlobalCoordinateAt(const FloatArrayF<3> &localCoords, int layer, TimeStep *tStep);
+    virtual FloatArrayF<3> vtkEvalInitialGlobalCZCoordinateAt(const FloatArrayF<3> &localCoords, int interface);
+
+    void giveCompositeExportData(std::vector< VTKPiece > &vtkPieces, IntArray &primaryVarsToExport, IntArray &internalVarsToExport, IntArray cellVarsToExport, TimeStep *tStep ) override;
     virtual void giveShellExportData(VTKPiece &vtkPiece, IntArray &primaryVarsToExport, IntArray &internalVarsToExport, IntArray cellVarsToExport, TimeStep *tStep );
-    
-    void giveFictiousNodeCoordsForExport(std::vector<FloatArray> &nodes, int layer);
-    void giveFictiousCZNodeCoordsForExport(std::vector<FloatArray> &nodes, int interface);
-    void giveFictiousUpdatedNodeCoordsForExport(std::vector<FloatArray> &nodes, int layer, TimeStep *tStep);
+
+    std::vector<FloatArray> giveFictiousNodeCoordsForExport(int layer);
+    std::vector<FloatArray> giveFictiousCZNodeCoordsForExport(int interface);
+    std::vector<FloatArray> giveFictiousUpdatedNodeCoordsForExport(int layer, TimeStep *tStep);
     //void giveLocalNodeCoordsForExport(FloatArray &nodeLocalXi1Coords, FloatArray &nodeLocalXi2Coords, FloatArray &nodeLocalXi3Coords);
 
-    void recoverValuesFromIP(std::vector<FloatArray> &nodes, int layer, InternalStateType type, TimeStep *tStep);
-    void recoverShearStress(TimeStep *tStep);
-    void computeBmatrixForStressRecAt(const FloatArray &lCoords, FloatMatrix &answer, int layer);
-
-    virtual void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
-    { answer.clear(); }
+    // Recovery of through thickness stresses by momentum balance
+    enum stressRecoveryType {copyIPvalue, LSfit, L2fit}; 
+    virtual void giveRecoveredTransverseInterfaceStress(std::vector<FloatMatrix> &transverseStress, TimeStep *tStep);
+    void giveTractionBC(FloatMatrix &tractionTop, FloatMatrix &tractionBtm, TimeStep *tStep);
+    void recoverValuesFromIP(std::vector<FloatArray> &nodes, int layer, InternalStateType type, TimeStep *tStep, stressRecoveryType SRtype = copyIPvalue);
+    void CopyIPvaluesToNodes(std::vector<FloatArray> &recoveredValues, int layer, InternalStateType type, TimeStep *tStep);
+    void nodalLeastSquareFitFromIP(std::vector<FloatArray> &recoveredValues, int layer, InternalStateType type, TimeStep *tStep);
+    virtual void recoverShearStress(TimeStep *tStep);
+    void giveLayerContributionToSR(FloatMatrix &dSmat, FloatMatrix &dSmatLayerIP, int layer, double zeroThicknessLevel, TimeStep *tStep);
+    void fitRecoveredStress2BC(std::vector<FloatMatrix> &answer1, std::vector<FloatMatrix> &answer2, std::vector<FloatMatrix> &dSmat, std::vector<FloatMatrix> &dSmatIP, FloatMatrix &SmatOld, FloatMatrix &tractionBtm, FloatMatrix &tractionTop, double zeroThicknessLevel, FloatArray fulfillBC, int startLayer, int endLayer);
+    void updateLayerTransvStressesSR(FloatMatrix &dSmatLayerIP, int layer);
+    void updateLayerTransvShearStressesSR(FloatMatrix &dSmatLayerIP, FloatMatrix &SmatOld, int layer);
+    void updateLayerTransvNormalStressSR(FloatMatrix &dSzzMatLayerIP, FloatArray &SzzMatOld, int layer);
+//    void computeBmatrixForStressRecAt(FloatArray &lcoords, FloatMatrix &answer, int layer, bool intSzz = false);
+//     void givePolynomial2GradientForStressRecAt(FloatArray &answer, FloatArray &coords);
+    void giveZintegratedPolynomialGradientForStressRecAt(FloatArray &answer, FloatArray &coords);
+//    void giveZintegratedPolynomial2GradientForStressRecAt(FloatArray &answer, FloatArray &coords);
+    void giveZ2integratedPolynomial2GradientForStressRecAt(FloatArray &answer, FloatArray &coords);
+    void giveL2contribution(FloatMatrix &ipValues, FloatMatrix &Nbar, int layer, InternalStateType type, TimeStep *tStep);
+    void giveSPRcontribution(FloatMatrix &eltIPvalues, FloatMatrix &eltPolynomialValues, int layer, InternalStateType type, TimeStep *tStep);
 
     // N and B matrices
-    virtual void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li = 1, int ui = ALL_STRAINS) { answer.clear(); }
+    void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li = 1, int ui = ALL_STRAINS) override { answer.clear(); }
 
     virtual void computeBmatrixAt(const FloatArray &lCoords, FloatMatrix &answer, int li = 1, int ui = ALL_STRAINS);
-    virtual void computeNmatrixAt(const FloatArray &iLocCoords, FloatMatrix &answer);
+    void computeNmatrixAt(const FloatArray &iLocCoords, FloatMatrix &answer) override;
     virtual void edgeComputeNmatrixAt(const FloatArray &lCoords, FloatMatrix &answer);
 
-    virtual void computeStrainVectorInLayer(FloatArray &answer, const FloatArray &masterGpStrain, GaussPoint *masterGp, GaussPoint *slaveGp, TimeStep *tStep)
+    void computeStrainVectorInLayer(FloatArray &answer, const FloatArray &masterGpStrain, GaussPoint *masterGp, GaussPoint *slaveGp, TimeStep *tStep) override
     {
-        OOFEM_ERROR("Should not be called! Not meaningful for this element.");
+        OOFEM_ERROR("ComputeStrainVectorInLayer - Should not be called! Not meaningful for this element.");
     }
     virtual void edgeComputeBmatrixAt(const FloatArray &lCoords, FloatMatrix &answer, int li = 1, int ui = ALL_STRAINS);
 
-    FloatArray convV6ToV9Stress(const FloatArray &V6);
+    static FloatArrayF<9> convV6ToV9Stress(const FloatArrayF<6> &V6);
 
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
     void computeInterLaminarStressesAt(int interfaceNum, TimeStep *tStep, std::vector < FloatArray > &interLamStresses);
     virtual void evaluateFailureCriteriaQuantities(FailureCriteriaStatus *fc, TimeStep *tStep);
     int giveSymVoigtIndex(int ind1, int ind2);
     int giveVoigtIndex(int ind1, int ind2);
     std::vector< std::vector<int> > voigtIndices;
-    
 };
 } // end namespace oofem
 #endif

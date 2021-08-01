@@ -44,19 +44,18 @@ namespace oofem {
 class KelvinChainMaterialStatus : public RheoChainMaterialStatus
 {
 public:
-    KelvinChainMaterialStatus(int n, Domain * d, GaussPoint * g, int nunits);
-    virtual ~KelvinChainMaterialStatus() { }
+    KelvinChainMaterialStatus(GaussPoint *g, int nunits);
 
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    void printOutputAt(FILE *file, TimeStep *tStep) const override;
 
-    virtual void initTempStatus();
-    virtual void updateYourself(TimeStep *tStep);
+    void initTempStatus() override;
+    void updateYourself(TimeStep *tStep) override;
 
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 
     // definition
-    virtual const char *giveClassName() const { return "KelvinChainMaterialStatus"; }
+    const char *giveClassName() const override { return "KelvinChainMaterialStatus"; }
 };
 
 
@@ -67,37 +66,35 @@ public:
 class KelvinChainMaterial : public RheoChainMaterial
 {
 public:
-    KelvinChainMaterial(int n, Domain * d);
-    virtual ~KelvinChainMaterial() { }
+    KelvinChainMaterial(int n, Domain *d);
 
     // identification and auxiliary functions
-    virtual int hasNonLinearBehaviour() { return 0; }
-    virtual const char *giveClassName() const { return "KelvinChainMaterial"; }
+    const char *giveClassName() const override { return "KelvinChainMaterial"; }
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual void  giveShrinkageStrainVector(FloatArray &answer,
-                                            GaussPoint *gp,
-                                            TimeStep *tStep,
-                                            ValueModeType mode)
+    void giveShrinkageStrainVector(FloatArray &answer,
+                                   GaussPoint *gp,
+                                   TimeStep *tStep,
+                                   ValueModeType mode) const override
     { answer.clear(); }
 
-    virtual void  giveEigenStrainVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep, ValueModeType mode);
+    void giveEigenStrainVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep, ValueModeType mode) const override;
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const;
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
 
-    virtual void giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep);
+    void giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep) override;
 
     void computeHiddenVars(GaussPoint *gp, TimeStep *tStep);
 
 protected:
-    virtual int hasIncrementalShrinkageFormulation() { return 0; }
+    bool hasIncrementalShrinkageFormulation() const override { return false; }
 
-    virtual void computeCharCoefficients(FloatArray &answer, double tPrime, GaussPoint *gp, TimeStep *tStep);
+    FloatArray computeCharCoefficients(double tPrime, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual double giveEModulus(GaussPoint *gp, TimeStep *tStep);
+    double giveEModulus(GaussPoint *gp, TimeStep *tStep) const override;
 
-    LinearElasticMaterial *giveLinearElasticMaterial();
+    //    LinearElasticMaterial *giveLinearElasticMaterial();
 };
 } // end namespace oofem
 #endif // kelvinchm_h

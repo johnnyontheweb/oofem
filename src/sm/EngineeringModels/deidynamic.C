@@ -32,7 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/EngineeringModels/deidynamic.h"
+#include "sm/EngineeringModels/deidynamic.h"
 #include "timestep.h"
 #include "dofmanager.h"
 #include "element.h"
@@ -58,15 +58,13 @@ NumericalMethod *DEIDynamic :: giveNumericalMethod(MetaStep *mStep)
 }
 
 
-IRResultType
-DEIDynamic :: initializeFrom(InputRecord *ir)
+void
+DEIDynamic :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
+    StructuralEngngModel :: initializeFrom(ir);
 
     IR_GIVE_FIELD(ir, dumpingCoef, _IFT_DEIDynamic_dumpcoef); // C = dumpingCoef * M
     IR_GIVE_FIELD(ir, deltaT, _IFT_DEIDynamic_deltat);
-
-    return StructuralEngngModel :: initializeFrom(ir);
 }
 
 
@@ -117,7 +115,7 @@ TimeStep *DEIDynamic :: giveNextStep()
     }
 
     previousStep = std :: move(currentStep);
-    currentStep.reset( new TimeStep(istep, this, 1, totalTime, deltaT, counter) );
+    currentStep = std::make_unique<TimeStep>(istep, this, 1, totalTime, deltaT, counter);
 
     return currentStep.get();
 }

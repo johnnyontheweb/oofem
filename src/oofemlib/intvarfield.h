@@ -38,6 +38,7 @@
 #include "field.h"
 #include "materialmappingalgorithmtype.h"
 #include "internalstatetype.h"
+#include "materialmappingalgorithm.h"
 
 namespace oofem {
 class Domain;
@@ -57,7 +58,7 @@ class OOFEM_EXPORT InternalVariableField : public Field
 {
 protected:
     /// Material mapping algorithm used.
-    MaterialMappingAlgorithm *mma;
+    std::unique_ptr<MaterialMappingAlgorithm> mma;
     /// InternalStateType.
     InternalStateType type;
     /// Source domain.
@@ -72,14 +73,14 @@ public:
      * @param d Domain which field belongs to.
      */
     InternalVariableField(InternalStateType ist, FieldType b, MaterialMappingAlgorithmType mma_type, Domain * d);
-    virtual ~InternalVariableField();
+    virtual ~InternalVariableField() {}
 
-    virtual int evaluateAt(FloatArray &answer, const FloatArray &coords, ValueModeType mode, TimeStep *tStep);
-    virtual int evaluateAt(FloatArray &answer, DofManager *dman, ValueModeType mode, TimeStep *tStep);
+    int evaluateAt(FloatArray &answer, const FloatArray &coords, ValueModeType mode, TimeStep *tStep) override;
+    int evaluateAt(FloatArray &answer, DofManager *dman, ValueModeType mode, TimeStep *tStep) override;
 
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode);
-    virtual const char *giveClassName() const { return "InternalVariableField"; }
+    void saveContext(DataStream &stream) override;
+    void restoreContext(DataStream &stream) override;
+    const char *giveClassName() const override { return "InternalVariableField"; }
 };
 } // end namespace oofem
 #endif // intvarfield_h

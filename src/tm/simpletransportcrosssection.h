@@ -53,8 +53,8 @@ class TransportMaterial;
 class OOFEM_EXPORT SimpleTransportCrossSection : public TransportCrossSection
 {
 protected:
-    int matNumber;
-    double thickness;
+    int matNumber = 0;
+    double thickness = 0.;
 
 public:
     /**
@@ -63,26 +63,25 @@ public:
      * @param d Domain for cross section.
      */
     SimpleTransportCrossSection(int n, Domain * d);
-    /// Destructor.
-    virtual ~SimpleTransportCrossSection();
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
     /// Temporary function that hands out the material. Must be removed for future layered support, but input files will still look the same.
-    TransportMaterial *giveMaterial();
+    TransportMaterial *giveMaterial() const override;
+    Material *giveMaterial(IntegrationPoint *ip) const override;
 
-    virtual bool isCharacteristicMtrxSymmetric(MatResponseMode rMode);
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *ip, InternalStateType type, TimeStep *tStep);
+    bool isCharacteristicMtrxSymmetric(MatResponseMode rMode) const override;
+    int giveIPValue(FloatArray &answer, GaussPoint *ip, InternalStateType type, TimeStep *tStep) override;
 
-    virtual int checkConsistency();
+    int checkConsistency() override;
 
-    virtual int packUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *gp);
-    virtual int unpackAndUpdateUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *gp);
-    virtual int estimatePackSize(DataStream &buff, GaussPoint *gp);
+    int packUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *gp) override;
+    int unpackAndUpdateUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *gp) override;
+    int estimatePackSize(DataStream &buff, GaussPoint *gp) override;
 
-    virtual const char *giveClassName() const { return "SimpleTransportCrossSection"; }
-    virtual const char *giveInputRecordName() const { return _IFT_SimpleTransportCrossSection_Name; }
+    const char *giveClassName() const override { return "SimpleTransportCrossSection"; }
+    const char *giveInputRecordName() const override { return _IFT_SimpleTransportCrossSection_Name; }
 };
 } // end namespace oofem
 #endif // simpletransportcrosssection_h

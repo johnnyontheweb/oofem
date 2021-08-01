@@ -46,6 +46,7 @@
 #include "linesearch.h"
 
 #include <memory>
+#include <map>
 
 ///@name Input fields for NRSolver
 //@{
@@ -65,6 +66,10 @@
 #define _IFT_NRSolver_calcstiffbeforeres "calcstiffbeforeres"
 #define _IFT_NRSolver_constrainedNRalpha "constrainednralpha"
 #define _IFT_NRSolver_constrainedNRminiter "constrainednrminiter"
+#define _IFT_NRSolver_maxinc "maxinc"
+#define _IFT_NRSolver_forceScale "forcescale"
+#define _IFT_NRSolver_forceScaleDofs "forcescaledofs"
+#define _IFT_NRSolver_solutionDependentExternalForces "soldepextforces"
 //@}
 
 namespace oofem {
@@ -95,13 +100,12 @@ protected:
 
     int nsmax, minIterations;
     double minStepLength;
-    int solved;
     nrsolver_ModeType NR_Mode, NR_OldMode;
     int NR_ModeTick;
     int MANRMSteps;
 
     /// linear system solver
-    std :: unique_ptr< SparseLinearSystemNM > linSolver;
+    std :: unique_ptr< SparseLinearSystemNM >linSolver;
     /// linear system solver ID
     LinSystSolverType solverType;
     /// sparse matrix version, used to control constrains application to stiffness
@@ -131,7 +135,7 @@ protected:
     /// Flag indicating whether to use line-search
     bool lsFlag;
     /// Line search solver
-    std :: unique_ptr< LineSearchNM > linesearchSolver;
+    std :: unique_ptr< LineSearchNM >linesearchSolver;
     /// Flag indicating if the stiffness should be evaluated before the residual in the first iteration.
     bool mCalcStiffBeforeRes;
     /// Flag indicating whether to use constrained Newton
@@ -149,22 +153,32 @@ protected:
     ///@todo This doesn't check units, it is nonsense and must be corrected / Mikael
     FloatArray forceErrVec;
     FloatArray forceErrVecOld;
+
+    /// Solution dependent external forces - updating then each NR iteration
+    bool solutionDependentExternalForcesFlag;
+
+
+
+    /// Optional user supplied scale of forces used in convergence check.
+    std :: map< int, double >dg_forceScale;
+
+    double maxIncAllowed;
 public:
-    NRSolver(Domain * d, EngngModel * m);
+    NRSolver(Domain *d, EngngModel *m);
     virtual ~NRSolver();
 
     // Overloaded methods:
-    virtual NM_Status solve(SparseMtrx &k, FloatArray &R, FloatArray *R0,
-                            FloatArray &X, FloatArray &dX, FloatArray &F,
-                            const FloatArray &internalForcesEBENorm, double &l, referenceLoadInputModeType rlm,
-                            int &nite, TimeStep *);
-    virtual void printState(FILE *outputStream);
+    NM_Status solve(SparseMtrx &k, FloatArray &R, FloatArray *R0,
+                    FloatArray &X, FloatArray &dX, FloatArray &F,
+                    const FloatArray &internalForcesEBENorm, double &l, referenceLoadInputModeType rlm,
+                    int &nite, TimeStep *) override;
+    void printState(FILE *outputStream) override;
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual const char *giveClassName() const { return "NRSolver"; }
+    void initializeFrom(InputRecord &ir) override;
+    const char *giveClassName() const override { return "NRSolver"; }
     virtual const char *giveInputRecordName() const { return _IFT_NRSolver_Name; }
 
-    virtual void setDomain(Domain *d) {
+    void setDomain(Domain *d) override {
         this->domain = d;
         if ( linSolver ) {
             linSolver->setDomain(d);
@@ -173,13 +187,13 @@ public:
             linesearchSolver->setDomain(d);
         }
     }
-    virtual void reinitialize() {
+    void reinitialize() override {
         if ( linSolver ) {
             linSolver->reinitialize();
         }
     }
 
-    virtual SparseLinearSystemNM *giveLinearSolver();
+    SparseLinearSystemNM *giveLinearSolver() override;
 
 protected:
     /// Constructs and returns a line search solver.
@@ -196,7 +210,7 @@ protected:
      * @return True if solution has converged, otherwise false.
      */
     bool checkConvergence(FloatArray &RT, FloatArray &F, FloatArray &rhs, FloatArray &ddX, FloatArray &X,
-		double RRT, const FloatArray &internalForcesEBENorm, int nite, bool &errorOutOfRange, TimeStep *tStep);
+                          double RRT, const FloatArray &internalForcesEBENorm, int nite, bool &errorOutOfRange, TimeStep *tStep);
 };
 } // end namespace oofem
 #endif // nrsolver_h

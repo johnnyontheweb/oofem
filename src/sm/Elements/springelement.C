@@ -32,7 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/springelement.h"
+#include "sm/Elements/springelement.h"
 #include "floatmatrix.h"
 #include "intarray.h"
 #include "floatarray.h"
@@ -154,10 +154,10 @@ SpringElement :: computeNumberOfGlobalDofs()
 }
 
 
-IRResultType
-SpringElement :: initializeFrom(InputRecord *ir)
+void
+SpringElement :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
+    StructuralElement :: initializeFrom(ir);
 
     int _mode;
     IR_GIVE_FIELD(ir, _mode, _IFT_SpringElement_mode);
@@ -171,26 +171,24 @@ SpringElement :: initializeFrom(InputRecord *ir)
         this->dir.normalize();
     }
 
-	this->macroElem = 0;
-	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_SpringElement_macroElem);
-
-    return StructuralElement :: initializeFrom(ir);
+    this->macroElem = 0;
+    IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_SpringElement_macroElem);
 }
 
 void SpringElement :: printOutputAt(FILE *File, TimeStep *tStep)
 {
-	if (this->macroElem != 0) {
-		FloatArray u,f;
-		double disp;
-		this->computeVectorOf(VM_Total, tStep, u);
-		disp = (u.at(2) - u.at(1));
-		f=(this->springConstant * disp);
+    if (this->macroElem != 0) {
+	FloatArray u,f;
+	double disp;
+	this->computeVectorOf(VM_Total, tStep, u);
+	disp = (u.at(2) - u.at(1));
+	f=(this->springConstant * disp);
 
-		fprintf(File, "springElement %d type %d dir 3 %.4e %.4e %.4e macroelem %d disp %.4e : %.4e\n", this->giveLabel(), this->mode, this->dir.at(1), this->dir.at(2), this->dir.at(3), this->macroElem, disp,this->computeSpringInternalForce(tStep));
-	} else {
-		fprintf(File, "springElement %d type %d : %.4e\n", this->giveLabel(), this->mode, this->computeSpringInternalForce(tStep));
-	}
-	// fprintf(File, "springElement %d (%8d) :\n", this->giveLabel(), this->giveNumber());
+	fprintf(File, "springElement %d type %d dir 3 %.4e %.4e %.4e macroelem %d disp %.4e : %.4e\n", this->giveLabel(), this->mode, this->dir.at(1), this->dir.at(2), this->dir.at(3), this->macroElem, disp,this->computeSpringInternalForce(tStep));
+    } else {
+	fprintf(File, "springElement %d type %d : %.4e\n", this->giveLabel(), this->mode, this->computeSpringInternalForce(tStep));
+    }
+    // fprintf(File, "springElement %d (%8d) :\n", this->giveLabel(), this->giveNumber());
     // fprintf(File, "  spring force or moment %.4e", this->computeSpringInternalForce(tStep) );
     // fprintf(File, "\n");
 }

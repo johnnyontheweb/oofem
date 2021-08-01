@@ -32,8 +32,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/EngineeringModels/pdeltanstatic.h"
-#include "../sm/Elements/structuralelement.h"
+#include "sm/EngineeringModels/pdeltanstatic.h"
+#include "sm/Elements/structuralelement.h"
 #include "nummet.h"
 #include "timestep.h"
 #include "metastep.h"
@@ -93,8 +93,6 @@ PdeltaNstatic :: ~PdeltaNstatic()
 
 NumericalMethod *PdeltaNstatic :: giveNumericalMethod(MetaStep *mStep)
 {
-    IRResultType result;                     // Required by IR_GIVE_FIELD macro
-
     if ( mStep == NULL ) {
         OOFEM_ERROR("undefined meta step");
     }
@@ -135,10 +133,8 @@ NumericalMethod *PdeltaNstatic :: giveNumericalMethod(MetaStep *mStep)
 void
 PdeltaNstatic :: updateAttributes(MetaStep *mStep)
 {
-    IRResultType result;                  // Required by IR_GIVE_FIELD macro
-
     MetaStep *mStep1 = this->giveMetaStep( mStep->giveNumber() ); //this line ensures correct input file in staggered problem
-    InputRecord *ir = mStep1->giveAttributesRecord();
+    InputRecord &ir = mStep1->giveAttributesRecord();
 
     LinearStatic :: updateAttributes(mStep1);
 
@@ -180,28 +176,23 @@ PdeltaNstatic :: updateAttributes(MetaStep *mStep)
     IR_GIVE_OPTIONAL_FIELD(ir, _val, _IFT_PdeltaNstatic_refloadmode);
     this->refLoadInputMode = ( SparseNonLinearSystemNM :: referenceLoadInputModeType ) _val;
 
-    mstepCumulateLoadLevelFlag = ir->hasField(_IFT_PdeltaNstatic_keepll);
+    mstepCumulateLoadLevelFlag = ir.hasField(_IFT_PdeltaNstatic_keepll);
 
     // called just to mark field as recognized, used later
-    ir->hasField(_IFT_PdeltaNstatic_donotfixload);
+    ir.hasField(_IFT_PdeltaNstatic_donotfixload);
 }
 
 
-IRResultType
-PdeltaNstatic :: initializeFrom(InputRecord *ir)
+void
+PdeltaNstatic :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
-    result = LinearStatic :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    LinearStatic :: initializeFrom(ir);
 
     nonlocalStiffnessFlag = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, nonlocalStiffnessFlag, _IFT_PdeltaNstatic_nonlocstiff);
 
     updateElasticStiffnessFlag = false;
-    if ( ir->hasField(_IFT_PdeltaNstatic_updateElasticStiffnessFlag) ) {
+    if ( ir.hasField(_IFT_PdeltaNstatic_updateElasticStiffnessFlag) ) {
       updateElasticStiffnessFlag = true;
     }
 
@@ -221,15 +212,13 @@ PdeltaNstatic :: initializeFrom(InputRecord *ir)
         communicator = new NodeCommunicator(this, commBuff, this->giveRank(),
                                             this->giveNumberOfProcesses());
 
-        if ( ir->hasField(_IFT_PdeltaNstatic_nonlocalext) ) {
+        if ( ir.hasField(_IFT_PdeltaNstatic_nonlocalext) ) {
             nonlocalExt = 1;
             nonlocCommunicator = new ElementCommunicator(this, commBuff, this->giveRank(),
                                                          this->giveNumberOfProcesses());
         }
     }
 #endif
-
-    return IRRT_OK;
 }
 
 
@@ -377,11 +366,11 @@ void
 PdeltaNstatic :: terminate(TimeStep *tStep)
 {
     this->doStepOutput(tStep);
-    this->printReactionForces(tStep, 1);
+    this->printReactionForces(tStep, 1, this->giveOutputStream());
     // update load vectors before storing context
     fflush( this->giveOutputStream() );
     this->updateLoadVectors(tStep);
-    this->saveStepContext(tStep);
+    this->saveStepContext(tStep, CM_State | CM_Definition);
 }
 
 
@@ -392,9 +381,9 @@ PdeltaNstatic :: updateLoadVectors(TimeStep *tStep)
     bool isLastMetaStep = ( tStep->giveNumber() == mstep->giveLastStepNumber() );
 
     if ( controlMode == nls_indirectControl ) {
-        //if ((tStep->giveNumber() == mstep->giveLastStepNumber()) && ir->hasField("fixload")) {
+        //if ((tStep->giveNumber() == mstep->giveLastStepNumber()) && ir.hasField("fixload")) {
         if ( isLastMetaStep ) {
-            if ( !mstep->giveAttributesRecord()->hasField(_IFT_PdeltaNstatic_donotfixload) ) {
+            if ( !mstep->giveAttributesRecord().hasField(_IFT_PdeltaNstatic_donotfixload) ) {
                 OOFEM_LOG_INFO("Fixed load level\n");
 
                 //update initialLoadVector
@@ -408,7 +397,7 @@ PdeltaNstatic :: updateLoadVectors(TimeStep *tStep)
                 this->loadInitFlag = 1;
             }
 
-            //if (!mstep->giveAttributesRecord()->hasField("keepll")) this->loadLevelInitFlag = 1;
+            //if (!mstep->giveAttributesRecord().hasField("keepll")) this->loadLevelInitFlag = 1;
         }
     } else { // direct control
         //update initialLoadVector after each step of direct control
@@ -427,7 +416,7 @@ PdeltaNstatic :: updateLoadVectors(TimeStep *tStep)
 
 
     // if (isLastMetaStep) {
-    if ( isLastMetaStep && !mstep->giveAttributesRecord()->hasField(_IFT_PdeltaNstatic_donotfixload) ) {
+    if ( isLastMetaStep && !mstep->giveAttributesRecord().hasField(_IFT_PdeltaNstatic_donotfixload) ) {
 #ifdef VERBOSE
         OOFEM_LOG_INFO("Reseting load level\n");
 #endif
@@ -457,7 +446,7 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
         // first step  create space for stiffness Matrix
         //
         if ( !stiffnessMatrix ) {
-            stiffnessMatrix.reset( classFactory.createSparseMtrx(sparseMtrxType) );
+            stiffnessMatrix = classFactory.createSparseMtrx(sparseMtrxType);
         }
 
         if ( !stiffnessMatrix ) {
@@ -473,7 +462,7 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
         stiffnessMatrix->buildInternalStructure( this, di, EModelDefaultEquationNumbering() );
 		// pdelta
 		if (!initialStressMatrix) {
-			initialStressMatrix.reset(classFactory.createSparseMtrx(sparseMtrxType));
+            initialStressMatrix = classFactory.createSparseMtrx(sparseMtrxType);
 		};
 		initialStressMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
     }
@@ -581,7 +570,7 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
 
 		this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain(di));
 		std::unique_ptr< SparseMtrx > Kiter;
-		Kiter.reset(stiffnessMatrix->GiveCopy());
+        Kiter = stiffnessMatrix->clone();
 		Kiter->add(1, *initialStressMatrix);
 
 		//#ifdef DEBUG
@@ -703,7 +692,7 @@ PdeltaNstatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *d)
         OOFEM_LOG_DEBUG("Updating internal forces\n");
 #endif
         // update internalForces and internalForcesEBENorm concurrently
-        this->giveInternalForces(internalForces, true, d->giveNumber(), tStep);
+        this->updateInternalRHS(internalForces, tStep, d, &this->internalForcesEBENorm );
         break;
 
     default:
@@ -730,140 +719,91 @@ PdeltaNstatic :: printOutputAt(FILE *File, TimeStep *tStep)
 }
 
 
-contextIOResultType
-PdeltaNstatic :: saveContext(DataStream *stream, ContextMode mode, void *obj)
+void
+PdeltaNstatic :: saveContext(DataStream &stream, ContextMode mode)
 //
 // saves state variable - displacement vector
 //
 {
-    int closeFlag = 0;
     contextIOResultType iores;
     FILE *file = NULL;
 
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, this->giveCurrentStep()->giveNumber(),
-                                    this->giveCurrentStep()->giveVersion(), contextMode_write) ) {
-            THROW_CIOERR(CIO_IOERR); // override
-        }
-
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
-
-    if ( ( iores = EngngModel :: saveContext(stream, mode) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
+    EngngModel::saveContext(stream, mode);
 
     //if ((iores = this->giveNumericalMethod(giveCurrentStep())->saveContext (stream)) != CIO_OK) THROW_CIOERR(iores);
 
-    if ( ( iores = totalDisplacement.storeYourself(*stream) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
+    totalDisplacement.storeYourself(stream);
 
-    if ( ( iores = incrementOfDisplacement.storeYourself(*stream) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
+    incrementOfDisplacement.storeYourself(stream);
 
     int _cm = controlMode;
-    if ( !stream->write(_cm) ) {
+    if ( !stream.write(_cm) ) {
         THROW_CIOERR(CIO_IOERR);
     }
 
-    if ( !stream->write(loadLevel) ) {
+    if ( !stream.write(loadLevel) ) {
         THROW_CIOERR(CIO_IOERR);
     }
 
-    if ( !stream->write(cumulatedLoadLevel) ) {
+    if ( !stream.write(cumulatedLoadLevel) ) {
         THROW_CIOERR(CIO_IOERR);
     }
 
     // store InitialLoadVector
-    if ( ( iores = initialLoadVector.storeYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = initialLoadVector.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = initialLoadVectorOfPrescribed.storeYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = initialLoadVectorOfPrescribed.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete stream;
-        stream = NULL;
-    } // ensure consistent records
-
-    return CIO_OK;
 }
 
 
-contextIOResultType
-PdeltaNstatic :: restoreContext(DataStream *stream, ContextMode mode, void *obj)
+void
+PdeltaNstatic :: restoreContext(DataStream &stream, ContextMode mode)
 //
 // restore state variable - displacement vector
 //
 {
-    int closeFlag = 0;
-    int istep, iversion;
     contextIOResultType iores;
-    FILE *file = NULL;
-
-    this->resolveCorrespondingStepNumber(istep, iversion, obj);
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, istep, iversion, contextMode_read) ) {
-            THROW_CIOERR(CIO_IOERR); // override
-        }
-
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
 
     // save element context
-    if ( ( iores = EngngModel :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
+    EngngModel::restoreContext(stream, mode);
 
     //if ((iores = this->giveNumericalMethod(giveCurrentStep())->restoreContext (stream)) !=CIO_OK) THROW_CIOERR(iores);
 
-    if ( ( iores = totalDisplacement.restoreYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = totalDisplacement.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = incrementOfDisplacement.restoreYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = incrementOfDisplacement.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
     int _cm;
-    if ( !stream->read(_cm) ) {
+    if ( !stream.read(_cm) ) {
         THROW_CIOERR(CIO_IOERR);
     }
 
     controlMode = ( PdeltaNstatic_controlType ) _cm;
-    if ( !stream->read(loadLevel) ) {
+    if ( !stream.read(loadLevel) ) {
         THROW_CIOERR(CIO_IOERR);
     }
 
-    if ( !stream->read(cumulatedLoadLevel) ) {
+    if ( !stream.read(cumulatedLoadLevel) ) {
         THROW_CIOERR(CIO_IOERR);
     }
 
 
     // store InitialLoadVector
-    if ( ( iores = initialLoadVector.restoreYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = initialLoadVector.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = initialLoadVectorOfPrescribed.restoreYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = initialLoadVectorOfPrescribed.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete stream;
-        stream = NULL;
-    } // ensure consistent records
-
-    return CIO_OK;
 }
 
 

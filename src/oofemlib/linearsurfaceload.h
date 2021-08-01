@@ -75,17 +75,17 @@ public:
      */
     void updateLoad(const FloatArray &newValue) { componentArray = newValue; }
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual bcGeomType giveBCGeoType() const { return SurfaceLoadBGT; }
+    void initializeFrom(InputRecord &ir) override;
+    bcGeomType giveBCGeoType() const override { return SurfaceLoadBGT; }
 
-    virtual const char *giveClassName() const { return "linearsurfaceload"; }
-    virtual const char *giveInputRecordName() const { return _IFT_LinearSurfaceLoad_Name; }
-	// support for varying load magnitude
-	FloatArray normVals;
+    const char *giveClassName() const override { return "linearsurfaceload"; }
+    const char *giveInputRecordName() const override { return _IFT_LinearSurfaceLoad_Name; }
+    // support for varying load magnitude
+    FloatArray normVals;
 
 private:
-	virtual void computeNArray(FloatArray &answer, const FloatArray &coords) const;
-	double loadPlane(const FloatArray &coords);
+    void computeNArray(FloatArray &answer, const FloatArray &coords) const override;
+    double loadPlane(const FloatArray &coords);
 };
 } // end namespace oofem
 #endif // LinearSurfaceLoad_h

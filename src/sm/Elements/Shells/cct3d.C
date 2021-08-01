@@ -32,8 +32,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/Shells/cct3d.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Elements/Shells/cct3d.h"
+#include "sm/Materials/structuralms.h"
 #include "fei2dtrlin.h"
 #include "node.h"
 #include "load.h"
@@ -54,23 +54,17 @@ CCTPlate3d :: CCTPlate3d(int n, Domain *aDomain) : CCTPlate(n, aDomain)
 
 
 void
-CCTPlate3d :: giveLocalCoordinates(FloatArray &answer, FloatArray &global)
-// Returns global coordinates given in global vector
-// transformed into local coordinate system of the
-// receiver
+CCTPlate3d :: giveLocalCoordinates(FloatArray &answer, const FloatArray &global)
 {
-    FloatArray offset;
-    // test the parametr
     if ( global.giveSize() != 3 ) {
         OOFEM_ERROR("cannot transform coordinates - size mismatch");
-        exit(1);
     }
 
     // first ensure that receiver's GtoLRotationMatrix[3,3] is defined
     this->computeGtoLRotationMatrix();
 
-    offset = global;
-    offset.subtract( * this->giveNode(1)->giveCoordinates() );
+    FloatArray offset;
+    offset.beDifferenceOf(global, this->giveNode(1)->giveCoordinates() );
     answer.beProductOf(GtoLRotationMatrix, offset);
 }
 
@@ -82,9 +76,9 @@ CCTPlate3d :: giveNodeCoordinates(double &x1, double &x2, double &x3,
 {
     FloatArray nc1(3), nc2(3), nc3(3);
 
-    this->giveLocalCoordinates( nc1, * ( this->giveNode(1)->giveCoordinates() ) );
-    this->giveLocalCoordinates( nc2, * ( this->giveNode(2)->giveCoordinates() ) );
-    this->giveLocalCoordinates( nc3, * ( this->giveNode(3)->giveCoordinates() ) );
+    this->giveLocalCoordinates( nc1, this->giveNode(1)->giveCoordinates() );
+    this->giveLocalCoordinates( nc2, this->giveNode(2)->giveCoordinates() );
+    this->giveLocalCoordinates( nc3, this->giveNode(3)->giveCoordinates() );
 
     x1 = nc1.at(1);
     x2 = nc2.at(1);
@@ -118,9 +112,9 @@ CCTPlate3d :: computeLocalCoordinates(FloatArray &answer, const FloatArray &coor
     FloatArray inputCoords_ElCS;
     std::vector< FloatArray > lc(3);
     FloatArray llc;
-    this->giveLocalCoordinates( inputCoords_ElCS, const_cast< FloatArray & >(coords) );
+    this->giveLocalCoordinates( inputCoords_ElCS, coords );
     for ( int _i = 0; _i < 3; _i++ ) {
-        this->giveLocalCoordinates( lc [ _i ], * this->giveNode(_i + 1)->giveCoordinates() );
+        this->giveLocalCoordinates( lc [ _i ], this->giveNode(_i + 1)->giveCoordinates() );
     }
     FEI2dTrLin _interp(1, 2);
     bool inplane = _interp.global2local(llc, inputCoords_ElCS, FEIVertexListGeometryWrapper(lc)) > 0;
@@ -166,8 +160,8 @@ CCTPlate3d :: computeGtoLRotationMatrix()
         FloatArray e1, e2, e3, help;
 
         // compute e1' = [N2-N1]  and  help = [N3-N1]
-        e1.beDifferenceOf(*this->giveNode(2)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
-        help.beDifferenceOf(*this->giveNode(3)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
+        e1.beDifferenceOf(this->giveNode(2)->giveCoordinates(), this->giveNode(1)->giveCoordinates());
+        help.beDifferenceOf(this->giveNode(3)->giveCoordinates(), this->giveNode(1)->giveCoordinates());
 
         // let us normalize e1'
         e1.normalize();
@@ -177,20 +171,20 @@ CCTPlate3d :: computeGtoLRotationMatrix()
         // let us normalize
         e3.normalize();
 
-		//if (la1.computeNorm() !=0 ) {
-		//	// custom local axes
-		//	e1 = la1;
-		//}
+	//if (la1.computeNorm() !=0 ) {
+	//  // custom local axes
+	//  e1 = la1;
+	//}
 
         // now from e3' x e1' compute e2'
         e2.beVectorProductOf(e3, e1);
 
-		// rotate as to have the 1st local axis equal to la1
-		if (la1.computeNorm() != 0) {
-			double ang = -Angle::giveAngleIn3Dplane(la1, e1, e3); // radians
-			e1 = Angle::rotate(e1, e3, ang);
-			e2 = Angle::rotate(e2, e3, ang);
-		}
+	// rotate as to have the 1st local axis equal to la1
+	if (la1.computeNorm() != 0) {
+	    double ang = -Angle::giveAngleIn3Dplane(la1, e1, e3); // radians
+	    e1 = Angle::rotate(e1, e3, ang);
+	    e2 = Angle::rotate(e2, e3, ang);
+	}
         // rot. matrix
         GtoLRotationMatrix.resize(3, 3);
 
@@ -244,7 +238,7 @@ CCTPlate3d :: giveCharacteristicTensor(FloatMatrix &answer, CharTensor type, Gau
         answer.at(3, 1) = charVect.at(4);
         answer.at(2, 3) = charVect.at(5);
         answer.at(3, 2) = charVect.at(5);
-    } else if ( ( type == LocalMomentumTensor ) || ( type == GlobalMomentumTensor ) ) {
+    } else if ( ( type == LocalMomentTensor ) || ( type == GlobalMomentTensor ) ) {
         //this->computeStressVector(charVect, gp, tStep);
         charVect = ms->giveStressVector();
 
@@ -253,11 +247,11 @@ CCTPlate3d :: giveCharacteristicTensor(FloatMatrix &answer, CharTensor type, Gau
         answer.at(1, 2) = charVect.at(3);
         answer.at(2, 1) = charVect.at(3);
 
-		// shear forces
-		answer.at(1, 3) = charVect.at(4);
-		answer.at(3, 1) = charVect.at(4);
-		answer.at(2, 3) = charVect.at(5);
-		answer.at(3, 2) = charVect.at(5);
+	// shear forces
+	answer.at(1, 3) = charVect.at(4);
+	answer.at(3, 1) = charVect.at(4);
+	answer.at(2, 3) = charVect.at(5);
+	answer.at(3, 2) = charVect.at(5);
     } else if ( ( type == LocalStrainTensor ) || ( type == GlobalStrainTensor ) ) {
         //this->computeStrainVector(charVect, gp, tStep);
         charVect = ms->giveStrainVector();
@@ -279,7 +273,7 @@ CCTPlate3d :: giveCharacteristicTensor(FloatMatrix &answer, CharTensor type, Gau
         exit(1);
     }
 
-    if ( ( type == GlobalForceTensor  ) || ( type == GlobalMomentumTensor  ) ||
+    if ( ( type == GlobalForceTensor  ) || ( type == GlobalMomentTensor  ) ||
         ( type == GlobalStrainTensor ) || ( type == GlobalCurvatureTensor ) ) {
         this->computeGtoLRotationMatrix();
         answer.rotatedWith(GtoLRotationMatrix);
@@ -297,9 +291,9 @@ CCTPlate3d :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
 
     if (  type == IST_CurvatureTensor || type == IST_ShellStrainTensor ) {
         if ( type == IST_CurvatureTensor ) {
-			cht = GlobalCurvatureTensor;
+            cht = GlobalCurvatureTensor;
         } else {
-			cht = GlobalStrainTensor;
+            cht = GlobalStrainTensor;
         }
 
         this->giveCharacteristicTensor(globTensor, cht, gp, tStep);
@@ -310,13 +304,13 @@ CCTPlate3d :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
         answer.at(4) = 2 * globTensor.at(2, 3); //yz
         answer.at(5) = 2 * globTensor.at(1, 3); //xz
         answer.at(6) = 2 * globTensor.at(1, 2); //xy
-		if (type == IST_CurvatureTensor) { answer.negated(); }
+	if (type == IST_CurvatureTensor) { answer.negated(); }
         return 1;
     } else if ( type == IST_ShellMomentTensor || type == IST_ShellForceTensor ) {
         if ( type == IST_ShellMomentTensor ) {
-			cht = GlobalMomentumTensor;
+            cht = GlobalMomentTensor;
         } else {
-			cht = GlobalForceTensor;
+            cht = GlobalForceTensor;
         }
 
         this->giveCharacteristicTensor(globTensor, cht, gp, tStep);
@@ -327,7 +321,7 @@ CCTPlate3d :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
         answer.at(4) = globTensor.at(2, 3); //yz
         answer.at(5) = globTensor.at(1, 3); //xz
         answer.at(6) = globTensor.at(1, 2); //xy
-		if (type == IST_ShellMomentTensor) { answer.negated(); }
+	if (type == IST_ShellMomentTensor) { answer.negated(); }
         return 1;
     } else {
         return NLStructuralElement :: giveIPValue(answer, gp, type, tStep);
@@ -455,14 +449,6 @@ CCTPlate3d :: giveSurfaceDofMapping(IntArray &answer, int iSurf) const
     }
 }
 
-IntegrationRule *
-CCTPlate3d :: GetSurfaceIntegrationRule(int approxOrder)
-{
-    IntegrationRule *iRule = new GaussIntegrationRule(1, this, 1, 1);
-    int npoints = iRule->getRequiredNumberOfIntegrationPoints(_Triangle, approxOrder);
-    iRule->SetUpPointsOnTriangle(npoints, _Unknown);
-    return iRule;
-}
 
 double
 CCTPlate3d :: computeSurfaceVolumeAround(GaussPoint *gp, int iSurf)

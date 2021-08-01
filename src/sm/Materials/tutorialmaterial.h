@@ -35,9 +35,9 @@
 #ifndef tutorialmaterial_h
 #define tutorialmaterial_h
 
-#include "Materials/structuralmaterial.h"
-#include "Materials/structuralms.h"
-#include "Materials/isolinearelasticmaterial.h"
+#include "sm/Materials/structuralmaterial.h"
+#include "sm/Materials/structuralms.h"
+#include "sm/Materials/isolinearelasticmaterial.h"
 
 ///@name Input fields for TutorialMaterial
 //@{
@@ -57,81 +57,71 @@ class TutorialMaterial : public StructuralMaterial
 {
 protected:
     /// Hardening modulus.
-    double H;
+    double H = 0.;
 
     /// Initial (uniaxial) yield stress.
-    double sig0;
-    
+    double sig0 = 0.;
+
     IsotropicLinearElasticMaterial D;
 
 public:
     TutorialMaterial(int n, Domain * d);
-    virtual ~TutorialMaterial();
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &ir);
-    virtual const char *giveInputRecordName() const { return _IFT_TutorialMaterial_Name; }
-    virtual const char *giveClassName() const { return "TutorialMaterial"; }
-    virtual bool isCharacteristicMtrxSymmetric(MatResponseMode rMode) { return true; }
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &ir) override;
+    const char *giveInputRecordName() const override { return _IFT_TutorialMaterial_Name; }
+    const char *giveClassName() const override { return "TutorialMaterial"; }
+    bool isCharacteristicMtrxSymmetric(MatResponseMode rMode) const override { return true; }
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const;
-    // stress computation methods
-    virtual void giveRealStressVector_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedE, TimeStep *tStep);
-    
-    virtual void give3dMaterialStiffnessMatrix(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
 
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
+    FloatArrayF<6> giveRealStressVector_3d(const FloatArrayF<6> &strain, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual void giveThermalDilatationVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep);
+    FloatMatrixF<6,6> give3dMaterialStiffnessMatrix(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
 
-protected:
-    static void giveDeviatoricProjectionMatrix(FloatMatrix &answer);
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 
-    static void computeSphDevPartOf(const FloatArray &sigV, FloatArray &sigSph, FloatArray &sigDev); 
+    FloatArrayF<6> giveThermalDilatationVector(GaussPoint *gp, TimeStep *tStep) const override;
 };
-
 
 
 class TutorialMaterialStatus : public StructuralMaterialStatus
 {
 protected:
     /// Temporary plastic strain (the given iteration)
-    FloatArray tempPlasticStrain;
-    
-    ///  Last equilibriated plastic strain (end of last time step)
-    FloatArray plasticStrain;
-    
-    FloatArray tempDevTrialStress;
+    FloatArrayF<6> tempPlasticStrain;
 
-    double tempK;
-    double k;
+    ///  Last equilibriated plastic strain (end of last time step)
+    FloatArrayF<6> plasticStrain;
+
+    FloatArrayF<6> tempDevTrialStress;
+
+    double tempK = 0.;
+    double k = 0.;
 
 public:
-    TutorialMaterialStatus(int n, Domain * d, GaussPoint * g);
-    virtual ~TutorialMaterialStatus() {}
+    TutorialMaterialStatus(GaussPoint * g);
 
-    const FloatArray &givePlasticStrain() { return plasticStrain; }
+    const FloatArrayF<6> &givePlasticStrain() const { return plasticStrain; }
 
-    void letTempPlasticStrainBe(const FloatArray &values) { tempPlasticStrain = values; }
+    void letTempPlasticStrainBe(const FloatArrayF<6> &values) { tempPlasticStrain = values; }
 
-    double giveK() { return this->k; }
+    double giveK() const { return this->k; }
 
     void letTempKBe(double value) { tempK = value; }
-    
-    void letTempDevTrialStressBe(const FloatArray &values) { tempDevTrialStress = values; }
-    const FloatArray &giveTempDevTrialStress() { return tempDevTrialStress; }
-    
-    virtual const char *giveClassName() const { return "TutorialMaterialStatus"; }
-    
-    virtual void initTempStatus();
 
-    virtual void updateYourself(TimeStep *tStep);
+    void letTempDevTrialStressBe(const FloatArrayF<6> &values) { tempDevTrialStress = values; }
+    const FloatArrayF<6> &giveTempDevTrialStress() const { return tempDevTrialStress; }
+
+    const char *giveClassName() const override { return "TutorialMaterialStatus"; }
+
+    void initTempStatus() override;
+    void updateYourself(TimeStep *tStep) override;
 
     // semi optional methods
-    //virtual void printOutputAt(FILE *file, TimeStep *tStep);
-    
-    //virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    //virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    //void printOutputAt(FILE *file, TimeStep *tStep) override;
+    //void saveContext(DataStream &stream, ContextMode mode) override;
+    //void restoreContext(DataStream &stream, ContextMode mode) override;
 };
 
 } // end namespace oofem

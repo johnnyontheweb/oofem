@@ -41,6 +41,11 @@
 #include <cstring>
 #include <algorithm>
 #include <memory>
+#include <numeric>
+#include <cmath>
+#include <iostream>
+#include <fstream>
+#include <iomanip>
 
 namespace oofem {
 
@@ -54,57 +59,6 @@ void IntArray :: add(int value)
 {
     for (int &x: values) x += value;
 }
-
-
-#ifdef DEBUG
-int &IntArray :: at(int i)
-{
-    this->checkBounds(i);
-    return values [ i - 1 ];
-}
-
-int IntArray :: at(int i) const
-{
-    this->checkBounds(i);
-    return values [ i - 1 ];
-}
-
-int &IntArray :: operator()(int i)
-{
-    this->checkBounds(i);
-    return values [ i ];
-}
-
-const int &IntArray :: operator()(int i) const
-{
-    this->checkBounds(i);
-    return values [ i ];
-}
-
-int &IntArray :: operator[](int i)
-{
-    this->checkBounds(i);
-    return values [ i ];
-}
-
-const int &IntArray :: operator[](int i) const
-{
-    this->checkBounds(i);
-    return values [ i ];
-}
-
-void IntArray :: checkBounds(int i) const
-// Checks that the receiver includes an index i.
-{
-    if ( i < 0 ) {
-        OOFEM_ERROR("array error on index : %d < 0", i);
-    }
-
-    if ( i > this->giveSize() ) {
-        OOFEM_ERROR("array error on index : %d > %d", i, this->giveSize());
-    }
-}
-#endif
 
 
 void IntArray :: resizeWithValues(int n, int allocChunk)
@@ -157,7 +111,7 @@ void IntArray :: followedBy(int b, int allocChunk)
 
 void IntArray :: erase(int _pos)
 {
-#ifdef DEBUG
+#ifndef NDEBUG
     this->checkBounds(_pos);
 #endif
     values.erase(values.begin() + _pos - 1);
@@ -178,7 +132,7 @@ bool IntArray :: containsOnlyZeroes() const
 
 int IntArray :: minimum() const
 {
-#ifdef DEBUG
+#ifndef NDEBUG
     if ( this->isEmpty() ) {
         OOFEM_ERROR("Empty array.");
     }
@@ -189,7 +143,7 @@ int IntArray :: minimum() const
 
 int IntArray :: maximum() const
 {
-#ifdef DEBUG
+#ifndef NDEBUG
     if ( this->isEmpty() ) {
         OOFEM_ERROR("Empty array.");
     }
@@ -250,10 +204,36 @@ void IntArray :: printYourself(const std::string name) const
     printf("\n");
 }
 
+bool IntArray :: isFinite() const
+{
+    for ( int val : values ) {
+        if( !std::isfinite((double)val) ) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void IntArray :: pY() const {
     printYourself();
 }
 
+void IntArray :: printYourselfToFile(const std::string filename, const bool showDimensions) const
+// Prints the receiver to file.
+{
+    std :: ofstream arrayfile (filename);
+    if (arrayfile.is_open()) {
+        if (showDimensions)
+            arrayfile << "IntArray of size : " << this->giveSize() << "\n";
+        for ( int x: *this ) {
+            arrayfile << x << "\t";
+        }
+        arrayfile.close();
+    } else {
+        OOFEM_ERROR("Failed to write to file");
+    }
+}
 
 contextIOResultType IntArray :: storeYourself(DataStream &stream) const
 {
@@ -326,7 +306,7 @@ void IntArray :: insertSorted(int val, int allocChunk)
 }
 
 
-void IntArray :: insertSortedOnce(int val, int allocChunk)
+bool IntArray :: insertSortedOnce(int val, int allocChunk)
 {
     if ( allocChunk > 0 && values.size() + 1 >= values.capacity() ) {
         values.reserve(allocChunk + values.capacity());
@@ -334,7 +314,9 @@ void IntArray :: insertSortedOnce(int val, int allocChunk)
     auto low = std::lower_bound(values.begin(), values.end(), val);
     if ( low == values.end() || *low != val ) {
         values.insert(low, val);
+        return true;
     }
+    return false;
 }
 
 

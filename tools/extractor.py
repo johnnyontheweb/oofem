@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 #
 #  Extractor.py        (c) 2009 Borek Patzak, www.oofem.org
@@ -123,7 +123,7 @@ errorestimate_re = re.compile(r"""
         """, re.X)
 
 
-gprecord_re = re.compile (r"""[ ]*(stresses|strains|status|element_status|curvatures|moments|{)\s*""",re.X)
+gprecord_re = re.compile (r"""[ ]*(stresses|strains|status|element_status|curvatures|moments|jump|traction|{)\s*""",re.X)
 #gpstrain_re = re.compile (r"""[ ]strains\s*([\s+-e\d]+)""",re.X)
 #gpstatus_re = re.compile (r"""status\s.*""", re.X)
 #gpelementstatus_re = re.compile (r"""element_status\s.*""", re.X)
@@ -195,6 +195,21 @@ def elemKwdToString(kwd):
         return 'strains'
     elif (kwd == '13') : 
         return 'damage'
+    elif (kwd == '91') : 
+        return 'F'
+    elif (kwd == '92') : 
+        return 'P'
+    elif (kwd == '39') : 
+        return 'DoH'
+    elif (kwd == '98') : 
+        return 'jump'
+    elif (kwd == '99') : 
+        return 'traction'
+    elif (kwd == '135') : 
+        return 'equivalentTime'
+    
+    
+    
     else:
         # keyword is something else -> allow to use the string directly 
         return kwd;

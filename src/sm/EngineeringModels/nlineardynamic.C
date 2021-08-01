@@ -35,9 +35,9 @@
 #include <iostream>
 using namespace std;
 
-#include "../sm/EngineeringModels/nlineardynamic.h"
-#include "../sm/Elements/nlstructuralelement.h"
-#include "../sm/Elements/structuralelementevaluator.h"
+#include "sm/EngineeringModels/nlineardynamic.h"
+#include "sm/Elements/nlstructuralelement.h"
+#include "sm/Elements/structuralelementevaluator.h"
 #include "nummet.h"
 #include "timestep.h"
 #include "metastep.h"
@@ -91,7 +91,7 @@ NumericalMethod *NonLinearDynamic :: giveNumericalMethod(MetaStep *mStep)
     if ( this->nMethod ) {
         this->nMethod->reinitialize();
     } else {
-        this->nMethod.reset( new NRSolver(this->giveDomain(1), this) );
+        this->nMethod = std::make_unique<NRSolver>(this->giveDomain(1), this);
     }
 
     return this->nMethod.get();
@@ -101,9 +101,7 @@ NumericalMethod *NonLinearDynamic :: giveNumericalMethod(MetaStep *mStep)
 void
 NonLinearDynamic :: updateAttributes(MetaStep *mStep)
 {
-    IRResultType result;                     // Required by IR_GIVE_FIELD macro
-
-    InputRecord *ir = mStep->giveAttributesRecord();
+    auto &ir = mStep->giveAttributesRecord();
 
     StructuralEngngModel :: updateAttributes(mStep);
 
@@ -121,15 +119,10 @@ NonLinearDynamic :: updateAttributes(MetaStep *mStep)
 }
 
 
-IRResultType
-NonLinearDynamic :: initializeFrom(InputRecord *ir)
+void
+NonLinearDynamic :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                   // Required by IR_GIVE_FIELD macro
-
-    result = StructuralEngngModel :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    StructuralEngngModel :: initializeFrom(ir);
 
     int val = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_EngngModel_lstype);
@@ -163,19 +156,18 @@ NonLinearDynamic :: initializeFrom(InputRecord *ir)
     } else if ( initialTimeDiscretization == TD_ThreePointBackward ) {
         OOFEM_LOG_INFO("Selecting Three-point Backward Euler method\n");
     } else {
-        OOFEM_WARNING("Time-stepping scheme not found!");
-        return IRRT_BAD_FORMAT;
+        throw ValueInputException(ir, _IFT_NonLinearDynamic_ddtScheme, "Time-stepping scheme not found!");
     }
 
     MANRMSteps = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, MANRMSteps, _IFT_NRSolver_manrmsteps);
 
-	secOrder = false;
-	IR_GIVE_OPTIONAL_FIELD(ir, secOrder, _IFT_NonLinearDynamic_secondOrder);
-	//if (secOrder && sparseMtrxType > 1) {
-	//	sparseMtrxType = SMT_EigenSparse;
-	//	solverType = ST_EigenLib;
-	//}
+    secOrder = false;
+    IR_GIVE_OPTIONAL_FIELD(ir, secOrder, _IFT_NonLinearDynamic_secondOrder);
+    //if (secOrder && sparseMtrxType > 1) {
+    //	sparseMtrxType = SMT_EigenSparse;
+    //	solverType = ST_EigenLib;
+    //}
 
 #ifdef __PARALLEL_MODE
     if ( isParallel() ) {
@@ -183,15 +175,13 @@ NonLinearDynamic :: initializeFrom(InputRecord *ir)
         communicator = new NodeCommunicator(this, commBuff, this->giveRank(),
                                             this->giveNumberOfProcesses());
 
-        if ( ir->hasField(_IFT_NonLinearDynamic_nonlocalext) ) {
+        if ( ir.hasField(_IFT_NonLinearDynamic_nonlocalext) ) {
             nonlocalExt = 1;
             nonlocCommunicator = new ElementCommunicator(this, commBuff, this->giveRank(),
                                                          this->giveNumberOfProcesses());
         }
     }
 #endif
-
-    return IRRT_OK;
 }
 
 
@@ -260,7 +250,7 @@ TimeStep *NonLinearDynamic :: giveNextStep()
     }
 
     previousStep = std :: move(currentStep);
-    currentStep.reset( new TimeStep(istep, this, mStepNum, totalTime, deltaTtmp, counter, td) );
+    currentStep = std::make_unique<TimeStep>(istep, this, mStepNum, totalTime, deltaTtmp, counter, td);
 
     return currentStep.get();
 }
@@ -312,9 +302,9 @@ void
 NonLinearDynamic :: terminate(TimeStep *tStep)
 {
     this->doStepOutput(tStep);
-    this->printReactionForces(tStep, 1);
+    this->printReactionForces(tStep, 1, this->giveOutputStream());
     fflush( this->giveOutputStream() );
-    this->saveStepContext(tStep);
+    this->saveStepContext(tStep, CM_State | CM_Definition);
 }
 
 void 
@@ -366,158 +356,159 @@ NonLinearDynamic :: initializeYourself(TimeStep *tStep)
                 }
             }
         }
-        this->giveInternalForces(internalForces, true, 1, tStep);
+        this->updateInternalRHS(internalForces, tStep, domain, &this->internalForcesEBENorm);
     }
 }
 
 void
-NonLinearDynamic::proceedStep(int di, TimeStep *tStep)
+NonLinearDynamic :: proceedStep(int di, TimeStep *tStep)
 {
-	// creates system of governing eq's and solves them at given time step
-	// first assemble problem at current time step
+    // creates system of governing eq's and solves them at given time step
+    // first assemble problem at current time step
 
-	int neq = this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering());
+    int neq = this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering());
 
-	// Time-stepping constants
-	this->determineConstants(tStep);
+    // Time-stepping constants
+    this->determineConstants(tStep);
 
-	if (initFlag) {
-		// First assemble problem at current time step.
-		// Option to take into account initial conditions.
-		if (!effectiveStiffnessMatrix) {
-			effectiveStiffnessMatrix.reset(classFactory.createSparseMtrx(sparseMtrxType));
-			// create mass matrix as compcol storage, need only mass multiplication by vector, not linear system solution.
-			massMatrix.reset(classFactory.createSparseMtrx(SMT_CompCol));
-		}
 
-		if (!effectiveStiffnessMatrix || !massMatrix) {
-			OOFEM_ERROR("sparse matrix creation failed");
-		}
 
-		if (nonlocalStiffnessFlag) {
-			if (!effectiveStiffnessMatrix->isAsymmetric()) {
-				OOFEM_ERROR("effectiveStiffnessMatrix does not support asymmetric storage");
-			}
-		}
+    if ( initFlag ) {
+        // First assemble problem at current time step.
+        // Option to take into account initial conditions.
+        if ( !effectiveStiffnessMatrix ) {
+            effectiveStiffnessMatrix = classFactory.createSparseMtrx(sparseMtrxType);
+	    // create mass matrix as compcol storage, need only mass multiplication by vector, not linear system solution.
+            massMatrix = classFactory.createSparseMtrx(SMT_CompCol); 
+        }
 
-		effectiveStiffnessMatrix->buildInternalStructure(this, di, EModelDefaultEquationNumbering());
-		massMatrix->buildInternalStructure(this, di, EModelDefaultEquationNumbering());
+        if ( !effectiveStiffnessMatrix || !massMatrix ) {
+            OOFEM_ERROR("sparse matrix creation failed");
+        }
 
-		if (secOrder) {
-			initialStressMatrix.reset(classFactory.createSparseMtrx(sparseMtrxType));
-			initialStressMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
-		}
+        if ( nonlocalStiffnessFlag ) {
+            if ( !effectiveStiffnessMatrix->isAsymmetric() ) {
+                OOFEM_ERROR("effectiveStiffnessMatrix does not support asymmetric storage");
+            }
+        }
 
-		// Assemble mass matrix
-		this->assemble(*massMatrix, tStep, MassMatrixAssembler(),
-			EModelDefaultEquationNumbering(), this->giveDomain(di));
+        effectiveStiffnessMatrix->buildInternalStructure( this, di, EModelDefaultEquationNumbering() );
+        massMatrix->buildInternalStructure( this, di, EModelDefaultEquationNumbering() );
 
-		// Initialize vectors
-		help.resize(neq);
-		help.zero();
-		rhs.resize(neq);
-		rhs.zero();
-		rhs2.resize(neq);
-		rhs2.zero();
-
-		previousIncrementOfDisplacement = incrementOfDisplacement;
-		previousTotalDisplacement = totalDisplacement;
-		previousVelocityVector = velocityVector;
-		previousAccelerationVector = accelerationVector;
-		previousInternalForces = internalForces;
-
-		forcesVector.resize(neq);
-		forcesVector.zero();
-
-		totIterations = 0;
-		initFlag = 0;
-	}
-
-#ifdef VERBOSE
-	OOFEM_LOG_DEBUG("Assembling load\n");
-#endif
-
-	// Assemble the external forces
-	FloatArray loadVector;
-	loadVector.resize(this->giveNumberOfDomainEquations(di, EModelDefaultEquationNumbering()));
-	loadVector.zero();
-	this->assembleVector(loadVector, tStep, ExternalForceAssembler(),
-		VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(di));
-	this->updateSharedDofManagers(loadVector, EModelDefaultEquationNumbering(), LoadExchangeTag);
-
-	// Assembling the effective load vector
-	for (int i = 1; i <= neq; i++) {
-		//help.beScaled(a2, previousVelocityVector);
-		//help.add(a3, previousAccelerationVector);
-		//help.add(a4 * eta, previousVelocityVector);
-		//help.add(a5 * eta, previousAccelerationVector);
-		//help.add(a6 * eta, previousIncrementOfDisplacement);
-		help.at(i) = a2 * previousVelocityVector.at(i) + a3 *previousAccelerationVector.at(i)
-			+ eta * (a4 * previousVelocityVector.at(i)
-			+ a5 * previousAccelerationVector.at(i)
-			+ a6 * previousIncrementOfDisplacement.at(i));
-	}
-
-	massMatrix->times(help, rhs);
-	//this->timesMtrx(help, rhs2, MassMatrix, this->giveDomain(di), tStep);
-
-	if (delta != 0) {
-		//help.beScaled(a4 * delta, previousVelocityVector);
-		//help.add(a5 * delta, previousAccelerationVector);
-		//help.add(a6 * delta, previousIncrementOfDisplacement);
-		for (int i = 1; i <= neq; i++) {
-			help.at(i) = delta * (a4 * previousVelocityVector.at(i)
-				+ a5 * previousAccelerationVector.at(i)
-				+ a6 * previousIncrementOfDisplacement.at(i));
-		}
-		this->timesMtrx(help, rhs2, TangentStiffnessMatrix, this->giveDomain(di), tStep);
-
-		help.zero();
-		rhs.add(rhs2);
-
-		//this->assembleVector(rhs, tStep, MatrixProductAssembler(TangentAssembler(), help), VM_Total, 
-		//                    EModelDefaultEquationNumbering(), this->giveDomain(1));
-	}
-
-	rhs.add(loadVector);
-	rhs.subtract(previousInternalForces);
-
-	//
-	// Set-up numerical model.
-	//
-	this->giveNumericalMethod(this->giveCurrentMetaStep());
-
-	//
-	// Call numerical model to solve problem.
-	//
-	double loadLevel = 1.0;
-
-	if (totIterations == 0) {
-		incrementOfDisplacement.zero();
-	}
-	NM_Status numMetStatus;
 	if (secOrder) {
-		this->updateComponent(tStep, NonLinearLhs, this->giveDomain(di));
+	    initialStressMatrix = classFactory.createSparseMtrx(sparseMtrxType);
+	    initialStressMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
+	}
+
+	// Assemble mass matrix
+	this->assemble(*massMatrix, tStep, MassMatrixAssembler(),
+	    EModelDefaultEquationNumbering(), this->giveDomain(di));
+
+        // Initialize vectors
+        help.resize(neq);
+        help.zero();
+        rhs.resize(neq);
+        rhs.zero();
+        rhs2.resize(neq);
+        rhs2.zero();
+
+        previousIncrementOfDisplacement = incrementOfDisplacement;
+        previousTotalDisplacement = totalDisplacement;
+        previousVelocityVector = velocityVector;
+        previousAccelerationVector = accelerationVector;
+        previousInternalForces = internalForces;
+
+        forcesVector.resize(neq);
+        forcesVector.zero();
+
+        totIterations = 0;
+        initFlag = 0;
+    }
+
 #ifdef VERBOSE
-		OOFEM_LOG_INFO("Assembling initial stress matrix\n");
+    OOFEM_LOG_DEBUG("Assembling load\n");
 #endif
-		// initialStressMatrix.reset(stiffnessMatrix->GiveCopy());
-		initialStressMatrix->zero();
 
-		this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain(di));
-		std::unique_ptr< SparseMtrx > Kiter;
-		Kiter.reset(effectiveStiffnessMatrix->GiveCopy());
-		Kiter->add(1, *initialStressMatrix);
+    // Assemble the external forces
+    FloatArray loadVector;
+    loadVector.resize( this->giveNumberOfDomainEquations( di, EModelDefaultEquationNumbering() ) );
+    loadVector.zero();
+    this->assembleVector( loadVector, tStep, ExternalForceAssembler(),
+                         VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(di) );
+    this->updateSharedDofManagers(loadVector, EModelDefaultEquationNumbering(), LoadExchangeTag);
 
-		numMetStatus = nMethod->solve(*Kiter, rhs, NULL,
-			totalDisplacement, incrementOfDisplacement, forcesVector,
-			internalForcesEBENorm, loadLevel, SparseNonLinearSystemNM::rlm_total, currentIterations, tStep);
+    // Assembling the effective load vector
+    for ( int i = 1; i <= neq; i++ ) {
+        //help.beScaled(a2, previousVelocityVector);
+        //help.add(a3, previousAccelerationVector);
+        //help.add(a4 * eta, previousVelocityVector);
+        //help.add(a5 * eta, previousAccelerationVector);
+        //help.add(a6 * eta, previousIncrementOfDisplacement);
+        help.at(i) = a2 * previousVelocityVector.at(i) + a3 *previousAccelerationVector.at(i)
+        + eta * ( a4 * previousVelocityVector.at(i)
+                 + a5 * previousAccelerationVector.at(i)
+                 + a6 * previousIncrementOfDisplacement.at(i) );
+    }
 
-	} 	else 	{
-		numMetStatus = nMethod->solve(*effectiveStiffnessMatrix, rhs, NULL,
+    massMatrix->times(help, rhs);
+
+    if ( delta != 0 ) {
+        //help.beScaled(a4 * delta, previousVelocityVector);
+        //help.add(a5 * delta, previousAccelerationVector);
+        //help.add(a6 * delta, previousIncrementOfDisplacement);
+        for ( int i = 1; i <= neq; i++ ) {
+            help.at(i) = delta * ( a4 * previousVelocityVector.at(i)
+                                  + a5 * previousAccelerationVector.at(i)
+                                  + a6 * previousIncrementOfDisplacement.at(i) );
+        }
+        this->timesMtrx(help, rhs2, TangentStiffnessMatrix, this->giveDomain(di), tStep);
+
+        help.zero();
+        rhs.add(rhs2);
+
+        //this->assembleVector(rhs, tStep, MatrixProductAssembler(TangentAssembler(), help), VM_Total, 
+        //                    EModelDefaultEquationNumbering(), this->giveDomain(1));
+    }
+
+    rhs.add(loadVector);
+    rhs.subtract(previousInternalForces);
+
+    //
+    // Set-up numerical model.
+    //
+    this->giveNumericalMethod( this->giveCurrentMetaStep() );
+
+    //
+    // Call numerical model to solve problem.
+    //
+    double loadLevel = 1.0;
+
+    if (totIterations == 0) {
+	incrementOfDisplacement.zero();
+    }
+    NM_Status numMetStatus;
+    if (secOrder) {
+	this->updateComponent(tStep, NonLinearLhs, this->giveDomain(di));
+#ifdef VERBOSE
+	OOFEM_LOG_INFO("Assembling initial stress matrix\n");
+#endif
+	// initialStressMatrix.reset(stiffnessMatrix->GiveCopy());
+	initialStressMatrix->zero();
+
+	this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain(di));
+	std::unique_ptr< SparseMtrx > Kiter;
+	Kiter = effectiveStiffnessMatrix->clone();
+	Kiter->add(1, *initialStressMatrix);
+
+	numMetStatus = nMethod->solve(*Kiter, rhs, NULL,
+	    totalDisplacement, incrementOfDisplacement, forcesVector,
+	    internalForcesEBENorm, loadLevel, SparseNonLinearSystemNM::rlm_total, currentIterations, tStep);
+
+    } else {
+	    numMetStatus = nMethod->solve(*effectiveStiffnessMatrix, rhs, NULL,
                                             totalDisplacement, incrementOfDisplacement, forcesVector,
                                             internalForcesEBENorm, loadLevel, SparseNonLinearSystemNM :: rlm_total, currentIterations, tStep);
-	}
+    }
     if ( !( numMetStatus & NM_Success ) ) {
         OOFEM_ERROR("NRSolver failed to solve problem");
     }
@@ -596,6 +587,79 @@ void NonLinearDynamic :: updateYourself(TimeStep *tStep)
     StructuralEngngModel :: updateYourself(tStep);
 }
 
+
+void NonLinearDynamic :: updateSolution(FloatArray &solutionVector, TimeStep *tStep, Domain *d)
+{
+    // No-op; this still assumes that the solution vector is passed by reference to the NRSolver. 
+    //this->field->update(VM_Total, tStep, solutionVector, EModelDefaultEquationNumbering());
+}
+
+
+void NonLinearDynamic :: updateInternalRHS(FloatArray &answer, TimeStep *tStep, Domain *d, FloatArray *eNorm)
+{
+#ifdef VERBOSE
+    OOFEM_LOG_DEBUG("Updating internal RHS\n");
+#endif
+#ifdef TIME_REPORT
+    Timer timer;
+    timer.startTimer();
+#endif
+    if ( ( currentIterations != 0 ) || ( totIterations == 0 ) ) {
+        StructuralEngngModel::updateInternalRHS(internalForces, tStep, d, eNorm);
+
+        // Updating the residual vector @ NR-solver
+        help.beScaled(a0 + eta * a1, incrementOfDisplacement);
+
+        massMatrix->times(help, rhs2);
+
+        forcesVector = internalForces;
+        forcesVector.add(rhs2);
+        forcesVector.subtract(previousInternalForces);
+
+        if ( delta != 0 ) {
+            help.beScaled(delta * a1, incrementOfDisplacement);
+            this->timesMtrx(help, rhs2, TangentStiffnessMatrix, this->giveDomain(1), tStep);
+            //this->assembleVector(rhs2, tStep, MatrixProductAssembler(TangentAssembler(), help), VM_Total, 
+            //                    EModelDefaultEquationNumbering(), this->giveDomain(1));
+            forcesVector.add(rhs2);
+        }
+    }
+#ifdef TIME_REPORT
+    timer.stopTimer();
+    OOFEM_LOG_DEBUG( "User time consumed by updating internal RHS: %.2fs\n", timer.getUtime() );
+#endif
+}
+
+
+void NonLinearDynamic :: updateMatrix(SparseMtrx &mat, TimeStep *tStep, Domain *d)
+{
+    // Prevent assembly if already assembled ( totIterations > 0 )
+    // Allow if MANRMSteps != 0
+    if ( ( totIterations == 0 ) || MANRMSteps ) {
+#ifdef VERBOSE
+        OOFEM_LOG_DEBUG("Updating effective stiffness matrix\n");
+#endif
+#ifdef TIME_REPORT
+        Timer timer;
+        timer.startTimer();
+#endif
+#if 1
+        mat.zero();
+        this->assemble(mat, tStep, EffectiveTangentAssembler(TangentStiffness, false, 1 + this->delta * a1,  this->a0 + this->eta * this->a1),
+                       EModelDefaultEquationNumbering(), d);
+#else
+        this->assemble(mat, tStep, TangentStiffnessMatrix, EModelDefaultEquationNumbering(), d);
+        mat.times(1. + this->delta * a1);
+        mat.add(this->a0 + this->eta * this->a1, this->massMatrix);
+#endif
+#ifdef TIME_REPORT
+        timer.stopTimer();
+        OOFEM_LOG_DEBUG( "User time consumed by updating nonlinear LHS: %.2fs\n", timer.getUtime() );
+#endif
+    }
+}
+
+
 void NonLinearDynamic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *d)
 //
 // Updates some component, which is used by numerical method
@@ -621,25 +685,25 @@ void NonLinearDynamic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Do
 #endif
 #if 1
             effectiveStiffnessMatrix->zero();
-            this->assemble(*effectiveStiffnessMatrix, tStep, EffectiveTangentAssembler(false, 1 + this->delta * a1,  this->a0 + this->eta * this->a1),
+            this->assemble(*effectiveStiffnessMatrix, tStep, EffectiveTangentAssembler(TangentStiffness, false, 1 + this->delta * a1,  this->a0 + this->eta * this->a1),
                            EModelDefaultEquationNumbering(), d);
-			if (secOrder) {
-				// update internal state - nodes ...
-				for (auto &dman : d->giveDofManagers()) {
-					dman->updateYourself(tStep);
-				}
-				// ... and elements
-				for (auto &elem : d->giveElements()) {
-					elem->updateInternalState(tStep);
-					elem->updateYourself(tStep);
-				}
+	    if (secOrder) {
+		// update internal state - nodes ...
+		for (auto &dman : d->giveDofManagers()) {
+		    dman->updateYourself(tStep);
+		}
+		// ... and elements
+		for (auto &elem : d->giveElements()) {
+		    elem->updateInternalState(tStep);
+		    elem->updateYourself(tStep);
+		}
 //#ifdef VERBOSE
-//				OOFEM_LOG_INFO("Assembling initial stress matrix\n");
+//		OOFEM_LOG_INFO("Assembling initial stress matrix\n");
 //#endif
-//				initialStressMatrix->zero();
-//				this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), d);
-//				effectiveStiffnessMatrix->add(1, *initialStressMatrix); // in 1st step this would be zero
-			}
+//		initialStressMatrix->zero();
+//		this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), d);
+//		effectiveStiffnessMatrix->add(1, *initialStressMatrix); // in 1st step this would be zero
+	    }
 #else
             this->assemble(effectiveStiffnessMatrix, tStep, TangentStiffnessMatrix,
                            EModelDefaultEquationNumbering(), d);
@@ -661,13 +725,13 @@ void NonLinearDynamic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Do
             timer.startTimer();
 #endif
             if ( ( currentIterations != 0 ) || ( totIterations == 0 ) ) {
-                this->giveInternalForces(internalForces, true, d->giveNumber(), tStep);
+                StructuralEngngModel::updateInternalRHS(internalForces, tStep, d, &this->internalForcesEBENorm);
 
                 // Updating the residual vector @ NR-solver
                 help.beScaled(a0 + eta * a1, incrementOfDisplacement);
 
                 massMatrix->times(help, rhs2);
-				// this->timesMtrx(help, rhs2, MassMatrix, this->giveDomain(1), tStep);
+		// this->timesMtrx(help, rhs2, MassMatrix, this->giveDomain(1), tStep);
 
                 forcesVector = internalForces;
                 forcesVector.add(rhs2);
@@ -694,22 +758,20 @@ void NonLinearDynamic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Do
 }
 
 void
-NonLinearDynamic :: printOutputAt(FILE *File, TimeStep *tStep)
+NonLinearDynamic :: printOutputAt(FILE *file, TimeStep *tStep)
 {
-    //FILE* File = this -> giveDomain() -> giveOutputStream() ;
-
     if ( !this->giveDomain(1)->giveOutputManager()->testTimeStepOutput(tStep) ) {
         return; // Do not print even Solution step header
     }
 
-    fprintf( File, "\n\nOutput for time %.8e, solution step number %d\n", tStep->giveTargetTime(), tStep->giveNumber() );
-    fprintf(File, "Equilibrium reached in %d iterations\n\n", currentIterations);
+    fprintf(file, "\n\nOutput for time %.8e, solution step number %d\n", tStep->giveTargetTime(), tStep->giveNumber() );
+    fprintf(file, "Equilibrium reached in %d iterations\n\n", currentIterations);
 
+    nMethod->printState(file);
 
-    nMethod->printState(File);
-
-    this->giveDomain(1)->giveOutputManager()->doDofManOutput(File, tStep);
-    this->giveDomain(1)->giveOutputManager()->doElementOutput(File, tStep);
+    this->giveDomain(1)->giveOutputManager()->doDofManOutput(file, tStep);
+    this->giveDomain(1)->giveOutputManager()->doElementOutput(file, tStep);
+    this->printReactionForces(tStep, 1, file);
 }
 
 void
@@ -723,97 +785,51 @@ NonLinearDynamic :: printDofOutputAt(FILE *stream, Dof *iDof, TimeStep *tStep)
     iDof->printMultipleOutputAt(stream, tStep, dofchar, dofmodes, 3);
 }
 
-contextIOResultType NonLinearDynamic :: saveContext(DataStream *stream, ContextMode mode, void *obj)
+void NonLinearDynamic :: saveContext(DataStream &stream, ContextMode mode)
 {
-    int closeFlag = 0;
     contextIOResultType iores;
-    FILE *file = NULL;
 
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, this->giveCurrentStep()->giveNumber(),
-                                    this->giveCurrentStep()->giveVersion(), contextMode_write) ) {
-            THROW_CIOERR(CIO_IOERR);
-        }
+    EngngModel :: saveContext(stream, mode);
 
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
-
-    if ( ( iores = EngngModel :: saveContext(stream, mode) ) != CIO_OK ) {
+    if ( ( iores = incrementOfDisplacement.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = incrementOfDisplacement.storeYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = totalDisplacement.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = totalDisplacement.storeYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = velocityVector.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = velocityVector.storeYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = accelerationVector.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    if ( ( iores = accelerationVector.storeYourself(*stream) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete stream;
-        stream = NULL;
-    }
-
-    return CIO_OK;
 }
 
 
-
-contextIOResultType NonLinearDynamic :: restoreContext(DataStream *stream, ContextMode mode, void *obj)
+void NonLinearDynamic :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    int closeFlag = 0;
-    int istep, iversion;
     contextIOResultType iores;
-    FILE *file = NULL;
 
-    this->resolveCorrespondingStepNumber(istep, iversion, obj);
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, istep, iversion, contextMode_read) ) {
-            THROW_CIOERR(CIO_IOERR);
-        }
+    EngngModel :: restoreContext(stream, mode);
 
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
-
-    if ( ( iores = EngngModel :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
+    if ( ( iores = incrementOfDisplacement.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = incrementOfDisplacement.restoreYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = totalDisplacement.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = totalDisplacement.restoreYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = velocityVector.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = velocityVector.restoreYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = accelerationVector.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    if ( ( iores = accelerationVector.restoreYourself(*stream) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete stream;
-        stream = NULL;
-    } // ensure consistent records
-
-    return CIO_OK;
 }
 
 
@@ -972,14 +988,14 @@ LoadBalancer *
 NonLinearDynamic :: giveLoadBalancer()
 {
     if ( lb ) {
-        return lb;
+        return lb.get();
     }
 
     if ( loadBalancingFlag ) {
         lb = classFactory.createLoadBalancer( "parmetis", this->giveDomain(1) );
-        return lb;
+        return lb.get();
     } else {
-        return NULL;
+        return nullptr;
     }
 }
 
@@ -988,14 +1004,14 @@ LoadBalancerMonitor *
 NonLinearDynamic :: giveLoadBalancerMonitor()
 {
     if ( lbm ) {
-        return lbm;
+        return lbm.get();
     }
 
     if ( loadBalancingFlag ) {
         lbm = classFactory.createLoadBalancerMonitor( "wallclock", this);
-        return lbm;
+        return lbm.get();
     } else {
-        return NULL;
+        return nullptr;
     }
 }
 #endif

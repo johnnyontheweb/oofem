@@ -35,49 +35,50 @@
 #include "classfactory.h"
 
 #include <string>
+#include <algorithm>
 #include <cctype>
 
+// unique_ptrs need the base 
+#include "engngm.h"
 #include "masterdof.h"
 #include "slavedof.h"
 #include "simpleslavedof.h"
 #include "activedof.h"
+
+#include "sparsemtrx.h"
+#include "sparsegeneigenvalsystemnm.h"
+#include "sparsenonlinsystemnm.h"
+#include "sparselinsystemnm.h"
+#include "mesherinterface.h"
+#include "errorestimator.h"
+#include "materialmappingalgorithm.h"
+#include "function.h"
+#include "material.h"
+#include "crosssection.h"
+#include "nonlocalbarrier.h"
+#include "exportmodule.h"
+#include "initmodule.h"
+#include "loadbalancer.h"
 
 #include "gaussintegrationrule.h"
 #include "lobattoir.h"
 
 #include "initialcondition.h"
 
-#include "subspaceit.h"
-#include "inverseit.h"
-#ifdef __SLEPC_MODULE
- #include "slepcsolver.h"
-#endif
-#include "eigensolver.h"
+// Experimental stuff
+#include "xfem/nucleationcriterion.h"
+#include "xfem/xfemmanager.h"
+#include "xfem/enrichmentfunction.h"
+#include "xfem/enrichmentitem.h"
+#include "xfem/propagationlaw.h"
+#include "xfem/enrichmentfunction.h"
+#include "xfem/enrichmentitem.h"
+#include "topologydescription.h"
+#include "geometry.h"
+#include "fracturemanager.h"
+#include "contact/contactmanager.h"
+#include "contact/contactdefinition.h"
 
-#include "nodalaveragingrecoverymodel.h"
-#include "zznodalrecoverymodel.h"
-#include "sprnodalrecoverymodel.h"
-
-// mesher interfaces
-#include "t3dinterface.h"
-#include "targe2interface.h"
-#include "subdivision.h"
-#include "freeminterface.h"
-
-#include "mmaclosestiptransfer.h"
-#include "mmaleastsquareprojection.h"
-#include "mmashapefunctprojection.h"
-#include "mmacontainingelementprojection.h" ///@todo This doesn't seem to be included? It is broken?
-
-// Helper macro for creating objects
-#define CF_CREATE(list, ...) \
-    auto creator = list.find(conv2lower(name));\
-    return creator != list.end() ? creator->second(__VA_ARGS__) : nullptr;
-
-// Helper macro for storing objects
-#define CF_STORE(list) \
-    list[ conv2lower(name) ] = creator;\
-    return true;
 
 namespace oofem {
 ClassFactory &GiveClassFactory()
@@ -94,11 +95,45 @@ std::string pid{ "" };
 
 std :: string conv2lower(std :: string input)
 {
-    for ( std :: size_t i = 0; i < input.size(); i++ ) {
-        input [ i ] = (char)std :: tolower(input [ i ]);
-    }
+    std::transform(input.begin(), input.end(), input.begin(), ::tolower);
     return input;
 }
+
+// Non-string names (should be changed eventually):
+template< typename C, typename T, typename V, typename ... As> C *cf_create2(const T &list, V name, As ... args)
+{
+    auto creator = list.find(name);
+    return creator != list.end() ? creator->second(args...) : nullptr;
+}
+
+// Helper for storing creators
+template< typename T, typename V, typename C> bool cf_store2(T &list, V name, C &creator)
+{
+    list[ name ] = creator;
+    return true;
+}
+
+// Non string names (should be replaced with eventually)
+template< typename C, typename T, typename V, typename ... As> std::unique_ptr<C> cf_create4(const T &list, V name, As ... args)
+{
+    auto creator = list.find(name);
+    return creator != list.end() ? creator->second(args...) : nullptr;
+}
+
+// Helper for creating objects
+template< typename C, typename T, typename ... As> std::unique_ptr<C> cf_create(const T &list, const char *name, As ... args)
+{
+    auto creator = list.find(conv2lower(name));
+    return creator != list.end() ? creator->second(args...) : nullptr;
+}
+
+// Helper for storing creators
+template< typename T, typename C> bool cf_store(T &list, const char *name, C &creator)
+{
+    list[ conv2lower(name) ] = creator;
+    return true;
+}
+
 
 ClassFactory :: ClassFactory()
 {
@@ -109,388 +144,378 @@ ClassFactory :: ClassFactory()
     dofList [ DT_active ] = dofCreator< ActiveDof >;
 }
 
-SparseMtrx *ClassFactory :: createSparseMtrx(SparseMtrxType name)
+std::unique_ptr<SparseMtrx> ClassFactory :: createSparseMtrx(SparseMtrxType name)
 {
-    //CF_CREATE(sparseMtrxList)
-    return ( sparseMtrxList.count(name) == 1 ) ? sparseMtrxList [ name ]() : NULL;
+    return cf_create4<SparseMtrx>(sparseMtrxList, name);
 }
 
-bool ClassFactory :: registerSparseMtrx( SparseMtrxType name, SparseMtrx * ( *creator )( ) )
+bool ClassFactory :: registerSparseMtrx( SparseMtrxType name, std::unique_ptr<SparseMtrx> ( *creator )( ) )
 {
-    //CF_STORE(sparseMtrxList);
-    sparseMtrxList[ name ] = creator;
-    return true;
+    return cf_store2(sparseMtrxList, name, creator);
 }
 
 Dof *ClassFactory :: createDof(dofType name, DofIDItem dofid, DofManager *dman)
 {
-    //CF_CREATE(dofList, dofid, dman)
-    return ( dofList.count(name) == 1 ) ? dofList [ name ](dofid, dman) : NULL;
+    return cf_create2<Dof>(dofList, name, dofid, dman);
 }
 
-SparseLinearSystemNM *ClassFactory :: createSparseLinSolver(LinSystSolverType name, Domain *domain, EngngModel *emodel)
+std::unique_ptr<SparseLinearSystemNM> ClassFactory :: createSparseLinSolver(LinSystSolverType name, Domain *domain, EngngModel *emodel)
 {
-    //CF_CREATE(sparseLinSolList, domain, emodel)
-    return ( sparseLinSolList.count(name) == 1 ) ? sparseLinSolList [ name ](domain, emodel) : NULL;
+    return cf_create4<SparseLinearSystemNM>(sparseLinSolList, name, domain, emodel);
 }
 
-bool ClassFactory :: registerSparseLinSolver( LinSystSolverType name, SparseLinearSystemNM * ( *creator )( Domain *, EngngModel * ) )
+bool ClassFactory :: registerSparseLinSolver( LinSystSolverType name, std::unique_ptr<SparseLinearSystemNM> ( *creator )( Domain *, EngngModel * ) )
 {
-    //CF_STORE(sparseLinSolList)
-    sparseLinSolList[ name ] = creator;
-    return true;
+    return cf_store2(sparseLinSolList, name, creator);
 }
 
-ErrorEstimator *ClassFactory :: createErrorEstimator(ErrorEstimatorType name, int number, Domain *domain)
+std::unique_ptr<ErrorEstimator> ClassFactory :: createErrorEstimator(ErrorEstimatorType name, int number, Domain *domain)
 {
-    //CF_CREATE(errEstList, number, domain)
-    return ( errEstList.count(name) == 1 ) ? errEstList [ name ](number, domain) : NULL;
+    return cf_create4<ErrorEstimator>(errEstList, name, number, domain);
 }
 
-bool ClassFactory :: registerErrorEstimator( ErrorEstimatorType name, ErrorEstimator * ( *creator )( int, Domain * ) )
+bool ClassFactory :: registerErrorEstimator( ErrorEstimatorType name, std::unique_ptr<ErrorEstimator> ( *creator )( int, Domain * ) )
 {
-    //CF_STORE(errEstList)
-    errEstList[ name ] = creator;
-    return true;
+    return cf_store2(errEstList, name, creator);
 }
 
-InitialCondition *ClassFactory :: createInitialCondition(const char *name, int number, Domain *domain)
+std::unique_ptr<InitialCondition> ClassFactory :: createInitialCondition(const char *name, int number, Domain *domain)
 {
     if ( conv2lower(name).compare("initialcondition") == 0 ) {
-        return new InitialCondition(number, domain);
+        return std::make_unique<InitialCondition>(number, domain);
     }
-    return NULL;
+    return nullptr;
 }
 
-NodalRecoveryModel *ClassFactory :: createNodalRecoveryModel(NodalRecoveryModel :: NodalRecoveryModelType type, Domain *domain)
+bool ClassFactory :: registerNodalRecoveryModel( NodalRecoveryModel :: NodalRecoveryModelType name, std::unique_ptr<NodalRecoveryModel> ( *creator )(Domain *) )
 {
-    //CF_CREATE(nodalRecoveryModelList, domain)
-    if ( type == NodalRecoveryModel :: NRM_NodalAveraging ) {
-        return new NodalAveragingRecoveryModel(domain);
-    } else if ( type == NodalRecoveryModel :: NRM_ZienkiewiczZhu ) {
-        return new ZZNodalRecoveryModel(domain);
-    } else if ( type == NodalRecoveryModel :: NRM_SPR ) {
-        return new SPRNodalRecoveryModel(domain);
-    }
-    return NULL;
+    return cf_store2(nodalRecoveryModelList, name, creator);
+}
+
+std::unique_ptr<NodalRecoveryModel> ClassFactory :: createNodalRecoveryModel(NodalRecoveryModel :: NodalRecoveryModelType name, Domain *domain)
+{
+    return cf_create4<NodalRecoveryModel>(nodalRecoveryModelList, name, domain);
 }
 
 
-Element *ClassFactory :: createElement(const char *name, int number, Domain *domain)
+std::unique_ptr<Element> ClassFactory :: createElement(const char *name, int number, Domain *domain)
 {
-    CF_CREATE(elemList, number, domain)
+    return cf_create<Element>(elemList, name,number, domain);
 }
 
-bool ClassFactory :: registerElement( const char *name, Element * ( *creator )( int, Domain * ) )
+bool ClassFactory :: registerElement( const char *name, std::unique_ptr<Element> ( *creator )( int, Domain * ) )
 {
-    CF_STORE(elemList)
+    return cf_store(elemList, name, creator);
 }
 
-DofManager *ClassFactory :: createDofManager(const char *name, int number, Domain *domain)
+std::unique_ptr<DofManager> ClassFactory :: createDofManager(const char *name, int number, Domain *domain)
 {
-    CF_CREATE(dofmanList, number, domain)
+    return cf_create<DofManager>(dofmanList, name, number, domain);
 }
 
-bool ClassFactory :: registerDofManager( const char *name, DofManager * ( *creator )( int, Domain * ) )
+bool ClassFactory :: registerDofManager( const char *name, std::unique_ptr<DofManager> ( *creator )( int, Domain * ) )
 {
-    CF_STORE(dofmanList)
+    return cf_store(dofmanList, name, creator);
 }
 
-GeneralBoundaryCondition *ClassFactory :: createBoundaryCondition(const char *name, int number, Domain *domain)
+std::unique_ptr<GeneralBoundaryCondition> ClassFactory :: createBoundaryCondition(const char *name, int number, Domain *domain)
 {
-    CF_CREATE(bcList, number, domain)
+    return cf_create<GeneralBoundaryCondition>(bcList, name, number, domain);
 }
 
-bool ClassFactory :: registerBoundaryCondition( const char *name, GeneralBoundaryCondition * ( *creator )( int, Domain * ) )
+bool ClassFactory :: registerBoundaryCondition( const char *name, std::unique_ptr<GeneralBoundaryCondition> ( *creator )( int, Domain * ) )
 {
-    CF_STORE(bcList)
+    return cf_store(bcList, name, creator);
 }
 
-CrossSection *ClassFactory :: createCrossSection(const char *name, int number, Domain *domain)
+std::unique_ptr<CrossSection> ClassFactory :: createCrossSection(const char *name, int number, Domain *domain)
 {
-    CF_CREATE(csList, number, domain)
+    return cf_create<CrossSection>(csList, name, number, domain);
 }
 
-bool ClassFactory :: registerCrossSection( const char *name, CrossSection * ( *creator )( int, Domain * ) )
+bool ClassFactory :: registerCrossSection( const char *name, std::unique_ptr<CrossSection> ( *creator )( int, Domain * ) )
 {
-    CF_STORE(csList)
+    return cf_store(csList, name, creator);
 }
 
-Material *ClassFactory :: createMaterial(const char *name, int number, Domain *domain)
+std::unique_ptr<Material> ClassFactory :: createMaterial(const char *name, int number, Domain *domain)
 {
-    CF_CREATE(matList, number, domain)
+    return cf_create<Material>(matList, name, number, domain);
 }
 
-bool ClassFactory :: registerMaterial( const char *name, Material * ( *creator )( int, Domain * ) )
+bool ClassFactory :: registerMaterial( const char *name, std::unique_ptr<Material> ( *creator )( int, Domain * ) )
 {
-    CF_STORE(matList)
+    return cf_store(matList, name, creator);
 }
 
-EngngModel *ClassFactory :: createEngngModel(const char *name, int number, EngngModel *master)
+std::unique_ptr<EngngModel> ClassFactory :: createEngngModel(const char *name, int number, EngngModel *master)
 {
-    CF_CREATE(engngList, number, master)
+    return cf_create<EngngModel>(engngList, name, number, master);
 }
 
-bool ClassFactory :: registerEngngModel( const char *name, EngngModel * ( *creator )( int, EngngModel * ) )
+bool ClassFactory :: registerEngngModel( const char *name, std::unique_ptr<EngngModel> ( *creator )( int, EngngModel * ) )
 {
-    CF_STORE(engngList)
+    return cf_store(engngList, name, creator);
 }
 
-Function *ClassFactory :: createFunction(const char *name, int number, Domain *domain)
+std::unique_ptr<Function> ClassFactory :: createFunction(const char *name, int number, Domain *domain)
 {
-    CF_CREATE(funcList, number, domain)
+    return cf_create<Function>(funcList, name, number, domain);
 }
 
-bool ClassFactory :: registerFunction( const char *name, Function * ( *creator )( int, Domain * ) )
+bool ClassFactory :: registerFunction( const char *name, std::unique_ptr<Function> ( *creator )( int, Domain * ) )
 {
-    CF_STORE(funcList)
+    return cf_store(funcList, name, creator);
 }
 
-NonlocalBarrier *ClassFactory :: createNonlocalBarrier(const char *name, int number, Domain *domain)
+std::unique_ptr<NonlocalBarrier> ClassFactory :: createNonlocalBarrier(const char *name, int number, Domain *domain)
 {
-    CF_CREATE(nlbList, number, domain)
+    return cf_create<NonlocalBarrier>(nlbList, name, number, domain);
 }
 
-bool ClassFactory :: registerNonlocalBarrier( const char *name, NonlocalBarrier * ( *creator )( int, Domain * ) )
+bool ClassFactory :: registerNonlocalBarrier( const char *name, std::unique_ptr<NonlocalBarrier> ( *creator )( int, Domain * ) )
 {
-    CF_STORE(nlbList)
+    return cf_store(nlbList, name, creator);
 }
 
-ExportModule *ClassFactory :: createExportModule(const char *name, int number, EngngModel *emodel)
+std::unique_ptr<ExportModule> ClassFactory :: createExportModule(const char *name, int number, EngngModel *emodel)
 {
-    CF_CREATE(exportList, number, emodel)
+    return cf_create<ExportModule>(exportList, name, number, emodel);
 }
 
-bool ClassFactory :: registerExportModule( const char *name, ExportModule * ( *creator )( int, EngngModel * ) )
+bool ClassFactory :: registerExportModule( const char *name, std::unique_ptr<ExportModule> ( *creator )( int, EngngModel * ) )
 {
-    CF_STORE(exportList)
+    return cf_store(exportList, name, creator);
 }
 
-SparseNonLinearSystemNM *ClassFactory :: createNonLinearSolver(const char *name, Domain *domain, EngngModel *emodel)
+std::unique_ptr<Monitor> ClassFactory :: createMonitor(const char *name, int number)
 {
-    CF_CREATE(nonlinList, domain, emodel)
+    return cf_create<Monitor>(monitorList, name, number);
 }
 
-bool ClassFactory :: registerSparseNonLinearSystemNM( const char *name, SparseNonLinearSystemNM * ( *creator )( Domain *, EngngModel * ) )
+bool ClassFactory :: registerMonitor( const char *name, std::unique_ptr<Monitor> ( *creator )( int ) )
 {
-    CF_STORE(nonlinList)
+    return cf_store(monitorList, name, creator);
 }
 
-InitModule *ClassFactory :: createInitModule(const char *name, int number, EngngModel *emodel)
+std::unique_ptr<SparseNonLinearSystemNM>ClassFactory :: createNonLinearSolver(const char *name, Domain *domain, EngngModel *emodel)
 {
-    CF_CREATE(initList, number, emodel)
+    return cf_create<SparseNonLinearSystemNM>(nonlinList, name, domain, emodel);
 }
 
-bool ClassFactory :: registerInitModule( const char *name, InitModule * ( *creator )( int, EngngModel * ) )
+bool ClassFactory :: registerSparseNonLinearSystemNM(const char *name, std::unique_ptr<SparseNonLinearSystemNM> ( *creator )( Domain *, EngngModel * ) )
 {
-    CF_STORE(initList)
+    return cf_store(nonlinList, name, creator);
 }
 
-TopologyDescription *ClassFactory :: createTopology(const char *name, Domain *domain)
+std::unique_ptr<InitModule> ClassFactory :: createInitModule(const char *name, int number, EngngModel *emodel)
 {
-    CF_CREATE(topologyList, domain)
+    return cf_create<InitModule>(initList, name, number, emodel);
 }
 
-bool ClassFactory :: registerTopologyDescription( const char *name, TopologyDescription * ( *creator )( Domain * ) )
+bool ClassFactory :: registerInitModule(const char *name, std::unique_ptr<InitModule> ( *creator )( int, EngngModel * ) )
 {
-    CF_STORE(topologyList)
+    return cf_store(initList, name, creator);
+}
+
+std::unique_ptr<TopologyDescription> ClassFactory :: createTopology(const char *name, Domain *domain)
+{
+    return cf_create<TopologyDescription>(topologyList, name, domain);
+}
+
+bool ClassFactory :: registerTopologyDescription(const char *name, std::unique_ptr<TopologyDescription> ( *creator )( Domain * ) )
+{
+    return cf_store(topologyList, name, creator);
 }
 
 
 // XFEM:
-EnrichmentItem *ClassFactory :: createEnrichmentItem(const char *name, int number, XfemManager *xm, Domain *domain)
+std::unique_ptr<EnrichmentItem> ClassFactory :: createEnrichmentItem(const char *name, int number, XfemManager *xm, Domain *domain)
 {
-    CF_CREATE(enrichItemList, number, xm, domain)
+    return cf_create<EnrichmentItem>(enrichItemList, name, number, xm, domain);
 }
 
-bool ClassFactory :: registerEnrichmentItem( const char *name, EnrichmentItem * ( *creator )( int, XfemManager *, Domain * ) )
+bool ClassFactory :: registerEnrichmentItem(const char *name, std::unique_ptr<EnrichmentItem> ( *creator )( int, XfemManager *, Domain * ) )
 {
-    CF_STORE(enrichItemList)
+    return cf_store(enrichItemList, name, creator);
 }
 
-EnrichmentFunction *ClassFactory :: createEnrichmentFunction(const char *name, int number, Domain *domain)
+std::unique_ptr<NucleationCriterion> ClassFactory :: createNucleationCriterion(const char *name, Domain *domain)
 {
-    CF_CREATE(enrichFuncList, number, domain)
+    return cf_create<NucleationCriterion>(nucleationCritList, name, domain);
 }
 
-bool ClassFactory :: registerEnrichmentFunction( const char *name, EnrichmentFunction * ( *creator )( int, Domain * ) )
+bool ClassFactory :: registerNucleationCriterion(const char *name, std::unique_ptr<NucleationCriterion> ( *creator )( Domain * ) )
 {
-    CF_STORE(enrichFuncList)
+    return cf_store(nucleationCritList, name, creator);
 }
 
-EnrichmentDomain *ClassFactory :: createEnrichmentDomain(const char *name)
+std::unique_ptr<EnrichmentFunction> ClassFactory :: createEnrichmentFunction(const char *name, int number, Domain *domain)
 {
-    CF_CREATE(enrichmentDomainList)
+    return cf_create<EnrichmentFunction>(enrichFuncList, name, number, domain);
 }
 
-bool ClassFactory :: registerEnrichmentDomain( const char *name, EnrichmentDomain * ( *creator )( ) )
+bool ClassFactory :: registerEnrichmentFunction(const char *name, std::unique_ptr<EnrichmentFunction> ( *creator )( int, Domain * ) )
 {
-    CF_STORE(enrichmentDomainList)
+    return cf_store(enrichFuncList, name, creator);
 }
 
-EnrichmentFront *ClassFactory :: createEnrichmentFront(const char *name)
+#if 0
+std::unique_ptr<EnrichmentDomain> ClassFactory :: createEnrichmentDomain(const char *name)
 {
-    CF_CREATE(enrichmentFrontList)
+    return cf_create<EnrichmentDomain>(enrichmentDomainList, name);
 }
 
-bool ClassFactory :: registerEnrichmentFront( const char *name, EnrichmentFront * ( *creator )( ) )
+bool ClassFactory :: registerEnrichmentDomain(const char *name, std::unique_ptr<EnrichmentDomain> ( *creator )( ) )
 {
-    CF_STORE(enrichmentFrontList)
+    return cf_store(enrichmentDomainList, name, creator);
+}
+#endif
+
+std::unique_ptr<EnrichmentFront> ClassFactory :: createEnrichmentFront(const char *name)
+{
+    return cf_create<EnrichmentFront>(enrichmentFrontList, name);
 }
 
-PropagationLaw *ClassFactory :: createPropagationLaw(const char *name)
+bool ClassFactory :: registerEnrichmentFront(const char *name, std::unique_ptr<EnrichmentFront> ( *creator )( ) )
 {
-    CF_CREATE(propagationLawList)
+    return cf_store(enrichmentFrontList, name, creator);
 }
 
-bool ClassFactory :: registerPropagationLaw( const char *name, PropagationLaw * ( *creator )( ) )
+std::unique_ptr<PropagationLaw> ClassFactory :: createPropagationLaw(const char *name)
 {
-    CF_STORE(propagationLawList)
+    return cf_create<PropagationLaw>(propagationLawList, name);
 }
 
-BasicGeometry *ClassFactory :: createGeometry(const char *name)
+bool ClassFactory :: registerPropagationLaw( const char *name, std::unique_ptr<PropagationLaw> ( *creator )( ) )
 {
-    CF_CREATE(geometryList)
+    return cf_store(propagationLawList, name, creator);
 }
 
-bool ClassFactory :: registerGeometry( const char *name, BasicGeometry * ( *creator )( ) )
+std::unique_ptr<BasicGeometry> ClassFactory :: createGeometry(const char *name)
 {
-    CF_STORE(geometryList)
+    return cf_create<BasicGeometry>(geometryList, name);
 }
 
-XfemManager *ClassFactory :: createXfemManager(const char *name, Domain *domain)
+bool ClassFactory :: registerGeometry(const char *name, std::unique_ptr<BasicGeometry> ( *creator )( ) )
 {
-    CF_CREATE(xManList, domain)
+    return cf_store(geometryList, name, creator);
 }
 
-bool ClassFactory :: registerXfemManager( const char *name, XfemManager * ( *creator )( Domain * ) )
+std::unique_ptr<XfemManager> ClassFactory :: createXfemManager(const char *name, Domain *domain)
 {
-    CF_STORE(xManList)
+    return cf_create<XfemManager>(xManList, name, domain);
+}
+
+bool ClassFactory :: registerXfemManager(const char *name, std::unique_ptr<XfemManager> ( *creator )( Domain * ) )
+{
+    return cf_store(xManList, name, creator);
 }
 
 
 // Failure module:
 
-FailureCriteria *ClassFactory :: createFailureCriteria(const char *name, int number, FractureManager *fracManager)
+std::unique_ptr<FailureCriteria> ClassFactory :: createFailureCriteria(const char *name, int number, FractureManager *fracManager)
 {
-    CF_CREATE(failureCriteriaList, number, fracManager)
+    return cf_create<FailureCriteria>(failureCriteriaList, name, number, fracManager);
 }
 
-bool ClassFactory :: registerFailureCriteria( const char *name, FailureCriteria * ( *creator )( int, FractureManager * ) )
+bool ClassFactory :: registerFailureCriteria( const char *name, std::unique_ptr<FailureCriteria> ( *creator )( int, FractureManager * ) )
 {
-    CF_STORE(failureCriteriaList)
+    return cf_store(failureCriteriaList, name, creator);
 }
 
-FailureCriteriaStatus *ClassFactory :: createFailureCriteriaStatus(const char *name, int number, FailureCriteria *fc)
+std::unique_ptr<FailureCriteriaStatus> ClassFactory :: createFailureCriteriaStatus(const char *name, int number, FailureCriteria *fc)
 {
-    CF_CREATE(failureCriteriaStatusList, number, fc)
+    return cf_create<FailureCriteriaStatus>(failureCriteriaStatusList, name, number, fc);
 }
 
-bool ClassFactory :: registerFailureCriteriaStatus( const char *name, FailureCriteriaStatus * ( *creator )( int, FailureCriteria * ) )
+bool ClassFactory :: registerFailureCriteriaStatus(const char *name, std::unique_ptr<FailureCriteriaStatus> ( *creator )( int, FailureCriteria * ) )
 {
-    CF_STORE(failureCriteriaStatusList)
-}
-
-
-ContactManager *ClassFactory :: createContactManager(const char *name, Domain *domain)
-{
-    CF_CREATE(contactManList, domain)
-}
-
-bool ClassFactory :: registerContactManager( const char *name, ContactManager * ( *creator )( Domain * ) )
-{
-    CF_STORE(contactManList)
+    return cf_store(failureCriteriaStatusList, name, creator);
 }
 
 
-ContactDefinition *ClassFactory :: createContactDefinition(const char *name, ContactManager *cMan)
+std::unique_ptr<ContactManager> ClassFactory :: createContactManager(const char *name, Domain *domain)
 {
-    CF_CREATE(contactDefList, cMan)
+    return cf_create<ContactManager>(contactManList, name, domain);
 }
 
-bool ClassFactory :: registerContactDefinition( const char *name, ContactDefinition * ( *creator )( ContactManager * ) )
+bool ClassFactory :: registerContactManager(const char *name, std::unique_ptr<ContactManager> ( *creator )( Domain * ) )
 {
-    CF_STORE(contactDefList)
+    return cf_store(contactManList, name, creator);
 }
 
 
-
-SparseGeneralEigenValueSystemNM *ClassFactory :: createGeneralizedEigenValueSolver(GenEigvalSolverType st, Domain *domain, EngngModel *emodel)
+std::unique_ptr<ContactDefinition> ClassFactory :: createContactDefinition(const char *name, ContactManager *cMan)
 {
-    //CF_CREATE(mesherInterfaceList, domain)
-    if ( st == GES_SubspaceIt ) {
-        return new SubspaceIteration(domain, emodel);
-    } else if ( st == GES_InverseIt ) {
-        return new InverseIteration(domain, emodel);
-    }
-#ifdef __SLEPC_MODULE
-    else if ( st == GES_SLEPc ) {
-        return new SLEPcSolver(domain, emodel);
-    }
-#endif
-	else if (st == GES_Eigen) {
-		return new EigenSolver(domain, emodel);
-	}
-    return NULL;
+    return cf_create<ContactDefinition>(contactDefList, name, cMan);
 }
 
-IntegrationRule *ClassFactory :: createIRule(IntegrationRuleType type, int number, Element *e)
+bool ClassFactory :: registerContactDefinition( const char *name, std::unique_ptr<ContactDefinition> ( *creator )( ContactManager * ) )
+{
+    return cf_store(contactDefList, name, creator);
+}
+
+std::unique_ptr<SparseGeneralEigenValueSystemNM> ClassFactory :: createGeneralizedEigenValueSolver(GenEigvalSolverType name, Domain *domain, EngngModel *emodel)
+{
+    return cf_create4<SparseGeneralEigenValueSystemNM>(generalizedEigenValueSolverList, name, domain, emodel);
+}
+
+bool ClassFactory :: registerGeneralizedEigenValueSolver( GenEigvalSolverType name, std::unique_ptr<SparseGeneralEigenValueSystemNM> ( *creator )(Domain *, EngngModel *) )
+{
+    return cf_store2(generalizedEigenValueSolverList, name, creator);
+}
+
+std::unique_ptr<IntegrationRule> ClassFactory :: createIRule(IntegrationRuleType type, int number, Element *e)
 {
     if ( type == IRT_Gauss ) {
-        return new GaussIntegrationRule(number, e);
+        return std::make_unique<GaussIntegrationRule>(number, e);
     } else if ( type == IRT_Lobatto ) {
-        return new LobattoIntegrationRule(number, e);
+        return std::make_unique<LobattoIntegrationRule>(number, e);
     }
-    return NULL;
+    return nullptr;
 }
 
-MaterialMappingAlgorithm *ClassFactory :: createMaterialMappingAlgorithm(MaterialMappingAlgorithmType type)
+bool ClassFactory :: registerMaterialMappingAlgorithm( MaterialMappingAlgorithmType name, std::unique_ptr<MaterialMappingAlgorithm> ( *creator )( ) )
 {
-    //CF_CREATE(materialMappingList)
-    if ( type == MMA_ClosestPoint ) {
-        return new MMAClosestIPTransfer();
-    } else if ( type == MMA_LeastSquareProjection ) {
-        return new MMALeastSquareProjection();
-    } else if ( type == MMA_ShapeFunctionProjection ) {
-        return new MMAShapeFunctProjection();
-    }
-    return NULL;
+    return cf_store2(materialMappingList, name, creator);
 }
 
-MesherInterface *ClassFactory :: createMesherInterface(MeshPackageType type, Domain *domain)
+std::unique_ptr<MaterialMappingAlgorithm> ClassFactory :: createMaterialMappingAlgorithm(MaterialMappingAlgorithmType name)
 {
-    //CF_CREATE(mesherInterfaceList, domain)
-    if ( type == MPT_T3D ) {
-        return new T3DInterface(domain);
-    } else if ( type == MPT_TARGE2 ) {
-        return new Targe2Interface(domain);
-    } else if ( type == MPT_FREEM ) {
-        return new FreemInterface(domain);
-    } else if ( type == MPT_SUBDIVISION ) {
-        return new Subdivision(domain);
-    }
-    return NULL;
+    return cf_create4<MaterialMappingAlgorithm>(materialMappingList, name);
+}
+
+bool ClassFactory :: registerMesherInterface( MeshPackageType name, std::unique_ptr<MesherInterface> ( *creator )( Domain * ) )
+{
+    return cf_store2(mesherInterfaceList, name, creator);
+}
+
+std::unique_ptr<MesherInterface> ClassFactory :: createMesherInterface(MeshPackageType name, Domain *domain)
+{
+    return cf_create4<MesherInterface>(mesherInterfaceList, name, domain);
 }
 
 
-LoadBalancerMonitor *ClassFactory :: createLoadBalancerMonitor(const char *name, EngngModel *emodel)
+std::unique_ptr<LoadBalancerMonitor> ClassFactory :: createLoadBalancerMonitor(const char *name, EngngModel *emodel)
 {
-    CF_CREATE(loadMonitorList, emodel)
+    return cf_create<LoadBalancerMonitor>(loadMonitorList, name, emodel);
 }
 
-bool ClassFactory :: registerLoadBalancerMonitor( const char *name, LoadBalancerMonitor * ( *creator )( EngngModel * ) )
+bool ClassFactory :: registerLoadBalancerMonitor(const char *name, std::unique_ptr<LoadBalancerMonitor> ( *creator )( EngngModel * ) )
 {
-    CF_STORE(loadMonitorList)
+    return cf_store(loadMonitorList, name, creator);
 }
 
-LoadBalancer *ClassFactory :: createLoadBalancer(const char *name, Domain *domain)
+std::unique_ptr<LoadBalancer> ClassFactory :: createLoadBalancer(const char *name, Domain *domain)
 {
-    CF_CREATE(loadBalancerList, domain)
+    return cf_create<LoadBalancer>(loadBalancerList, name, domain);
 }
 
-bool ClassFactory :: registerLoadBalancer( const char *name, LoadBalancer * ( *creator )( Domain * ) )
+bool ClassFactory :: registerLoadBalancer(const char *name, std::unique_ptr<LoadBalancer> ( *creator )( Domain * ) )
 {
-    CF_STORE(loadBalancerList)
+    return cf_store(loadBalancerList, name, creator);
 }
 
 #ifdef MEMSTR

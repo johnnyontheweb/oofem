@@ -45,6 +45,10 @@
 #include "node.h"
 #include "domain.h"
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 namespace oofem {
 REGISTER_BoundaryCondition(LinearConstraintBC);
 
@@ -64,9 +68,9 @@ LinearConstraintBC :: ~LinearConstraintBC()
 }
 
 
-IRResultType LinearConstraintBC :: initializeFrom(InputRecord *ir)
+void LinearConstraintBC :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;
+    ActiveBoundaryCondition :: initializeFrom(ir);
     rhsTf = 0;
 
     IR_GIVE_FIELD(ir, weights, _IFT_LinearConstraintBC_weights);
@@ -74,16 +78,13 @@ IRResultType LinearConstraintBC :: initializeFrom(InputRecord *ir)
     IR_GIVE_FIELD(ir, dofmans, _IFT_LinearConstraintBC_dofmans);
     IR_GIVE_FIELD(ir, dofs, _IFT_LinearConstraintBC_dofs);
     if ( weights.giveSize() != dofmans.giveSize() ) {
-        OOFEM_WARNING("Size mismatch, weights %d and dofmans %d", weights.giveSize(), dofmans.giveSize());
-        return IRRT_BAD_FORMAT;
+        throw ValueInputException(ir, _IFT_LinearConstraintBC_weights, "Size mismatch weights and dofmans");
     }
     IR_GIVE_OPTIONAL_FIELD(ir, weightsTf, _IFT_LinearConstraintBC_weightsfuncs);
     IR_GIVE_OPTIONAL_FIELD(ir, rhsTf, _IFT_LinearConstraintBC_rhsfuncs);
 
     IR_GIVE_FIELD(ir, lhsType, _IFT_LinearConstraintBC_lhstype);
     IR_GIVE_FIELD(ir, rhsType, _IFT_LinearConstraintBC_rhstype);
-
-    return ActiveBoundaryCondition :: initializeFrom(ir);
 }
 
 
@@ -104,7 +105,8 @@ void LinearConstraintBC :: giveLocArray(const UnknownNumberingScheme &r_s,  IntA
 
 void LinearConstraintBC :: assemble(SparseMtrx &answer, TimeStep *tStep,
                                     CharType type, const UnknownNumberingScheme &r_s,
-                                    const UnknownNumberingScheme &c_s)
+                                    const UnknownNumberingScheme &c_s, double scale,
+                                    void*lock)
 {
     int size = this->weights.giveSize();
     IntArray lambdaeq(1);
@@ -124,23 +126,38 @@ void LinearConstraintBC :: assemble(SparseMtrx &answer, TimeStep *tStep,
             }
             contrib.at(_i, 1) = this->weights.at(_i) * factor;
         }
-        contribt.beTranspositionOf(contrib);
 
+        contribt.times(scale);
+        contribt.beTranspositionOf(contrib);
+#ifdef _OPENMP
+        if (lock) omp_set_lock(static_cast<omp_lock_t*>(lock));
+#endif
         answer.assemble(lambdaeq, locr, contribt);
         answer.assemble(locr, lambdaeq, contrib);
+#ifdef _OPENMP
+        if (lock) omp_unset_lock(static_cast<omp_lock_t*>(lock));
+#endif
     } else {
         // the bc is not imposed at specific time step, however in order to make the equation system regular
         // we initialize the allocated equation to the following form 1*labmda = 0, forcing lagrange multiplier
         // of inactive condition to be zero.
         FloatMatrix help(1, 1);
         help.at(1, 1) = 1.0;
+#ifdef _OPENMP
+        if (lock) omp_set_lock(static_cast<omp_lock_t*>(lock));
+#endif
         answer.assemble(lambdaeq, lambdaeq, help);
+#ifdef _OPENMP
+        if (lock) omp_unset_lock(static_cast<omp_lock_t*>(lock));
+#endif
     }
 }
 
 void LinearConstraintBC :: assembleVector(FloatArray &answer, TimeStep *tStep,
                                           CharType type, ValueModeType mode,
-                                          const UnknownNumberingScheme &s, FloatArray *eNorms)
+                                          const UnknownNumberingScheme &s, 
+                                          FloatArray *eNorms,
+                                          void* lock)
 {
     IntArray loc, lambdaeq(1);
     FloatArray vec(1);
@@ -164,10 +181,22 @@ void LinearConstraintBC :: assembleVector(FloatArray &answer, TimeStep *tStep,
             }
             idof = this->domain->giveDofManager( this->dofmans.at(_i) )->giveDofWithID( this->dofs.at(_i) );
             if ( s.giveDofEquationNumber(idof) ) {
+#ifdef _OPENMP
+                if (lock) omp_set_lock(static_cast<omp_lock_t*>(lock));
+#endif
                 answer.at( s.giveDofEquationNumber(idof) ) += mdof->giveUnknown(mode, tStep) * this->weights.at(_i) * factor;
+#ifdef _OPENMP
+                if (lock) omp_unset_lock(static_cast<omp_lock_t*>(lock));
+#endif
             }
             if ( s.giveDofEquationNumber( mdof ) ) {
+#ifdef _OPENMP
+                if (lock) omp_set_lock(static_cast<omp_lock_t*>(lock));
+#endif
                 answer.at( s.giveDofEquationNumber( mdof ) ) += idof->giveUnknown(mode, tStep) * this->weights.at(_i) * factor;
+#ifdef _OPENMP
+                if (lock) omp_unset_lock(static_cast<omp_lock_t*>(lock));
+#endif
             }
         }
     } else if ( type == ExternalForcesVector ) {
@@ -178,7 +207,13 @@ void LinearConstraintBC :: assembleVector(FloatArray &answer, TimeStep *tStep,
         }
         this->giveLocArray( s, loc, lambdaeq.at(1) );
         vec.at(1) = rhs * factor;
+#ifdef _OPENMP
+        if (lock) omp_set_lock(static_cast<omp_lock_t*>(lock));
+#endif
         answer.assemble(vec, lambdaeq);
+#ifdef _OPENMP
+        if (lock) omp_unset_lock(static_cast<omp_lock_t*>(lock));
+#endif
     }
 }
 
@@ -201,11 +236,11 @@ void LinearConstraintBC :: giveLocationArrays(std :: vector< IntArray > &rows, s
 }
 
 
-contextIOResultType
-LinearConstraintBC :: saveContext(DataStream &stream, ContextMode mode, void *obj)
+void
+LinearConstraintBC :: saveContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
     if ( mode & CM_Definition ) {
+        contextIOResultType iores;
         if ( ( iores = weights.storeYourself(stream) ) != CIO_OK ) {
             THROW_CIOERR(iores);
         }
@@ -232,19 +267,15 @@ LinearConstraintBC :: saveContext(DataStream &stream, ContextMode mode, void *ob
         }
     }
 
-    if ( ( iores = md->saveContext(stream, mode) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    return CIO_OK;
+    md->saveContext(stream, mode);
 }
 
 
-contextIOResultType
-LinearConstraintBC :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
+void
+LinearConstraintBC :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
     if ( mode & CM_Definition ) {
+        contextIOResultType iores;
         if ( ( iores = weights.restoreYourself(stream) ) != CIO_OK ) {
             THROW_CIOERR(iores);
         }
@@ -271,10 +302,6 @@ LinearConstraintBC :: restoreContext(DataStream &stream, ContextMode mode, void 
         }
     }
 
-    if ( ( iores = md->restoreContext(stream, mode) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    return CIO_OK;
+    md->restoreContext(stream, mode);
 }
 } //end of oofem namespace

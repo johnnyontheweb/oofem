@@ -1,10 +1,14 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 from unv2x import *
 from abaqus2x import *
 from oofemctrlreader import *
 import time
+import sys
+import json
 from numpy.core.defchararray import splitlines
+
 
 if __name__=='__main__':
     helpmsg=""" 
@@ -35,9 +39,9 @@ set records
 Assignment of properties to nodes and elements is based on association with some unv group. The same mechanism
 is valid for assignment of boundary conditions (edge, surface) load. The syntax is following:
 group name1 [name2] [name3] ...
-[nodeprop "nodal_attributes_appended_to_nodal_records"]
-[elemprop "element_attributes_appended_to_element_records"]
-[etype[unv_etype]] oofem_etype #provides mapping between unv and oofem element types
+nodeprop "nodal_attributes_appended_to_nodal_records" [set INT]
+elemprop "element_attributes_appended_to_element_records" [set INT]
+etype[unv_etype] oofem_etype #provides mapping between unv and oofem element types
 
 By default, all nodes will be exported,
 elements are exported only when associated to some group
@@ -45,17 +49,19 @@ with valid element mapping
 
 Enjoy.
 """
-    print """
+    welcomeMsg = """
 UNV2OOFEM: Converts UNV file from Salome to OOFEM native file format
                     (C) 2009 Borek Patzak
-"""
+                    Running python version %s.%s
+""" % (sys.version_info.major, sys.version_info.minor)
+    print (welcomeMsg)
     t1 = time.time()
-    if len(sys.argv)==4:
+    if (len(sys.argv)==4):
         unvfile=sys.argv[1]
         ctrlfile=sys.argv[2]
         oofemfile=sys.argv[3]
         of=open(oofemfile,'w')
-         
+        
         # read file in FEM object structure
         fileExtension = unvfile.split('.')
         if (fileExtension[-1].lower()=='unv'): # Salome output file
@@ -63,31 +69,31 @@ UNV2OOFEM: Converts UNV file from Salome to OOFEM native file format
         elif (fileExtension[-1].lower()=='inp'): # Abaqus output file
             Parser=AbaqusParser(unvfile)
         else:
-            print "Unknown extension of input file %s" % fileExtension[-1].lower()
+            print ("Unknown extension of input file %s" % fileExtension[-1].lower())
             exit(0)
         
-        print 'Parsing mesh file %s' % sys.argv[1],
+        print ('Parsing mesh file %s' % sys.argv[1], end=' ')
         FEM=Parser.parse()
-        print "done"
+        print ("done")
 
-        print "Detected node groups:",
+        print ("Detected node groups:", end=' ')
         for i in FEM.nodesets:
-            print i.name.strip(),
-        print
+            print (i.name.strip(), end=' ')
+        print ()
 
-        print "Detected element groups:",
+        print ("Detected element groups:", end=' ')
         for i in FEM.elemsets:
-            print i.name.strip(),
-        print
+            print (i.name.strip(), end=' ')
+        print ()
 
         # read oofem ctrl file
         CTRL=CTRLParser(ctrlfile, Parser.mapping())
-        print 'Parsing ctrl file %s' % sys.argv[2]
+        print ('Parsing ctrl file %s' % sys.argv[2])
         CTRL.parse(FEM)
-        print "done"
+        print ("done")
         # write files in native oofem format
 
-        print 'Writing oofem file %s' % sys.argv[3]
+        print ('Writing oofem file %s' % sys.argv[3])
         # write oofem header
         of.write(CTRL.header)
 
@@ -105,13 +111,14 @@ UNV2OOFEM: Converts UNV file from Salome to OOFEM native file format
             for igroup in elem.oofem_groups:
                 #print igroup.name
                 properties+=igroup.oofem_properties
+                #print('Properties', properties)
             #Do output if oofem_elemtype resolved and not BoundaryLoads
             if ( elem.oofem_elemtype):
                 if(CTRL.oofem_elemProp[elem.oofem_elemtype].name != 'RepresentsBoundaryLoad'):
                     #Check if unv element and OOFEM element have the same amount of nodes
                     if (elem.nnodes != len(CTRL.oofem_elemProp[elem.oofem_elemtype].nodeMask)):
-                        print "\nUnv element #%d has %d nodes, which should be mapped on OOFEM element \"%s\" with %d nodes" % \
-                            (elem.id, elem.nnodes,CTRL.oofem_elemProp[elem.oofem_elemtype].name, len(CTRL.oofem_elemProp[elem.oofem_elemtype].nodeMask))
+                        print ("\nUnv element #%d has %d nodes, which should be mapped on OOFEM element \"%s\" with %d nodes" % \
+                            (elem.id, elem.nnodes,CTRL.oofem_elemProp[elem.oofem_elemtype].name, len(CTRL.oofem_elemProp[elem.oofem_elemtype].nodeMask)))
                         exit(0)
 
                     elemNotBoundary.append(elem)
@@ -125,7 +132,7 @@ UNV2OOFEM: Converts UNV file from Salome to OOFEM native file format
                         try:
                             dat.append("%-3d" % elem.cntvt[mask])
                         except:
-                            print "Exception in mapping nodes in unv element number %d, nodes %s" % (elem.id, elem.cntvt)
+                            print ("Exception in mapping nodes in unv element number %d, nodes %s" % (elem.id, elem.cntvt))
                             exit(0)
                     #dat.extend(["%-3d" % x for x in elem.cntvt])
                     dat.append(properties)
@@ -174,27 +181,34 @@ UNV2OOFEM: Converts UNV file from Salome to OOFEM native file format
                                                     newList[2*j+1] = i+1
                                                 #print newList
                                                 elem.oofem_bLoads+=newList
-                                                print "Boundary load \"%s\" found for element %d " % (bel.name.rstrip('\n'), elem.id)
+                                                print ("Boundary load \"%s\" found for element %d " % (bel.name.rstrip('\n'), elem.id))
                                                 #print bel.name, elem.id, elem.oofem_bLoads
                                                 
                                         if (bel.oofem_sets):
-                                            print "Set \"%s\" found for boundary of element %d " % (bel.name.rstrip('\n'), elem.id)
+                                            print ("Set \"%s\" found for boundary of element %d " % (bel.name.rstrip('\n'), elem.id))
                                             setNum = bel.oofem_sets;
                                             # setID, element id, element side
                                             for thisSet in setNum:
                                                 boundarySets.append([thisSet, elem.id, i+1])
                                                 
                             if(success==0):
-                                print "Can not assign edge/face load \"%s\" to unv element %d" % (bel.name, elem.id)
+                                print ("Can not assign edge/face load \"%s\" to unv element %d" % (bel.name, elem.id))
 
         #write component record
         of.write('ndofman %d nelem %d ncrosssect %d nmat %d nbc %d nic %d nltf %d nset %d nxfemman %d\n' % (FEM.nnodes, len(elemNotBoundary), CTRL.ncrosssect, CTRL.nmat, CTRL.nbc, CTRL.nic, CTRL.nltf, CTRL.nset, CTRL.nxfemman))
+        
         #write nodes
         for node in FEM.nodes:
-            #resolve nodal properties
-            outputLine="node %-5d coords %-2d" % (node.id, len(node.coords))
+            hanging = False
+            for igroup in node.oofem_groups:
+                if (igroup.oofem_hangingNode):
+                    hanging = True  
+            
+            outputLine="%s %-5d coords %-2d" % ('hangingNode' if hanging else 'node', node.id, len(node.coords))
+            
             for coord in node.coords:
                 outputLine+= "% -8g " % coord
+            
             properties=""
            
             for igroup in node.oofem_groups:
@@ -243,7 +257,7 @@ UNV2OOFEM: Converts UNV file from Salome to OOFEM native file format
                                 ellist.extend(elemset.items)
                     setElements=list(set(ellist))
 
-                elif (words[2].lower()=='elementboundaries'):
+                elif (words[2].lower()=='elementboundaries' or words[2].lower()=='elementedges'):
                     setElements=[]
                     for thisSet in boundarySets:
                         if (thisSet[0]==int(words[1])):
@@ -261,8 +275,8 @@ UNV2OOFEM: Converts UNV file from Salome to OOFEM native file format
         #
         t2 = time.time()
         #
-        print "done ( %d nodes %d elements)" % (FEM.nnodes, len(elemNotBoundary))
-        print "Finished in %0.2f [s]" % ((t2-t1))
+        print ("done ( %d nodes %d elements)" % (FEM.nnodes, len(elemNotBoundary)))
+        print ("Finished in %0.2f [s]" % ((t2-t1)))
 
     else:
         print(helpmsg)

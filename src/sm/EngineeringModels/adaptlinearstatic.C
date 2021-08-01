@@ -32,7 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/EngineeringModels/adaptlinearstatic.h"
+#include "sm/EngineeringModels/adaptlinearstatic.h"
 #include "remeshingcrit.h"
 #include "mesherinterface.h"
 #include "errorestimator.h"
@@ -127,21 +127,15 @@ AdaptiveLinearStatic :: initializeAdaptive(int tStepNumber)
 }
 
 
-contextIOResultType AdaptiveLinearStatic :: restoreContext(DataStream *stream, ContextMode mode, void *obj)
+void AdaptiveLinearStatic :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-    if ( ( iores = LinearStatic :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    return CIO_OK;
+    LinearStatic :: restoreContext(stream, mode);
 }
 
-IRResultType
-AdaptiveLinearStatic :: initializeFrom(InputRecord *ir)
-// input from inputString
+void
+AdaptiveLinearStatic :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
+    LinearStatic :: initializeFrom(ir);
 
     int meshPackageId = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, meshPackageId, _IFT_AdaptiveLinearStatic_meshpackage);
@@ -153,8 +147,6 @@ AdaptiveLinearStatic :: initializeFrom(InputRecord *ir)
     } else {
         meshPackage = MPT_T3D;
     }
-
-    return LinearStatic :: initializeFrom(ir);
 }
 
 

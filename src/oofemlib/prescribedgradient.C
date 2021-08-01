@@ -59,11 +59,7 @@ REGISTER_BoundaryCondition(PrescribedGradient);
 double PrescribedGradient :: give(Dof *dof, ValueModeType mode, double time)
 {
     DofIDItem id = dof->giveDofID();
-    FloatArray *coords = dof->giveDofManager()->giveCoordinates();
-
-    if ( coords->giveSize() != this->mCenterCoord.giveSize() ) {
-        OOFEM_ERROR("Size of coordinate system different from center coordinate in b.c.");
-    }
+    const auto &coords = dof->giveDofManager()->giveCoordinates();
 
     double factor = 0;
     if ( mode == VM_Total ) {
@@ -77,7 +73,9 @@ double PrescribedGradient :: give(Dof *dof, ValueModeType mode, double time)
     }
     // Reminder: u_i = d_ij . (x_j - xb_j) = d_ij . dx_j
     FloatArray dx;
-    dx.beDifferenceOf(* coords, this->mCenterCoord);
+    dx.beDifferenceOf(coords, this->mCenterCoord);
+
+    mGradient.resizeWithData(coords.giveSize(), coords.giveSize());
 
     FloatArray u;
     u.beProductOf(mGradient, dx);
@@ -85,7 +83,13 @@ double PrescribedGradient :: give(Dof *dof, ValueModeType mode, double time)
 
     ///@todo Use the user-specified dofs here instead:
     int pos = this->dofs.findFirstIndexOf(id);
-    return u.at(pos);
+//    printf("pos: %d\n", pos);
+    if ( pos > 0 && pos <= u.giveSize() ) {
+        return u.at(pos);
+    } else {
+        // XFEM dofs
+        return 0.0;
+    }
 }
 
 
@@ -115,39 +119,39 @@ void PrescribedGradient :: updateCoefficientMatrix(FloatMatrix &C)
     }
 
     for ( auto &n : domain->giveDofManagers() ) {
-        FloatArray *coords = n->giveCoordinates();
-        Dof *d1 = n->giveDofWithID( this->dofs(0) );
-        Dof *d2 = n->giveDofWithID( this->dofs(1) );
+        const auto &coords = n->giveCoordinates();
+        Dof *d1 = n->giveDofWithID( this->dofs[0] );
+        Dof *d2 = n->giveDofWithID( this->dofs[1] );
         int k1 = d1->__givePrescribedEquationNumber();
         int k2 = d2->__givePrescribedEquationNumber();
         if ( nsd == 2 ) {
             if ( k1 ) {
-                C.at(k1, 1) = coords->at(1) - xbar;
-                C.at(k1, 4) = coords->at(2) - ybar;
+                C.at(k1, 1) = coords.at(1) - xbar;
+                C.at(k1, 4) = coords.at(2) - ybar;
             }
 
             if ( k2 ) {
-                C.at(k2, 2) = coords->at(2) - ybar;
-                C.at(k2, 3) = coords->at(1) - xbar;
+                C.at(k2, 2) = coords.at(2) - ybar;
+                C.at(k2, 3) = coords.at(1) - xbar;
             }
         } else { // nsd == 3
-            Dof *d3 = n->giveDofWithID( this->dofs(2) );
+            Dof *d3 = n->giveDofWithID( this->dofs[2] );
             int k3 = d3->__givePrescribedEquationNumber();
 
             if ( k1 ) {
-                C.at(k1, 1) = coords->at(1) - xbar;
-                C.at(k1, 6) = coords->at(2) - ybar;
-                C.at(k1, 5) = coords->at(3) - zbar;
+                C.at(k1, 1) = coords.at(1) - xbar;
+                C.at(k1, 6) = coords.at(2) - ybar;
+                C.at(k1, 5) = coords.at(3) - zbar;
             }
             if ( k2 ) {
-                C.at(k2, 2) = coords->at(2) - ybar;
-                C.at(k2, 9) = coords->at(1) - xbar;
-                C.at(k2, 4) = coords->at(3) - zbar;
+                C.at(k2, 2) = coords.at(2) - ybar;
+                C.at(k2, 9) = coords.at(1) - xbar;
+                C.at(k2, 4) = coords.at(3) - zbar;
             }
             if ( k3 ) {
-                C.at(k3, 3) = coords->at(3) - zbar;
-                C.at(k3, 8) = coords->at(1) - xbar;
-                C.at(k3, 7) = coords->at(2) - ybar;
+                C.at(k3, 3) = coords.at(3) - zbar;
+                C.at(k3, 8) = coords.at(1) - xbar;
+                C.at(k3, 7) = coords.at(2) - ybar;
             }
         }
     }
@@ -224,16 +228,16 @@ void PrescribedGradient :: computeTangent(FloatMatrix &tangent, TimeStep *tStep)
 }
 
 
-IRResultType PrescribedGradient :: initializeFrom(InputRecord *ir)
+void PrescribedGradient :: initializeFrom(InputRecord &ir)
 {
     GeneralBoundaryCondition :: initializeFrom(ir);
-    return PrescribedGradientHomogenization :: initializeFrom(ir);
+    PrescribedGradientHomogenization :: initializeFrom(ir);
 }
 
 
 void PrescribedGradient :: giveInputRecord(DynamicInputRecord &input)
 {
     GeneralBoundaryCondition :: giveInputRecord(input);
-    return PrescribedGradientHomogenization :: giveInputRecord(input);
+    PrescribedGradientHomogenization :: giveInputRecord(input);
 }
 } // end namespace oofem

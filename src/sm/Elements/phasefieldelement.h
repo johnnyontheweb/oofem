@@ -36,7 +36,7 @@
 #ifndef phasefieldelement_h
 #define phasefieldelement_h
 
-#include "../sm/Elements/PlaneStress/qplanstrss.h"
+#include "sm/Elements/PlaneStress/qplanstrss.h"
 
 namespace oofem {
 /**
@@ -53,11 +53,11 @@ public:
 
     virtual NLStructuralElement *giveElement( ) = 0;
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    virtual void initializeFrom(InputRecord &ir);
     virtual void giveDofManDofIDMask_u(IntArray &answer) = 0;
     virtual void giveDofManDofIDMask_d(IntArray &answer) = 0;
 
-    virtual const char *giveClassName() const { return "PhaseFieldElement"; }
+    const char *giveClassName() const { return "PhaseFieldElement"; }
 
     int computeNumberOfDofs();
     void computeLocationArrayOfDofIDs(const IntArray &dofIdArray, IntArray &answer);
@@ -81,7 +81,7 @@ protected:
     void computeStiffnessMatrix_dd(FloatMatrix &, MatResponseMode, TimeStep *);
     void computeStiffnessMatrix_du(FloatMatrix &, MatResponseMode, TimeStep *);
 
-    
+
     double computeG(GaussPoint *gp, ValueModeType valueMode, TimeStep *stepN);
     double computeGPrim(GaussPoint *gp, ValueModeType valueMode, TimeStep *stepN);
     double computeDamageAt(GaussPoint *gp, ValueModeType valueMode, TimeStep *stepN);
@@ -94,11 +94,10 @@ protected:
 
     void computeDisplacementUnknowns(FloatArray &answer, ValueModeType valueMode, TimeStep *stepN);
     void computeDamageUnknowns(FloatArray &answer, ValueModeType valueMode, TimeStep *stepN);
-    
+
     //Interpolation matrices
     virtual void computeBd_matrixAt(GaussPoint *, FloatMatrix &, int = 1, int = ALL_STRAINS);
     virtual void computeNd_matrixAt(const FloatArray &lCoords, FloatMatrix &N);
-
 };
 } // end namespace oofem
 

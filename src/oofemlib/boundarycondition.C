@@ -76,21 +76,16 @@ double BoundaryCondition :: give(Dof *dof, ValueModeType mode, double time)
 }
 
 
-IRResultType
-BoundaryCondition :: initializeFrom(InputRecord *ir)
+void
+BoundaryCondition :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
+    GeneralBoundaryCondition :: initializeFrom(ir);
 
-    result = GeneralBoundaryCondition :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
-
-    if ( ir->hasField(_IFT_BoundaryCondition_values) ) {
+    if ( ir.hasField(_IFT_BoundaryCondition_values) ) {
         IR_GIVE_FIELD(ir, values, _IFT_BoundaryCondition_values);
     } else {
         double prescribedValue;
-        if ( ir->hasField(_IFT_BoundaryCondition_PrescribedValue) ) {
+        if ( ir.hasField(_IFT_BoundaryCondition_PrescribedValue) ) {
             IR_GIVE_FIELD(ir, prescribedValue, _IFT_BoundaryCondition_PrescribedValue);
         } else {
             IR_GIVE_FIELD(ir, prescribedValue, _IFT_BoundaryCondition_PrescribedValue_d);
@@ -104,8 +99,6 @@ BoundaryCondition :: initializeFrom(InputRecord *ir)
         values.zero();
         values.add(prescribedValue);
     }
-
-    return IRRT_OK;
 }
 
 
@@ -132,38 +125,30 @@ BoundaryCondition :: scale(double s)
 }
 
 
-contextIOResultType
-BoundaryCondition :: saveContext(DataStream &stream, ContextMode mode, void *obj)
+void
+BoundaryCondition :: saveContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-    if ( ( iores = GeneralBoundaryCondition :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
+    GeneralBoundaryCondition :: saveContext(stream, mode);
 
     if ( mode & CM_Definition ) {
-      if ( (iores = values.storeYourself(stream) ) != CIO_OK ) {
+        contextIOResultType iores;
+        if ( (iores = values.storeYourself(stream) ) != CIO_OK ) {
             THROW_CIOERR(CIO_IOERR);
         }
     }
-
-    return CIO_OK;
 }
 
 
-contextIOResultType
-BoundaryCondition :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
+void
+BoundaryCondition :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-    if ( ( iores = GeneralBoundaryCondition :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
+    GeneralBoundaryCondition :: restoreContext(stream, mode);
 
     if ( mode & CM_Definition ) {
-      if ( (iores = values.restoreYourself(stream) ) != CIO_OK ) {
+        contextIOResultType iores;
+        if ( (iores = values.restoreYourself(stream) ) != CIO_OK ) {
             THROW_CIOERR(CIO_IOERR);
         }
     }
-
-    return CIO_OK;
 }
 } // end namespace oofem

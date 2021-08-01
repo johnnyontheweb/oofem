@@ -42,6 +42,8 @@
 #include "error.h"
 #include "sparsemtrxtype.h"
 
+#include <memory>
+
 namespace oofem {
 class EngngModel;
 class TimeStep;
@@ -88,9 +90,7 @@ public:
      * Constructor, creates (n,m) sparse matrix. Due to sparsity character of matrix,
      * not all coefficient are physically stored (in general, zero members are omitted).
      */
-    SparseMtrx(int n, int m) : nRows(n), nColumns(m), version(0) { }
-    /// Constructor
-    SparseMtrx() : nRows(0), nColumns(0), version(0) { }
+    SparseMtrx(int n=0, int m=0) : nRows(n), nColumns(m), version(0) { }
     /// Destructor
     virtual ~SparseMtrx() { }
 
@@ -128,9 +128,10 @@ public:
      * care about proper deallocation of allocated space.
      * @return Newly allocated copy of receiver.
      */
-    virtual SparseMtrx *GiveCopy() const {
+    virtual std::unique_ptr<SparseMtrx> clone() const
+    {
         OOFEM_ERROR("Not implemented");
-        return NULL;
+        return nullptr;
     }
 
     /**
@@ -179,6 +180,15 @@ public:
         }
     }
 
+    /**
+     * Builds internal structure of receiver based on I and J.
+     * This call is for special purpose uses. Normal problems should use the other prealloation methods.
+     * @param eModel Pointer to corresponding engineering model.
+     * @param I Row indices
+     * @param J Column indices
+     * @return Zero iff successful.
+     */
+    virtual int buildInternalStructure(EngngModel* eModel, int n, int m, const IntArray& I, const IntArray& J) { OOFEM_ERROR("Not implemented"); }
     /**
      * Builds internal structure of receiver. This method determines the internal profile
      * of sparse matrix, allocates necessary space for storing nonzero coefficients and
@@ -256,8 +266,8 @@ public:
         return 0.0;
     }
 
-    virtual SparseMtrx *giveSubMatrix(const IntArray &rows, const IntArray &cols) 
-    { OOFEM_ERROR("Not implemented"); return NULL; }
+    virtual std::unique_ptr<SparseMtrx> giveSubMatrix(const IntArray &rows, const IntArray &cols) 
+    { OOFEM_ERROR("Not implemented"); return nullptr; }
     
     /// Returns coefficient at position (i,j).
     virtual double &at(int i, int j) = 0;

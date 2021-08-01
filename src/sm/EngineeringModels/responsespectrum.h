@@ -80,13 +80,13 @@ private:
     SparseMtrxType sparseMtrxType;
     FloatMatrix eigVec;
     FloatArray eigVal;
-	FloatArray periods;
-	FloatMatrix rhos;
-	FloatArray centroid;
-	FloatArray totMass;
-	FloatMatrix partFact;
-	FloatMatrix massPart;
-	int dominantMode = 1;
+    FloatArray periods;
+    FloatMatrix rhos;
+    FloatArray centroid;
+    FloatArray totMass;
+    FloatMatrix partFact;
+    FloatMatrix massPart;
+    int dominantMode = 1;
     int numberOfRequiredEigenValues;
     int activeVector;
     int restoreFlag;
@@ -95,41 +95,41 @@ private:
     /// Numerical method used to solve the problem.
     std :: unique_ptr< SparseGeneralEigenValueSystemNM > nMethod;
     GenEigvalSolverType solverType;
-	/// Numerical method used to solve the static problem.
-	LinSystSolverType linStype = ST_Direct;
-	RSpecComboType modalCombo;
-	double csi;
-	int func;
-	FloatArray dir;
-	FloatArray loadVector;
-	FloatArray dummyDisps;
-	std::list<FloatArray> reactionsList;
-	std::list<FloatArray> dispList;
-	FloatArray combReactions;
-	FloatArray combDisps;
-	IntArray dofManMap, dofidMap, eqnMap;
-	std::list< std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> > elemResponseList;
-	std::list< std::map<int, std::map<std::string, FloatArray>> > beamResponseList;
-	std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> combElemResponse;
-	std::map<int, std::map<std::string, FloatArray>> combBeamResponse;
+    /// Numerical method used to solve the static problem.
+    LinSystSolverType linStype = ST_Direct;
+    RSpecComboType modalCombo;
+    double csi;
+    int func;
+    FloatArray dir;
+    FloatArray loadVector;
+    FloatArray dummyDisps;
+    std::list<FloatArray> reactionsList;
+    std::list<FloatArray> dispList;
+    FloatArray combReactions;
+    FloatArray combDisps;
+    IntArray dofManMap, dofidMap, eqnMap;
+    std::list< std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> > elemResponseList;
+    std::list< std::map<int, std::map<std::string, FloatArray>> > beamResponseList;
+    std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> combElemResponse;
+    std::map<int, std::map<std::string, FloatArray>> combBeamResponse;
 
 
 public:
-	ResponseSpectrum(int i, EngngModel * _master = NULL) : EngngModel(i, _master)
+    ResponseSpectrum(int i, EngngModel * _master = NULL) : EngngModel(i, _master)
     {
         numberOfSteps = 1;
         ndomains = 1;
     }
-	virtual ~ResponseSpectrum() { }
+    virtual ~ResponseSpectrum() { }
 
     virtual void solveYourselfAt(TimeStep *tStep);
     virtual void terminate(TimeStep *tStep);
     virtual void updateYourself(TimeStep *tStep);
 
     virtual double giveUnknownComponent(ValueModeType type, TimeStep *tStep, Domain *d, Dof *dof);
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual contextIOResultType saveContext(DataStream *stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream *stream, ContextMode mode, void *obj = NULL);
+    void initializeFrom(InputRecord& ir) override;
+    void saveContext(DataStream &stream, ContextMode mode);
+    void restoreContext(DataStream &stream, ContextMode mode);
     virtual TimeStep *giveNextStep();
     virtual NumericalMethod *giveNumericalMethod(MetaStep *mStep);
     virtual void setActiveVector(int i) { activeVector = i; }
@@ -137,22 +137,22 @@ public:
 
     virtual double giveEigenValue(int eigNum) { return eigVal.at(eigNum); }
 
-	virtual void postInitialize();
+    virtual void postInitialize();
 
-	virtual void getGPOutputAt(GaussPoint *gp, TimeStep *tStep, std::map<std::string, FloatArray> *&ips);
-	virtual void getIntRuleOutputAt(IntegrationRule *iRule, TimeStep *tStep, std::map<int, std::map<std::string, FloatArray>> *&ir);
-	virtual void getIntPointStatusOutputAt(IntegrationPointStatus *iStatus, TimeStep *tStep, MaterialMode materialMode, std::map<std::string, FloatArray> *&ir);
-	virtual double calcSpectrumOrdinate(double period);
-	virtual void computeExternalLoadReactionContribution(FloatArray &reactions, TimeStep *tStep, int di);
-	virtual void buildReactionTable(IntArray &restrDofMans, IntArray &restrDofs,
-		IntArray &eqn, TimeStep *tStep, int di);
-	virtual void computeReaction(FloatArray &answer, TimeStep *tStep, int di);
-	virtual void updateInternalState(TimeStep *tStep);
-	virtual void SRSS();
-	virtual void CQC();
-	virtual void giveRhos(FloatMatrix &rhos);
-	virtual void giveDominantMode(int &mode);
-	virtual RSpecComboType giveComboType();
+    virtual void getGPOutputAt(GaussPoint *gp, TimeStep *tStep, std::map<std::string, FloatArray> *&ips);
+    virtual void getIntRuleOutputAt(IntegrationRule *iRule, TimeStep *tStep, std::map<int, std::map<std::string, FloatArray>> *&ir);
+    virtual void getIntPointStatusOutputAt(IntegrationPointStatus *iStatus, TimeStep *tStep, MaterialMode materialMode, std::map<std::string, FloatArray> *&ir);
+    virtual double calcSpectrumOrdinate(double period);
+    virtual void computeExternalLoadReactionContribution(FloatArray &reactions, TimeStep *tStep, int di);
+    virtual void buildReactionTable(IntArray &restrDofMans, IntArray &restrDofs,
+        IntArray &eqn, TimeStep *tStep, int di);
+    virtual void computeReaction(FloatArray &answer, TimeStep *tStep, int di);
+    virtual void updateInternalState(TimeStep *tStep);
+    virtual void SRSS();
+    virtual void CQC();
+    virtual void giveRhos(FloatMatrix &rhos);
+    virtual void giveDominantMode(int &mode);
+    virtual RSpecComboType giveComboType();
 
     // identification
     virtual const char *giveClassName() const { return "ResponseSpectrum"; }

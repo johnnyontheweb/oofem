@@ -33,9 +33,9 @@
  */
 
 
-#include "Elements/3D/qtrspace.h"
-#include "Materials/structuralms.h"
-#include "CrossSections/structuralcrosssection.h"
+#include "sm/Elements/3D/qtrspace.h"
+#include "sm/Materials/structuralms.h"
+#include "sm/CrossSections/structuralcrosssection.h"
 #include "node.h"
 #include "material.h"
 #include "gausspoint.h"
@@ -62,11 +62,11 @@ QTRSpace :: QTRSpace(int n, Domain *aDomain) : Structural3DElement(n, aDomain), 
 }
 
 
-IRResultType
-QTRSpace :: initializeFrom(InputRecord *ir)
+void
+QTRSpace :: initializeFrom(InputRecord &ir)
 {
     numberOfGaussPoints = 4;
-    return Structural3DElement :: initializeFrom(ir);
+    Structural3DElement :: initializeFrom(ir);
 }
 
 

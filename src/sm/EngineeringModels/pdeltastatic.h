@@ -80,23 +80,23 @@ public:
     PDeltaStatic(int i, EngngModel * _master = NULL);
     virtual ~PDeltaStatic();
 
-    virtual void solveYourself();
-    virtual void solveYourselfAt(TimeStep *tStep);
+    void solveYourself() override;
+    void solveYourselfAt(TimeStep *tStep) override;
 
-    virtual double giveUnknownComponent(ValueModeType type, TimeStep *tStep, Domain *d, Dof *dof);
-    virtual contextIOResultType saveContext(DataStream *stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream *stream, ContextMode mode, void *obj = NULL);
+    double giveUnknownComponent(ValueModeType type, TimeStep *tStep, Domain *d, Dof *dof) override;
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 
     virtual void updateDomainLinks();
 
     virtual TimeStep *giveNextStep();
     virtual NumericalMethod *giveNumericalMethod(MetaStep *mStep);
 	virtual void terminate(TimeStep *tStep);
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    void initializeFrom(InputRecord &ir);
 
     // identification
     virtual const char *giveInputRecordName() const { return _IFT_PDeltaStatic_Name; }
-    virtual const char *giveClassName() const { return "PDeltaStatic"; }
+    const char *giveClassName() const override { return "PDeltaStatic"; }
     virtual fMode giveFormulation() { return TL; }
 
     virtual int estimateMaxPackSize(IntArray &commMap, DataStream &buff, int packUnpackType);

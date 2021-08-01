@@ -37,7 +37,7 @@
 
 
 #include "activebc.h"
-#include <memory>
+
 
 ///@name Input fields for _IFT_ContactElement
 //@{
@@ -70,7 +70,7 @@ protected:
     bool useTangent; ///< Determines if tangent should be used.
     IntArray slaveSet;
     IntArray masterSet;
-    std :: vector< std :: unique_ptr< DofManager > >lmdm;
+    std :: vector< std :: shared_ptr< DofManager > >lmdm;
 public:
 
     /// Constructor.
@@ -79,23 +79,20 @@ public:
     /// Destructor.
     virtual ~Node2NodeLagrangianMultiplierContact() {};
 
-private:
-	Node2NodeLagrangianMultiplierContact(Node2NodeLagrangianMultiplierContact const&);
-	void operator=(Node2NodeLagrangianMultiplierContact const&);
-public:
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    void assemble(SparseMtrx &answer, TimeStep *tStep,
+                  CharType type, const UnknownNumberingScheme &r_s, const UnknownNumberingScheme &c_s, double scale = 1.0,
+                  void*lock=nullptr) override;
 
-	virtual void assemble(SparseMtrx &answer, TimeStep *tStep,
-		CharType type, const UnknownNumberingScheme &r_s, const UnknownNumberingScheme &c_s, double scale = 1.0); // override;
-
-    virtual void assembleVector(FloatArray &answer, TimeStep *tStep,
-                                CharType type, ValueModeType mode,
-                                const UnknownNumberingScheme &s, FloatArray *eNorms = NULL) override;
+    void assembleVector(FloatArray &answer, TimeStep *tStep,
+                        CharType type, ValueModeType mode,
+                        const UnknownNumberingScheme &s, FloatArray *eNorms = NULL,
+                        void *lock=nullptr) override;
 
 
-    virtual const char *giveClassName() const { return "Node2NodeLagrangianMultiplierContact"; }
-    virtual const char *giveInputRecordName() const { return _IFT_Node2NodeLagrangianMultiplierContact_Name; }
+    const char *giveClassName() const override { return "Node2NodeLagrangianMultiplierContact"; }
+    const char *giveInputRecordName() const override { return _IFT_Node2NodeLagrangianMultiplierContact_Name; }
 
     int giveNumberOfInternalDofManagers() override { return masterSet.giveSize(); }
     DofManager *giveInternalDofManager(int i) override { return this->lmdm.at(i - 1).get(); }

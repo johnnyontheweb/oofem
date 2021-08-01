@@ -171,7 +171,7 @@ protected:
 
     /// Transformation material matrix, used in orthotropic and anisotropic materials, global->local transformation
     FloatMatrix elemLocalCS;
-
+  
     /// Element activity time function. If defined, nonzero value indicates active receiver, zero value inactive element.
     int activityTimeFunction;
 
@@ -372,7 +372,7 @@ public:
      * @param tStep  Time step, when vector of unknowns is requested.
      * @param answer Local vector of unknowns.
      */
-	void computeVectorOf(ValueModeType u, TimeStep *tStep, FloatArray &answer, bool padding = true);
+    void computeVectorOf(ValueModeType u, TimeStep *tStep, FloatArray &answer);
     void computeVectorOf(const IntArray &dofIDMask, ValueModeType u, TimeStep *tStep, FloatArray &answer, bool padding = false);
     /**
      * Boundary version of computeVectorOf.
@@ -556,31 +556,29 @@ public:
      * @param bNodes list of boundary edge nodes 
      * @param boundary edge id
      */
-    virtual void giveBoundaryEdgeNodes (IntArray& bNodes, int boundary);
+    virtual IntArray giveBoundaryEdgeNodes(int boundary) const;
     /**
      * Returns list of receiver boundary nodes for given surface
      * @param bNodes list of boundary surface nodes 
      * @param boundary surface id
      */
-    virtual void giveBoundarySurfaceNodes (IntArray& bNodes, int boundary);
+    virtual IntArray giveBoundarySurfaceNodes(int boundary) const;
     /**
      * Returns boundary edge integration rule
      * @param order approximation order to integrate 
      * @param boundary boundary edge id
-     * @note some elements may increase the order (like axusymmetric elements)
+     * @note some elements may increase the order (like axisymmetric elements)
      */
-    virtual IntegrationRule* giveBoundaryEdgeIntegrationRule (int order, int boundary);
+    virtual std::unique_ptr<IntegrationRule> giveBoundaryEdgeIntegrationRule(int order, int boundary);
     /**
      * Returns boundary surface integration rule
      * @param order approximation order to integrate 
      * @param boundary boundary surface id
-     * @note some elements may increase the order (like axusymmetric elements)
+     * @note some elements may increase the order (like axisymmetric elements)
       */
-    virtual IntegrationRule* giveBoundarySurfaceIntegrationRule (int order, int boundary);
+    virtual std::unique_ptr<IntegrationRule> giveBoundarySurfaceIntegrationRule(int order, int boundary);
 
 
-
-    
     // data management
     /**
      * Translates local to global indices for dof managers.
@@ -640,7 +638,27 @@ public:
     int giveMaterialNumber() const {return material;}
     /// @return Reference to the associated crossSection of element.
     CrossSection *giveCrossSection();
+
+
     /**
+     * Gets the activity time function number.
+     */
+    int getActivityTimeFunctionNumber(){ return this->activityTimeFunction; }
+
+
+    /**
+     * Sets the activity time function of receiver.
+     * @param funcIndx Index of new time function.
+     */
+    void setActivityTimeFunctionNumber(int funcIndx){ this->activityTimeFunction = funcIndx; }
+
+    /**
+     * Sets the material of receiver.
+     * @param matIndx Index of new material.
+     */
+    void setMaterial(int matIndx) { this->material = matIndx; }
+        
+	/**
      * Sets the cross section model of receiver.
      * @param csIndx Index of new cross section.
      */
@@ -648,6 +666,8 @@ public:
 
     /// @return Number of dofmanagers of receiver.
     virtual int giveNumberOfDofManagers() const { return numberOfDofMans; }
+    /// Sets number of element dof managers
+    void setNumberOfDofManagers(int i) {this->numberOfDofMans = i;}
     /**
      * Returns number of nodes of receiver.
      * Default implementation returns number of dofmanagers of element
@@ -754,7 +774,7 @@ public:
      * this is invoked after all domain components are instanciated.
      * @return Zero value if check fail, otherwise nonzero.
      */
-    virtual int checkConsistency() { return 1; }
+    int checkConsistency() override { return 1; }
 
     /**
      * @return True, if receiver is activated for given solution step, otherwise false.
@@ -827,6 +847,9 @@ public:
      * @return Requested integration rule.
      */
     virtual IntegrationRule *giveIntegrationRule(int i) { return integrationRulesArray [ i ].get(); }
+
+    std::vector< std :: unique_ptr< IntegrationRule > > &giveIntegrationRulesArray() {return integrationRulesArray;}
+
     /**
      * Tests if the element implements required extension. ElementExtension type defines
      * the list of all available element extensions.
@@ -977,7 +1000,7 @@ public:
      * to return an updated number of specified entity type based on old number.
      * @param f Decides the renumbering.
      */
-    virtual void updateLocalNumbering(EntityRenumberingFunctor &f);
+    void updateLocalNumbering(EntityRenumberingFunctor &f) override;
 
     /// Integration point evaluator, loops over receiver IP's and calls given function (passed as f parameter) on them. The IP is parameter to function f.
     template< class T > void ipEvaluator( T *src, void ( T :: *f )( GaussPoint *gp ) );
@@ -1130,14 +1153,18 @@ public:
     IntArray *giveBoundaryLoadArray();
 
     // Overloaded methods:
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
-    virtual const char *giveClassName() const { return "Element"; }
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
+    const char *giveClassName() const override { return "Element"; }
 
-protected:
+    void printOutputAt(FILE *file, TimeStep *tStep) override;
+
+    virtual const IntArray giveLocation() {IntArray answer(0); return answer;}
+    virtual void recalculateCoordinates(int nodeNumber, FloatArray &coords){;}
+
+ protected:
     /**
      * Initializes the array of integration rules member variable.
      * Element can have multiple integration rules for different tasks.

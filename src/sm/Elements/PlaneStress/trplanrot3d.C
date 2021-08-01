@@ -32,9 +32,9 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/PlaneStress/trplanrot3d.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Elements/PlaneStress/trplanrot3d.h"
+#include "sm/CrossSections/structuralcrosssection.h"
+#include "sm/Materials/structuralms.h"
 #include "material.h"
 #include "node.h"
 #include "load.h"
@@ -54,7 +54,7 @@ TrPlaneStrRot3d :: TrPlaneStrRot3d(int n, Domain *aDomain) : TrPlaneStrRot(n, aD
 
 
 void
-TrPlaneStrRot3d :: giveLocalCoordinates(FloatArray &answer, FloatArray &global)
+TrPlaneStrRot3d :: giveLocalCoordinates(FloatArray &answer, const FloatArray &global)
 // Returns global coordinates given in global vector
 // transformed into local coordinate system of the
 // receiver
@@ -71,7 +71,7 @@ TrPlaneStrRot3d :: giveLocalCoordinates(FloatArray &answer, FloatArray &global)
     }
 
     FloatArray offset = global;
-    offset.subtract( * this->giveNode(1)->giveCoordinates() );
+    offset.subtract( this->giveNode(1)->giveCoordinates() );
     answer.beProductOf(GtoLRotationMatrix, offset);
 }
 
@@ -96,9 +96,9 @@ TrPlaneStrRot3d :: giveNodeCoordinates(FloatArray &x, FloatArray &y)
 {
     FloatArray nc1(3), nc2(3), nc3(3);
 
-    this->giveLocalCoordinates( nc1, * ( this->giveNode(1)->giveCoordinates() ) );
-    this->giveLocalCoordinates( nc2, * ( this->giveNode(2)->giveCoordinates() ) );
-    this->giveLocalCoordinates( nc3, * ( this->giveNode(3)->giveCoordinates() ) );
+    this->giveLocalCoordinates( nc1, this->giveNode(1)->giveCoordinates() );
+    this->giveLocalCoordinates( nc2, this->giveNode(2)->giveCoordinates() );
+    this->giveLocalCoordinates( nc3, this->giveNode(3)->giveCoordinates() );
 
     x.resize(3);
     x.at(1) = nc1.at(1);
@@ -141,8 +141,8 @@ TrPlaneStrRot3d :: computeGtoLRotationMatrix()
         FloatArray e1, e2, e3, help;
 
         // compute e1' = [N2-N1]  and  help = [N3-N1]
-        e1.beDifferenceOf( * this->giveNode(2)->giveCoordinates(),  * this->giveNode(1)->giveCoordinates() );
-        help.beDifferenceOf( * this->giveNode(3)->giveCoordinates(),  * this->giveNode(1)->giveCoordinates() );
+        e1.beDifferenceOf( this->giveNode(2)->giveCoordinates(), this->giveNode(1)->giveCoordinates() );
+        help.beDifferenceOf( this->giveNode(3)->giveCoordinates(), this->giveNode(1)->giveCoordinates() );
 
         // let us normalize e1'
         e1.normalize();
@@ -152,20 +152,20 @@ TrPlaneStrRot3d :: computeGtoLRotationMatrix()
         // let us normalize
         e3.normalize();
 
-		//if (la1.computeNorm() != 0) {
-		//	// custom local axes
-		//	e1 = la1;
-		//}
+	//if (la1.computeNorm() != 0) {
+	//	// custom local axes
+	//	e1 = la1;
+	//}
 
         // now from e3' x e1' compute e2'
         e2.beVectorProductOf(e3, e1);
 
-		// rotate as to have the 1st local axis equal to la1
-		if (la1.computeNorm() != 0) {
-			double ang = -Angle::giveAngleIn3Dplane(la1, e1, e3); // radians
-			e1 = Angle::rotate(e1, e3, ang);
-			e2 = Angle::rotate(e2, e3, ang);
-		}
+	// rotate as to have the 1st local axis equal to la1
+	if (la1.computeNorm() != 0) {
+	    double ang = -Angle::giveAngleIn3Dplane(la1, e1, e3); // radians
+	    e1 = Angle::rotate(e1, e3, ang);
+	    e2 = Angle::rotate(e2, e3, ang);
+	}
         // rot. matrix
         GtoLRotationMatrix.resize(3, 3);
 
@@ -215,20 +215,21 @@ TrPlaneStrRot3d :: giveCharacteristicTensor(FloatMatrix &answer, CharTensor type
     answer.resize(3, 3);
     answer.zero();
 
-    if ( ( type == LocalForceTensor ) || ( type == GlobalForceTensor ) ) {
+    if ( type == LocalForceTensor || type == GlobalForceTensor ) {
         //this->computeStressVector(charVect, gp, tStep);
         charVect = ms->giveStressVector();
 
-        answer.at(1, 1) = charVect.at(1);
-        answer.at(2, 2) = charVect.at(2);
-        answer.at(1, 2) = charVect.at(3);
-        answer.at(2, 1) = charVect.at(3);
-    } else if ( ( type == LocalMomentumTensor ) || ( type == GlobalMomentumTensor ) ) {
+        double h = this->giveStructuralCrossSection()->give(CS_Thickness, gp);
+        answer.at(1, 1) = charVect.at(1) * h;
+        answer.at(2, 2) = charVect.at(2) * h;
+        answer.at(1, 2) = charVect.at(3) * h;
+        answer.at(2, 1) = charVect.at(3) * h;
+    } else if ( type == LocalMomentTensor || type == GlobalMomentTensor ) {
         //this->computeStressVector(charVect, gp, tStep);
         charVect = ms->giveStressVector();
 
         answer.at(3, 3) = charVect.at(4);
-    } else if ( ( type == LocalStrainTensor ) || ( type == GlobalStrainTensor ) ) {
+    } else if ( type == LocalStrainTensor || type == GlobalStrainTensor ) {
         //this->computeStrainVector(charVect, gp, tStep);
         charVect = ms->giveStrainVector();
 
@@ -236,7 +237,7 @@ TrPlaneStrRot3d :: giveCharacteristicTensor(FloatMatrix &answer, CharTensor type
         answer.at(2, 2) = charVect.at(2);
         answer.at(1, 2) = charVect.at(3) / 2.;
         answer.at(2, 1) = charVect.at(3) / 2.;
-    } else if ( ( type == LocalCurvatureTensor ) || ( type == GlobalCurvatureTensor ) ) {
+    } else if ( type == LocalCurvatureTensor || type == GlobalCurvatureTensor ) {
         //this->computeStrainVector(charVect, gp, tStep);
         charVect = ms->giveStrainVector();
 
@@ -246,8 +247,8 @@ TrPlaneStrRot3d :: giveCharacteristicTensor(FloatMatrix &answer, CharTensor type
         exit(1);
     }
 
-    if ( ( type == GlobalForceTensor  ) || ( type == GlobalMomentumTensor  ) ||
-        ( type == GlobalStrainTensor ) || ( type == GlobalCurvatureTensor ) ) {
+    if ( type == GlobalForceTensor || type == GlobalMomentTensor ||
+         type == GlobalStrainTensor || type == GlobalCurvatureTensor ) {
         this->computeGtoLRotationMatrix();
         answer.rotatedWith(GtoLRotationMatrix);
     }
@@ -259,14 +260,14 @@ TrPlaneStrRot3d :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalState
 {
     FloatMatrix globTensor;
     CharTensor cht;
-	
+
     answer.resize(6);
 
     if ( type == IST_CurvatureTensor || type == IST_ShellStrainTensor ) {
         if ( type == IST_CurvatureTensor ) {
-			cht = GlobalCurvatureTensor;
+            cht = GlobalCurvatureTensor;
         } else {
-			cht = GlobalStrainTensor;
+            cht = GlobalStrainTensor;
         }
 
         this->giveCharacteristicTensor(globTensor, cht, gp, tStep);
@@ -281,9 +282,9 @@ TrPlaneStrRot3d :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalState
         return 1;
     } else if ( type == IST_ShellMomentTensor || type == IST_ShellForceTensor ) {
         if ( type == IST_ShellMomentTensor ) {
-			cht = GlobalMomentumTensor;
+            cht = GlobalMomentTensor;
         } else {
-			cht = GlobalForceTensor;
+            cht = GlobalForceTensor;
         }
 		double t = this->giveCrossSection()->give(CS_Thickness, gp);
         this->giveCharacteristicTensor(globTensor, cht, gp, tStep);
@@ -293,7 +294,7 @@ TrPlaneStrRot3d :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalState
 		answer.at(3) = globTensor.at(3, 3)*t; //zz
 		answer.at(4) = globTensor.at(2, 3)*t; //yz
 		answer.at(5) = globTensor.at(1, 3)*t; //xz
-		answer.at(6) = globTensor.at(2, 3)*t; //yz
+		answer.at(6) = globTensor.at(1, 2)*t; //yz
 
         return 1;
     } else {
@@ -425,14 +426,6 @@ TrPlaneStrRot3d :: giveSurfaceDofMapping(IntArray &answer, int iSurf) const
     }
 }
 
-IntegrationRule *
-TrPlaneStrRot3d :: GetSurfaceIntegrationRule(int approxOrder)
-{
-    IntegrationRule *iRule = new GaussIntegrationRule(1, this, 1, 1);
-    int npoints = iRule->getRequiredNumberOfIntegrationPoints(_Triangle, approxOrder);
-    iRule->SetUpPointsOnTriangle(npoints, _Unknown);
-    return iRule;
-}
 
 double
 TrPlaneStrRot3d :: computeSurfaceVolumeAround(GaussPoint *gp, int iSurf)

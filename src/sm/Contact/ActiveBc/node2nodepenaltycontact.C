@@ -42,29 +42,33 @@
 #include "sparsemtrx.h"
 #include "classfactory.h"
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 namespace oofem {
 REGISTER_BoundaryCondition(Node2NodePenaltyContact);
 
 
-IRResultType
-Node2NodePenaltyContact :: initializeFrom(InputRecord *ir)
+void
+Node2NodePenaltyContact :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;
+    ActiveBoundaryCondition :: initializeFrom(ir);
+
     IR_GIVE_FIELD(ir, this->penalty, _IFT_Node2NodePenaltyContact_penalty);
-    this->useTangent = ir->hasField(_IFT_Node2NodePenaltyContact_useTangent);
+    this->useTangent = ir.hasField(_IFT_Node2NodePenaltyContact_useTangent);
 
 
     IR_GIVE_FIELD(ir, this->masterSet, _IFT_Node2NodePenaltyContact_masterSet);
     IR_GIVE_FIELD(ir, this->slaveSet, _IFT_Node2NodePenaltyContact_slaveSet);
-
-
-    return ActiveBoundaryCondition :: initializeFrom(ir);
 }
 
 
 void
 Node2NodePenaltyContact :: assemble(SparseMtrx &answer, TimeStep *tStep,
-                                    CharType type, const UnknownNumberingScheme &r_s, const UnknownNumberingScheme &c_s, double scale)
+                                    CharType type, const UnknownNumberingScheme &r_s, 
+                                    const UnknownNumberingScheme &c_s, double scale,
+                                    void* lock)
 {
     if ( !this->useTangent || type != TangentStiffnessMatrix ) {
         return;
@@ -91,14 +95,21 @@ Node2NodePenaltyContact :: assemble(SparseMtrx &answer, TimeStep *tStep,
         loc.followedBy(c_loc);
 
         this->computeTangentFromContact(K, masterNode, slaveNode, tStep);
+#ifdef _OPENMP
+        if (lock) omp_set_lock(static_cast<omp_lock_t*>(lock));
+#endif
         answer.assemble(loc, K);
+#ifdef _OPENMP
+        if (lock) omp_unset_lock(static_cast<omp_lock_t*>(lock));
+#endif
     }
 }
 
 void
 Node2NodePenaltyContact :: assembleVector(FloatArray &answer, TimeStep *tStep,
                                           CharType type, ValueModeType mode,
-                                          const UnknownNumberingScheme &s, FloatArray *eNorms)
+                                          const UnknownNumberingScheme &s, FloatArray *eNorms,
+                                          void*lock)
 {
     if ( type != ExternalForcesVector ) {
         return;
@@ -124,7 +135,13 @@ Node2NodePenaltyContact :: assembleVector(FloatArray &answer, TimeStep *tStep,
         slaveNode->giveLocationArray(dofIdArray, c_loc, s);
         this->computeExternalForcesFromContact(fext, masterNode, slaveNode, tStep);
         loc.followedBy(c_loc);
+#ifdef _OPENMP
+        if (lock) omp_set_lock(static_cast<omp_lock_t*>(lock));
+#endif
         answer.assemble(fext, loc);
+#ifdef _OPENMP
+        if (lock) omp_unset_lock(static_cast<omp_lock_t*>(lock));
+#endif
     }
 }
 
@@ -181,9 +198,9 @@ Node2NodePenaltyContact :: computeTangentFromContact(FloatMatrix &answer, Node *
 void
 Node2NodePenaltyContact :: computeGap(double &answer, Node *masterNode, Node *slaveNode, TimeStep *tStep)
 {
-    FloatArray xs, xm, uS, uM;
-    xs = * slaveNode->giveCoordinates();
-    xm = * masterNode->giveCoordinates();
+    FloatArray uS, uM;
+    auto xs = slaveNode->giveCoordinates();
+    auto xm = masterNode->giveCoordinates();
     FloatArray normal = xs - xm;
     double norm = normal.computeNorm();
     if ( norm < 1.0e-8 ) {
@@ -205,10 +222,9 @@ Node2NodePenaltyContact :: computeGap(double &answer, Node *masterNode, Node *sl
 void
 Node2NodePenaltyContact :: computeNormalMatrixAt(FloatArray &answer, Node *masterNode, Node *slaveNode, TimeStep *TimeStep)
 {
-    FloatArray xs, xm;
-    xs = * slaveNode->giveCoordinates();
-    xm = * masterNode->giveCoordinates();
-    FloatArray normal = xs - xm;
+    const auto &xs = slaveNode->giveCoordinates();
+    const auto &xm = masterNode->giveCoordinates();
+    auto normal = xs - xm;
     double norm = normal.computeNorm();
     if ( norm < 1.0e-8 ) {
         OOFEM_ERROR("Couldn't compute normal between master node (num %d) and slave node (num %d), nodes are too close to each other.",

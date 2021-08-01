@@ -32,10 +32,10 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/EngineeringModels/structengngmodel.h"
-#include "../sm/Elements/structuralelement.h"
-#include "../sm/Elements/structuralelementevaluator.h"
-#include "../sm/Elements/Interfaces/structuralinterfaceelement.h"
+#include "sm/EngineeringModels/structengngmodel.h"
+#include "sm/Elements/structuralelement.h"
+#include "sm/Elements/structuralelementevaluator.h"
+#include "sm/Elements/Interfaces/structuralinterfaceelement.h"
 #include "dofmanager.h"
 #include "dof.h"
 #include "element.h"
@@ -45,8 +45,8 @@
 #include "assemblercallback.h"
 #include "unknownnumberingscheme.h"
 
-#include "../sm/Materials/structuralmaterial.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
+#include "sm/Materials/structuralmaterial.h"
+#include "sm/CrossSections/structuralcrosssection.h"
 
 namespace oofem {
 
@@ -62,18 +62,14 @@ void LinearizedDilationForceAssembler :: vectorFromElement(FloatArray &vec, Elem
 
     vec.clear();
     for ( auto &gp : *selem.giveDefaultIntegrationRulePtr() ) {
-        FloatMatrix B;
-        FloatArray epsilonTemperature;
-        
-        double dV = selem.computeVolumeAround(gp);
-        selem.computeBmatrixAt(gp, B);
-
         /// @todo Problematic: Needs direct access to material model. Should do without (can be easily done by adding lots of code, but I'm searching for a simple, general, implementation) / Mikael
-        static_cast< StructuralMaterial *>( selem.giveStructuralCrossSection()->giveMaterial(gp) )->computeStressIndependentStrainVector(epsilonTemperature, gp, tStep, VM_Incremental);
+        auto epsilonTemperature = static_cast< StructuralMaterial *>( selem.giveStructuralCrossSection()->giveMaterial(gp) )->computeStressIndependentStrainVector(gp, tStep, VM_Incremental);
 
         if ( epsilonTemperature.giveSize() > 0 ) {
+            FloatMatrix D, B;
             FloatArray s;
-            FloatMatrix D;
+            double dV = selem.computeVolumeAround(gp);
+            selem.computeBmatrixAt(gp, B);
             selem.computeConstitutiveMatrixAt(D, ElasticStiffness, gp, tStep);
             s.beProductOf(D, epsilonTemperature);
             vec.plusProduct(B, s, dV);
@@ -98,7 +94,7 @@ StructuralEngngModel :: ~StructuralEngngModel()
 
 
 void
-StructuralEngngModel :: printReactionForces(TimeStep *tStep, int di)
+StructuralEngngModel :: printReactionForces(TimeStep *tStep, int di, FILE *out)
 //
 // computes and prints reaction forces in all supported or restrained dofs
 //
@@ -144,6 +140,7 @@ void StructuralEngngModel :: terminate(TimeStep *tStep){
     EngngModel :: terminate(tStep);
 }
 
+
 void
 StructuralEngngModel :: computeReaction(FloatArray &answer, TimeStep *tStep, int di)
 {
@@ -177,17 +174,17 @@ StructuralEngngModel :: computeExternalLoadReactionContribution(FloatArray &reac
 
 
 void
-StructuralEngngModel :: giveInternalForces(FloatArray &answer, bool normFlag, int di, TimeStep *tStep)
+StructuralEngngModel :: updateInternalRHS(FloatArray &answer, TimeStep *tStep, Domain *d, FloatArray *eNorm)
 {
-    // Simply assembles contributions from each element in domain
-    Domain *domain = this->giveDomain(di);
+#ifdef VERBOSE
+    OOFEM_LOG_DEBUG("Updating internal forces\n");
+#endif
     // Update solution state counter
     tStep->incrementStateCounter();
 
-    answer.resize( this->giveNumberOfDomainEquations( di, EModelDefaultEquationNumbering() ) );
+    answer.resize( this->giveNumberOfDomainEquations( d->giveNumber(), EModelDefaultEquationNumbering() ) );
     answer.zero();
-    this->assembleVector(answer, tStep, InternalForceAssembler(), VM_Total,
-                         EModelDefaultEquationNumbering(), domain, normFlag ? & this->internalForcesEBENorm : NULL);
+    this->assembleVector(answer, tStep, InternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), d, eNorm);
 
     // Redistributes answer so that every process have the full values on all shared equations
     this->updateSharedDofManagers(answer, EModelDefaultEquationNumbering(), InternalForcesExchangeTag);
@@ -224,6 +221,18 @@ StructuralEngngModel :: checkConsistency()
     EngngModel :: checkConsistency();
 
     return 1;
+}
+
+
+void
+StructuralEngngModel :: printOutputAt(FILE *file, TimeStep *tStep)
+{
+    if ( !this->giveDomain(1)->giveOutputManager()->testTimeStepOutput(tStep) ) {
+        return; // Do not print even Solution step header
+    }
+
+    EngngModel :: printOutputAt(file, tStep);
+    this->printReactionForces(tStep, 1, file);
 }
 
 

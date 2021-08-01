@@ -38,12 +38,12 @@
 #include "oofemcfg.h"
 #include "contextioresulttype.h"
 #include "contextmode.h"
+#include "error.h"
 
 #include <cstdio>
 #include <vector>
 #include <iosfwd>
 #include <initializer_list>
-#include <string>
 
 namespace oofem {
 class DataStream;
@@ -56,6 +56,7 @@ class DataStream;
  * 
  * @author Mikael Öhman
  * @author Jim Brouzoulis 
+ * @author Erik Svenning
  * @author many others (please add yourselves)
  */
 class OOFEM_EXPORT IntArray
@@ -97,66 +98,70 @@ public:
      * @param i Position of coefficient in array.
      * @return Value at position.
      */
-#ifdef DEBUG
-    int &at(int i);
-#else
-    inline int &at(int i) { return values [ i - 1 ]; }
+    inline int &at(int i)
+    {
+#ifndef NDEBUG
+        this->checkBounds(i);
 #endif
+        return values[ i - 1 ];
+    }
     /**
      * Coefficient access function. Returns value of coefficient at given
      * position of the receiver.
      * @param i position of coefficient in array.
      * @return Value at position.
      */
-#ifdef DEBUG
-    int at(int i) const;
-#else
-    inline int at(int i) const { return values [ i - 1 ]; }
+    inline int at(int i) const
+    {
+#ifndef NDEBUG
+        this->checkBounds(i);
 #endif
+        return values[ i - 1 ];
+    }
     /**
      * Coefficient access function. Returns value of coefficient at given
      * position of the receiver. Provides 0-based indexing access.
      * @param i Position of coefficient in array.
      * @return Value at position.
      */
-#ifdef DEBUG
-    int &operator() (int i);
-#else
-    inline int &operator() (int i) { return values [ i ]; }
+    inline int &operator() (int i) { return this->operator[](i); }
+    inline int &operator[] (int i)
+    {
+#ifndef NDEBUG
+        this->checkBounds(i + 1);
 #endif
+        return values[ i ];
+    }
     /**
      * Coefficient access function. Returns value of coefficient at given
      * position of the receiver. Provides 0-based indexing access.
      * @param i position of coefficient in array.
      * @return Value at position.
      */
-#ifdef DEBUG
-    const int &operator() (int i) const;
-#else
-    inline const int &operator() (int i) const { return values [ i ]; }
+    inline const int &operator() (int i) const { return this->operator[](i); }
+    inline const int &operator[] (int i) const
+    {
+#ifndef NDEBUG
+        this->checkBounds(i + 1);
 #endif
+        return values[ i ];
+    }
 
-#ifdef DEBUG
-    int &operator[] ( int i );
-#else
-    inline int &operator[] ( int i ) { return values [ i ]; }
-#endif
-
-#ifdef DEBUG
-    const int &operator[] ( int i ) const;
-#else
-    inline const int &operator[] ( int i ) const { return values [ i ]; }
-#endif
-
-#ifdef DEBUG
     /**
      * Checks size of receiver towards requested bounds.
      * Current implementation will call exit(1) if dimension
      * mismatch found.
      * @param i Required size of receiver
      */
-    void checkBounds(int i) const;
-#endif
+    void checkBounds(int i) const
+    {
+        if ( i <= 0 ) {
+            OOFEM_ERROR("array error on index : %d <= 0", i);
+        } else if ( i > this->giveSize() ) {
+            OOFEM_ERROR("array error on index : %d > %d", i, this->giveSize());
+        }
+    }
+
     /**
      * Checks size of receiver towards requested bounds.
      * If dimension mismatch, size is adjusted accordingly and memory is copied over.
@@ -250,8 +255,9 @@ public:
      * The size of receiver is changed accordingly.
      * @param value Value to insert.
      * @param allocChunk If reallocation needed, an additional space for allocChunk values will be allocated.
+     * @return True if value is inserted, false if value is already in array.
      */
-    void insertSortedOnce(int value, int allocChunk = 0);
+    bool insertSortedOnce(int value, int allocChunk = 0);
     /**
      * Erase the element of given value.
      * If the value is found receiver will shrink accordingly,
@@ -316,7 +322,18 @@ public:
      * Prints receiver on stdout with custom name.  
      * @param name Display name of reciever.
      */
-    void printYourself(const std::string name) const;    
+    void printYourself(const std::string name) const;
+
+    /**
+     * Print receiver to file
+     * @param filename Name of recieving file.
+     * @param showDimensions Determins if dimesions should be included in output
+     */
+    void printYourselfToFile(const std::string filename, const bool showDimensions=true) const;
+
+    /// Returns true if no element is NAN or infinite
+    bool isFinite() const;
+
     /**
      * Breaks encapsulation. Avoid using this unless absolutely necessary.
      * @return Internal pointer to stored values.
@@ -341,7 +358,7 @@ public:
 
     friend std :: ostream &operator << ( std :: ostream & out, const IntArray & x );
 
-#ifdef BOOST_PYTHON
+#ifdef _BOOSTPYTHON_BINDINGS
     void __setitem__(int i, int val) { this->at(i + 1) = val; }
     int __getitem__(int i) { return this->at(i + 1); }
     void beCopyOf(const IntArray &src) { this->operator = ( src ); }
@@ -350,7 +367,8 @@ public:
 
 
 template< class operation > int
-quickSortPartition(IntArray &arry, int l, int r, operation op) {
+quickSortPartition(IntArray &arry, int l, int r, operation op)
+{
     int i = l - 1, j = r;
     int v = arry.at(r);
     int swap;
@@ -383,7 +401,8 @@ quickSortPartition(IntArray &arry, int l, int r, operation op) {
 
 
 
-template< class operation > void quickSort(IntArray &arry, int l, int r, operation op) {
+template< class operation > void quickSort(IntArray &arry, int l, int r, operation op)
+{
     if ( r <= l ) {
         return;
     }

@@ -32,9 +32,9 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/tet21ghostsolid.h"
-#include "../sm/Elements/nlstructuralelement.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
+#include "sm/Elements/tet21ghostsolid.h"
+#include "sm/Elements/nlstructuralelement.h"
+#include "sm/CrossSections/structuralcrosssection.h"
 #include "fei3dtetquad.h"
 #include "fei3dtetlin.h"
 #include "classfactory.h"
@@ -53,7 +53,7 @@
 #include <iostream>
 
 #ifdef __FM_MODULE
- #include "fluiddynamicmaterial.h"
+ #include "fm/Materials/fluiddynamicmaterial.h"
  #include "fluidcrosssection.h"
 #endif
 
@@ -105,20 +105,20 @@ tet21ghostsolid :: tet21ghostsolid(int n, Domain *aDomain) : NLStructuralElement
     };
 
     for ( int i = 0, j = 1; i < 10; ++i ) {
-        momentum_ordering(i * 3 + 0) = j++;
-        momentum_ordering(i * 3 + 1) = j++;
-        momentum_ordering(i * 3 + 2) = j++;
+        momentum_ordering[i * 3 + 0] = j++;
+        momentum_ordering[i * 3 + 1] = j++;
+        momentum_ordering[i * 3 + 2] = j++;
         if ( i <= 3 ) {
             j++;
         }
-        j = j + 3;
+        j += 3;
     }
 
     for ( int i = 0, j = 1; i < 10; ++i ) {
-        j = j + 3;
-        ghostdisplacement_ordering(i * 3 + 0) = j++;
-        ghostdisplacement_ordering(i * 3 + 1) = j++;
-        ghostdisplacement_ordering(i * 3 + 2) = j++;
+        j += 3;
+        ghostdisplacement_ordering[i * 3 + 0] = j++;
+        ghostdisplacement_ordering[i * 3 + 1] = j++;
+        ghostdisplacement_ordering[i * 3 + 2] = j++;
         if ( i <= 3 ) {
             j++;
         }
@@ -147,7 +147,7 @@ tet21ghostsolid :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize(1);
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 6) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 6);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], numberOfGaussPoints, this);
     }
 }
@@ -206,27 +206,26 @@ tet21ghostsolid :: computeNumericStiffnessMatrixDebug(FloatMatrix &answer, MatRe
 void
 tet21ghostsolid :: computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->giveRealStress_3d(answer, gp, strain, tStep);
+    answer = this->giveStructuralCrossSection()->giveRealStress_3d(strain, gp, tStep);
 }
 
 void
 tet21ghostsolid :: computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->giveStiffnessMatrix_3d(answer, rMode, gp, tStep);
+    answer = this->giveStructuralCrossSection()->giveStiffnessMatrix_3d(rMode, gp, tStep);
 }
 
 void
 tet21ghostsolid :: computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep)
 {
+#ifdef __FM_MODULE
 #if USENUMTAN == 1
     computeNumericStiffnessMatrix(answer, rMode, tStep);
     return;
 
 #endif
 
-#ifdef __FM_MODULE
     FluidDynamicMaterial *fluidMaterial = static_cast< FluidCrossSection * >( this->giveCrossSection() )->giveFluidMaterial();
-#endif
 
     FloatMatrix afDu, afDw, bfuDu, bfuDp, bfpDu, bfpDw, cfwDu;
     FloatMatrix Kf, G, Kx, Ed, EdB, dNx;
@@ -280,13 +279,9 @@ tet21ghostsolid :: computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode r
             dNv.at(k * 3 + 3) = dNx.at(k + 1, 3);
         }
 
-#ifdef __FM_MODULE
         gp->setMaterialMode(_3dFlow);
-        fluidMaterial->giveDeviatoricStiffnessMatrix(Ed, TangentStiffness, gp, tStep);
+        Ed = fluidMaterial->computeTangent3D(TangentStiffness, gp, tStep);
         gp->setMaterialMode(_3dMat);
-#else
-        OOFEM_ERROR("Fluid module missing\n");
-#endif
 
         if ( nlGeometry == 0 ) {
             FloatMatrix B;
@@ -334,7 +329,7 @@ tet21ghostsolid :: computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode r
             // Compute Cauchy stress
             FloatArray fluidCauchyArray, epsf;
             FloatMatrix fluidCauchyMatrix;
-            double epsvol, pressure;
+            double pressure;
 
             epsf.beProductOf(B, aTotal);
             pressure = Nlin.dotProduct(aPressure);
@@ -344,7 +339,8 @@ tet21ghostsolid :: computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode r
 #endif
 
             gp->setMaterialMode(_3dFlow);
-            fluidMaterial->computeDeviatoricStressVector(fluidCauchyArray, epsvol, gp, epsf, pressure, tStep);
+            auto stress_eps = fluidMaterial->computeDeviatoricStress3D(epsf, pressure, gp, tStep);
+            fluidCauchyArray = stress_eps.first;
             gp->setMaterialMode(_3dMat);
             fluidCauchyMatrix.beMatrixFormOfStress(fluidCauchyArray);
 
@@ -594,6 +590,11 @@ tet21ghostsolid :: computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode r
         }
     }
 #endif
+#else // ifdef __FM_MODULE
+        OOFEM_ERROR("Fluid module missing\n");
+#endif// ifdef __FM_MODULE
+
+
     // *******************
     //computeNumericStiffnessMatrix(answer, rMode, tStep);
 }
@@ -716,7 +717,7 @@ tet21ghostsolid :: giveInternalForcesVectorGivenSolution(FloatArray &answer, Tim
     FloatMatrix Kf, G, Kx, B, Ed, dNx;
     FloatArray Strain, Stress, Nlin, dNv, a_inc, a_prev, aVelocity, aPressure, aGhostDisplacement, aIncGhostDisplacement, fluidStress, epsf, dpdivv;
     FloatArray momentum, conservation, auxstress, divv;
-    double pressure, epsvol = 0.0;
+    double pressure;
 
     if ( !tStep->isTheFirstStep() ) {
         this->computeVectorOf(VM_Total, tStep->givePreviousStep(), a_prev);
@@ -759,7 +760,8 @@ tet21ghostsolid :: giveInternalForcesVectorGivenSolution(FloatArray &answer, Tim
             // Momentum equation
             gp->setMaterialMode(_3dFlow);
 #ifdef __FM_MODULE
-            fluidMaterial->computeDeviatoricStressVector(fluidStress, epsvol, gp, epsf, pressure, tStep);
+            auto val = fluidMaterial->computeDeviatoricStress3D(epsf, pressure, gp, tStep);
+            fluidStress = val.first;
 #else
             OOFEM_ERROR("Missing FM module");
 #endif
@@ -806,7 +808,8 @@ tet21ghostsolid :: giveInternalForcesVectorGivenSolution(FloatArray &answer, Tim
 
             gp->setMaterialMode(_3dFlow);
 #ifdef __FM_MODULE
-            fluidMaterial->computeDeviatoricStressVector(fluidCauchyArray, epsvol, gp, epsf, pressure, tStep);
+            auto val = fluidMaterial->computeDeviatoricStress3D(epsf, pressure, gp, tStep);
+            fluidCauchyArray = val.first;
 #else
             OOFEM_ERROR("Missing FM module");
 #endif
@@ -869,7 +872,7 @@ tet21ghostsolid :: giveInternalForcesVectorGivenSolutionDebug(FloatArray &answer
     FloatMatrix Kf, G, Kx, B, Ed, dNx;
     FloatArray Strain, Stress, Nlin, dNv, a_inc, a_prev, aVelocity, aPressure, aGhostDisplacement, aIncGhostDisplacement, fluidStress, epsf, dpdivv;
     FloatArray momentum, conservation, auxstress, divv;
-    double pressure, epsvol = 0.0;
+    double pressure;
 
     if ( !tStep->isTheFirstStep() ) {
         this->computeVectorOf(VM_Total, tStep->givePreviousStep(), a_prev);
@@ -916,7 +919,8 @@ tet21ghostsolid :: giveInternalForcesVectorGivenSolutionDebug(FloatArray &answer
             // Momentum equation
             gp->setMaterialMode(_3dFlow);
 #ifdef __FM_MODULE
-            fluidMaterial->computeDeviatoricStressVector(fluidStress, epsvol, gp, epsf, pressure, tStep);
+            auto val = fluidMaterial->computeDeviatoricStress3D(epsf, pressure, gp, tStep);
+            fluidStress = val.first;
 #else
             OOFEM_ERROR("Missing FM module");
 #endif
@@ -974,7 +978,8 @@ tet21ghostsolid :: giveInternalForcesVectorGivenSolutionDebug(FloatArray &answer
 
             gp->setMaterialMode(_3dFlow);
 #ifdef __FM_MODULE
-            fluidMaterial->computeDeviatoricStressVector(fluidCauchy, epsvol, gp, epsf, pressure, tStep);
+            auto val = fluidMaterial->computeDeviatoricStress3D(epsf, pressure, gp, tStep);
+            fluidCauchy = val.first;
 #else
             OOFEM_ERROR("Missing FM module");
 #endif
@@ -1360,8 +1365,7 @@ tet21ghostsolid :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer
         if ( node <= 4 ) {
             answer.at(1) = this->giveNode(node)->giveDofWithID(P_f)->giveUnknown(VM_Total, tStep);
         } else {
-            IntArray eNodes;
-            this->interpolation.computeLocalEdgeMapping(eNodes, node - 4);
+            const auto &eNodes = this->interpolation.computeLocalEdgeMapping(node - 4);
             answer.at(1) = 0.5 * (
                 this->giveNode( eNodes.at(1) )->giveDofWithID(P_f)->giveUnknown(VM_Total, tStep) +
                 this->giveNode( eNodes.at(2) )->giveDofWithID(P_f)->giveUnknown(VM_Total, tStep) );
@@ -1390,9 +1394,9 @@ tet21ghostsolid :: computeBoundarySurfaceLoadVector(FloatArray &answer, Boundary
     int nsd = fei->giveNsd();
 
     f.zero();
-    IntegrationRule *iRule = fei->giveBoundaryIntegrationRule(load->giveApproxOrder(), boundary);
+    auto iRule = fei->giveBoundaryIntegrationRule(load->giveApproxOrder(), boundary);
 
-    for ( GaussPoint *gp : *iRule ) {
+    for ( auto &gp : *iRule ) {
         FloatArray lcoords = gp->giveNaturalCoordinates();
         if ( load->giveFormulationType() == Load :: FT_Entity ) {
             load->computeValueAt(force, tStep, lcoords, mode);
@@ -1452,7 +1456,5 @@ tet21ghostsolid :: computeBoundarySurfaceLoadVector(FloatArray &answer, Boundary
     answer.resize(39);
     answer.zero();
     answer.assemble(f, this->velocitydofsonside);
-
-    delete iRule;
 }
 }

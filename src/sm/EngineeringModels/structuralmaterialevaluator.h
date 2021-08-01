@@ -48,6 +48,7 @@
 #define _IFT_StructuralMaterialEvaluator_stressControl "stresscontrol" ///< Integer list of the stress components which are controlled
 #define _IFT_StructuralMaterialEvaluator_outputVariables "vars" ///< Variables (from integration point) to be written.
 #define _IFT_StructuralMaterialEvaluator_tolerance "tolerance" ///< Tolerance for stress control
+#define _IFT_StructuralMaterialEvaluator_keepTangent "keeptangent"
 //@}
 
 namespace oofem {
@@ -64,6 +65,7 @@ class StructuralMaterialEvaluator : public EngngModel
 {
 protected:
     double deltaT; ///< Time increment.
+    double keepTangent;
 
     IntArray cmpntFunctions; /// Time functions controlling each component of the deviatoric part of the stress.
     IntArray sControl, eControl;
@@ -76,19 +78,19 @@ protected:
     double tolerance;
 
 public:
-    StructuralMaterialEvaluator(int i, EngngModel * _master = NULL);
+    StructuralMaterialEvaluator(int i, EngngModel *master = nullptr);
     virtual ~StructuralMaterialEvaluator();
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual void solveYourself();
+    void solveYourself() override;
 
-    virtual int checkConsistency();
-    virtual void doStepOutput(TimeStep *tStep);
-    virtual TimeStep *giveNextStep();
+    int checkConsistency() override;
+    void doStepOutput(TimeStep *tStep) override;
+    TimeStep *giveNextStep() override;
 
-    virtual const char *giveClassName() const { return "StructuralMaterialEvaluator"; }
-    virtual const char *giveInputRecordName() const { return _IFT_StructuralMaterialEvaluator_Name; }
+    const char *giveClassName() const override { return "StructuralMaterialEvaluator"; }
+    const char *giveInputRecordName() const { return _IFT_StructuralMaterialEvaluator_Name; }
 };
 } // end namespace oofem
 

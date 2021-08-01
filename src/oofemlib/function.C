@@ -37,6 +37,8 @@
 #include "error.h"
 #include "domain.h"
 #include "gausspoint.h"
+#include "datastream.h"
+#include "contextioerr.h"
 
 namespace oofem {
 Function :: Function(int n, Domain *d) :
@@ -114,6 +116,31 @@ Function :: evaluate(const std :: map< std :: string, FunctionArgument > &valDic
         OOFEM_ERROR("Function does not return scalar value");
     }
     return ans[0];
+}
+
+void
+Function :: saveContext(DataStream &stream, ContextMode mode)
+{
+    FEMComponent :: saveContext(stream, mode);
+
+    if ( mode & CM_Definition ) {
+        if ( !stream.write(parameterType) ) {
+          THROW_CIOERR(CIO_IOERR);
+        }
+    }
+}
+
+
+void
+Function :: restoreContext(DataStream &stream, ContextMode mode)
+{
+    FEMComponent :: restoreContext(stream, mode);
+
+    if ( mode & CM_Definition ) {
+        if ( !stream.read(parameterType) ) {
+          THROW_CIOERR(CIO_IOERR);
+        }
+    }
 }
 
 } // end namespace oofem

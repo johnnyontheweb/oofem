@@ -1,5 +1,4 @@
 MPS_06.out.sm
-# 
 drying creep described of plane-stress elements in tension
 #
 # element 1: autogenous shrinkage - "fib prediction"
@@ -8,7 +7,7 @@ drying creep described of plane-stress elements in tension
 # element 4: drying and autogenous shrinkage
 # element 5: autogenous shrinkage - "B4 prediction"
 #
-IncrLinearStatic endOfTimeOfInterest 10000.00000 nsteps 25 prescribedTimes 25 0.0001 0.0002 0.0005 0.001 0.002 0.005 0.01 0.02 0.05 0.1 0.2 0.5 1. 2. 5. 10. 20. 50. 100. 200. 500. 1000. 2000. 5000. 10000. nmodules 1
+StaticStructural nsteps 25 prescribedTimes 25 0.0001 0.0002 0.0005 0.001 0.002 0.005 0.01 0.02 0.05 0.1 0.2 0.5 1. 2. 5. 10. 20. 50. 100. 200. 500. 1000. 2000. 5000. 10000. nmodules 1 miniter 1
 #
 errorcheck
 #vtkxml tstep_step 1 domain_all vars 2 1 4 primvars 1 1 
@@ -74,15 +73,15 @@ SimpleCS 5 thick 1.0 material 5
 #
 # MATERIAL
 #
-mps 1 d 0. n 0.2 talpha 12.e-6 referencetemperature 296. mode 0 fc 30. cc 350. w/c 0.5 a/c 6. stiffnessfactor 1.e6  timefactor 1. lambda0 1. begoftimeofinterest 1.e-6 endoftimeofinterest 1.e4 relMatAge 0.1 CoupledAnalysisType 2 ksh 0.0 t0 7. mus 5.e-6 alpha_as 700.
+mps 1 d 0. n 0.2 talpha 12.e-6 referencetemperature 296. mode 0 fc 30. cc 350. w/c 0.5 a/c 6. stiffnessfactor 1.e6  timefactor 1. lambda0 1. begoftimeofinterest 1.e-6 endoftimeofinterest 1.e4 relMatAge 0.1 CoupledAnalysisType 2 ksh 0.0 mus 5.e-6 alpha_as 700.
 #
-mps 2 d 0. n 0.2 talpha 12.e-6 referencetemperature 296. mode 0 fc 30. cc 350. w/c 0.5 a/c 6. stiffnessfactor 1.e6  timefactor 1. lambda0 1. begoftimeofinterest 1.e-6 endoftimeofinterest 1.e4 relMatAge 0.1 CoupledAnalysisType 2 ksh 0.0 t0 7. mus 5.e-6 eps_cas0 -100.e-6
+mps 2 d 0. n 0.2 talpha 12.e-6 referencetemperature 296. mode 0 fc 30. cc 350. w/c 0.5 a/c 6. stiffnessfactor 1.e6  timefactor 1. lambda0 1. begoftimeofinterest 1.e-6 endoftimeofinterest 1.e4 relMatAge 0.1 CoupledAnalysisType 2 ksh 0.0 mus 5.e-6 eps_cas0 -100.e-6
 #
-mps 3 d 0. n 0.2 talpha 12.e-6 referencetemperature 296. mode 0 fc 30. cc 350. w/c 0.5 a/c 6. stiffnessfactor 1.e6  timefactor 1. lambda0 1. begoftimeofinterest 1.e-6 endoftimeofinterest 1.e4 relMatAge 0.1 CoupledAnalysisType 2 ksh 0.001 t0 7. mus 5.e-6 
+mps 3 d 0. n 0.2 talpha 12.e-6 referencetemperature 296. mode 0 fc 30. cc 350. w/c 0.5 a/c 6. stiffnessfactor 1.e6  timefactor 1. lambda0 1. begoftimeofinterest 1.e-6 endoftimeofinterest 1.e4 relMatAge 0.1 CoupledAnalysisType 2 ksh 0.001 mus 5.e-6 
 #
-mps 4 d 0. n 0.2 talpha 12.e-6 referencetemperature 296. mode 0 fc 30. cc 350. w/c 0.5 a/c 6. stiffnessfactor 1.e6  timefactor 1. lambda0 1. begoftimeofinterest 1.e-6 endoftimeofinterest 1.e4 relMatAge 0.1 CoupledAnalysisType 2 ksh 0.001 t0 7. mus 5.e-6 eps_cas0 -100.e-6
+mps 4 d 0. n 0.2 talpha 12.e-6 referencetemperature 296. mode 0 fc 30. cc 350. w/c 0.5 a/c 6. stiffnessfactor 1.e6  timefactor 1. lambda0 1. begoftimeofinterest 1.e-6 endoftimeofinterest 1.e4 relMatAge 0.1 CoupledAnalysisType 2 ksh 0.001 mus 5.e-6 eps_cas0 -100.e-6
 #
-mps 5 d 0. n 0.2 talpha 12.e-6 referencetemperature 296. mode 0 fc 30. cc 350. w/c 0.5 a/c 6. stiffnessfactor 1.e6  timefactor 1. lambda0 1. begoftimeofinterest 1.e-6 endoftimeofinterest 1.e4 relMatAge 0.1 CoupledAnalysisType 2 ksh 0.0 t0 7. mus 5.e-6 b4_cem_type 0
+mps 5 d 0. n 0.2 talpha 12.e-6 referencetemperature 296. mode 0 fc 30. cc 350. w/c 0.5 a/c 6. stiffnessfactor 1.e6  timefactor 1. lambda0 1. begoftimeofinterest 1.e-6 endoftimeofinterest 1.e4 relMatAge 0.1 CoupledAnalysisType 2 ksh 0.0 mus 5.e-6 b4_cem_type 0
 #
 # BOUNDARY CONDITIONS
 #

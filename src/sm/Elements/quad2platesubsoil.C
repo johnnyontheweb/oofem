@@ -32,7 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/quad2platesubsoil.h"
+#include "sm/Elements/quad2platesubsoil.h"
 #include "fei2dquadquad.h"
 #include "crosssection.h"
 #include "gausspoint.h"
@@ -69,7 +69,7 @@ Quad2PlateSubSoil :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize( 1 );
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 5) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 5);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], numberOfGaussPoints, this);
     }
 }
@@ -99,20 +99,18 @@ Quad2PlateSubSoil :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int l
 }
 
 
-IRResultType
-Quad2PlateSubSoil :: initializeFrom(InputRecord *ir)
+void
+Quad2PlateSubSoil :: initializeFrom(InputRecord &ir)
 {
     this->numberOfGaussPoints = 4;
-	IRResultType result = StructuralElement::initializeFrom(ir);
-	// optional record for 1st local axes - here it is not used, unuseful
-	la1.resize(3);
-	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
-	IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_Quad2PlateSubSoil_lcs);
+    StructuralElement :: initializeFrom(ir);
+    // optional record for 1st local axes - here it is not used, unuseful
+    la1.resize(3);
+    la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
+    IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_Quad2PlateSubSoil_lcs);
 
-	this->macroElem = 0;
-	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_Quad2PlateSubSoil_macroelem);
-
-	return IRRT_OK;
+    this->macroElem = 0;
+    IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_Quad2PlateSubSoil_macroelem);
 }
 
 
@@ -150,6 +148,26 @@ Quad2PlateSubSoil :: SPRNodalRecoveryMI_giveDofMansDeterminedByPatch(IntArray &a
         OOFEM_ERROR("node %d not found on element %d", pap, this->giveNumber());
     }
 }
+
+void
+Quad2PlateSubSoil ::computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer)
+// Returns the [1x8] displacement interpolation matrix {N}
+{
+    FloatArray N(8);
+    giveInterpolation()->evalN(N, iLocCoord, FEIElementGeometryWrapper(this) );
+    answer.beNMatrixOf(N, 1);
+}
+
+void
+Quad2PlateSubSoil :: computeSurfaceNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords)
+{
+    if (boundaryID == 1) {
+        this->computeNmatrixAt(lcoords, answer);
+    } else {
+        OOFEM_ERROR("computeSurfaceNMatrix: Only one surface is supported with id=1");
+    }
+}
+
 
 
 } // end namespace oofem

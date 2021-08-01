@@ -32,9 +32,9 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/EngineeringModels/linearstatic.h"
-#include "../sm/Elements/structuralelement.h"
-#include "../sm/Elements/structuralelementevaluator.h"
+#include "sm/EngineeringModels/linearstatic.h"
+#include "sm/Elements/structuralelement.h"
+#include "sm/Elements/structuralelementevaluator.h"
 #include "nummet.h"
 #include "timestep.h"
 #include "element.h"
@@ -65,7 +65,7 @@ LinearStatic :: LinearStatic(int i, EngngModel *_master) : StructuralEngngModel(
 }
 
 
-LinearStatic :: ~LinearStatic() { }
+LinearStatic :: ~LinearStatic() {}
 
 
 NumericalMethod *LinearStatic :: giveNumericalMethod(MetaStep *mStep)
@@ -73,10 +73,10 @@ NumericalMethod *LinearStatic :: giveNumericalMethod(MetaStep *mStep)
     if ( !nMethod ) {
         if ( isParallel() ) {
             if ( ( solverType == ST_Petsc ) || ( solverType == ST_Feti ) ) {
-                nMethod.reset( classFactory.createSparseLinSolver(solverType, this->giveDomain(1), this) );
+                nMethod = classFactory.createSparseLinSolver(solverType, this->giveDomain(1), this);
             }
         } else {
-            nMethod.reset( classFactory.createSparseLinSolver(solverType, this->giveDomain(1), this) );
+            nMethod = classFactory.createSparseLinSolver(solverType, this->giveDomain(1), this);
         }
         if ( !nMethod ) {
             OOFEM_ERROR("linear solver creation failed for lstype %d", solverType);
@@ -87,15 +87,10 @@ NumericalMethod *LinearStatic :: giveNumericalMethod(MetaStep *mStep)
     return nMethod.get();
 }
 
-IRResultType
-LinearStatic :: initializeFrom(InputRecord *ir)
+void
+LinearStatic :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
-    result = StructuralEngngModel :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    StructuralEngngModel :: initializeFrom(ir);
 
     int val = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_EngngModel_lstype);
@@ -113,9 +108,6 @@ LinearStatic :: initializeFrom(InputRecord *ir)
     }
 
 #endif
-
-
-    return IRRT_OK;
 }
 
 
@@ -160,11 +152,11 @@ TimeStep *LinearStatic :: giveNextStep()
 {
     if ( !currentStep ) {
         // first step -> generate initial step
-        //currentStep.reset( new TimeStep(*giveSolutionStepWhenIcApply()) );
-        currentStep.reset( new TimeStep(giveNumberOfTimeStepWhenIcApply(), this, 1, 0., 1., 0) );
+        //currentStep = std::make_unique<TimeStep>(*giveSolutionStepWhenIcApply());
+        currentStep = std::make_unique<TimeStep>(giveNumberOfTimeStepWhenIcApply(), this, 1, 0., 1., 0);
     }
     previousStep = std :: move(currentStep);
-    currentStep.reset( new TimeStep(*previousStep, 1.) );
+    currentStep = std::make_unique<TimeStep>(*previousStep, 1.);
 
     return currentStep.get();
 }
@@ -258,7 +250,7 @@ void LinearStatic :: solveYourself()
     if ( this->isParallel() ) {
 #ifdef __VERBOSE_PARALLEL
         // force equation numbering before setting up comm maps
-        int neq = this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering());
+        int neq = this->giveNumberOfDomainEquations(1, this->giveEquationNumbering());
         OOFEM_LOG_INFO("[process rank %d] neq is %d\n", this->giveRank(), neq);
 #endif
 
@@ -285,15 +277,15 @@ void LinearStatic :: solveYourselfAt(TimeStep *tStep)
         //
         // first step  assemble stiffness Matrix
         //
-        stiffnessMatrix.reset( classFactory.createSparseMtrx(sparseMtrxType) );
+        stiffnessMatrix = classFactory.createSparseMtrx(sparseMtrxType);
         if ( !stiffnessMatrix ) {
             OOFEM_ERROR("sparse matrix creation failed");
         }
 
-        stiffnessMatrix->buildInternalStructure( this, 1, EModelDefaultEquationNumbering() );
+        stiffnessMatrix->buildInternalStructure( this, 1, this->giveEquationNumbering() );
 
         this->assemble( *stiffnessMatrix, tStep, TangentAssembler(TangentStiffness),
-                       EModelDefaultEquationNumbering(), this->giveDomain(1) );
+                       this->giveEquationNumbering(), this->giveDomain(1) );
 
         initFlag = 0;
     }
@@ -305,28 +297,28 @@ void LinearStatic :: solveYourselfAt(TimeStep *tStep)
     //
     // allocate space for displacementVector
     //
-    displacementVector.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ) );
+    displacementVector.resize( this->giveNumberOfDomainEquations( 1, this->giveEquationNumbering() ) ); // km?? replace EModelDefaultEquationNumbering() with this->giveEquationNumbering(). Use pointer?
     displacementVector.zero();
 
     //
     // assembling the load vector
     //
-    loadVector.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ) );
+    loadVector.resize( this->giveNumberOfDomainEquations( 1, this->giveEquationNumbering() ) );
     loadVector.zero();
     this->assembleVector( loadVector, tStep, ExternalForceAssembler(), VM_Total,
-                         EModelDefaultEquationNumbering(), this->giveDomain(1) );
+                         this->giveEquationNumbering(), this->giveDomain(1) );
 
     //
     // internal forces (from Dirichlet b.c's, or thermal expansion, etc.)
     //
-    FloatArray internalForces( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ) );
+    FloatArray internalForces( this->giveNumberOfDomainEquations( 1, this->giveEquationNumbering() ) );
     internalForces.zero();
     this->assembleVector( internalForces, tStep, InternalForceAssembler(), VM_Total,
-                         EModelDefaultEquationNumbering(), this->giveDomain(1) );
+                         this->giveEquationNumbering(), this->giveDomain(1) );
 
     loadVector.subtract(internalForces);
 
-    this->updateSharedDofManagers(loadVector, EModelDefaultEquationNumbering(), ReactionExchangeTag);
+    this->updateSharedDofManagers(loadVector, this->giveEquationNumbering(), ReactionExchangeTag);
 
     //
     // set-up numerical model
@@ -395,87 +387,32 @@ void LinearStatic :: solveYourselfAt(TimeStep *tStep)
 }
 
 
-contextIOResultType LinearStatic :: saveContext(DataStream *stream, ContextMode mode, void *obj)
-//
-// saves state variable - displacement vector
-//
+void LinearStatic :: saveContext(DataStream &stream, ContextMode mode)
 {
+    StructuralEngngModel :: saveContext(stream, mode);
+
     contextIOResultType iores;
-    int closeFlag = 0;
-    FILE *file = NULL;
-
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, this->giveCurrentStep()->giveNumber(),
-                                    this->giveCurrentStep()->giveVersion(), contextMode_write) ) {
-            THROW_CIOERR(CIO_IOERR); // override
-        }
-
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
-
-    if ( ( iores = StructuralEngngModel :: saveContext(stream, mode) ) != CIO_OK ) {
+    if ( ( iores = displacementVector.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    if ( ( iores = displacementVector.storeYourself(*stream) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete stream;
-        stream = NULL;
-    }
-
-    return CIO_OK;
 }
 
 
-contextIOResultType LinearStatic :: restoreContext(DataStream *stream, ContextMode mode, void *obj)
-//
-// restore state variable - displacement vector
-//
+void LinearStatic :: restoreContext(DataStream &stream, ContextMode mode)
 {
+    StructuralEngngModel :: restoreContext(stream, mode);
+
     contextIOResultType iores;
-    int closeFlag = 0;
-    int istep, iversion;
-    FILE *file = NULL;
-
-    this->resolveCorrespondingStepNumber(istep, iversion, obj);
-
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, istep, iversion, contextMode_read) ) {
-            THROW_CIOERR(CIO_IOERR); // override
-        }
-
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
-
-    if ( ( iores = StructuralEngngModel :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
+    if ( ( iores = displacementVector.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
-
-    if ( ( iores = displacementVector.restoreYourself(*stream) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete stream;
-        stream = NULL;
-    }
-
-    return CIO_OK;
 }
 
 void
 LinearStatic::terminate(TimeStep *tStep)
 {
 	StructuralEngngModel::terminate(tStep);
-	this->printReactionForces(tStep, 1);
+	this->printReactionForces(tStep, 1, this->giveOutputStream());
 	fflush(this->giveOutputStream());
 }
 
@@ -509,7 +446,7 @@ LinearStatic :: estimateMaxPackSize(IntArray &commMap, DataStream &buff, int pac
         // only pcount is relevant here, since only prescribed components are exchanged !!!!
         // --------------------------------------------------------------------------------
 
-        return ( buff.givePackSizeOfDouble(1) * pcount );
+        return buff.givePackSizeOfDouble(1) * pcount;
     } else if ( packUnpackType == 1 ) {
         for ( int map: commMap ) {
             count += domain->giveElement( map )->estimatePackSize(buff);

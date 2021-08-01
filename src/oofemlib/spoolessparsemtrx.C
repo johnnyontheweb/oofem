@@ -40,13 +40,6 @@
 namespace oofem {
 REGISTER_SparseMtrx(SpoolesSparseMtrx, SMT_SpoolesMtrx);
 
-SparseMtrx *
-SpoolesSparseMtrx :: GiveCopy() const
-{
-    OOFEM_ERROR("Not implemented");
-    return NULL;
-}
-
 void
 SpoolesSparseMtrx :: times(const FloatArray &x, FloatArray &answer) const
 {
@@ -113,18 +106,16 @@ SpoolesSparseMtrx :: buildInternalStructure(EngngModel *eModel, int di, const Un
 int
 SpoolesSparseMtrx :: assemble(const IntArray &loc, const FloatMatrix &mat)
 {
-    int i, j, ac1, ac2, ndofe;
+    int ndofe = mat.giveNumberOfRows();
 
-    ndofe = mat.giveNumberOfRows();
-
-    for ( i = 1; i <= ndofe; i++ ) {
-        ac1 = loc.at(i);
+    for ( int i = 1; i <= ndofe; i++ ) {
+        int ac1 = loc.at(i);
         if ( ac1 == 0 ) {
             continue;
         }
 
-        for ( j = 1; j <= ndofe; j++ ) {
-            ac2 = loc.at(j);
+        for ( int j = 1; j <= ndofe; j++ ) {
+            int ac2 = loc.at(j);
             if ( ac2 == 0 ) {
                 continue;
             }
@@ -137,7 +128,6 @@ SpoolesSparseMtrx :: assemble(const IntArray &loc, const FloatMatrix &mat)
         }
     }
 
-    // increment version
     this->version++;
     return 1;
 }
@@ -145,15 +135,13 @@ SpoolesSparseMtrx :: assemble(const IntArray &loc, const FloatMatrix &mat)
 int
 SpoolesSparseMtrx :: assemble(const IntArray &rloc, const IntArray &cloc, const FloatMatrix &mat)
 {
-    int i, j, ii, jj, dim1, dim2;
-
-    dim1 = mat.giveNumberOfRows();
-    dim2 = mat.giveNumberOfColumns();
-    for ( i = 1; i <= dim1; i++ ) {
-        ii = rloc.at(i);
+    int dim1 = mat.giveNumberOfRows();
+    int dim2 = mat.giveNumberOfColumns();
+    for ( int i = 1; i <= dim1; i++ ) {
+        int ii = rloc.at(i);
         if ( ii ) {
-            for ( j = 1; j <= dim2; j++ ) {
-                jj = cloc.at(j);
+            for ( int j = 1; j <= dim2; j++ ) {
+                int jj = cloc.at(j);
                 if ( jj ) {
                     InpMtx_inputRealEntry( this->mtrx, ii - 1, jj - 1, mat.at(i, j) );
                 }
@@ -161,28 +149,27 @@ SpoolesSparseMtrx :: assemble(const IntArray &rloc, const IntArray &cloc, const 
         }
     }
 
-    // increment version
     this->version++;
 
     return 1;
 }
 
-void SpoolesSparseMtrx::add(double x, FloatMatrix &m)
-{
-	int dim1 = m.giveNumberOfRows();
-	int dim2 = m.giveNumberOfColumns();
-	int i, j;
-	for (i = 1; i <= dim1; i++) {
-	 for (j = 1; j <= dim2; j++)
-	 {
-		 //if (j > i) {
-			// continue; // symmetric lower triangular?
-		 //}
-		 InpMtx_inputRealEntry(this->mtrx, i - 1, j - 1, m.at(i, j));
-	 }
-	}
-	this->version++;
-}
+//void SpoolesSparseMtrx::add(double x, FloatMatrix &m)
+//{
+//	int dim1 = m.giveNumberOfRows();
+//	int dim2 = m.giveNumberOfColumns();
+//	int i, j;
+//	for (i = 1; i <= dim1; i++) {
+//	 for (j = 1; j <= dim2; j++)
+//	 {
+//		 //if (j > i) {
+//			// continue; // symmetric lower triangular?
+//		 //}
+//		 InpMtx_inputRealEntry(this->mtrx, i - 1, j - 1, m.at(i, j));
+//	 }
+//	}
+//	this->version++;
+//}
 
 void
 SpoolesSparseMtrx :: zero()

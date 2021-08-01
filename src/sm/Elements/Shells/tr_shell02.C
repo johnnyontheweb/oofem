@@ -32,7 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/Shells/tr_shell02.h"
+#include "sm/Elements/Shells/tr_shell02.h"
 #include "fei2dtrlin.h"
 #include "contextioerr.h"
 #include "gaussintegrationrule.h"
@@ -55,49 +55,38 @@ IntArray TR_SHELL02 :: loc_plate = {3, 4, 5, 9, 10, 11, 15, 16, 17};
 IntArray TR_SHELL02 :: loc_membrane = {1, 2, 6, 7, 8, 12, 13, 14, 18};
 
 TR_SHELL02 :: TR_SHELL02(int n, Domain *aDomain) : StructuralElement(n, aDomain), ZZNodalRecoveryModelInterface(this), ZZErrorEstimatorInterface(this), SpatialLocalizerInterface(this),
-    plate(new DKTPlate3d(-1, aDomain)), membrane(new TrPlanestressRotAllman3d(-1, aDomain))
+    plate(std::make_unique<DKTPlate3d>(-1, aDomain)),
+    membrane(std::make_unique<TrPlanestressRotAllman3d>(-1, aDomain))
 {
     numberOfDofMans = 3;
 }
 
 
-IRResultType
-TR_SHELL02 :: initializeFrom(InputRecord *ir)
+void
+TR_SHELL02 :: initializeFrom(InputRecord &ir)
 {
     // proc tady neni return = this...   ??? termitovo
-    IRResultType result = StructuralElement :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    StructuralElement :: initializeFrom(ir);
 
-	// optional record for 1st local axes
-	la1.resize(3);
-	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
-	IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_TR_SHELL02_FirstLocalAxis);
+    // optional record for 1st local axes
+    la1.resize(3);
+    la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
+    IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_TR_SHELL02_FirstLocalAxis);
 
-	this->macroElem = 0;
-	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_TR_SHELL02_macroElem);
+    this->macroElem = 0;
+    IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_TR_SHELL02_macroElem);
 
-    result = plate->initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
-	plate->la1 = la1;
-
-    result = membrane->initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
-	membrane->la1 = la1;
-
-    return IRRT_OK;
+    plate->initializeFrom(ir);
+    plate->la1 = la1;
+    membrane->initializeFrom(ir);
+    membrane->la1 = la1;
 }
 
 void
 TR_SHELL02 :: postInitialize()
 {
     StructuralElement :: postInitialize();
-	this->numberOfGaussPoints = plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints();
+    this->numberOfGaussPoints = plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints();
     if ( plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints() != membrane->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints() ) {
         OOFEM_ERROR("incompatible integration rules detected");
     }
@@ -157,31 +146,19 @@ TR_SHELL02 :: giveCharacteristicMatrix(FloatMatrix &answer, CharType mtrx, TimeS
 }
 
 void
-TR_SHELL02::giveNodeCoordinates(double &x1, double &x2, double &x3,
-double &y1, double &y2, double &y3,
-double &z1, double &z2, double &z3)
+TR_SHELL02::giveNodeCoordinates(FloatArray& nc1, FloatArray& nc2, FloatArray& nc3)
 {
-	FloatArray nc1(3), nc2(3), nc3(3);
+    nc1.resize(3);
+    nc2.resize(3);
+    nc3.resize(3);
 
-	this->giveLocalCoordinates(nc1, *(this->giveNode(1)->giveCoordinates()));
-	this->giveLocalCoordinates(nc2, *(this->giveNode(2)->giveCoordinates()));
-	this->giveLocalCoordinates(nc3, *(this->giveNode(3)->giveCoordinates()));
-
-	x1 = nc1.at(1);
-	x2 = nc2.at(1);
-	x3 = nc3.at(1);
-
-	y1 = nc1.at(2);
-	y2 = nc2.at(2);
-	y3 = nc3.at(2);
-
-	z1 = nc1.at(3);
-	z2 = nc2.at(3);
-	z3 = nc3.at(3);
+	this->giveLocalCoordinates(nc1, this->giveNode(1)->giveCoordinates());
+	this->giveLocalCoordinates(nc2, this->giveNode(2)->giveCoordinates());
+	this->giveLocalCoordinates(nc3, this->giveNode(3)->giveCoordinates());
 }
 
 void
-TR_SHELL02::giveLocalCoordinates(FloatArray &answer, FloatArray &global)
+TR_SHELL02::giveLocalCoordinates(FloatArray &answer, const FloatArray &global)
 // Returns global coordinates given in global vector
 // transformed into local coordinate system of the
 // receiver
@@ -196,7 +173,7 @@ TR_SHELL02::giveLocalCoordinates(FloatArray &answer, FloatArray &global)
 	//this->computeGtoLRotationMatrix();
 
 	offset = global;
-	offset.subtract(*this->giveNode(1)->giveCoordinates());
+	offset.subtract(this->giveNode(1)->giveCoordinates());
 	answer.beProductOf(*this->plate->computeGtoLRotationMatrix(), offset);
 }
 
@@ -280,9 +257,8 @@ TR_SHELL02::computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
 	FloatMatrix Kgx{ 3, 3 }, Kgy{ 3, 3 }, Kgxy{ 3, 3 };
 
 	// calculate the matrices - hp constant thickness
-	double x1, x2, x3, y1, y2, y3, z1, z2, z3;
-	this->giveNodeCoordinates(x1, x2, x3, y1, y2, y3, z1, z2, z3);
-	FloatArray n1{ x1, y1, z1 }, n2{ x2, y2, z2 }, n3{ x3, y3, z3 };
+	FloatArray n1, n2, n3;
+	this->giveNodeCoordinates(n1, n2, n3);
 
 	double x12, x23, x13, y12, y23, y13;
 	x12 = n1.at(1) - n2.at(1);
@@ -355,16 +331,16 @@ void
 TR_SHELL02 :: computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode)
 {
     // OOFEM_ERROR("This function is not implemented yet.");
-	FloatArray aux;
+    FloatArray aux;
 
-	answer.resize(18);
-	answer.zero();
+    answer.resize(18);
+    answer.zero();
 
-	plate->computeBodyLoadVectorAt(aux, forLoad, tStep, mode);
-	if (!aux.isEmpty()) answer.assemble(aux, loc_plate);
+    plate->computeBodyLoadVectorAt(aux, forLoad, tStep, mode);
+    if (!aux.isEmpty()) answer.assemble(aux, loc_plate);
 
-	membrane->computeBodyLoadVectorAt(aux, forLoad, tStep, mode);
-	if (!aux.isEmpty()) answer.assemble(aux, loc_membrane);
+    membrane->computeBodyLoadVectorAt(aux, forLoad, tStep, mode);
+    if (!aux.isEmpty()) answer.assemble(aux, loc_membrane);
 }
 
 int
@@ -377,14 +353,14 @@ TR_SHELL02 :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
         GaussPoint *plateGP = plate->giveDefaultIntegrationRulePtr()->getIntegrationPoint(gp->giveNumber() - 1);
 
         plate->giveIPValue(answer, plateGP, type, tStep);
-		if (type == IST_ShellMomentTensor || type == IST_CurvatureTensor) { answer.negated(); } // tension at bottom is positive bending
+	if (type == IST_ShellMomentTensor || type == IST_CurvatureTensor) { answer.negated(); } // tension at bottom is positive bending
         membrane->giveIPValue(aux, membraneGP, type, tStep);
         answer.add(aux);
         return 1;
-	} else if (type == IST_StrainTensor || type == IST_StressTensor) {
-		answer.resize(6);
-		answer.zero();
-		return 1;
+    } else if (type == IST_StrainTensor || type == IST_StressTensor) {
+	    answer.resize(6);
+	    answer.zero();
+	    return 1;
     } else {
         return StructuralElement :: giveIPValue(answer, gp, type, tStep);
     }
@@ -398,97 +374,97 @@ void
 TR_SHELL02 :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,
                                                          InternalStateType type, TimeStep *tStep)
 {
-	//if (node < 1 || node>3) {
-	//	OOFEM_ERROR("unsupported node");
-	//}
+    //if (node < 1 || node>3) {
+    //	OOFEM_ERROR("unsupported node");
+    //}
 
-	//int size = 0;
-	//FloatArray val;
-	//FloatArray Nweights;
-	//FEIElementGeometryWrapper wrap(this);
-	//for (int i = 0; i < plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints(); i++) {
-	//	GaussPoint *gpP = plate->giveDefaultIntegrationRulePtr()->getIntegrationPoint(i);
-	//	//GaussPoint *gpM = membrane->giveDefaultIntegrationRulePtr()->getIntegrationPoint(i);
-	//	giveIPValue(val, gpP, type, tStep);
-	//	if (size == 0) {
-	//		size = val.giveSize();
-	//		answer.resize(size);
-	//	}
-	//	plate->giveInterpolation()->evalN(Nweights, gpP->giveNaturalCoordinates(), wrap);
-	//	//membrane->giveInterpolation()->evalN(Nweights, gpM->giveNaturalCoordinates(), wrap);
-	//	answer.add(Nweights.at(node), val);
-	//}
+    //int size = 0;
+    //FloatArray val;
+    //FloatArray Nweights;
+    //FEIElementGeometryWrapper wrap(this);
+    //for (int i = 0; i < plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints(); i++) {
+    //	GaussPoint *gpP = plate->giveDefaultIntegrationRulePtr()->getIntegrationPoint(i);
+    //	//GaussPoint *gpM = membrane->giveDefaultIntegrationRulePtr()->getIntegrationPoint(i);
+    //	giveIPValue(val, gpP, type, tStep);
+    //	if (size == 0) {
+    //		size = val.giveSize();
+    //		answer.resize(size);
+    //	}
+    //	plate->giveInterpolation()->evalN(Nweights, gpP->giveNaturalCoordinates(), wrap);
+    //	//membrane->giveInterpolation()->evalN(Nweights, gpM->giveNaturalCoordinates(), wrap);
+    //	answer.add(Nweights.at(node), val);
+    //}
 
-	// choose least squares or not
-	if (this->numberOfGaussPoints == 1) {
-		this->giveIPValue(answer, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint(0), type, tStep);
-	}else{
-		double x1 = 0.0, x2 = 0.0, y = 0.0;
-		FloatMatrix A(3, 3);
-		FloatMatrix b, r;
-		FloatArray val;
-		double u, v;
+    // choose least squares or not
+    if (this->numberOfGaussPoints == 1) {
+	this->giveIPValue(answer, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint(0), type, tStep);
+    }else{
+	double x1 = 0.0, x2 = 0.0, y = 0.0;
+	FloatMatrix A(3, 3);
+	FloatMatrix b, r;
+	FloatArray val;
+	double u, v;
 
-		int size = 0;
+	int size = 0;
 
-		//for (GaussPoint *gp : *integrationRulesArray[0]) {
-		for (int i = 0; i < plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints(); i++) {
-			GaussPoint *gp = plate->giveDefaultIntegrationRulePtr()->getIntegrationPoint(i);
-			giveIPValue(val, gp, type, tStep);
-			if (size == 0) {
-				size = val.giveSize();
-				b.resize(3, size);
-				r.resize(3, size);
-				A.zero();
-				r.zero();
-			}
+	//for (GaussPoint *gp : *integrationRulesArray[0]) {
+	for (int i = 0; i < plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints(); i++) {
+	    GaussPoint *gp = plate->giveDefaultIntegrationRulePtr()->getIntegrationPoint(i);
+	    giveIPValue(val, gp, type, tStep);
+	    if (size == 0) {
+		size = val.giveSize();
+		b.resize(3, size);
+		r.resize(3, size);
+		A.zero();
+		r.zero();
+	    }
 
-			const FloatArray &coord = gp->giveNaturalCoordinates();
-			u = coord.at(1);
-			v = coord.at(2);
+	    const FloatArray &coord = gp->giveNaturalCoordinates();
+	    u = coord.at(1);
+	    v = coord.at(2);
 
-			A.at(1, 1) += 1;
-			A.at(1, 2) += u;
-			A.at(1, 3) += v;
-			A.at(2, 1) += u;
-			A.at(2, 2) += u * u;
-			A.at(2, 3) += u * v;
-			A.at(3, 1) += v;
-			A.at(3, 2) += v * u;
-			A.at(3, 3) += v * v;
+	    A.at(1, 1) += 1;
+	    A.at(1, 2) += u;
+	    A.at(1, 3) += v;
+	    A.at(2, 1) += u;
+	    A.at(2, 2) += u * u;
+	    A.at(2, 3) += u * v;
+	    A.at(3, 1) += v;
+	    A.at(3, 2) += v * u;
+	    A.at(3, 3) += v * v;
 
-			for (int j = 1; j <= size; j++) {
-				y = val.at(j);
-				r.at(1, j) += y;
-				r.at(2, j) += y * u;
-				r.at(3, j) += y * v;
-			}
-		}
-
-		A.solveForRhs(r, b);
-
-		switch (node) {
-		case 1:
-			x1 = 0.0;
-			x2 = 0.0;
-			break;
-		case 2:
-			x1 = 1.0;
-			x2 = 0.0;
-			break;
-		case 3:
-			x1 = 0.0;
-			x2 = 1.0;
-			break;
-		default:
-			OOFEM_ERROR("unsupported node");
-		}
-
-		answer.resize(size);
-		for (int j = 1; j <= size; j++) {
-			answer.at(j) = b.at(1, j) + x1 *b.at(2, j) + x2 *b.at(3, j);
-		}
+	    for (int j = 1; j <= size; j++) {
+		y = val.at(j);
+		r.at(1, j) += y;
+		r.at(2, j) += y * u;
+		r.at(3, j) += y * v;
+	    }
 	}
+
+	A.solveForRhs(r, b);
+
+	switch (node) {
+	case 1:
+	    x1 = 0.0;
+	    x2 = 0.0;
+	    break;
+	case 2:
+	    x1 = 1.0;
+	    x2 = 0.0;
+	    break;
+	case 3:
+	    x1 = 0.0;
+	    x2 = 1.0;
+	    break;
+	default:
+	    OOFEM_ERROR("unsupported node");
+	}
+
+	answer.resize(size);
+	for (int j = 1; j <= size; j++) {
+	    answer.at(j) = b.at(1, j) + x1 *b.at(2, j) + x2 *b.at(3, j);
+	}
+    }
 }
 
 
@@ -496,7 +472,7 @@ void
 TR_SHELL02 :: printOutputAt(FILE *file, TimeStep *tStep)
 // Performs end-of-step operations.
 {
-	fprintf(file, "element %d (%8d) macroelem %d :\n", this->giveLabel(), this->giveNumber(), this->macroElem);
+    fprintf(file, "element %d (%8d) macroelem %d :\n", this->giveLabel(), this->giveNumber(), this->macroElem);
 
 //#ifdef DEBUG
 //    FloatArray v, aux;
@@ -544,77 +520,61 @@ TR_SHELL02 :: printOutputAt(FILE *file, TimeStep *tStep)
 void
 TR_SHELL02::computeEdgeNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords)
 {
-	FloatArray n_vec;
-	this->giveInterpolation()->boundaryEdgeEvalN(n_vec, boundaryID, lcoords, FEIElementGeometryWrapper(this));
-	answer.beNMatrixOf(n_vec, 6);
+    FloatArray n_vec;
+    this->giveInterpolation()->boundaryEdgeEvalN(n_vec, boundaryID, lcoords, FEIElementGeometryWrapper(this));
+    answer.beNMatrixOf(n_vec, 6);
 }
 
 void
 TR_SHELL02::computeSurfaceNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords)
 {
-	FloatArray n_vec;
-	this->giveInterpolation()->boundarySurfaceEvalN(n_vec, boundaryID, lcoords, FEIElementGeometryWrapper(this));
-	answer.beNMatrixOf(n_vec, 6);
+    FloatArray n_vec;
+    this->giveInterpolation()->boundarySurfaceEvalN(n_vec, boundaryID, lcoords, FEIElementGeometryWrapper(this));
+    answer.beNMatrixOf(n_vec, 6);
 }
 
 double
 TR_SHELL02::computeSurfaceVolumeAround(GaussPoint *gp, int iSurf)
 {
-	return this->computeVolumeAround(gp);
+    return this->computeVolumeAround(gp);
 }
 
 double
 TR_SHELL02::computeEdgeVolumeAround(GaussPoint *gp, int iEdge)
 {
-	std::vector< FloatArray >lc = {
-		FloatArray(3), FloatArray(3), FloatArray(3)
-	};
-	this->giveNodeCoordinates(lc[0].at(1), lc[1].at(1), lc[2].at(1),
-		lc[0].at(2), lc[1].at(2), lc[2].at(2),
-		lc[0].at(3), lc[1].at(3), lc[2].at(3));
+    std::vector< FloatArray >lc = {
+	FloatArray(3), FloatArray(3), FloatArray(3)
+    };
+    this->giveNodeCoordinates(lc[0], lc[1], lc[2]);
 
-
-	double detJ = this->plate->interp_lin.edgeGiveTransformationJacobian(iEdge, gp->giveNaturalCoordinates(), FEIVertexListGeometryWrapper(lc));
-	return detJ * gp->giveWeight();
+    double detJ = this->plate->interp_lin.edgeGiveTransformationJacobian(iEdge, gp->giveNaturalCoordinates(), FEIVertexListGeometryWrapper(lc));
+    return detJ * gp->giveWeight();
 }
 
-contextIOResultType
-TR_SHELL02 :: saveContext(DataStream &stream, ContextMode mode, void *obj)
+
+void
+TR_SHELL02 :: saveContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-    if ( ( iores =  StructuralElement :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    if ( ( iores =  this->plate->saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    if ( ( iores = this->membrane->saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    return iores;
+    StructuralElement :: saveContext(stream, mode);
+    this->plate->saveContext(stream, mode);
+    this->membrane->saveContext(stream, mode);
 }
 
-contextIOResultType
-TR_SHELL02 :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
+
+void
+TR_SHELL02 :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-    if ( ( iores =  StructuralElement :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    if ( ( iores =   this->plate->restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    if ( ( iores =  this->membrane->restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    return iores;
+    StructuralElement :: restoreContext(stream, mode);
+    this->plate->restoreContext(stream, mode);
+    this->membrane->restoreContext(stream, mode);
 }
+
 
 IntegrationRule *
 TR_SHELL02 :: ZZErrorEstimatorI_giveIntegrationRule()
 {
     if ( !this->compositeIR ) {
-        this->compositeIR.reset( new GaussIntegrationRule(1, this, 1, 12) );
+        this->compositeIR = std::make_unique<GaussIntegrationRule>(1, this, 1, 12);
         this->compositeIR->SetUpPointsOnTriangle(plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints(), _3dShell);
     }
     return this->compositeIR.get();
@@ -693,9 +653,9 @@ TR_SHELL02 :: SpatialLocalizerI_giveBBox(FloatArray &bb0, FloatArray &bb1)
     FloatArray _c;
 
     for ( int i = 1; i <= this->giveNumberOfNodes(); ++i ) {
-        FloatArray *coordinates = this->giveNode(i)->giveCoordinates();
+        const auto &coordinates = this->giveNode(i)->giveCoordinates();
 
-        _c = * coordinates;
+        _c = coordinates;
         _c.add(gt3);
         if ( i == 1 ) {
             bb0 = bb1 = _c;
@@ -704,7 +664,7 @@ TR_SHELL02 :: SpatialLocalizerI_giveBBox(FloatArray &bb0, FloatArray &bb1)
             bb1.beMaxOf(bb1, _c);
         }
 
-        _c = * coordinates;
+        _c = coordinates;
         _c.subtract(gt3);
         bb0.beMinOf(bb0, _c);
         bb1.beMaxOf(bb1, _c);

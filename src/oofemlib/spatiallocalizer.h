@@ -115,7 +115,7 @@ protected:
 
 public:
     /// Typedefs to introduce the container type for element numbers, returned by some services.
-    typedef std :: set< int > elementContainerType;
+    typedef IntArray elementContainerType;
     /// Typedefs to introduce the container type for nodal numbers, returned by some services.
     typedef std :: list< int > nodeContainerType;
 
@@ -133,7 +133,7 @@ public:
      * @param regionList Only elements within given regions are considered, if NULL all regions are considered.
      * @return The element belonging to associated domain, containing given point, NULL otherwise.
      */
-    virtual Element *giveElementContainingPoint(const FloatArray &coords, const IntArray *regionList = NULL) = 0;
+    virtual Element *giveElementContainingPoint(const FloatArray &coords, const IntArray *regionList=nullptr) = 0;
     /**
      * Returns the element, containing given point and belonging to one of the region in region list.
      * @param coords Global problem coordinates of point of interest.

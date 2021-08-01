@@ -41,19 +41,17 @@
 namespace oofem {
 REGISTER_BoundaryCondition(LinearSurfaceLoad);
 
-IRResultType
-LinearSurfaceLoad :: initializeFrom(InputRecord *ir)
+void
+LinearSurfaceLoad :: initializeFrom(InputRecord &ir)
 {
-	IRResultType result;                // Required by IR_GIVE_FIELD macro
-
-	// support for normalized values for loading magnitude
-	IR_GIVE_OPTIONAL_FIELD(ir, normVals, _IFT_LinearSurfaceLoad_normVals);
-	if (normVals.giveSize() == 0) {
-		normVals.resize(4); // maximum supported values
-		for (int i = 1; i <= 4; i++) {
-			normVals.at(i) = 1.;
-		}
-	}
+    // support for normalized values for loading magnitude
+    IR_GIVE_OPTIONAL_FIELD(ir, normVals, _IFT_LinearSurfaceLoad_normVals);
+    if (normVals.giveSize() == 0) {
+	    normVals.resize(4); // maximum supported values
+	    for (int i = 1; i <= 4; i++) {
+		    normVals.at(i) = 1.;
+	    }
+    }
     return BoundaryLoad :: initializeFrom(ir);
 }
 

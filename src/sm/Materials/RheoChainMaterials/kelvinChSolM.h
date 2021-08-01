@@ -45,18 +45,18 @@ namespace oofem {
 class KelvinChainSolidMaterialStatus : public RheoChainMaterialStatus
 {
 public:
-    KelvinChainSolidMaterialStatus(int n, Domain * d, GaussPoint * g, int nunits);
-    virtual ~KelvinChainSolidMaterialStatus() { }
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    KelvinChainSolidMaterialStatus(GaussPoint * g, int nunits);
 
-    virtual void initTempStatus();
-    virtual void updateYourself(TimeStep *tStep);
+    void printOutputAt(FILE *file, TimeStep *tStep) const override;
 
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void initTempStatus() override;
+    void updateYourself(TimeStep *tStep) override;
+
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 
     // definition
-    virtual const char *giveClassName() const { return "KelvinChainSolidMaterialStatus"; }
+    const char *giveClassName() const override { return "KelvinChainSolidMaterialStatus"; }
 };
 
 
@@ -68,41 +68,38 @@ class KelvinChainSolidMaterial : public RheoChainMaterial
 {
 public:
     KelvinChainSolidMaterial(int n, Domain * d);
-    virtual ~KelvinChainSolidMaterial() { }
 
-    virtual void giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep);
+    void giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep) override;
     void computeHiddenVars(GaussPoint *gp, TimeStep *tStep);
 
     // identification and auxiliary functions
-    virtual int hasNonLinearBehaviour() { return 0; }
-    virtual const char *giveClassName() const { return "KelvinChainSolidMaterial"; }
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    const char *giveClassName() const override { return "KelvinChainSolidMaterial"; }
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual void  giveShrinkageStrainVector(FloatArray &answer,
-                                            GaussPoint *gp,
-                                            TimeStep *tStep,
-                                            ValueModeType mode)
+    void  giveShrinkageStrainVector(FloatArray &answer,
+                                    GaussPoint *gp,
+                                    TimeStep *tStep,
+                                    ValueModeType mode) const override
     { answer.clear(); }
 
-    virtual void  giveEigenStrainVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep, ValueModeType mode);
+    void giveEigenStrainVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep, ValueModeType mode) const override;
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const;
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
 
     /// Evaluation of the creep compliance function - function useless here
-    virtual double computeCreepFunction(double ofAge, double tPrime, GaussPoint *gp, TimeStep *tStep);
+    double computeCreepFunction(double ofAge, double tPrime, GaussPoint *gp, TimeStep *tStep) const override;
 
 protected:
-    virtual int hasIncrementalShrinkageFormulation() { return 0; }
+    bool hasIncrementalShrinkageFormulation() const override { return false; }
 
-    virtual double giveEModulus(GaussPoint *gp, TimeStep *tStep);
+    double giveEModulus(GaussPoint *gp, TimeStep *tStep) const override;
 
     /// Evaluation of the relative volume of the solidified material
-    virtual double computeSolidifiedVolume(GaussPoint *gp, TimeStep *tStep) = 0;
+    virtual double computeSolidifiedVolume(GaussPoint *gp, TimeStep *tStep) const = 0;
 
     /// factors for exponential algorithm
-    virtual double computeBetaMu(GaussPoint *gp, TimeStep *tStep, int Mu);
-    virtual double computeLambdaMu(GaussPoint *gp, TimeStep *tStep, int Mu);
-
+    virtual double computeBetaMu(GaussPoint *gp, TimeStep *tStep, int Mu) const;
+    virtual double computeLambdaMu(GaussPoint *gp, TimeStep *tStep, int Mu) const;
 };
 } // end namespace oofem
 #endif // kelvinchsol_h

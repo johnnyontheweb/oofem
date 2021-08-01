@@ -118,13 +118,13 @@ double PiecewiseLinFunction :: evaluateVelocityAtTime(double time)
     return 0.;
 }
 
-IRResultType
-PiecewiseLinFunction :: initializeFrom(InputRecord *ir)
+void
+PiecewiseLinFunction :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
+    Function :: initializeFrom(ir);
 
     // Optional means, read data from external file (useful for very large sets of data)
-    if ( ir->hasField(_IFT_PiecewiseLinFunction_dataFile) ) {
+    if ( ir.hasField(_IFT_PiecewiseLinFunction_dataFile) ) {
         std :: list< double >t, ft;
         // Open the file;
         std :: string fname;
@@ -162,9 +162,8 @@ PiecewiseLinFunction :: initializeFrom(InputRecord *ir)
         IR_GIVE_OPTIONAL_FIELD(ir, numberOfPoints, "npoints");
         IR_GIVE_FIELD(ir, dates, _IFT_PiecewiseLinFunction_t);
         IR_GIVE_FIELD(ir, values, _IFT_PiecewiseLinFunction_ft);
+        IR_GIVE_OPTIONAL_FIELD(ir, this->parameterType, "paramtype");
     }
-
-    return Function :: initializeFrom(ir);
 }
 
 
@@ -177,26 +176,22 @@ void PiecewiseLinFunction :: giveInputRecord(DynamicInputRecord &input)
 
 
 
-contextIOResultType
-PiecewiseLinFunction :: saveContext(DataStream &stream, ContextMode mode, void *obj)
+void
+PiecewiseLinFunction :: saveContext(DataStream &stream, ContextMode mode)
 {
     if ( mode & CM_Definition ) {
         dates.storeYourself(stream);
         values.storeYourself(stream);
     }
-
-    return CIO_OK;
 }
 
 
-contextIOResultType
-PiecewiseLinFunction :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
+void
+PiecewiseLinFunction :: restoreContext(DataStream &stream, ContextMode mode)
 {
     if ( mode & CM_Definition ) {
         dates.restoreYourself(stream);
         values.restoreYourself(stream);
     }
-
-    return CIO_OK;
 }
 } // end namespace oofem

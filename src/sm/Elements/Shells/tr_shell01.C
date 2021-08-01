@@ -32,8 +32,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/Shells/tr_shell01.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Elements/Shells/tr_shell01.h"
+#include "sm/Materials/structuralms.h"
 #include "fei2dtrlin.h"
 #include "contextioerr.h"
 #include "gaussintegrationrule.h"
@@ -56,20 +56,20 @@ IntArray TR_SHELL01 :: loc_plate = {3, 4, 5, 9, 10, 11, 15, 16, 17};
 IntArray TR_SHELL01 :: loc_membrane = {1, 2, 6, 7, 8, 12, 13, 14, 18};
 
 TR_SHELL01 :: TR_SHELL01(int n, Domain *aDomain) : StructuralElement(n, aDomain), ZZNodalRecoveryModelInterface(this), ZZErrorEstimatorInterface(this), SpatialLocalizerInterface(this),
-    plate(new CCTPlate3d(-1, aDomain)), membrane(new TrPlaneStrRot3d(-1, aDomain))
+    plate(std::make_unique<CCTPlate3d>(-1, aDomain)),
+    membrane(std::make_unique<TrPlaneStrRot3d>(-1, aDomain))
 {
     numberOfDofMans = 3;
 }
 
 
-IRResultType
-TR_SHELL01 :: initializeFrom(InputRecord *ir)
+void
+TR_SHELL01 :: initializeFrom(InputRecord &ir)
 {
     // proc tady neni return = this...   ??? termitovo
-    IRResultType result = StructuralElement :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    StructuralElement :: initializeFrom(ir);
+    plate->initializeFrom(ir);
+    membrane->initializeFrom(ir);
 
 //#if 0
 	//int val=-1;
@@ -86,27 +86,20 @@ TR_SHELL01 :: initializeFrom(InputRecord *ir)
     //}
 //#endif
 
-	// optional record for 1st local axes
-	la1.resize(3);
-	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
-	IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_TR_SHELL01_FirstLocalAxis);
+    // optional record for 1st local axes
+    la1.resize(3);
+    la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
+    IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_TR_SHELL01_FirstLocalAxis);
 
-	this->macroElem = 0;
-	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_TR_SHELL01_macroElem);
+    this->macroElem = 0;
+    IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_TR_SHELL01_macroElem);
 
-    result = plate->initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
-	plate->la1 = la1;
+    plate->initializeFrom(ir);
+    plate->la1 = la1;
 
-    result = membrane->initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
-	membrane->la1 = la1;
+    membrane->initializeFrom(ir);
+    membrane->la1 = la1;
 
-    return IRRT_OK;
 }
 
 void
@@ -115,36 +108,26 @@ TR_SHELL01 :: postInitialize()
     StructuralElement :: postInitialize();
 
     if ( plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints() != membrane->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints() ) {
-        OOFEM_ERROR("incompatible integration rules detected");
+        OOFEM_ERROR("incompatible integration rules detected %d vs %d IPs",
+                plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints(),
+                membrane->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints());
     }
 }
 
 void
-TR_SHELL01::giveNodeCoordinates(double &x1, double &x2, double &x3,
-double &y1, double &y2, double &y3,
-double &z1, double &z2, double &z3)
+TR_SHELL01::giveNodeCoordinates(FloatArray& nc1, FloatArray& nc2, FloatArray& nc3)
 {
-	FloatArray nc1(3), nc2(3), nc3(3);
+    nc1.resize(3);
+    nc2.resize(3);
+    nc3.resize(3);
 
-	this->giveLocalCoordinates(nc1, *(this->giveNode(1)->giveCoordinates()));
-	this->giveLocalCoordinates(nc2, *(this->giveNode(2)->giveCoordinates()));
-	this->giveLocalCoordinates(nc3, *(this->giveNode(3)->giveCoordinates()));
-
-	x1 = nc1.at(1);
-	x2 = nc2.at(1);
-	x3 = nc3.at(1);
-
-	y1 = nc1.at(2);
-	y2 = nc2.at(2);
-	y3 = nc3.at(2);
-
-	z1 = nc1.at(3);
-	z2 = nc2.at(3);
-	z3 = nc3.at(3);
+    this->giveLocalCoordinates(nc1, this->giveNode(1)->giveCoordinates());
+    this->giveLocalCoordinates(nc2, this->giveNode(2)->giveCoordinates());
+    this->giveLocalCoordinates(nc3, this->giveNode(3)->giveCoordinates());
 }
 
 void
-TR_SHELL01::giveLocalCoordinates(FloatArray &answer, FloatArray &global)
+TR_SHELL01::giveLocalCoordinates(FloatArray &answer, const FloatArray &global)
 // Returns global coordinates given in global vector
 // transformed into local coordinate system of the
 // receiver
@@ -159,7 +142,7 @@ TR_SHELL01::giveLocalCoordinates(FloatArray &answer, FloatArray &global)
 	this->computeGtoLRotationMatrix();
 
 	offset = global;
-	offset.subtract(*this->giveNode(1)->giveCoordinates());
+	offset.subtract(this->giveNode(1)->giveCoordinates());
 	answer.beProductOf(this->plate->GtoLRotationMatrix, offset);
 }
 
@@ -218,92 +201,91 @@ TR_SHELL01 :: giveCharacteristicMatrix(FloatMatrix &answer, CharType mtrx, TimeS
 void
 TR_SHELL01::computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
 {
-	answer.resize(18, 18);
-	answer.zero();
+    answer.resize(18, 18);
+    answer.zero();
 
-	// matrix assembly vectors
-	IntArray asmz{ 3, 9, 15 };  // local z
+    // matrix assembly vectors
+    IntArray asmz{ 3, 9, 15 };  // local z
 
-	// stress vector
-	FloatArray str,str2;
-	//this->giveCharacteristicVector(str, InternalForcesVector, VM_Total, tStep);
-	for (GaussPoint *gp : *this->giveDefaultIntegrationRulePtr()) {
-		this->giveIPValue(str2, gp, IST_ShellForceTensor, tStep);
-		str2.times(gp->giveWeight());
-		str.add(str2);
-	}
-	str.times(2.0); // the weights add up to 0.5 for a tria
-	// this needs to be transformed to local
-	FloatMatrix strmat{ 3, 3 };
-	strmat.at(1, 1) = str.at(1); strmat.at(2,2) = str.at(2); strmat.at(3,3) = str.at(3);
-	strmat.at(1,2) = str.at(6); strmat.at(1,3) = str.at(5); strmat.at(2,3) = str.at(4);
-	strmat.symmetrized();
-	strmat.rotatedWith(*this->computeGtoLRotationMatrix(), 't'); // back to local
+    // stress vector
+    FloatArray str,str2;
+    //this->giveCharacteristicVector(str, InternalForcesVector, VM_Total, tStep);
+    for (GaussPoint *gp : *this->giveDefaultIntegrationRulePtr()) {
+	this->giveIPValue(str2, gp, IST_ShellForceTensor, tStep);
+	str2.times(gp->giveWeight());
+	str.add(str2);
+    }
+    str.times(2.0); // the weights add up to 0.5 for a tria
+    // this needs to be transformed to local
+    FloatMatrix strmat{ 3, 3 };
+    strmat.at(1, 1) = str.at(1); strmat.at(2,2) = str.at(2); strmat.at(3,3) = str.at(3);
+    strmat.at(1,2) = str.at(6); strmat.at(1,3) = str.at(5); strmat.at(2,3) = str.at(4);
+    strmat.symmetrized();
+    strmat.rotatedWith(*this->computeGtoLRotationMatrix(), 't'); // back to local
 
-	// if above are local and Forces by unit length
-	// first average them
-	double sx=0, sy=0, sxy=0;
-	//for (auto it : asm1) sx += str.at(it);
-	//for (auto it : asm2) sy += str.at(it);
-	//for (auto it : asm3) sxy += str.at(it);
-	//sx = str.at(1);
-	//sy = str.at(2);
-	//sxy = str.at(6);
-	sx = strmat.at(1,1);
-	sy = strmat.at(2,2);
-	sxy = strmat.at(1,2);
-	// then divide by 4*A
-	double area = plate->computeArea();
-	sx /= (4 * area);
-	sy /= (4 * area);
-	sxy /= (4 * area);
+    // if above are local and Forces by unit length
+    // first average them
+    double sx=0, sy=0, sxy=0;
+    //for (auto it : asm1) sx += str.at(it);
+    //for (auto it : asm2) sy += str.at(it);
+    //for (auto it : asm3) sxy += str.at(it);
+    //sx = str.at(1);
+    //sy = str.at(2);
+    //sxy = str.at(6);
+    sx = strmat.at(1,1);
+    sy = strmat.at(2,2);
+    sxy = strmat.at(1,2);
+    // then divide by 4*A
+    double area = plate->computeArea();
+    sx /= (4 * area);
+    sy /= (4 * area);
+    sxy /= (4 * area);
 
-	// partial matrices
-	FloatMatrix Kgx{ 3, 3 }, Kgy{ 3, 3 }, Kgxy{ 3, 3 };
+    // partial matrices
+    FloatMatrix Kgx{ 3, 3 }, Kgy{ 3, 3 }, Kgxy{ 3, 3 };
 
-	// calculate the matrices - hp constant thickness
-	double x1, x2, x3, y1, y2, y3, z1, z2, z3;
-	this->giveNodeCoordinates(x1, x2, x3, y1, y2, y3, z1, z2, z3);
-	FloatArray n1{ x1, y1, z1 }, n2{ x2, y2, z2 }, n3{ x3, y3, z3 };
+    // calculate the matrices - hp constant thickness
+    FloatArray n1, n2, n3;
+    this->giveNodeCoordinates(n2,n2, n3);
 
-	double x12, x23, x13, y12, y23, y13;
-	x12 = n1.at(1) - n2.at(1);
-	y12 = n1.at(2) - n2.at(2);
-	x13 = n1.at(1) - n3.at(1);
-	y13 = n1.at(2) - n3.at(2);
-	x23 = n2.at(1) - n3.at(1);
-	y23 = n2.at(2) - n3.at(2);
+    double x12, x23, x13, y12, y23, y13;
+    x12 = n1.at(1) - n2.at(1);
+    y12 = n1.at(2) - n2.at(2);
+    x13 = n1.at(1) - n3.at(1);
+    y13 = n1.at(2) - n3.at(2);
+    x23 = n2.at(1) - n3.at(1);
+    y23 = n2.at(2) - n3.at(2);
 
-	Kgx.at(1, 1) = y23*y23; Kgx.at(2, 2) = y13*y13; Kgx.at(3, 3) = y12*y12;
-	Kgx.at(1, 2) = -y23*y13; Kgx.at(1, 3) = y23*y12; Kgx.at(2, 3) = -y13*y12;
-	Kgy.at(1, 1) = x23*x23; Kgy.at(2, 2) = x13*x13; Kgy.at(3, 3) = x12*x12;
-	Kgy.at(1, 2) = -y23*y13; Kgy.at(1, 3) = y23*y12; Kgy.at(2, 3) = -y13*y12;
-	Kgxy.at(1, 1) = -2 * y23*x23; Kgxy.at(2,2) = -2 * y13*x13; Kgxy.at(3,3) = -2 * y12*x12;
-	Kgxy.at(1, 2) = y23*x13 + x23*y13; Kgxy.at(1, 3) = -y23*x12 - x23*y12; Kgxy.at(2,3) = y13*x12+x13*y12;
+    Kgx.at(1, 1) = y23*y23; Kgx.at(2, 2) = y13*y13; Kgx.at(3, 3) = y12*y12;
+    Kgx.at(1, 2) = -y23*y13; Kgx.at(1, 3) = y23*y12; Kgx.at(2, 3) = -y13*y12;
+    Kgy.at(1, 1) = x23*x23; Kgy.at(2, 2) = x13*x13; Kgy.at(3, 3) = x12*x12;
+    Kgy.at(1, 2) = -y23*y13; Kgy.at(1, 3) = y23*y12; Kgy.at(2, 3) = -y13*y12;
+    Kgxy.at(1, 1) = -2 * y23*x23; Kgxy.at(2,2) = -2 * y13*x13; Kgxy.at(3,3) = -2 * y12*x12;
+    Kgxy.at(1, 2) = y23*x13 + x23*y13; Kgxy.at(1, 3) = -y23*x12 - x23*y12; Kgxy.at(2,3) = y13*x12+x13*y12;
 
-	Kgx.symmetrized(); Kgy.symmetrized(); Kgxy.symmetrized();
+    Kgx.symmetrized(); Kgy.symmetrized(); Kgxy.symmetrized();
 
-	// assemble them
-	Kgx.times(sx);
-	Kgx.add(sy,Kgy);
-	Kgx.add(sxy, Kgxy);
-	// once for local z
-	answer.assemble(Kgx, asmz);
-	// done
+    // assemble them
+    Kgx.times(sx);
+    Kgx.add(sy,Kgy);
+    Kgx.add(sxy, Kgxy);
+    // once for local z
+    answer.assemble(Kgx, asmz);
+    // done
 }
 
 void TR_SHELL01 :: computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode)
 {
-  FloatArray aux;
-  
-  answer.resize(18);
-  answer.zero();
-  
-  plate->computeBodyLoadVectorAt(aux, forLoad, tStep, mode);
-  if ( !aux.isEmpty() ) answer.assemble(aux, loc_plate);
-  
-  membrane->computeBodyLoadVectorAt(aux, forLoad, tStep, mode);
-  if ( !aux.isEmpty() ) answer.assemble(aux, loc_membrane);
+    FloatArray aux;
+
+    answer.resize(18);
+    answer.zero();
+
+    plate->computeBodyLoadVectorAt(aux, forLoad, tStep, mode);
+    if ( !aux.isEmpty() ) answer.assemble(aux, loc_plate);
+
+    membrane->computeBodyLoadVectorAt(aux, forLoad, tStep, mode);
+    if ( !aux.isEmpty() ) answer.assemble(aux, loc_membrane);
 
 }
 
@@ -383,11 +365,11 @@ TR_SHELL01 :: computeVolumeAround(GaussPoint *gp)
 int
 TR_SHELL01 :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep)
 {
-	answer.resize(6);
-	answer.zero();
+    answer.resize(6);
+    answer.zero();
 
-	if ( type == IST_ShellForceTensor || type == IST_ShellStrainTensor ||
-		type == IST_ShellMomentTensor || type == IST_CurvatureTensor ) {
+    if ( type == IST_ShellForceTensor || type == IST_ShellStrainTensor ||
+	    type == IST_ShellMomentTensor || type == IST_CurvatureTensor ) {
         FloatArray aux, aux2;
         GaussPoint *membraneGP = membrane->giveDefaultIntegrationRulePtr()->getIntegrationPoint(gp->giveNumber() - 1);
         GaussPoint *plateGP = plate->giveDefaultIntegrationRulePtr()->getIntegrationPoint(gp->giveNumber() - 1);
@@ -396,20 +378,20 @@ TR_SHELL01 :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
         membrane->giveIPValue(aux, membraneGP, type, tStep);
         aux2.add(aux);
 
-		//// local to global - not needed
-		//StructuralMaterial *mat = dynamic_cast< StructuralMaterial * >(this->giveStructuralCrossSection()->giveMaterial(gp));
-		//FloatMatrix rot; this->giveRotationMatrix(rot);
-		//mat->transformStressVectorTo(answer, rot, aux2, false);
-		
-		//// debug
-		//if (this->giveLabel() == 21561) {
-		//	printf("stop");
-		//}
+	//// local to global - not needed
+	//StructuralMaterial *mat = dynamic_cast< StructuralMaterial * >(this->giveStructuralCrossSection()->giveMaterial(gp));
+	//FloatMatrix rot; this->giveRotationMatrix(rot);
+	//mat->transformStressVectorTo(answer, rot, aux2, false);
+	
+	//// debug
+	//if (this->giveLabel() == 21561) {
+	//	printf("stop");
+	//}
 
-		answer.add(aux2);
+	answer.add(aux2);
         return 1;
-	} else if (type == IST_StressTensor || type == IST_StrainTensor) {
-		return 1;
+    } else if (type == IST_StressTensor || type == IST_StrainTensor) {
+	    return 1;
     } else {
         return StructuralElement :: giveIPValue(answer, gp, type, tStep);
     }
@@ -420,33 +402,33 @@ void
 TR_SHELL01 :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,
                                                          InternalStateType type, TimeStep *tStep)
 {
-	GaussPoint *gp = this->giveDefaultIntegrationRulePtr()->getIntegrationPoint(0);
-	//// stress recovery in traditional way
-	//if (this->giveMaterial()->hasNonLinearBehaviour() == 0) {
-	//	FloatArray u;
-	//	FloatMatrix D, N1, N2, N; N.resize(6, 18);
-	//	this->computeVectorOf(VM_Total, tStep, u); // total displ.
-	//	this->giveStructuralCrossSection()->giveCharMaterialStiffnessMatrix(D, SecantStiffness, gp, tStep);
-	//	// evaluate N at nodes
-	//	FloatArray n1; n1.resize(2); n1.zero();
-	//	this->plate->computeBmatrixAt(n1, N1);
-	//	this->membrane->computeBmatrixAt(n1, N2);
-	//	N.assemble(N1, loc_plate);
-	//	N.assemble(N2, loc_membrane);
-	//	// ...
-	//	FloatArray n2; n2.resize(2); n2.zero(); n2.at(1) = 0;
-	//	this->plate->computeNmatrixAt(n2, N);
+    GaussPoint *gp = this->giveDefaultIntegrationRulePtr()->getIntegrationPoint(0);
+    //// stress recovery in traditional way
+    //if (this->giveMaterial()->hasNonLinearBehaviour() == 0) {
+    //	FloatArray u;
+    //	FloatMatrix D, N1, N2, N; N.resize(6, 18);
+    //	this->computeVectorOf(VM_Total, tStep, u); // total displ.
+    //	this->giveStructuralCrossSection()->giveCharMaterialStiffnessMatrix(D, SecantStiffness, gp, tStep);
+    //	// evaluate N at nodes
+    //	FloatArray n1; n1.resize(2); n1.zero();
+    //	this->plate->computeBmatrixAt(n1, N1);
+    //	this->membrane->computeBmatrixAt(n1, N2);
+    //	N.assemble(N1, loc_plate);
+    //	N.assemble(N2, loc_membrane);
+    //	// ...
+    //	FloatArray n2; n2.resize(2); n2.zero(); n2.at(1) = 0;
+    //	this->plate->computeNmatrixAt(n2, N);
 
-	//}else{ // nl material
-		this->giveIPValue(answer, gp, type, tStep);
-	//}
+    //}else{ // nl material
+	this->giveIPValue(answer, gp, type, tStep);
+    //}
 }
 
 
 void
 TR_SHELL01 :: printOutputAt(FILE *file, TimeStep *tStep)
 {
-	fprintf(file, "element %d (%8d) macroelem %d :\n", this->giveLabel(), this->giveNumber(), this->macroElem);
+    fprintf(file, "element %d (%8d) macroelem %d :\n", this->giveLabel(), this->giveNumber(), this->macroElem);
 
 //#ifdef DEBUG
 //    FloatArray v;
@@ -491,43 +473,27 @@ TR_SHELL01 :: printOutputAt(FILE *file, TimeStep *tStep)
 }
 
 
-contextIOResultType
-TR_SHELL01 :: saveContext(DataStream &stream, ContextMode mode, void *obj)
+void
+TR_SHELL01 :: saveContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-    if ( ( iores =  StructuralElement :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    if ( ( iores =  this->plate->saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    if ( ( iores = this->membrane->saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    return iores;
+    StructuralElement :: saveContext(stream, mode);
+    this->plate->saveContext(stream, mode);
+    this->membrane->saveContext(stream, mode);
 }
 
-contextIOResultType
-TR_SHELL01 :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
+void
+TR_SHELL01 :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-    if ( ( iores =  StructuralElement :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    if ( ( iores =   this->plate->restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    if ( ( iores =  this->membrane->restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    return iores;
+    StructuralElement :: restoreContext(stream, mode);
+    this->plate->restoreContext(stream, mode);
+    this->membrane->restoreContext(stream, mode);
 }
 
 IntegrationRule *
 TR_SHELL01 :: ZZErrorEstimatorI_giveIntegrationRule()
 {
     if ( !this->compositeIR ) {
-        this->compositeIR.reset( new GaussIntegrationRule(1, this, 1, 12) );
+        this->compositeIR = std::make_unique<GaussIntegrationRule>(1, this, 1, 12);
         this->compositeIR->SetUpPointsOnTriangle(plate->giveDefaultIntegrationRulePtr()->giveNumberOfIntegrationPoints(), _3dShell);
     }
     return this->compositeIR.get();
@@ -536,7 +502,7 @@ TR_SHELL01 :: ZZErrorEstimatorI_giveIntegrationRule()
 void
 TR_SHELL01 :: ZZErrorEstimatorI_computeLocalStress(FloatArray &answer, FloatArray &sig)
 {
-    // sig is global ShellForceMomentumTensor
+    // sig is global ShellForceMomentTensor
     FloatMatrix globTensor(3, 3);
     const FloatMatrix *GtoLRotationMatrix = plate->computeGtoLRotationMatrix();
     FloatMatrix LtoGRotationMatrix;
@@ -606,9 +572,9 @@ TR_SHELL01 :: SpatialLocalizerI_giveBBox(FloatArray &bb0, FloatArray &bb1)
     FloatArray _c;
 
     for ( int i = 1; i <= this->giveNumberOfNodes(); ++i ) {
-        FloatArray *coordinates = this->giveNode(i)->giveCoordinates();
+        const auto &coordinates = this->giveNode(i)->giveCoordinates();
 
-        _c = * coordinates;
+        _c = coordinates;
         _c.add(gt3);
         if ( i == 1 ) {
             bb0 = bb1 = _c;
@@ -617,7 +583,7 @@ TR_SHELL01 :: SpatialLocalizerI_giveBBox(FloatArray &bb0, FloatArray &bb1)
             bb1.beMaxOf(bb1, _c);
         }
 
-        _c = * coordinates;
+        _c = coordinates;
         _c.subtract(gt3);
         bb0.beMinOf(bb0, _c);
         bb1.beMaxOf(bb1, _c);
@@ -627,56 +593,56 @@ TR_SHELL01 :: SpatialLocalizerI_giveBBox(FloatArray &bb0, FloatArray &bb1)
 int
 TR_SHELL01::computeLoadLEToLRotationMatrix(FloatMatrix &answer, int iEdge, GaussPoint *gp)
 {
-	FloatArray e1, e2, e3, help, xl, yl;
+    FloatArray e1, e2, e3, help, xl, yl;
 
-	// compute e1' = [N2-N1]  and  help = [N3-N1]
-	e1.beDifferenceOf(*this->giveNode(2)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
-	help.beDifferenceOf(*this->giveNode(3)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
+    // compute e1' = [N2-N1]  and  help = [N3-N1]
+    e1.beDifferenceOf(this->giveNode(2)->giveCoordinates(), this->giveNode(1)->giveCoordinates());
+    help.beDifferenceOf(this->giveNode(3)->giveCoordinates(), this->giveNode(1)->giveCoordinates());
 
-	// let us normalize e1'
-	e1.normalize();
+    // let us normalize e1'
+    e1.normalize();
 
-	// compute e3' : vector product of e1' x help
-	e3.beVectorProductOf(e1, help);
-	// let us normalize
-	e3.normalize();
+    // compute e3' : vector product of e1' x help
+    e3.beVectorProductOf(e1, help);
+    // let us normalize
+    e3.normalize();
 
-	//if (la1.computeNorm() != 0) {
-	//	// custom local axes
-	//	e1 = la1;
-	//}
+    //if (la1.computeNorm() != 0) {
+    //	// custom local axes
+    //	e1 = la1;
+    //}
 
-	// now from e3' x e1' compute e2'
-	e2.beVectorProductOf(e3, e1);
+    // now from e3' x e1' compute e2'
+    e2.beVectorProductOf(e3, e1);
 
-	// rotate as to have the 1st local axis equal to la1
-	if (la1.computeNorm() != 0) {
-		double ang = -Angle::giveAngleIn3Dplane(la1, e1, e3); // radians
-		e1 = Angle::rotate(e1, e3, ang);
-		e2 = Angle::rotate(e2, e3, ang);
-	}
-	IntArray edgeNodes;
-	((FEI2dTrLin*)(this->giveInterpolation()))->computeLocalEdgeMapping(edgeNodes, iEdge);
+    // rotate as to have the 1st local axis equal to la1
+    if (la1.computeNorm() != 0) {
+	double ang = -Angle::giveAngleIn3Dplane(la1, e1, e3); // radians
+	e1 = Angle::rotate(e1, e3, ang);
+	e2 = Angle::rotate(e2, e3, ang);
+    }
+    IntArray edgeNodes;
+    edgeNodes = ((FEI2dTrLin*)(this->giveInterpolation()))->computeLocalEdgeMapping(iEdge);
 
-	xl.beDifferenceOf(*this->giveNode(edgeNodes.at(2))->giveCoordinates(), *this->giveNode(edgeNodes.at(1))->giveCoordinates());
+    xl.beDifferenceOf(this->giveNode(edgeNodes.at(2))->giveCoordinates(), this->giveNode(edgeNodes.at(1))->giveCoordinates());
 
-	xl.normalize();
-	yl.beVectorProductOf(e3, xl);
+    xl.normalize();
+    yl.beVectorProductOf(e3, xl);
 
-	answer.resize(6, 6);
-	answer.zero();
+    answer.resize(6, 6);
+    answer.zero();
 
-	answer.at(1, 1) = answer.at(4, 4) = e1.dotProduct(xl);
-	answer.at(1, 2) = answer.at(4, 5) = e1.dotProduct(yl);
-	answer.at(1, 3) = answer.at(4, 6) = e1.dotProduct(e3);
-	answer.at(2, 1) = answer.at(5, 4) = e2.dotProduct(xl);
-	answer.at(2, 2) = answer.at(5, 5) = e2.dotProduct(yl);
-	answer.at(2, 3) = answer.at(5, 6) = e2.dotProduct(e3);
-	answer.at(3, 1) = answer.at(6, 4) = e3.dotProduct(xl);
-	answer.at(3, 2) = answer.at(6, 5) = e3.dotProduct(yl);
-	answer.at(3, 3) = answer.at(6, 6) = e3.dotProduct(e3);
+    answer.at(1, 1) = answer.at(4, 4) = e1.dotProduct(xl);
+    answer.at(1, 2) = answer.at(4, 5) = e1.dotProduct(yl);
+    answer.at(1, 3) = answer.at(4, 6) = e1.dotProduct(e3);
+    answer.at(2, 1) = answer.at(5, 4) = e2.dotProduct(xl);
+    answer.at(2, 2) = answer.at(5, 5) = e2.dotProduct(yl);
+    answer.at(2, 3) = answer.at(5, 6) = e2.dotProduct(e3);
+    answer.at(3, 1) = answer.at(6, 4) = e3.dotProduct(xl);
+    answer.at(3, 2) = answer.at(6, 5) = e3.dotProduct(yl);
+    answer.at(3, 3) = answer.at(6, 6) = e3.dotProduct(e3);
 
-	return 1;
+    return 1;
 }
 
 int
@@ -717,9 +683,7 @@ TR_SHELL01::computeEdgeVolumeAround(GaussPoint *gp, int iEdge)
 	std::vector< FloatArray >lc = {
 		FloatArray(3), FloatArray(3), FloatArray(3)
 	};
-	this->giveNodeCoordinates(lc[0].at(1), lc[1].at(1), lc[2].at(1),
-		lc[0].at(2), lc[1].at(2), lc[2].at(2),
-		lc[0].at(3), lc[1].at(3), lc[2].at(3));
+	this->giveNodeCoordinates(lc[0], lc[1], lc[2]);
 
 
 	double detJ = this->plate->interp_lin.edgeGiveTransformationJacobian(iEdge, gp->giveNaturalCoordinates(), FEIVertexListGeometryWrapper(lc));
@@ -747,7 +711,7 @@ TR_SHELL01 :: drawRawGeometry(oofegGraphicContext &gc, TimeStep *tStep)
         return;
     }
 
-    if ( this->giveMaterial()->isActivated(tStep) ) {
+    if ( this->isActivated(tStep) ) {
         EASValsSetLineWidth(OOFEG_RAW_GEOMETRY_WIDTH);
         EASValsSetColor( gc.getElementColor() );
         EASValsSetEdgeColor( gc.getElementEdgeColor() );
@@ -782,7 +746,7 @@ TR_SHELL01 :: drawDeformedGeometry(oofegGraphicContext &gc, TimeStep *tStep, Unk
         return;
     }
 
-    if ( this->giveMaterial()->isActivated(tStep) ) {
+    if ( this->isActivated(tStep) ) {
         EASValsSetLineWidth(OOFEG_DEFORMED_GEOMETRY_WIDTH);
         EASValsSetColor( gc.getDeformedElementColor() );
         EASValsSetEdgeColor( gc.getElementEdgeColor() );
@@ -817,7 +781,7 @@ TR_SHELL01 :: drawScalar(oofegGraphicContext &gc, TimeStep *tStep)
         return;
     }
 
-    if ( !this->giveMaterial()->isActivated(tStep) ) {
+    if ( !this->isActivated(tStep) ) {
         return;
     }
 

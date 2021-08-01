@@ -69,7 +69,7 @@ private:
     std :: vector< ContactElement *> masterElementList;
     int numberOfConstraintEq; // used when creating new dofs
     
-    ContactMaterial *contactMaterial;
+    //ContactMaterial *contactMaterial;
     
 public:
     /// Constructor.
@@ -82,19 +82,19 @@ public:
 
     virtual void createContactDofs();
 
-    virtual IRResultType initializeFrom(InputRecord *ir) { return IRRT_OK; }
+    virtual void initializeFrom(InputRecord &ir) { }
 
-    virtual int instanciateYourself(DataReader *dr);
+    virtual int instanciateYourself(DataReader &dr);
     virtual const char *giveClassName() const { return "ContactDefinition"; }
     //virtual const char *giveInputRecordName() const { return _IFT_ContactDefinition_Name; }
     ContactManager *giveContactManager() { return this->cMan; }
     virtual int giveNumberOfConstraintEqToAdd() { return this->numberOfConstraintEq; }
     virtual void setNumberOfConstraintEqToAdd(const int number) { this->numberOfConstraintEq = number; }
-    virtual void computeContactForces(FloatArray &answer, TimeStep *tStep, CharType type, ValueModeType mode,
+    virtual void computeContactForces(FloatArray &answer, TimeStep *tStep, ValueModeType mode,
                                 const UnknownNumberingScheme &s, Domain *domain, FloatArray *eNorms);
     
     virtual void computeContactTangent(SparseMtrx &answer, TimeStep *tStep,
-                      CharType type, const UnknownNumberingScheme &r_s, const UnknownNumberingScheme &c_s); 
+                      const UnknownNumberingScheme &r_s, const UnknownNumberingScheme &c_s); 
     
     ContactElement *giveContactElement(const int num) { return this->masterElementList[num-1]; }
     int giveNumbertOfContactElements() { return this->masterElementList.size(); }

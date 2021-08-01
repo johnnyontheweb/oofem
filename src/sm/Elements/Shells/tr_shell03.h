@@ -66,7 +66,7 @@ protected:
     /// Pointer to plate element.
     std :: unique_ptr< CCTPlate3d > plate;
     /// Pointer to membrane (plane stress) element.
-	std::unique_ptr< TrPlanestressRotAllman3d > membrane;
+    std::unique_ptr< TrPlanestressRotAllman3d > membrane;
     /**
      * Element integraton rule (plate and membrane parts have their own integration rules)
      * this one used to integrate element error and perhaps can be (re)used for other putrposes.
@@ -77,10 +77,10 @@ protected:
     static IntArray loc_plate;
     static IntArray loc_membrane;
 
-	// 1st local axis
-	FloatArray la1;
-	// macro element number
-	int macroElem;
+    // 1st local axis
+    FloatArray la1;
+    // macro element number
+    int macroElem;
 
 public:
     /// Constructor
@@ -90,25 +90,25 @@ public:
 
     virtual FEInterpolation *giveInterpolation() const { return plate->giveInterpolation(); }
 
-    virtual int computeNumberOfDofs() { return 18; }
-    virtual void giveDofManDofIDMask(int inode, IntArray &answer) const
+    int computeNumberOfDofs() override { return 18; }
+    void giveDofManDofIDMask(int inode, IntArray &answer) const override
     { plate->giveDofManDofIDMask(inode, answer); }
     // definition & identification
-    virtual const char *giveInputRecordName() const { return _IFT_TR_SHELL03_Name; }
-    virtual const char *giveClassName() const { return "TR_SHELL03"; }
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    const char *giveInputRecordName() const override { return _IFT_TR_SHELL03_Name; }
+    const char *giveClassName() const override { return "TR_SHELL03"; }
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual void giveCharacteristicVector(FloatArray &answer, CharType mtrx, ValueModeType mode, TimeStep *tStep);
-    virtual void giveCharacteristicMatrix(FloatMatrix &answer, CharType mtrx, TimeStep *tStep);
-    virtual double computeVolumeAround(GaussPoint *gp);
-    virtual bool giveRotationMatrix(FloatMatrix &answer);
-	int computeLoadGToLRotationMtrx(FloatMatrix &answer);
+    void giveCharacteristicVector(FloatArray &answer, CharType mtrx, ValueModeType mode, TimeStep *tStep) override;
+    void giveCharacteristicMatrix(FloatMatrix &answer, CharType mtrx, TimeStep *tStep) override;
+    double computeVolumeAround(GaussPoint *gp) override;
+    bool giveRotationMatrix(FloatMatrix &answer) override;
+    int computeLoadGToLRotationMtrx(FloatMatrix &answer);
 
-    virtual void updateYourself(TimeStep *tStep);
-    virtual void updateInternalState(TimeStep *tStep);
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void updateYourself(TimeStep *tStep) override;
+    void updateInternalState(TimeStep *tStep) override;
+    void printOutputAt(FILE *file, TimeStep *tStep) override;
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
     virtual void postInitialize();
     void updateLocalNumbering(EntityRenumberingFunctor &f);
     void setCrossSection(int csIndx);
@@ -118,14 +118,14 @@ public:
     virtual void drawScalar(oofegGraphicContext &gc, TimeStep *tStep);
 #endif
     // the membrane and plate irules are same (chacked in initializeFrom)
-    virtual int giveDefaultIntegrationRule() const { return plate->giveDefaultIntegrationRule(); }
-    virtual IntegrationRule *giveDefaultIntegrationRulePtr() { return plate->giveDefaultIntegrationRulePtr(); }
-    virtual Element_Geometry_Type giveGeometryType() const { return EGT_triangle_1; }
-    virtual integrationDomain giveIntegrationDomain() const { return _Triangle; }
-    virtual MaterialMode giveMaterialMode() { return _Unknown; }
+    int giveDefaultIntegrationRule() const override { return plate->giveDefaultIntegrationRule(); }
+    IntegrationRule *giveDefaultIntegrationRulePtr() override { return plate->giveDefaultIntegrationRulePtr(); }
+    Element_Geometry_Type giveGeometryType() const override { return EGT_triangle_1; }
+    integrationDomain giveIntegrationDomain() const override { return _Triangle; }
+    MaterialMode giveMaterialMode() override { return _Unknown; }
 
     virtual Interface *giveInterface(InterfaceType it);
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 
     virtual void NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,
                                                             InternalStateType type, TimeStep *tStep);
@@ -146,9 +146,9 @@ public:
     }
 
 protected:
-    virtual void computeBmatrixAt(GaussPoint *, FloatMatrix &, int = 1, int = ALL_STRAINS)
+    void computeBmatrixAt(GaussPoint *, FloatMatrix &, int = 1, int = ALL_STRAINS) override
     { OOFEM_ERROR("calling of this function is not allowed"); }
-    virtual void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &)
+    void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &) override
     { OOFEM_ERROR("calling of this function is not allowed"); }
 
     /// @todo In time delete
@@ -158,30 +158,30 @@ protected:
         this->membrane->computeGaussPoints();
         this->plate->computeGaussPoints();
     }
-    virtual void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
-    { OOFEM_ERROR("calling of this function is not allowed"); }
-    virtual void computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode);
-	virtual int computeLoadLEToLRotationMatrix(FloatMatrix &answer, int iEdge, GaussPoint *gp);
+    void computeStressVector( FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep ) override
+    { OOFEM_ERROR( "calling of this function is not allowed" ); }
+    void computeConstitutiveMatrixAt( FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep ) override
+    { OOFEM_ERROR( "calling of this function is not allowed" ); }
+    void computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode) override;
+	int computeLoadLEToLRotationMatrix(FloatMatrix &answer, int iEdge, GaussPoint *gp) override;
 
 public:
-    virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep)
+    void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep) override
     { OOFEM_ERROR("calling of this function is not allowed"); }
-    virtual void computeMassMatrix(FloatMatrix &answer, TimeStep *tStep)
+    void computeMassMatrix(FloatMatrix &answer, TimeStep *tStep) override
     { OOFEM_ERROR("calling of this function is not allowed"); }
-    virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord)
+    void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord) override
     { OOFEM_ERROR("calling of this function is not allowed"); }
-	virtual void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep);
+	void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep) override;
 
 private:
-	void giveNodeCoordinates(double &x1, double &x2, double &x3,
-		double &y1, double &y2, double &y3,
-		double &z1, double &z2, double &z3);
-	void giveLocalCoordinates(FloatArray &answer, FloatArray &global);
-	const FloatMatrix *computeGtoLRotationMatrix();
-	virtual void computeSurfaceNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords);
-	virtual void computeEdgeNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords);
-	virtual double computeEdgeVolumeAround(GaussPoint *gp, int iEdge);
-	virtual double computeSurfaceVolumeAround(GaussPoint *gp, int iSurf);
+    void giveNodeCoordinates(FloatArray& nc1, FloatArray& nc2, FloatArray& nc3);
+    void giveLocalCoordinates(FloatArray &answer,const FloatArray &global);
+    const FloatMatrix *computeGtoLRotationMatrix();
+    virtual void computeSurfaceNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords);
+    virtual void computeEdgeNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords);
+    virtual double computeEdgeVolumeAround(GaussPoint *gp, int iEdge);
+    virtual double computeSurfaceVolumeAround(GaussPoint *gp, int iSurf);
 };
 } // end namespace oofem
 #endif

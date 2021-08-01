@@ -32,8 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/PlaneStress/trplanestressrotallman.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
+#include "sm/Elements/PlaneStress/trplanestressrotallman.h"
 #include "fei2dtrquad.h"
 #include "fei2dtrlin.h"
 #include "node.h"
@@ -66,12 +65,15 @@ TrPlanestressRotAllman :: TrPlanestressRotAllman(int n, Domain *aDomain) :
 Interface *
 TrPlanestressRotAllman :: giveInterface(InterfaceType interface)
 {
-    if ( interface == ZZNodalRecoveryModelInterfaceType ) {
+    if ( interface == LayeredCrossSectionInterfaceType ) {
+        return static_cast< LayeredCrossSectionInterface * >(this);
+    } else if ( interface == ZZNodalRecoveryModelInterfaceType ) {
         return static_cast< ZZNodalRecoveryModelInterface * >(this);
     } else if ( interface == SPRNodalRecoveryModelInterfaceType ) {
         return static_cast< SPRNodalRecoveryModelInterface * >(this);
     } else if ( interface == SpatialLocalizerInterfaceType ) {
         return static_cast< SpatialLocalizerInterface * >(this);
+   
     }
     return NULL;
 }
@@ -81,7 +83,7 @@ TrPlanestressRotAllman :: computeLocalNodalCoordinates(std::vector< FloatArray >
 {
     lxy.resize(6);
     for ( int i = 0; i < 3; i++ ) {
-        lxy [ i ] = * this->giveNode(i + 1)->giveCoordinates();
+        lxy [ i ] = this->giveNode(i + 1)->giveCoordinates();
     }
     lxy [ 3 ].resize(2);
     lxy [ 4 ].resize(2);
@@ -130,13 +132,13 @@ TrPlanestressRotAllman :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, 
 // Returns the [3x12] strain-displacement matrix {B} of the receiver, eva-
 // luated at gp.
 {
-	answer.resize(3, 9);
-	answer.zero();
+    answer.resize(3, 9);
+    answer.zero();
 
-	if (BMatrices.at(gp->giveNumber() - 1).get() != nullptr) {
-		answer.add(*BMatrices.at(gp->giveNumber() - 1));
-		return;
-	}
+    if (BMatrices.at(gp->giveNumber() - 1)) {
+	answer.add(*BMatrices.at(gp->giveNumber() - 1));
+	return;
+    }
 
     FloatMatrix dnx;
     std::vector< FloatArray > lxy;
@@ -175,7 +177,7 @@ TrPlanestressRotAllman :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, 
     answer.at(3, 9) = dnx.at(5, 2) * ( lxy [ 2 ].at(2) - lxy [ 1 ].at(2) ) / 8.0 - dnx.at(6, 2) * ( lxy [ 0 ].at(2) - lxy [ 2 ].at(2) ) / 8.0;
     answer.at(3, 9) += -dnx.at(5, 1) * ( lxy [ 2 ].at(1) - lxy [ 1 ].at(1) ) / 8.0 + dnx.at(6, 1) * ( lxy [ 0 ].at(1) - lxy [ 2 ].at(1) ) / 8.0;
 
-	BMatrices.at(gp->giveNumber() - 1).reset(new FloatMatrix(answer));
+    BMatrices.at(gp->giveNumber() - 1).reset(new FloatMatrix(answer));
 }
 
 
@@ -253,7 +255,7 @@ void TrPlanestressRotAllman :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize( 1 );
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 3) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 3);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], numberOfGaussPoints, this);
     }
 }
@@ -263,12 +265,11 @@ TrPlanestressRotAllman :: computeEgdeNMatrixAt(FloatMatrix &answer, int iedge, G
 {
     std::vector< FloatArray > lxy;
     FloatArray l, n;
-    IntArray en;
     FEI2dTrQuad qi(1, 2);
 
     this->computeLocalNodalCoordinates(lxy); // get ready for tranformation into 3d
     qi.edgeEvalN( n, iedge, gp->giveNaturalCoordinates(), FEIVertexListGeometryWrapper(lxy) );
-    qi.computeLocalEdgeMapping(en, iedge); // get edge mapping
+    const auto &en = qi.computeLocalEdgeMapping(iedge); // get edge mapping
     this->interp.edgeEvalN( l, iedge, gp->giveNaturalCoordinates(), FEIElementGeometryWrapper(this) );
     answer.resize(3, 6);
 
@@ -458,22 +459,17 @@ void TrPlanestressRotAllman :: computeBoundaryEdgeLoadVector(FloatArray &answer,
  * }
  */
 
-IRResultType
-TrPlanestressRotAllman :: initializeFrom(InputRecord *ir)
+void
+TrPlanestressRotAllman :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result = TrPlaneStress2d :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    TrPlaneStress2d :: initializeFrom(ir);
     numberOfGaussPoints = 4;
-	BMatrices.resize(this->numberOfGaussPoints);
+    BMatrices.resize(this->numberOfGaussPoints);
 
-	// optional record for 1st local axes
-	la1.resize(3);
-	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
-	IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_TrPlanestressRotAllman_FirstLocalAxis);
-
-    return IRRT_OK;
+    // optional record for 1st local axes
+    la1.resize(3);
+    la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
+    IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_TrPlanestressRotAllman_FirstLocalAxis);
 }
 
 

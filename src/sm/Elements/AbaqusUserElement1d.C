@@ -67,14 +67,9 @@ AbaqusUserElement1d :: ~AbaqusUserElement1d()
 }
 
 
-IRResultType AbaqusUserElement1d :: initializeFrom(InputRecord *ir)
+void AbaqusUserElement1d :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                                        // Required by IR_GIVE_FIELD macro
-
-    result = StructuralElement :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    StructuralElement :: initializeFrom(ir);
 
     this->numberOfDofMans = dofManArray.giveSize();
 
@@ -144,8 +139,6 @@ IRResultType AbaqusUserElement1d :: initializeFrom(InputRecord *ir)
         OOFEM_ERROR("couldn't load symbol uel,\ndlerror: %s\n", dlresult);
     }
 #endif
-
-    return IRRT_OK;
 }
 
 
@@ -271,14 +264,14 @@ void AbaqusUserElement1d :: giveInternalForcesVector(FloatArray &answer, TimeSte
 {
     // init U vector
     //this->computeVectorOf(this->dofs, VM_Total, tStep, U);
-	this->computeVectorOf(VM_Total, tStep, U, false);
+	this->computeVectorOf(VM_Total, tStep, U);
 	// get A and V
-	this->computeVectorOf(VM_Velocity, tStep, V, false);
-	this->computeVectorOf(VM_Acceleration, tStep, A, false);
+	this->computeVectorOf(VM_Velocity, tStep, V);
+	this->computeVectorOf(VM_Acceleration, tStep, A);
     FloatArray tempIntVect;
     // init DU vector
     //this->computeVectorOf(this->dofs, VM_Incremental, tStep, tempIntVect);
-	this->computeVectorOf(VM_Incremental, tStep, tempIntVect, false);
+	this->computeVectorOf(VM_Incremental, tStep, tempIntVect);
     //this->giveDomain()->giveClassName();
     DU.zero();
     DU.setColumn(tempIntVect, 1);
@@ -371,7 +364,7 @@ AbaqusUserElement1d::printOutputAt(FILE *File, TimeStep *tStep)
 {
 	FloatArray rl, Fl;
 	// ask for global element displacement vector
-	this->computeVectorOf(VM_Total, tStep, rl, false);
+	this->computeVectorOf(VM_Total, tStep, rl);
 	// ask for global element end forces vector
 	this->giveInternalForcesVector(Fl, tStep, 1);
 

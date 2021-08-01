@@ -40,7 +40,7 @@
 #include "timestep.h"
 #include "engngm.h"
 #include "classfactory.h"
-#include "Materials/structuralmaterial.h"
+#include "sm/Materials/structuralmaterial.h"
 #include "crosssection.h"
 #include "floatarray.h"
 
@@ -63,18 +63,14 @@ CrackExportModule :: ~CrackExportModule()
 }
 
 
-IRResultType
-CrackExportModule :: initializeFrom(InputRecord *ir)
+void
+CrackExportModule :: initializeFrom(InputRecord &ir)
 {
-    const char *__proc = "initializeFrom"; // Required by IR_GIVE_FIELD macro
-    IRResultType result;              // Required by IR_GIVE_FIELD macro
-
+    ExportModule :: initializeFrom(ir);
 
     IR_GIVE_FIELD(ir, crossSections, _IFT_CrackExportModule_cs);
     this->threshold = 0.;
     IR_GIVE_OPTIONAL_FIELD(ir, threshold, _IFT_CrackExportModule_threshold);
-
-    return ExportModule :: initializeFrom(ir);
 }
 
 

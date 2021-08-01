@@ -45,7 +45,7 @@
 #include "domain.h"
 #include "mathfem.h"
 #include "engngm.h"
-#include "fluiddynamicmaterial.h"
+#include "fm/Materials/fluiddynamicmaterial.h"
 #include "fluidcrosssection.h"
 #include "load.h"
 #include "timestep.h"
@@ -76,12 +76,9 @@ TR1_2D_CBS :: TR1_2D_CBS(int n, Domain *aDomain) :
     , LEPlicElementInterface()
     //</RESTRICTED_SECTION>
 {
-    // Constructor.
     numberOfDofMans  = 3;
 }
 
-TR1_2D_CBS :: ~TR1_2D_CBS()
-{ }
 
 FEInterpolation *
 TR1_2D_CBS :: giveInterpolation() const { return & interp; }
@@ -99,12 +96,12 @@ TR1_2D_CBS :: giveDofManDofIDMask(int inode, IntArray &answer) const
 }
 
 
-IRResultType
-TR1_2D_CBS :: initializeFrom(InputRecord *ir)
+void
+TR1_2D_CBS :: initializeFrom(InputRecord &ir)
 {
-    //<RESTRICTED_SECTION>
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
+    CBSElement :: initializeFrom(ir);
 
+    //<RESTRICTED_SECTION>
     this->vof = 0.0;
     IR_GIVE_OPTIONAL_FIELD(ir, vof, _IFT_Tr1CBS_pvof);
     if ( vof > 0.0 ) {
@@ -117,8 +114,6 @@ TR1_2D_CBS :: initializeFrom(InputRecord *ir)
     }
 
     //</RESTRICTED_SECTION>
-
-    return CBSElement :: initializeFrom(ir);
 }
 
 
@@ -140,7 +135,7 @@ TR1_2D_CBS :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize(1);
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 3) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 3);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], 1, this);
     }
 }
@@ -148,13 +143,13 @@ TR1_2D_CBS :: computeGaussPoints()
 void
 TR1_2D_CBS :: computeConsistentMassMtrx(FloatMatrix &answer, TimeStep *tStep)
 {
-    answer.resize(9, 9);
-    answer.zero();
     double rho = static_cast< FluidCrossSection * >( this->giveCrossSection() )->giveDensity( integrationRulesArray [ 0 ]->getIntegrationPoint(0) );
 
     double ar6 = rho * area / 6.0;
     double ar12 = rho * area / 12.0;
 
+    answer.resize(9, 9);
+    answer.zero();
     answer.at(1, 1) = answer.at(2, 2) = ar6;
     answer.at(4, 4) = answer.at(5, 5) = ar6;
     answer.at(7, 7) = answer.at(8, 8) = ar6;
@@ -172,11 +167,10 @@ TR1_2D_CBS :: computeConsistentMassMtrx(FloatMatrix &answer, TimeStep *tStep)
 void
 TR1_2D_CBS :: computeDiagonalMassMtrx(FloatArray &answer, TimeStep *tStep)
 {
-    answer.resize(9);
-    answer.zero();
-
     double rho = static_cast< FluidCrossSection * >( this->giveCrossSection() )->giveDensity( integrationRulesArray [ 0 ]->getIntegrationPoint(0) );
     double mm = rho * this->area / 3.0;
+    answer.resize(9);
+    answer.zero();
     for ( int i = 0; i < 3; i++ ) {
         answer.at(i * 3 + 1) = mm;
         answer.at(i * 3 + 2) = mm;
@@ -196,8 +190,6 @@ TR1_2D_CBS :: computeConvectionTermsI(FloatArray &answer, TimeStep *tStep)
     //double rho =static_cast< FluidCrossSection * >( this->giveCrossSection() )->giveDensity(gp);
     double rho = static_cast< FluidCrossSection * >( this->giveCrossSection() )->giveDensity( integrationRulesArray [ 0 ]->getIntegrationPoint(0) );
     int nLoads;
-    bcGeomType ltype;
-    Load *load;
     FloatArray gVector;
 
     FloatArray u;
@@ -251,9 +243,9 @@ TR1_2D_CBS :: computeConvectionTermsI(FloatArray &answer, TimeStep *tStep)
     // body load (gravity effects)
     nLoads = this->giveBodyLoadArray()->giveSize();
     for ( int i = 1; i <= nLoads; i++ ) {
-        load  = domain->giveLoad( bodyLoadArray.at(i) );
-        ltype = load->giveBCGeoType();
-        if ( ( ltype == BodyLoadBGT ) && ( load->giveBCValType() == ForceLoadBVT ) ) {
+        auto load = domain->giveLoad( bodyLoadArray.at(i) );
+        auto ltype = load->giveBCGeoType();
+        if ( ltype == BodyLoadBGT && load->giveBCValType() == ForceLoadBVT ) {
             load->computeComponentArrayAt(gVector, tStep, VM_Total);
             if ( gVector.giveSize() ) {
                 answer.at(1) -= dt * 0.5 * ar3 * ( b [ 0 ] * usum + c [ 0 ] * vsum ) * gVector.at(1);
@@ -276,7 +268,7 @@ TR1_2D_CBS :: computeDiffusionTermsI(FloatArray &answer, TimeStep *tStep)
     FloatArray stress;
     double Re = static_cast< FluidModel * >( domain->giveEngngModel() )->giveReynoldsNumber();
     GaussPoint *gp = integrationRulesArray [ 0 ]->getIntegrationPoint(0);
-    double coeff, rho = static_cast< FluidCrossSection* >(this->giveCrossSection())->giveDensity( gp );
+    double rho = static_cast< FluidCrossSection* >(this->giveCrossSection())->giveDensity( gp );
     FloatArray gVector;
     double ar3 = area / 3.0;
 
@@ -287,12 +279,12 @@ TR1_2D_CBS :: computeDiffusionTermsI(FloatArray &answer, TimeStep *tStep)
     answer.resize(9);
     answer.zero();
     for ( int i = 0; i < 3; i++ ) {
-        answer.at(i * 3 + 1) = -area * ( stress.at(1) * b [ i ] + stress.at(3) * c [ i ] );
-        answer.at(i * 3 + 2) = -area * ( stress.at(3) * b [ i ] + stress.at(2) * c [ i ] );
+        answer.at(i * 3 + 1) = -area * ( stress.at(1) * b [ i ] + stress.at(6) * c [ i ] );
+        answer.at(i * 3 + 2) = -area * ( stress.at(6) * b [ i ] + stress.at(2) * c [ i ] );
     }
 
     // add boundary termms
-    coeff = ar3 * rho;
+    double coeff = ar3 * rho;
     // body load (gravity effects)
     int nLoads = this->giveBodyLoadArray()->giveSize();
     for ( int i = 1; i <= nLoads; i++ ) {
@@ -313,8 +305,6 @@ TR1_2D_CBS :: computeDiffusionTermsI(FloatArray &answer, TimeStep *tStep)
 
     // terms now computed even for boundary nodes that have prescribed velocities! (but they will not be localized)
     // loop over sides
-    int n1, n2;
-    double tx, ty, l, nx, ny;
     nLoads = boundarySides.giveSize();
     for ( int j = 1; j <= nLoads; j++ ) {
         int code = boundaryCodes.at(j);
@@ -324,22 +314,21 @@ TR1_2D_CBS :: computeDiffusionTermsI(FloatArray &answer, TimeStep *tStep)
             //_error("computeDiffusionTermsI: traction bc not supported");
             FloatArray t, coords(1);
 
-            BoundaryLoad *load;
             // integrate tractions
-            n1 = boundarySides.at(j);
-            n2 = ( n1 == 3 ? 1 : n1 + 1 );
+            int n1 = boundarySides.at(j);
+            int n2 = ( n1 == 3 ? 1 : n1 + 1 );
 
-            tx = giveNode(n2)->giveCoordinate(1) - giveNode(n1)->giveCoordinate(1);
-            ty = giveNode(n2)->giveCoordinate(2) - giveNode(n1)->giveCoordinate(2);
-            l = sqrt(tx * tx + ty * ty);
-            nx = ty / l;
-            ny = -tx / l;
+            double tx = giveNode(n2)->giveCoordinate(1) - giveNode(n1)->giveCoordinate(1);
+            double ty = giveNode(n2)->giveCoordinate(2) - giveNode(n1)->giveCoordinate(2);
+            double l = sqrt(tx * tx + ty * ty);
+            double nx = ty / l;
+            double ny = -tx / l;
 
             // loop over boundary load array
             int numLoads = this->giveBoundaryLoadArray()->giveSize() / 2;
             for ( int i = 1; i <= numLoads; i++ ) {
                 int n = boundaryLoadArray.at(1 + ( i - 1 ) * 2);
-                load = dynamic_cast< BoundaryLoad * >( domain->giveLoad(n) );
+                auto load = dynamic_cast< BoundaryLoad * >( domain->giveLoad(n) );
                 if ( load ) {
                     load->computeValueAt(t, tStep, coords, VM_Total);
 
@@ -365,11 +354,11 @@ TR1_2D_CBS :: computeDiffusionTermsI(FloatArray &answer, TimeStep *tStep)
              * nx = ty/l; ny = -tx/l;
              *
              * // normal displacement precribed
-             * answer.at((n1-1)*3+1)+=l*0.5*(stress.at(1)*nx + stress.at(3)*ny);
-             * answer.at((n1-1)*3+2)+=l*0.5*(stress.at(3)*nx + stress.at(2)*ny);
+             * answer.at((n1-1)*3+1)+=l*0.5*(stress.at(1)*nx + stress.at(6)*ny);
+             * answer.at((n1-1)*3+2)+=l*0.5*(stress.at(6)*nx + stress.at(2)*ny);
              *
-             * answer.at((n2-1)*3+1)+=l*0.5*(stress.at(1)*nx + stress.at(3)*ny);
-             * answer.at((n2-1)*3+2)+=l*0.5*(stress.at(3)*nx + stress.at(2)*ny);
+             * answer.at((n2-1)*3+1)+=l*0.5*(stress.at(1)*nx + stress.at(6)*ny);
+             * answer.at((n2-1)*3+2)+=l*0.5*(stress.at(6)*nx + stress.at(2)*ny);
              * //}
              */
         }
@@ -420,24 +409,20 @@ TR1_2D_CBS :: computeDensityRhsVelocityTerms(FloatArray &answer, TimeStep *tStep
 
     /* account for normal prescribed velocity on boundary*/
     /* on the rest of the boundary the tractions or pressure is prescribed -> to be implemented later */
-    int n1, n2;
-    double tx, ty, l, nx, ny, un1, un2;
-
 
     // loop over sides
-    int code;
     for ( int j = 1; j <= boundarySides.giveSize(); j++ ) {
-        code = boundaryCodes.at(j);
+        int code = boundaryCodes.at(j);
         if ( ( code & FMElement_PrescribedPressureBC ) ) {
             continue;
         } else if ( ( code & FMElement_PrescribedUnBC ) ) {
             this->computeVectorOfPrescribed({V_u, V_v}, VM_Total, tStep, u);
 
-            n1 = boundarySides.at(j);
-            n2 = ( n1 == 3 ? 1 : n1 + 1 );
+            int n1 = boundarySides.at(j);
+            int n2 = ( n1 == 3 ? 1 : n1 + 1 );
 
             //if (giveNode(n1)->isBoundary() && giveNode(n2)->isBoundary()) {
-
+            double tx, ty, l, nx, ny, un1, un2;
             tx = giveNode(n2)->giveCoordinate(1) - giveNode(n1)->giveCoordinate(1);
             ty = giveNode(n2)->giveCoordinate(2) - giveNode(n1)->giveCoordinate(2);
             l = sqrt(tx * tx + ty * ty);
@@ -478,20 +463,16 @@ TR1_2D_CBS :: computePrescribedTractionPressure(FloatArray &answer, TimeStep *tS
     answer.zero();
 
     // loop over sides
-    int n1, n2, code, sid;
-    double tx, ty, l, nx, ny, pcoeff;
-    //IntArray nodecounter (3);
     for ( int j = 1; j <= boundarySides.giveSize(); j++ ) {
-        code = boundaryCodes.at(j);
-        sid = boundarySides.at(j);
+        int code = boundaryCodes.at(j);
+        int sid = boundarySides.at(j);
         if ( ( code & FMElement_PrescribedTractionBC ) ) {
             FloatArray t, coords(1);
-            int nLoads, n, id;
-            BoundaryLoad *load;
             // integrate tractions
-            n1 = sid;
-            n2 = ( n1 == 3 ? 1 : n1 + 1 );
+            int n1 = sid;
+            int n2 = ( n1 == 3 ? 1 : n1 + 1 );
 
+            double tx, ty, l, nx, ny, pcoeff;
             tx = giveNode(n2)->giveCoordinate(1) - giveNode(n1)->giveCoordinate(1);
             ty = giveNode(n2)->giveCoordinate(2) - giveNode(n1)->giveCoordinate(2);
             l = sqrt(tx * tx + ty * ty);
@@ -501,7 +482,7 @@ TR1_2D_CBS :: computePrescribedTractionPressure(FloatArray &answer, TimeStep *tS
 
             //nodecounter.at(n1)++;
             //nodecounter.at(n2)++;
-            pcoeff = stress.at(1) * nx * nx + stress.at(2) * ny * ny + 2.0 * stress.at(3) * nx * ny;
+            pcoeff = stress.at(1) * nx * nx + stress.at(2) * ny * ny + 2.0 * stress.at(6) * nx * ny;
             answer.at(n1 * 3) += pcoeff;
             answer.at(n2 * 3) += pcoeff;
 
@@ -509,15 +490,15 @@ TR1_2D_CBS :: computePrescribedTractionPressure(FloatArray &answer, TimeStep *tS
             // then zero traction is assumed !!!
 
             // loop over boundary load array
-            nLoads = this->giveBoundaryLoadArray()->giveSize() / 2;
+            int nLoads = this->giveBoundaryLoadArray()->giveSize() / 2;
             for ( int i = 1; i <= nLoads; i++ ) {
-                n  = boundaryLoadArray.at(1 + ( i - 1 ) * 2);
-                id = boundaryLoadArray.at(i * 2);
+                int n = boundaryLoadArray.at(1 + ( i - 1 ) * 2);
+                int id = boundaryLoadArray.at(i * 2);
                 if ( id != sid ) {
                     continue;
                 }
 
-                load  = dynamic_cast< BoundaryLoad * >( domain->giveLoad(n) );
+                BoundaryLoad *load = dynamic_cast< BoundaryLoad * >( domain->giveLoad(n) );
                 if ( load ) {
                     load->computeValueAt(t, tStep, coords, VM_Total);
 
@@ -546,13 +527,11 @@ TR1_2D_CBS :: computeNumberOfNodalPrescribedTractionPressureContributions(FloatA
     answer.zero();
 
     // loop over sides
-    int n1, n2, code;
-    IntArray nodecounter(3);
     for ( int j = 1; j <= boundarySides.giveSize(); j++ ) {
-        code = boundaryCodes.at(j);
+        int code = boundaryCodes.at(j);
         if ( ( code & FMElement_PrescribedTractionBC ) ) {
-            n1 = boundarySides.at(j);
-            n2 = ( n1 == 3 ? 1 : n1 + 1 );
+            int n1 = boundarySides.at(j);
+            int n2 = ( n1 == 3 ? 1 : n1 + 1 );
             answer.at(n1 * 3)++;
             answer.at(n2 * 3)++;
         }
@@ -607,7 +586,7 @@ TR1_2D_CBS :: computeCorrectionRhs(FloatArray &answer, TimeStep *tStep)
 {
     //Evaluates the RHS of velocity correction step
     FloatArray p, u;
-    double pn1, ar3;
+    double ar3;
     double usum, vsum, coeff;
 
 
@@ -615,7 +594,7 @@ TR1_2D_CBS :: computeCorrectionRhs(FloatArray &answer, TimeStep *tStep)
 
     double dpdx = 0.0, dpdy = 0.0;
     for ( int i = 0; i < 3; i++ ) {
-        pn1 = p.at(i + 1);
+        double pn1 = p.at(i + 1);
         dpdx += b [ i ] * pn1;
         dpdy += c [ i ] * pn1;
     }
@@ -632,7 +611,7 @@ TR1_2D_CBS :: computeCorrectionRhs(FloatArray &answer, TimeStep *tStep)
     this->computeVectorOfVelocities(VM_Total, tStep->givePreviousStep(), u);
     dpdx = 0.0, dpdy = 0.0;
     for ( int i = 0; i < 3; i++ ) {
-        pn1 = p.at(i + 1);
+        double pn1 = p.at(i + 1);
         dpdx += b [ i ] * pn1;
         dpdy += c [ i ] * pn1;
     }
@@ -670,7 +649,7 @@ TR1_2D_CBS :: giveInterface(InterfaceType interface)
     }
 
     //</RESTRICTED_SECTION>
-    return NULL;
+    return nullptr;
 }
 
 
@@ -678,25 +657,25 @@ void
 TR1_2D_CBS :: computeDeviatoricStress(FloatArray &answer, GaussPoint *gp, TimeStep *tStep)
 {
     /* one should call material driver instead */
-    FloatArray u, eps(3);
-
+    FloatArray u;
     this->computeVectorOfVelocities(VM_Total, tStep, u);
 
-    eps.at(1) = ( b [ 0 ] * u.at(1) + b [ 1 ] * u.at(3) + b [ 2 ] * u.at(5) );
-    eps.at(2) = ( c [ 0 ] * u.at(2) + c [ 1 ] * u.at(4) + c [ 2 ] * u.at(6) );
-    eps.at(3) = ( b [ 0 ] * u.at(2) + b [ 1 ] * u.at(4) + b [ 2 ] * u.at(6) + c [ 0 ] * u.at(1) + c [ 1 ] * u.at(3) + c [ 2 ] * u.at(5) );
-    static_cast< FluidCrossSection * >( this->giveCrossSection() )->giveFluidMaterial()->computeDeviatoricStressVector(answer, gp, eps, tStep);
+    FloatArrayF<3> eps = {
+        b [ 0 ] * u.at(1) + b [ 1 ] * u.at(3) + b [ 2 ] * u.at(5),
+        c [ 0 ] * u.at(2) + c [ 1 ] * u.at(4) + c [ 2 ] * u.at(6),
+        b [ 0 ] * u.at(2) + b [ 1 ] * u.at(4) + b [ 2 ] * u.at(6) + c [ 0 ] * u.at(1) + c [ 1 ] * u.at(3) + c [ 2 ] * u.at(5),
+    };
+    answer = static_cast< FluidCrossSection * >( this->giveCrossSection() )->giveFluidMaterial()->computeDeviatoricStress2D(eps, gp, tStep);
 }
 
 int
 TR1_2D_CBS :: checkConsistency()
 {
-    Node *node1, *node2, *node3;
     double x1, x2, x3, y1, y2, y3;
 
-    node1 = giveNode(1);
-    node2 = giveNode(2);
-    node3 = giveNode(3);
+    auto node1 = giveNode(1);
+    auto node2 = giveNode(2);
+    auto node3 = giveNode(3);
 
     // init geometry data
     x1 = node1->giveCoordinate(1);
@@ -723,7 +702,6 @@ double
 TR1_2D_CBS :: computeCriticalTimeStep(TimeStep *tStep)
 {
     FloatArray u;
-    double dt1, dt2, dt;
     double Re = static_cast< FluidModel * >( domain->giveEngngModel() )->giveReynoldsNumber();
 
     this->computeVectorOfVelocities(VM_Total, tStep, u);
@@ -740,9 +718,10 @@ TR1_2D_CBS :: computeCriticalTimeStep(TimeStep *tStep)
     double ln = min( l1, min(l2, l3) );
 
     // viscous limit
-    dt2 = 0.5 * ln * ln * Re;
+    double dt;
+    double dt2 = 0.5 * ln * ln * Re;
     if ( veln != 0.0 ) {
-        dt1 = ln / veln;
+        double dt1 = ln / veln;
         dt = dt1 * dt2 / ( dt1 + dt2 );
     } else {
         dt = dt2;
@@ -770,7 +749,6 @@ void
 TR1_2D_CBS :: formMaterialVolumePoly(Polygon &matvolpoly, LEPlic *matInterface,
                                      const FloatArray &normal, const double p, bool updFlag)
 {
-    double x, y;
     Vertex v;
 
     matvolpoly.clear();
@@ -779,6 +757,7 @@ TR1_2D_CBS :: formMaterialVolumePoly(Polygon &matvolpoly, LEPlic *matInterface,
         return;
     } else if ( this->vof >= ( 1 - TRSUPG_ZERO_VOF ) ) {
         for ( int i = 1; i <= 3; i++ ) {
+            double x, y;
             if ( updFlag ) {
                 x = matInterface->giveUpdatedXCoordinate( this->giveNode(i)->giveNumber() );
                 y = matInterface->giveUpdatedYCoordinate( this->giveNode(i)->giveNumber() );
@@ -927,12 +906,12 @@ TR1_2D_CBS :: truncateMatVolume(const Polygon &matvolpoly, double &volume)
 void
 TR1_2D_CBS :: formMyVolumePoly(Polygon &me, LEPlic *matInterface, bool updFlag)
 {
-    double x, y;
     Vertex v;
 
     me.clear();
 
     for ( int i = 1; i <= 3; i++ ) {
+        double x, y;
         if ( updFlag ) {
             x = matInterface->giveUpdatedXCoordinate( this->giveNode(i)->giveNumber() );
             y = matInterface->giveUpdatedYCoordinate( this->giveNode(i)->giveNumber() );
@@ -950,8 +929,8 @@ TR1_2D_CBS :: formMyVolumePoly(Polygon &me, LEPlic *matInterface, bool updFlag)
 double
 TR1_2D_CBS :: computeMyVolume(LEPlic *matInterface, bool updFlag)
 {
-    double x1, x2, x3, y1, y2, y3;
     if ( updFlag ) {
+        double x1, x2, x3, y1, y2, y3;
         x1 = matInterface->giveUpdatedXCoordinate( this->giveNode(1)->giveNumber() );
         x2 = matInterface->giveUpdatedXCoordinate( this->giveNode(2)->giveNumber() );
         x3 = matInterface->giveUpdatedXCoordinate( this->giveNode(3)->giveNumber() );
@@ -1122,51 +1101,21 @@ TR1_2D_CBS :: printOutputAt(FILE *file, TimeStep *tStep)
 
 
 
-contextIOResultType TR1_2D_CBS :: saveContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// saves full element context (saves state variables, that completely describe
-// current state)
-//
+void TR1_2D_CBS :: saveContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-
-    if ( ( iores = CBSElement :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
+    CBSElement :: saveContext(stream, mode);
     //<RESTRICTED_SECTION>
-    if ( ( iores = LEPlicElementInterface :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
+    LEPlicElementInterface :: saveContext(stream, mode);
     //</RESTRICTED_SECTION>
-
-    return CIO_OK;
 }
 
 
-
-contextIOResultType TR1_2D_CBS :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// restores full element context (saves state variables, that completely describe
-// current state)
-//
+void TR1_2D_CBS :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-
-    if ( ( iores = CBSElement :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
+    CBSElement :: restoreContext(stream, mode);
     //<RESTRICTED_SECTION>
-    if ( ( iores = LEPlicElementInterface :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
+    LEPlicElementInterface :: restoreContext(stream, mode);
     //</RESTRICTED_SECTION>
-
-
-    return CIO_OK;
 }
 
 

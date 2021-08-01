@@ -81,30 +81,32 @@ protected:
     int initFlag; // needed?
 
 public:
-    FreeWarping(int i, EngngModel *_master = NULL);
+    FreeWarping(int i, EngngModel *master = nullptr);
     virtual ~FreeWarping();
 
-    virtual void solveYourself();
-    virtual void solveYourselfAt(TimeStep *tStep);
+    void solveYourself() override;
+    void solveYourselfAt(TimeStep *tStep) override;
 
-    virtual double giveUnknownComponent(ValueModeType type, TimeStep *tStep, Domain *d, Dof *dof);
-    // virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    //virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    double giveUnknownComponent(ValueModeType type, TimeStep *tStep, Domain *d, Dof *dof) override;
+    //void saveContext(DataStream &stream, ContextMode mode) override;
+    //void restoreContext(DataStream &stream, ContextMode mode) override;
 
-    virtual void updateDomainLinks();
+    void updateDomainLinks() override;
 
-    virtual TimeStep *giveNextStep();
-    virtual NumericalMethod *giveNumericalMethod(MetaStep *mStep);
-    virtual void terminate(TimeStep *tStep);
+    void printOutputAt(FILE *file, TimeStep *tStep) override;
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    TimeStep *giveNextStep() override;
+    NumericalMethod *giveNumericalMethod(MetaStep *mStep) override;
+    void terminate(TimeStep* tStep) override;
+
+    void initializeFrom(InputRecord &ir) override;
 
     void getCenterOfGravity(FloatMatrix &answer) { answer = this->CG; }
 
     // identification
-    virtual const char *giveInputRecordName() const { return _IFT_FreeWarping_Name; }
-    virtual const char *giveClassName() const { return "FreeWarping"; }
-    virtual fMode giveFormulation() { return TL; }
+    const char *giveInputRecordName() const { return _IFT_FreeWarping_Name; }
+    const char *giveClassName() const override { return "FreeWarping"; }
+    fMode giveFormulation() override { return TL; }
     /**
      * Gives the sum of the first moment of area.
      * @return Total moments Sx Sy.
@@ -114,7 +116,7 @@ public:
     void updateComputedResults(FloatArray &answer, TimeStep *tStep);
     void updateStiffnessMatrix(SparseMtrx *answer);
 
-    int estimateMaxPackSize(IntArray &commMap, DataStream &buff, int packUnpackType);
+    int estimateMaxPackSize(IntArray &commMap, DataStream &buff, int packUnpackType) override;
 };
 } // end namespace oofem
 #endif // freewarping_h

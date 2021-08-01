@@ -66,45 +66,20 @@ namespace oofem {
 REGISTER_DofManager(Node);
 
 Node :: Node(int n, Domain *aDomain) :
-    DofManager(n, aDomain), coordinates()
-{
-    localCoordinateSystem = NULL;
-}
+    DofManager(n, aDomain)
+{ }
 
 
-Node :: ~Node()
-{
-    delete localCoordinateSystem;
-}
-
-
-double
-Node :: giveCoordinate(int i)
-// Returns the i-th coordinate of the receiver.
-{
-    if ( i > coordinates.giveSize() ) {
-        return 0.;
-    }
-
-    return coordinates.at(i);
-}
-
-
-IRResultType Node :: initializeFrom(InputRecord *ir)
+void Node :: initializeFrom(InputRecord &ir)
 // Gets from the source line from the data file all the data of the receiver.
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
     int size;
 
 #  ifdef VERBOSE
     // VERBOSE_PRINT1("Instanciating node ",number)
 #  endif
 
-    result = DofManager :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    DofManager :: initializeFrom(ir);
 
     IR_GIVE_FIELD(ir, coordinates, _IFT_Node_coords);
 
@@ -118,7 +93,7 @@ IRResultType Node :: initializeFrom(InputRecord *ir)
 
 
     // Read if available local coordinate system in this node
-    if ( ir->hasField(_IFT_Node_lcs) ) {
+    if ( ir.hasField(_IFT_Node_lcs) ) {
         FloatArray triplets;
         IR_GIVE_FIELD(ir, triplets, _IFT_Node_lcs);
         size = triplets.giveSize();
@@ -127,7 +102,7 @@ IRResultType Node :: initializeFrom(InputRecord *ir)
         }
 
         double n1 = 0.0, n2 = 0.0;
-        localCoordinateSystem = new FloatMatrix(3, 3);
+        localCoordinateSystem = std::make_unique<FloatMatrix>(3, 3);
 
         for ( int j = 1; j <= 3; j++ ) {
             localCoordinateSystem->at(1, j) = triplets.at(j);
@@ -158,8 +133,6 @@ IRResultType Node :: initializeFrom(InputRecord *ir)
             localCoordinateSystem->at(1, 1) * localCoordinateSystem->at(2, 2) -
         localCoordinateSystem->at(1, 2) * localCoordinateSystem->at(2, 1);
     }
-
-    return IRRT_OK;
 }
 
 void Node :: giveInputRecord(DynamicInputRecord &input)
@@ -168,7 +141,7 @@ void Node :: giveInputRecord(DynamicInputRecord &input)
 
     input.setField(coordinates, _IFT_Node_coords);
 
-    if ( localCoordinateSystem != NULL ) {
+    if ( localCoordinateSystem ) {
         input.setField(* localCoordinateSystem, _IFT_Node_lcs);
     }
 }
@@ -207,7 +180,7 @@ void
 Node :: printYourself()
 // Prints the receiver on screen.
 {
-    printf("Node %d    coord : x %f  y %fz< %f\n", number, this->giveCoordinate(1), this->giveCoordinate(2), this->giveCoordinate(3));
+    printf("Node %d    coord : x %f  y %f  z %f\n", number, this->giveCoordinate(1), this->giveCoordinate(2), this->giveCoordinate(3));
     for ( Dof *dof: *this ) {
         dof->printYourself();
     }
@@ -430,7 +403,7 @@ Node :: computeL2GTransformation(FloatMatrix &answer, const IntArray &dofIDArry)
     //
     DofIDItem id;
 
-    if ( localCoordinateSystem == NULL ) {
+    if ( !localCoordinateSystem ) {
         answer.clear();
         return false;
     } else {
@@ -561,21 +534,14 @@ Node :: computeL2GTransformation(FloatMatrix &answer, const IntArray &dofIDArry)
 }
 
 
-contextIOResultType
-Node :: saveContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// saves full node context (saves state variables, that completely describe
-// current state)
-//
+void
+Node :: saveContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-
-    if ( ( iores = DofManager :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
+    DofManager :: saveContext(stream, mode);
 
     if ( mode & CM_Definition ) {
         int _haslcs = hasLocalCS();
+        contextIOResultType iores;
         if ( ( iores = coordinates.storeYourself(stream) ) != CIO_OK ) {
             THROW_CIOERR(iores);
         }
@@ -590,26 +556,17 @@ Node :: saveContext(DataStream &stream, ContextMode mode, void *obj)
             }
         }
     }
-
-    return CIO_OK;
 }
 
 
-contextIOResultType
-Node :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
-//
-// restores full node context (saves state variables, that completely describe
-// current state)
-//
+void
+Node :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-
-    if ( ( iores = DofManager :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
+    DofManager :: restoreContext(stream, mode);
 
     if ( mode & CM_Definition ) {
         int _haslcs;
+        contextIOResultType iores;
         if ( ( iores = coordinates.restoreYourself(stream) ) != CIO_OK ) {
             THROW_CIOERR(iores);
         }
@@ -619,19 +576,14 @@ Node :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
         }
 
         if ( _haslcs ) {
-            if ( localCoordinateSystem == NULL ) {
-                localCoordinateSystem = new FloatMatrix();
-            }
-
+            localCoordinateSystem = std::make_unique<FloatMatrix>();
             if ( ( iores = localCoordinateSystem->restoreYourself(stream) ) != CIO_OK ) {
                 THROW_CIOERR(iores);
             }
         } else {
-            localCoordinateSystem = NULL;
+            localCoordinateSystem = nullptr;
         }
     }
-
-    return CIO_OK;
 }
 
 

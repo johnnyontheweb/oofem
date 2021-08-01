@@ -69,14 +69,9 @@ AbaqusUserElement :: ~AbaqusUserElement()
 }
 
 
-IRResultType AbaqusUserElement :: initializeFrom(InputRecord *ir)
+void AbaqusUserElement :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                                        // Required by IR_GIVE_FIELD macro
-
-    result = StructuralElement :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    StructuralElement :: initializeFrom(ir);
 
     this->numberOfDofMans = dofManArray.giveSize();
 
@@ -136,8 +131,6 @@ IRResultType AbaqusUserElement :: initializeFrom(InputRecord *ir)
         OOFEM_ERROR("couldn't load symbol uel,\ndlerror: %s\n", dlresult);
     }
 #endif
-
-    return IRRT_OK;
 }
 
 
@@ -198,7 +191,7 @@ void AbaqusUserElement :: giveInputRecord(DynamicInputRecord &input)
     input.setField(this->filename, _IFT_AbaqusUserElement_userElement);
 }
 
-Interface *AbaqusUserElement :: giveInterface(InterfaceType it)
+Interface* AbaqusUserElement::giveInterface(InterfaceType it)
 {
     return NULL;
 }
@@ -239,14 +232,14 @@ void AbaqusUserElement :: giveInternalForcesVector(FloatArray &answer, TimeStep 
 {
     // init U vector
     // this->computeVectorOf(this->dofs, VM_Total, tStep, U);
-	this->computeVectorOf(VM_Total, tStep, U, false);
+	this->computeVectorOf(VM_Total, tStep, U);
 	// get A and V
-	this->computeVectorOf(VM_Velocity, tStep, V, false);
-	this->computeVectorOf(VM_Acceleration, tStep, A, false);
+	this->computeVectorOf(VM_Velocity, tStep, V);
+	this->computeVectorOf(VM_Acceleration, tStep, A);
     FloatArray tempIntVect;
     // init DU vector
     //this->computeVectorOf(this->dofs, VM_Incremental, tStep, tempIntVect);
-	this->computeVectorOf(VM_Incremental, tStep, tempIntVect, false);
+	this->computeVectorOf(VM_Incremental, tStep, tempIntVect);
     //this->giveDomain()->giveClassName();
     DU.zero();
     DU.setColumn(tempIntVect, 1);
@@ -351,7 +344,7 @@ AbaqusUserElement::printOutputAt(FILE *File, TimeStep *tStep)
 	fprintf(File, "abaqususerelement %d (%8d) macroelem %d :\n", this->giveLabel(), this->giveNumber(), this->macroElem);
 
 	// ask for global element displacement vector
-	this->computeVectorOf(VM_Total, tStep, rl, false);
+	this->computeVectorOf(VM_Total, tStep, rl);
 	// ask for global element end forces vector
 	this->giveInternalForcesVector(Fl, tStep, 1);
 

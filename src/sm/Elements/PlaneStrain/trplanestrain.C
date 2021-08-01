@@ -32,8 +32,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "Elements/PlaneStrain/trplanestrain.h"
-#include "../sm/Materials/structuralmaterial.h"
+#include "sm/Elements/PlaneStrain/trplanestrain.h"
+#include "sm/Materials/structuralmaterial.h"
 #include "fei2dtrlin.h"
 #include "node.h"
 #include "crosssection.h"
@@ -92,15 +92,11 @@ TrPlaneStrain :: giveInterface(InterfaceType interface)
     return NULL;
 }
 
-
-IRResultType
-TrPlaneStrain :: initializeFrom(InputRecord *ir)
+void
+TrPlaneStrain :: initializeFrom(InputRecord &ir)
 {
     numberOfGaussPoints = 1;
-    IRResultType result = PlaneStrainElement :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    PlaneStrainElement :: initializeFrom(ir);
 
 	// optional record for 1st local axes
 	la1.resize(3);
@@ -110,8 +106,6 @@ TrPlaneStrain :: initializeFrom(InputRecord *ir)
     if ( numberOfGaussPoints != 1 ) {
         numberOfGaussPoints = 1;
     }
-
-    return IRRT_OK;
 }
 
 const FloatMatrix *
@@ -126,46 +120,46 @@ TrPlaneStrain::computeGtoLRotationMatrix()
 // e3'    : e1' x help
 // e2'    : e3' x e1'
 {
-	if (!GtoLRotationMatrix.isNotEmpty()) {
-		FloatArray e1, e2, e3, help;
+    if (!GtoLRotationMatrix.isNotEmpty()) {
+	FloatArray e1, e2, e3, help;
 
-		// compute e1' = [N2-N1]  and  help = [N3-N1]
-		e1.beDifferenceOf(*this->giveNode(2)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
-		help.beDifferenceOf(*this->giveNode(3)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
+	// compute e1' = [N2-N1]  and  help = [N3-N1]
+	e1.beDifferenceOf(this->giveNode(2)->giveCoordinates(), this->giveNode(1)->giveCoordinates());
+	help.beDifferenceOf(this->giveNode(3)->giveCoordinates(), this->giveNode(1)->giveCoordinates());
 
-		// let us normalize e1'
-		e1.normalize();
+	// let us normalize e1'
+	e1.normalize();
 
-		// compute e3' : vector product of e1' x help
-		e3.beVectorProductOf(e1, help);
-		// let us normalize
-		e3.normalize();
+	// compute e3' : vector product of e1' x help
+	e3.beVectorProductOf(e1, help);
+	// let us normalize
+	e3.normalize();
 
-		//if (la1.computeNorm() != 0) {
-		//	// custom local axes
-		//	e1 = la1;
-		//}
+	//if (la1.computeNorm() != 0) {
+	//	// custom local axes
+	//	e1 = la1;
+	//}
 
-		// now from e3' x e1' compute e2'
-		e2.beVectorProductOf(e3, e1);
+	// now from e3' x e1' compute e2'
+	e2.beVectorProductOf(e3, e1);
 
-		// rotate as to have the 1st local axis equal to la1
-		if (la1.computeNorm() != 0) {
-			double ang = -Angle::giveAngleIn3Dplane(la1, e1, e3); // radians
-			e1 = Angle::rotate(e1, e3, ang);
-			e2 = Angle::rotate(e2, e3, ang);
-		}
-		// rot. matrix
-		GtoLRotationMatrix.resize(3, 3);
-
-		for (int i = 1; i <= 3; i++) {
-			GtoLRotationMatrix.at(1, i) = e1.at(i);
-			GtoLRotationMatrix.at(2, i) = e2.at(i);
-			GtoLRotationMatrix.at(3, i) = e3.at(i);
-		}
+	// rotate as to have the 1st local axis equal to la1
+	if (la1.computeNorm() != 0) {
+	    double ang = -Angle::giveAngleIn3Dplane(la1, e1, e3); // radians
+	    e1 = Angle::rotate(e1, e3, ang);
+	    e2 = Angle::rotate(e2, e3, ang);
 	}
+	// rot. matrix
+	GtoLRotationMatrix.resize(3, 3);
 
-	return &GtoLRotationMatrix;
+	for (int i = 1; i <= 3; i++) {
+	    GtoLRotationMatrix.at(1, i) = e1.at(i);
+	    GtoLRotationMatrix.at(2, i) = e2.at(i);
+	    GtoLRotationMatrix.at(3, i) = e3.at(i);
+	}
+    }
+
+    return &GtoLRotationMatrix;
 }
 
 
@@ -220,44 +214,42 @@ TrPlaneStrain :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, 
 {
     //GaussPoint *gp = integrationRulesArray [ 0 ]->getIntegrationPoint(0);
     //this->giveIPValue(answer, gp, type, tStep);
-	answer.zero();
-	GaussPoint *gp = integrationRulesArray[0]->getIntegrationPoint(0);
-	FloatArray localStress, localStrain;
-	this->computeStrainVector(localStrain, gp, tStep);
-	this->computeStressVector(localStress, localStrain, gp, tStep);
+    answer.zero();
+    GaussPoint *gp = integrationRulesArray[0]->getIntegrationPoint(0);
+    FloatArray localStress, localStrain;
+    this->computeStrainVector(localStrain, gp, tStep);
+    this->computeStressVector( localStress, localStrain, gp, tStep );
 
-	if (type == IST_ShellForceTensor) {
-		double thickness, w;
-		FloatArray mLocal;
-		mLocal.resize(6);
-		mLocal.zero();
+    if ( type == IST_ShellForceTensor ) {
+        double thickness, w;
+        FloatArray mLocal;
+        mLocal.resize( 6 );
+        mLocal.zero();
 
-		thickness = this->giveCrossSection()->give(CS_Thickness, gp->giveGlobalCoordinates(), this, false);
-		w = gp->giveWeight() * thickness;
-		// mLocal.add(w, localStress);
-		mLocal.at(1) = localStress.at(1) * w;
-		mLocal.at(2) = localStress.at(2) * w;
-		mLocal.at(6) = localStress.at(3) * w;
+        thickness = this->giveCrossSection()->give( CS_Thickness, gp->giveGlobalCoordinates(), this, false );
+        w         = gp->giveWeight() * thickness;
+        // mLocal.add(w, localStress);
+        mLocal.at( 1 ) = localStress.at( 1 ) * w;
+        mLocal.at( 2 ) = localStress.at( 2 ) * w;
+        mLocal.at( 6 ) = localStress.at( 3 ) * w;
 
-		// local to global
-		this->computeGtoLRotationMatrix();
-		StructuralMaterial::transformStressVectorTo(answer, GtoLRotationMatrix, mLocal, false);
-	}
-	else if (type == IST_ShellMomentTensor || type == IST_CurvatureTensor) {
-		// nothing
-	}
-	else if (type == IST_ShellStrainTensor) {
-		FloatArray mLocal;
-		mLocal.resize(6);
-		mLocal.zero();
-		mLocal.at(1) = localStrain.at(1);
-		mLocal.at(2) = localStrain.at(2);
-		mLocal.at(6) = localStrain.at(3);
+        // local to global
+        this->computeGtoLRotationMatrix();
+        answer = StructuralMaterial::transformStressVectorTo( GtoLRotationMatrix, mLocal, false );
+    } else if ( type == IST_ShellMomentTensor || type == IST_CurvatureTensor ) {
+        // nothing
+    } else if ( type == IST_ShellStrainTensor ) {
+        FloatArray mLocal;
+        mLocal.resize( 6 );
+	    mLocal.zero();
+	    mLocal.at(1) = localStrain.at(1);
+	    mLocal.at(2) = localStrain.at(2);
+	    mLocal.at(6) = localStrain.at(3);
 
-		// local to global
-		this->computeGtoLRotationMatrix();
-		StructuralMaterial::transformStressVectorTo(answer, GtoLRotationMatrix, mLocal, false);
-	}
+	    // local to global
+	    this->computeGtoLRotationMatrix();
+        answer = StructuralMaterial::transformStressVectorTo(GtoLRotationMatrix, mLocal, false);
+    }
 }
 
 
@@ -307,37 +299,37 @@ TrPlaneStrain :: HuertaErrorEstimatorI_setupRefinedElementProblem(RefinedElement
                                                                   IntArray &controlNode, IntArray &controlDof,
                                                                   HuertaErrorEstimator :: AnalysisMode aMode)
 {
-    int inode, nodes = 3, iside, sides = 3, nd1, nd2;
-    FloatArray *corner [ 3 ], midSide [ 3 ], midNode, cor [ 3 ];
+    int nodes = 3, sides = 3;
+    FloatArray corner [ 3 ], midSide [ 3 ], midNode, cor [ 3 ];
     double x = 0.0, y = 0.0;
 
     static int sideNode [ 3 ] [ 2 ] = { { 1, 2 }, { 2, 3 }, { 3, 1 } };
 
     if ( sMode == HuertaErrorEstimatorInterface :: NodeMode ||
         ( sMode == HuertaErrorEstimatorInterface :: BCMode && aMode == HuertaErrorEstimator :: HEE_linear ) ) {
-        for ( inode = 0; inode < nodes; inode++ ) {
+        for ( int inode = 0; inode < nodes; inode++ ) {
             corner [ inode ] = this->giveNode(inode + 1)->giveCoordinates();
-            if ( corner [ inode ]->giveSize() != 3 ) {
+            if ( corner [ inode ].giveSize() != 3 ) {
                 cor [ inode ].resize(3);
-                cor [ inode ].at(1) = corner [ inode ]->at(1);
-                cor [ inode ].at(2) = corner [ inode ]->at(2);
+                cor [ inode ].at(1) = corner [ inode ].at(1);
+                cor [ inode ].at(2) = corner [ inode ].at(2);
                 cor [ inode ].at(3) = 0.0;
 
-                corner [ inode ] = & ( cor [ inode ] );
+                corner [ inode ] = cor [ inode ];
             }
 
-            x += corner [ inode ]->at(1);
-            y += corner [ inode ]->at(2);
+            x += corner [ inode ].at(1);
+            y += corner [ inode ].at(2);
         }
 
-        for ( iside = 0; iside < sides; iside++ ) {
+        for ( int iside = 0; iside < sides; iside++ ) {
             midSide [ iside ].resize(3);
 
-            nd1 = sideNode [ iside ] [ 0 ] - 1;
-            nd2 = sideNode [ iside ] [ 1 ] - 1;
+            int nd1 = sideNode [ iside ] [ 0 ] - 1;
+            int nd2 = sideNode [ iside ] [ 1 ] - 1;
 
-            midSide [ iside ].at(1) = ( corner [ nd1 ]->at(1) + corner [ nd2 ]->at(1) ) / 2.0;
-            midSide [ iside ].at(2) = ( corner [ nd1 ]->at(2) + corner [ nd2 ]->at(2) ) / 2.0;
+            midSide [ iside ].at(1) = ( corner [ nd1 ].at(1) + corner [ nd2 ].at(1) ) / 2.0;
+            midSide [ iside ].at(2) = ( corner [ nd1 ].at(2) + corner [ nd2 ].at(2) ) / 2.0;
             midSide [ iside ].at(3) = 0.0;
         }
 

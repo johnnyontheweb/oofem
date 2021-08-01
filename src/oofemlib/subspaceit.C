@@ -43,18 +43,16 @@
 #include "gjacobi.h"
 #include "sparselinsystemnm.h"
 #include "classfactory.h"
-#include <memory>
 
 namespace oofem {
+REGISTER_GeneralizedEigenValueSolver(SubspaceIteration, GES_SubspaceIt);
+
 SubspaceIteration :: SubspaceIteration(Domain *d, EngngModel *m) :
-    SparseGeneralEigenValueSystemNM(d, m)
+    SparseGeneralEigenValueSystemNM(d, m),
+    nitem(40)
 {
-    nitem = 40; // max number of iterations
 }
 
-
-SubspaceIteration :: ~SubspaceIteration()
-{ }
 
 NM_Status
 SubspaceIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatrix &_r, double rtol, int nroot)
@@ -63,23 +61,21 @@ SubspaceIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Floa
 // jacobi iteration
 //
 {
-	FILE *outStream;
-	if ( a.giveNumberOfColumns() != b.giveNumberOfColumns() ) {
+    FILE *outStream;
+    if ( a.giveNumberOfColumns() != b.giveNumberOfColumns() ) {
         OOFEM_ERROR("matrices size mismatch");
     }
 
     FloatArray temp, w, d, tt, f, rtolv, eigv;
     FloatMatrix r;
-    int nn, nc1, ij = 0, is;
-    double rt, art, brt, eigvt;
+    int nc1, ij = 0;
     FloatMatrix ar, br, vec;
-	// SparseLinearSystemNM *solver = GiveClassFactory().createSparseLinSolver(ST_Direct, domain, engngModel);
-	std::unique_ptr< SparseLinearSystemNM > solver(GiveClassFactory().createSparseLinSolver(ST_Direct, domain, engngModel));
+    std :: unique_ptr< SparseLinearSystemNM > solver( GiveClassFactory().createSparseLinSolver(ST_Direct, domain, engngModel) );
 
     GJacobi mtd(domain, engngModel);
-	outStream = domain->giveEngngModel()->giveOutputStream();
+    outStream = domain->giveEngngModel()->giveOutputStream();
     int nc = min(2 * nroot, nroot + 8);
-    nn = a.giveNumberOfColumns();
+    int nn = a.giveNumberOfColumns();
     if ( nc > nn ) {
         nc = nn;
     }
@@ -113,14 +109,14 @@ SubspaceIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Floa
     eigv.resize(nc);
     eigv.zero();
 
-	//// control of diagonal zeroes in mass matrix, to be avoided
-	//for (i = 1; i <= nc; i++) {
-	//	if (b.at(i, i) == 0) {
-	//		b.at(i, i) = 1.0e-12;
-	//	}
-	//}
+    //// control of diagonal zeroes in mass matrix, to be avoided
+    //for (i = 1; i <= nc; i++) {
+    //	if (b.at(i, i) == 0) {
+    //		b.at(i, i) = 1.0e-12;
+    //	}
+    //}
 
-	FloatArray h(nn);
+    FloatArray h(nn);
     for ( int i = 1; i <= nn; i++ ) {
         h.at(i) = 1.0;
         w.at(i) = b.at(i, i) / a.at(i, i);
@@ -130,7 +126,7 @@ SubspaceIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Floa
     r.setColumn(tt, 1);
 
     for ( int j = 2; j <= nc; j++ ) {
-        rt = 0.0;
+        double rt = 0.0;
         for ( int i = 1; i <= nn; i++ ) {
             if ( fabs( w.at(i) ) >= rt ) {
                 rt = fabs( w.at(i) );
@@ -177,7 +173,7 @@ SubspaceIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Floa
             solver->solve(a, f, tt);
 
             for ( int i = j; i <= nc; i++ ) {
-                art = 0.;
+                double art = 0.;
                 for ( int k = 1; k <= nn; k++ ) {
                     art += r.at(k, i) * tt.at(k);
                 }
@@ -199,7 +195,7 @@ SubspaceIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Floa
 
             b.times(tt, temp);
             for ( int i = j; i <= nc; i++ ) {
-                brt = 0.;
+                double brt = 0.;
                 for ( int k = 1; k <= nn; k++ ) {
                     brt += r.at(k, i) * temp.at(k);
                 }
@@ -304,18 +300,15 @@ SubspaceIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Floa
         //
         // sorting eigenvalues according to their values
         //
+        int is;
         do {
             is = 0; // label 350
             for ( int i = 1; i <= nc1; i++ ) {
                 if ( fabs( eigv.at(i + 1) ) < fabs( eigv.at(i) ) ) {
                     is++;
-                    eigvt = eigv.at(i + 1);
-                    eigv.at(i + 1) = eigv.at(i);
-                    eigv.at(i)   = eigvt;
+                    std::swap(eigv.at(i), eigv.at(i + 1)); 
                     for ( int k = 1; k <= nc; k++ ) {
-                        rt = vec.at(k, i + 1);
-                        vec.at(k, i + 1) = vec.at(k, i);
-                        vec.at(k, i)   = rt;
+                        std::swap(vec.at(k, i), vec.at(k, i + 1));
                     }
                 }
             }                   // label 360
@@ -336,7 +329,7 @@ SubspaceIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Floa
             }
 
             for ( int k = 1; k <= nc; k++ ) {
-                rt = 0.;
+                double rt = 0.;
                 for ( int j = 1; j <= nc; j++ ) {
                     rt += tt.at(j) * vec.at(j, k);
                 }
@@ -363,11 +356,11 @@ SubspaceIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Floa
             }
         }
 
-		fprintf(outStream, "SubspaceIteration :: solveYourselfAt: Convergence reached for RTOL=%20.15f\n", rtol);
+        fprintf(outStream, "SubspaceIteration :: solveYourselfAt: Convergence reached for RTOL=%20.15f\n", rtol);
         break;
 label400:
         if ( nite >= nitem ) {
-			fprintf(outStream, "SubspaceIteration :: solveYourselfAt: Convergence not reached in %d iteration - using current values\n", nitem);
+            fprintf(outStream, "SubspaceIteration :: solveYourselfAt: Convergence not reached in %d iteration - using current values\n", nitem);
             break;
         }
 

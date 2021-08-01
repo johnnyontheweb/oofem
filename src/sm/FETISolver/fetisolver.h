@@ -35,7 +35,7 @@
 #ifndef fetisolver_h
 #define fetisolver_h
 
-#include "../sm/FETISolver/feticommunicator.h"
+#include "sm/FETISolver/feticommunicator.h"
 #include "sparselinsystemnm.h"
 #include "sparsemtrx.h"
 #include "floatarray.h"
@@ -44,10 +44,11 @@
 
 ///@name Input fields for FETISolver
 //@{
- #define _IFT_FETISolver_maxiter "maxiter"
- #define _IFT_FETISolver_maxerr "maxerr"
- #define _IFT_FETISolver_limit "limit"
- #define _IFT_FETISolver_energynormflag "energynormflag"
+#define _IFT_FETISolver_Name "feti"
+#define _IFT_FETISolver_maxiter "maxiter"
+#define _IFT_FETISolver_maxerr "maxerr"
+#define _IFT_FETISolver_limit "limit"
+#define _IFT_FETISolver_energynormflag "energynormflag"
 //@}
 
 namespace oofem {
@@ -110,17 +111,17 @@ public:
      * @param x Solution array
      * @return NM_Status value
      */
-    virtual NM_Status solve(SparseMtrx &A, FloatArray &b, FloatArray &x);
+    NM_Status solve(SparseMtrx &A, FloatArray &b, FloatArray &x) override;
 
     int estimateMaxPackSize(IntArray &, DataStream &, int &);
     /// Sets up the communication maps
     void setUpCommunicationMaps();
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    void initializeFrom(InputRecord &ir) override;
 
     // identification
-    virtual const char *giveClassName() const { return "FETISolver"; }
-    virtual LinSystSolverType giveLinSystSolverType() const { return ST_Feti; }
+    const char *giveClassName() const override { return "FETISolver"; }
+    LinSystSolverType giveLinSystSolverType() const override { return ST_Feti; }
 
     void projection(FloatArray &v, FloatMatrix &l, FloatMatrix &l1);
 

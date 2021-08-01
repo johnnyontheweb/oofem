@@ -39,6 +39,8 @@
 #include "floatarray.h"
 #include "floatmatrix.h"
 
+#include "error.h"
+
 ///@name Input fields for PrescribedGradientHomogenization
 //@{
 #define _IFT_PrescribedGradientHomogenization_Name "prescribedgradient"
@@ -72,6 +74,8 @@ public:
     PrescribedGradientHomogenization() { }
     virtual ~PrescribedGradientHomogenization() { }
 
+    virtual double domainSize() { OOFEM_ERROR("Not implemented."); return 0.0; }
+
     /**
      * Initializes receiver according to object description stored in input record.
      * The input record contains two fields;
@@ -80,7 +84,7 @@ public:
      * The prescribed gradients columns must be equal to the size of the center coordinates.
      * The size of the center coordinates must be equal to the size of the coordinates in the applied nodes.
      */
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    virtual void initializeFrom(InputRecord &ir);
     virtual void giveInputRecord(DynamicInputRecord &input);
 
     /**

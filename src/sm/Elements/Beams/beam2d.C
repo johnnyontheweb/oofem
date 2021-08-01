@@ -32,8 +32,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/Beams/beam2d.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Elements/Beams/beam2d.h"
+#include "sm/Materials/structuralms.h"
 #include "fei2dlinelin.h"
 #include "fei2dlinehermite.h"
 #include "node.h"
@@ -80,12 +80,8 @@ Beam2d :: Beam2d(int n, Domain *aDomain) : BeamBaseElement(n, aDomain), LayeredC
 
 Beam2d :: ~Beam2d()
 {
-    if ( ghostNodes [ 0 ] ) {
-        delete ghostNodes [ 0 ];
-    }
-    if ( ghostNodes [ 1 ] ) {
-        delete ghostNodes [ 1 ];
-    }
+    delete ghostNodes [ 0 ];
+    delete ghostNodes [ 1 ];
 }
 
 
@@ -105,7 +101,6 @@ Beam2d :: giveInterface(InterfaceType interface)
 
 void
 Beam2d :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int ui)
-// Returns the strain matrix of the receiver.
 {
     double l, ksi, kappa, c1;
     TimeStep *tStep = domain->giveEngngModel()->giveCurrentStep();
@@ -133,13 +128,12 @@ Beam2d :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int ui)
 
 void
 Beam2d :: computeGaussPoints()
-// Sets up the array of Gauss Points of the receiver.
 {
     if ( integrationRulesArray.size() == 0 ) {
         // the gauss point is used only when methods from crosssection and/or material
         // classes are requested
         integrationRulesArray.resize(1);
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 3) );
+        integrationRulesArray [ 0 ] = std :: make_unique< GaussIntegrationRule >(1, this, 1, 3);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], this->numberOfGaussPoints, this);
     }
 }
@@ -152,13 +146,12 @@ Beam2d :: computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer)
 // matrix. Must contain only interpolation for displacement terms,
 // not for any rotations. (Inertia forces do not work on rotations).
 // r = {u1,w1,fi_y1,u2,w2,fi_y2}^T
-
 {
     double l, ksi, ksi2, ksi3, kappa, c1;
     TimeStep *tStep = this->domain->giveEngngModel()->giveCurrentStep();
 
-    l     = this->computeLength();
-    ksi =   0.5 + 0.5 * iLocCoord.at(1);
+    l = this->computeLength();
+    ksi = 0.5 + 0.5 * iLocCoord.at(1);
     kappa = this->giveKappaCoeff(tStep);
     c1 = 1. + 2. * kappa;
     ksi2 = ksi * ksi;
@@ -211,7 +204,7 @@ Beam2d :: computeClampedStiffnessMatrix(FloatMatrix &answer,
     double l = this->computeLength();
     FloatMatrix B, d, DB;
     answer.clear();
-    for ( GaussPoint *gp : *this->giveDefaultIntegrationRulePtr() ) {
+    for ( auto &gp : *this->giveDefaultIntegrationRulePtr() ) {
         this->computeBmatrixAt(gp, B);
         this->computeConstitutiveMatrixAt(d, rMode, gp, tStep);
         double dV = gp->giveWeight() * 0.5 * l;
@@ -225,20 +218,19 @@ Beam2d :: computeClampedStiffnessMatrix(FloatMatrix &answer,
 void
 Beam2d :: computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->give2dBeamStiffMtrx(answer, rMode, gp, tStep);
+    answer = this->giveStructuralCrossSection()->give2dBeamStiffMtrx(rMode, gp, tStep);
 }
 
 
 void
 Beam2d :: computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->giveGeneralizedStress_Beam2d(answer, gp, strain, tStep);
+    answer = this->giveStructuralCrossSection()->giveGeneralizedStress_Beam2d(strain, gp, tStep);
 }
 
 
 bool
 Beam2d :: computeGtoLRotationMatrix(FloatMatrix &answer)
-// Returns the rotation matrix of the receiver.
 {
     double sine, cosine;
 
@@ -333,7 +325,6 @@ Beam2d :: giveDofManDofIDMask(int inode, IntArray &answer) const
 
 double
 Beam2d :: computeLength()
-// Returns the length of the receiver.
 {
     double dx, dy;
     Node *nodeA, *nodeB;
@@ -352,7 +343,6 @@ Beam2d :: computeLength()
 
 double
 Beam2d :: givePitch()
-// Returns the pitch of the receiver.
 {
     double xA, xB, yA, yB;
     Node *nodeA, *nodeB;
@@ -374,7 +364,6 @@ Beam2d :: givePitch()
 double
 Beam2d :: giveKappaCoeff(TimeStep *tStep)
 {
-    // returns kappa coeff
     // kappa = (6*E*I)/(k*G*A*l^2)
 
     if ( kappa < 0. ) {
@@ -414,19 +403,17 @@ Beam2d :: giveLocalCoordinateSystem(FloatMatrix &answer)
 }
 
 
-IRResultType
-Beam2d :: initializeFrom(InputRecord *ir)
+void
+Beam2d :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
     // first call parent
     BeamBaseElement :: initializeFrom(ir);
 
-    if ( ir->hasField(_IFT_Beam2d_dofstocondense) ) {
+    if ( ir.hasField(_IFT_Beam2d_dofstocondense) ) {
         IntArray val;
         IR_GIVE_FIELD(ir, val, _IFT_Beam2d_dofstocondense);
         if ( val.giveSize() >= 6 ) {
-            OOFEM_WARNING("wrong input data for condensed dofs");
-            return IRRT_BAD_FORMAT;
+            throw ValueInputException(ir, _IFT_Beam2d_dofstocondense, "wrong input data for condensed dofs");
         }
 
         DofIDItem mask[] = {
@@ -446,9 +433,7 @@ Beam2d :: initializeFrom(InputRecord *ir)
                 ghostNodes [ 1 ]->appendDof( new MasterDof(ghostNodes [ 1 ], mask [ val.at(i) - 4 ]) );
             }
         }
-
     }
-    return IRRT_OK;
 }
 
 
@@ -490,15 +475,6 @@ void
 Beam2d :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord)
 {
     BeamBaseElement :: giveInternalForcesVector(answer, tStep, useUpdatedGpRecord);
-
-    ///@todo Pretty sure this won't work for nonlinear problems. I think dofsToCondense should just be replaced by an extra slave node.
-    /*
-     * if ( this->dofsToCondense ) {
-     *  FloatMatrix stiff;
-     *  this->computeClampedStiffnessMatrix(stiff, TangentStiffness, tStep);
-     *  this->condense(& stiff, NULL, & answer, this->dofsToCondense);
-     * }
-     */
 }
 
 
@@ -521,7 +497,6 @@ Beam2d :: giveEndForcesVector(FloatArray &answer, TimeStep *tStep, bool useWink)
     if ( load.isNotEmpty() ) {
         answer.subtract(load);
     }
-
 }
 
 
@@ -543,12 +518,12 @@ Beam2d :: computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, 
     FloatMatrix N, T;
 
     answer.clear();
-    for ( GaussPoint *gp : *this->giveDefaultIntegrationRulePtr() ) {
+    for ( auto &gp : *this->giveDefaultIntegrationRulePtr() ) {
         const FloatArray &lcoords = gp->giveNaturalCoordinates();
         this->computeNmatrixAt(lcoords, N);
-		if (load->giveFormulationType() == Load::FT_Entity) {
-			load->computeValues(t, tStep, lcoords, { D_u, D_w, R_v }, mode);
-		} else {
+        if ( load->giveFormulationType() == Load :: FT_Entity ) {
+            load->computeValues(t, tStep, lcoords, { D_u, D_w, R_v }, mode);
+        } else {
             this->computeGlobalCoordinates(coords, lcoords);
             load->computeValues(t, tStep, coords, { D_u, D_w, R_v }, mode);
         }
@@ -563,10 +538,10 @@ Beam2d :: computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, 
         answer.plusProduct(N, t, dl);
     }
 
-    if (global) {
-      // Loads from sets expects global c.s.
-      this->computeGtoLRotationMatrix(T);
-      answer.rotatedWith(T, 't');
+    if ( global ) {
+        // Loads from sets expects global c.s.
+        this->computeGtoLRotationMatrix(T);
+        answer.rotatedWith(T, 't');
     }
 }
 
@@ -589,12 +564,12 @@ Beam2d :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type
     } else if ( type == IST_BeamStrainCurvatureTensor ) {
         answer = static_cast< StructuralMaterialStatus * >( gp->giveMaterialStatus() )->giveStrainVector();
         return 1;
-    } else if ( type == IST_ShellForceTensor || type == IST_ShellStrainTensor ) { 
+    } else if ( type == IST_ShellForceTensor || type == IST_ShellStrainTensor ) {
         // Order in generalized strain is:
         // {\eps_x, \gamma_xz, \kappa_y}
-        const FloatArray &help = type == IST_ShellForceTensor ? 
-            static_cast< StructuralMaterialStatus * >( gp->giveMaterialStatus() )->giveStressVector() :
-            static_cast< StructuralMaterialStatus * >( gp->giveMaterialStatus() )->giveStrainVector();
+        const FloatArray &help = type == IST_ShellForceTensor ?
+                                 static_cast< StructuralMaterialStatus * >( gp->giveMaterialStatus() )->giveStressVector() :
+                                 static_cast< StructuralMaterialStatus * >( gp->giveMaterialStatus() )->giveStrainVector();
 
         answer.resize(6);
         answer.at(1) = help.at(1); // nx
@@ -605,9 +580,9 @@ Beam2d :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type
         answer.at(6) = 0.0;        // vxy
         return 1;
     } else if ( type == IST_ShellMomentTensor || type == IST_CurvatureTensor ) {
-        const FloatArray &help = type == IST_ShellMomentTensor ? 
-            static_cast< StructuralMaterialStatus * >( gp->giveMaterialStatus() )->giveStressVector() :
-            static_cast< StructuralMaterialStatus * >( gp->giveMaterialStatus() )->giveStrainVector();
+        const FloatArray &help = type == IST_ShellMomentTensor ?
+                                 static_cast< StructuralMaterialStatus * >( gp->giveMaterialStatus() )->giveStressVector() :
+                                 static_cast< StructuralMaterialStatus * >( gp->giveMaterialStatus() )->giveStrainVector();
         answer.resize(6);
         answer.at(1) = 0.0;        // mx
         answer.at(2) = 0.0;        // my
@@ -627,7 +602,7 @@ Beam2d :: printOutputAt(FILE *File, TimeStep *tStep)
 {
     FloatArray rl, Fl;
 
-    fprintf(File, "beam element %d (%8d) :\n", this->giveLabel(), this->giveNumber() );
+    fprintf( File, "beam element %d (%8d) :\n", this->giveLabel(), this->giveNumber() );
 
     // ask for global element displacement vector
     this->computeVectorOf(VM_Total, tStep, rl);
@@ -702,17 +677,6 @@ Beam2d :: computeConsistentMassMatrix(FloatMatrix &answer, TimeStep *tStep, doub
     mass = l * area * density;
 }
 
-/*
- * void
- * Beam2d :: giveMassMtrxIntegrationgMask (IntArray& answer)
- * {
- * answer.resize (3);
- *
- * answer.at(1) = 1;
- * answer.at(2) = 1;
- * answer.at(3) = 0;
- * }
- */
 
 void
 Beam2d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)

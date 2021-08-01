@@ -40,7 +40,7 @@
 #include "timestep.h"
 #include "error.h"
 #include "oofeggraphiccontext.h"
-
+#include "datastream.h"
 
 #include "connectivitytable.h"
 #include "mathfem.h"
@@ -123,7 +123,7 @@ static XtActionsRec oofeg_remap_return[] = {
 static int oofeg_box_setup = 0;
 static int oofeg_axes      = 1;
 
-EngngModel *problem;
+std::unique_ptr<EngngModel> problem;
 
 
 
@@ -300,6 +300,7 @@ main(int argc, char *argv[])
 #ifdef __USE_MPI
     MPI_Init(& argc, & argv);
     MPI_Comm_rank(MPI_COMM_WORLD, & rank);
+    oofem_logger.setComm(MPI_COMM_WORLD);
 #endif
 
 #ifdef __PETSC_MODULE
@@ -361,9 +362,10 @@ main(int argc, char *argv[])
     std :: string jobName = temp.substr(k);
     std :: string viewTitle = "OOFEG (" + jobName + ")";
 
-    problem = InstanciateProblem(& dr, _postProcessor, 0, NULL, parallelFlag);
+    problem = InstanciateProblem(dr, _postProcessor, 0, NULL, parallelFlag);
     dr.finish();
     problem->checkProblemConsistency();
+    problem->init();
 
 #ifdef OOFEG_DEVEL
     mask = ESI_GRAPHIC_EDITOR_MASK;
@@ -386,7 +388,7 @@ main(int argc, char *argv[])
                              const_cast< char * >(OOFEG_DEFAULTDRAW_COLOR), 500, 400);
     EVSetRenderMode(myview, WIRE_RENDERING);
     EMAttachView(age_model, myview);
-    gc [ 0 ].init(problem); // init all gcs
+    gc [ 0 ].init(problem.get()); // init all gcs
 
     // AugmentCommandTable();
 
@@ -887,7 +889,7 @@ void ESICustomize(Widget parent_pane)
     oofeg_add_palette("< Filters >", parent_pane, & filters_palette);
     oofeg_add_palette("< Material Region Filter >", filters_palette, & matregfilter_palette);
     for ( int id = 1; id <= problem->giveNumberOfDomains(); id++ ) {
-        nmat = problem->giveDomain(id)->giveNumberOfMaterialModels();
+        nmat = problem->giveDomain(id)->giveNumberOfRegions();
 
         for ( i = 1; i <= nmat; i++ ) {
             sprintf(ltname, "region %2d.%2d", id, i);
@@ -945,23 +947,20 @@ void OOFEGSimpleCmd(char *buf)
 {
     char cmd [ 20 ];
     char *remain;
-    int stepinfo [ 2 ];
     int istep, pstep, iversion = 0;
 
     readSimpleString(buf, cmd, & remain); // read command
     if ( !strncmp(cmd, "active_step", 11) ) {
         pstep = gc [ 0 ].getActiveStep();
         istep = atoi(remain);
-        stepinfo [ 0 ] = istep;
-        stepinfo [ 1 ] = iversion;
         try {
-            problem->restoreContext(NULL, CM_State | CM_Definition, ( void * ) stepinfo);
+            FileDataStream stream(problem->giveContextFileName(istep, iversion), false);
+            problem->restoreContext(stream, CM_State | CM_Definition);
         } catch(ContextIOERR & m) {
             m.print();
-            stepinfo [ 0 ] = pstep;
-            stepinfo [ 1 ] = iversion;
             try {
-                problem->restoreContext(NULL, CM_State | CM_Definition, ( void * ) stepinfo);
+                FileDataStream stream(problem->giveContextFileName(pstep, iversion), false);
+                problem->restoreContext(stream, CM_State | CM_Definition);
             } catch(ContextIOERR & m2) {
                 m2.print();
                 exit(1);
@@ -974,17 +973,9 @@ void OOFEGSimpleCmd(char *buf)
 
         //problem ->forceEquationNumbering();
     } else if ( !strncmp(cmd, "active_eigen_value", 18) ) {
-        istep = atoi(remain);
-        gc [ 0 ].setActiveStep(istep);
-        stepinfo [ 0 ] = istep;
-        stepinfo [ 1 ] = iversion;
-        try {
-            problem->restoreContext(NULL, CM_State | CM_Definition, ( void * ) stepinfo);
-        } catch(ContextIOERR & m) {
-            m.print();
-            exit(1);
-        }
-        gc [ 0 ].setActiveEigVal(istep);
+        double ieig = atoi(remain);
+        problem->setActiveVector(ieig);
+        gc [ 0 ].setActiveEigVal(ieig);
     } else if ( !strncmp(cmd, "set_def_scale", 13) ) {
         gc [ 0 ].setDefScale( strtod(remain, NULL) );
         if ( strtod(remain, NULL) < 0 ) {
@@ -1129,55 +1120,48 @@ int  updateDefPlotFlag()
 
 void nextStep(Widget wid, XtPointer cl, XtPointer cd)
 {
-    int istep, prevStep, stepStep, prevStepVersion, istepVersion;
-    int stepInfo [ 2 ];
-
-    stepStep = problem->giveContextOutputStep();
+    int stepStep = problem->giveContextOutputStep();
     if ( stepStep == 0 ) {
         stepStep = 1;
     }
 
     if ( gc [ 0 ].getActiveStep() != -1 ) {
-        prevStep = gc [ 0 ].getActiveStep();
-        prevStepVersion = gc [ 0 ].getActiveStepVersion();
+        int prevStep = gc [ 0 ].getActiveStep();
+        int prevStepVersion = gc [ 0 ].getActiveStepVersion(); 
 
         // first try next version for the same step
-        if ( problem->testContextFile(prevStep, prevStepVersion + 1) ) {
-            istepVersion = prevStepVersion + 1;
-            stepInfo [ 0 ] = prevStep;
-            stepInfo [ 1 ] = istepVersion;
-            printf("OOFEG: restoring context file %d.%d\n", stepInfo [ 0 ], stepInfo [ 1 ]);
+        int istepVersion = prevStepVersion + 1;
+        try {
+            FileDataStream stream(problem->giveContextFileName(prevStep, istepVersion), false);
+            printf("OOFEG: restoring context file %d.%d\n", prevStep, istepVersion);
             try {
-                problem->restoreContext(NULL, CM_State| CM_Definition, ( void * ) stepInfo);
+                problem->restoreContext(stream, CM_State | CM_Definition);
             } catch(ContextIOERR & m) {
                 m.print();
                 istepVersion = 0;
-                stepInfo [ 0 ] = prevStep;
-                stepInfo [ 1 ] = 0;
                 try {
-                    problem->restoreContext(NULL, CM_State| CM_Definition, ( void * ) stepInfo);
-                } catch(ContextIOERR & m2) {
+                    FileDataStream stream(problem->giveContextFileName(prevStep, 0), false);
+                    problem->restoreContext(stream, CM_State | CM_Definition);
+                } catch ( ContextIOERR & m2 ) {
                     m2.print();
                     exit(1);
                 }
             }
             gc [ 0 ].setActiveStep(prevStep);
             gc [ 0 ].setActiveStepVersion(istepVersion);
-        } else {
+        } catch ( const FileDataStream::CantOpen &e ) {
             // no next version exist => next step with version 0
-            istep = prevStep + stepStep;
-            stepInfo [ 0 ] = istep;
-            stepInfo [ 1 ] = 0;
+            int istep = prevStep + stepStep;
 
             //printf ("NextStep: prevStep %d, nstep %d, stepStep %d\n", prevStep, istep, stepStep);
             try {
-                problem->restoreContext(NULL, CM_State| CM_Definition, ( void * ) stepInfo);
+                FileDataStream stream(problem->giveContextFileName(prevStep + stepStep, 0), false);
+                problem->restoreContext(stream, CM_State | CM_Definition);
             } catch(ContextIOERR & m) {
                 m.print();
-                stepInfo [ 0 ] = prevStep;
-                stepInfo [ 1 ] = 0;
                 try {
-                    problem->restoreContext(NULL, CM_State| CM_Definition, ( void * ) stepInfo);
+                    FileDataStream stream(problem->giveContextFileName(prevStep, 0), false);
+                    problem->restoreContext(stream, CM_State | CM_Definition);
                 } catch(ContextIOERR & m2) {
                     m2.print();
                     exit(1);
@@ -1188,12 +1172,11 @@ void nextStep(Widget wid, XtPointer cl, XtPointer cd)
             gc [ 0 ].setActiveStepVersion(0);
         }
     } else {
-        istep = problem->giveNumberOfFirstStep() + stepStep - 1;
+        int istep = problem->giveNumberOfFirstStep() + stepStep - 1;
         gc [ 0 ].setActiveStep(istep);
-        stepInfo [ 0 ] = istep;
-        stepInfo [ 1 ] = 0;
         try {
-            problem->restoreContext(NULL, CM_State| CM_Definition, ( void * ) stepInfo);
+            FileDataStream stream(problem->giveContextFileName(istep, 0), false);
+            problem->restoreContext(stream, CM_State | CM_Definition);
         } catch(ContextIOERR & m) {
             m.print();
             exit(1);
@@ -1206,7 +1189,6 @@ void nextStep(Widget wid, XtPointer cl, XtPointer cd)
 void previousStep(Widget wid, XtPointer cl, XtPointer cd)
 {
     int istep, prevStep, stepStep = problem->giveContextOutputStep();
-    int stepInfo [ 2 ];
     if ( stepStep == 0 ) {
         stepStep = 1;
     }
@@ -1215,16 +1197,14 @@ void previousStep(Widget wid, XtPointer cl, XtPointer cd)
         prevStep = gc [ 0 ].getActiveStep();
         istep = prevStep - stepStep;
         if ( istep >= 0 ) {
-            stepInfo [ 0 ] = istep;
-            stepInfo [ 1 ] = 0;
             try {
-                problem->restoreContext(NULL, CM_State | CM_Definition, ( void * ) stepInfo);
+                FileDataStream stream(problem->giveContextFileName(istep, 0), false);
+                problem->restoreContext(stream, CM_State | CM_Definition);
             } catch(ContextIOERR & m) {
                 m.print();
-                stepInfo [ 0 ] = prevStep;
-                stepInfo [ 1 ] = 0;
                 try {
-                    problem->restoreContext(NULL, CM_State | CM_Definition, ( void * ) stepInfo);
+                    FileDataStream stream(problem->giveContextFileName(prevStep, 0), false);
+                    problem->restoreContext(stream, CM_State | CM_Definition);
                 } catch(ContextIOERR & m2) {
                     m2.print();
                     exit(1);
@@ -1238,10 +1218,9 @@ void previousStep(Widget wid, XtPointer cl, XtPointer cd)
         istep = 1;
         gc [ 0 ].setActiveStep(istep);
         gc [ 0 ].setActiveStepVersion(0);
-        stepInfo [ 0 ] = istep;
-        stepInfo [ 1 ] = 0;
         try {
-            problem->restoreContext(NULL, CM_State | CM_Definition, ( void * ) stepInfo);
+            FileDataStream stream(problem->giveContextFileName(istep, 0), false);
+            problem->restoreContext(stream, CM_State | CM_Definition);
         } catch(ContextIOERR & m) {
             m.print();
             exit(1);
@@ -2177,7 +2156,6 @@ pass_setanimate_command(Widget w, XtPointer ptr, XtPointer call_data)
     Arg al [ 2 ];
     char *s;
     int estep, sstep;
-    int stepinfo [ 2 ];
     int istep, iversion = 0;
 
     ac = 0;
@@ -2206,10 +2184,9 @@ pass_setanimate_command(Widget w, XtPointer ptr, XtPointer call_data)
     }
 
     for ( istep = sstep; istep <= estep; istep++ ) {
-        stepinfo [ 0 ] = istep;
-        stepinfo [ 1 ] = iversion;
         try {
-            problem->restoreContext(NULL, CM_State | CM_Definition, ( void * ) stepinfo);
+            FileDataStream stream(problem->giveContextFileName(istep, iversion), false);
+            problem->restoreContext(stream, CM_State | CM_Definition);
         } catch(ContextIOERR & m) {
             m.print();
             return;
@@ -2787,7 +2764,7 @@ void debug_run(Widget w, XtPointer ptr, XtPointer call_data)
         gc [ 0 ].setActiveStep(0);
         problem->solveYourself();
     } catch(OOFEM_Terminate & c) {
-        delete problem;
+        problem = nullptr;
  #ifdef __PETSC_MODULE
         PetscFinalize();
  #endif

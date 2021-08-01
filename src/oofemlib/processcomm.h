@@ -46,6 +46,7 @@
 #include "logger.h"
 
 #include <string>
+#include <memory>
 
 namespace oofem {
 /**
@@ -65,35 +66,34 @@ class OOFEM_EXPORT ProcessCommunicatorBuff: public DataStream
 {
 protected:
     /// Send buffer.
-    CommunicationBuffer *send_buff;
+    std::unique_ptr<CommunicationBuffer> send_buff;
     /// Receive buffer.
-    CommunicationBuffer *recv_buff;
+    std::unique_ptr<CommunicationBuffer> recv_buff;
 public:
     /// Constructor, creates empty send and receive com buffs in MPI_COMM_WORLD.
     ProcessCommunicatorBuff(CommBuffType t);
-    virtual ~ProcessCommunicatorBuff();
 
-    virtual int givePackSizeOfInt(int count) { return send_buff->givePackSizeOfInt(count); }
-    virtual int givePackSizeOfDouble(int count) { return send_buff->givePackSizeOfDouble(count); }
-    virtual int givePackSizeOfChar(int count) { return send_buff->givePackSizeOfChar(count); }
-    virtual int givePackSizeOfBool(int count) { return send_buff->givePackSizeOfBool(count); }
-    virtual int givePackSizeOfLong(int count) { return send_buff->givePackSizeOfLong(count); }
+    int givePackSizeOfInt(int count) override { return send_buff->givePackSizeOfInt(count); }
+    int givePackSizeOfDouble(int count) override { return send_buff->givePackSizeOfDouble(count); }
+    int givePackSizeOfChar(int count) override { return send_buff->givePackSizeOfChar(count); }
+    int givePackSizeOfBool(int count) override { return send_buff->givePackSizeOfBool(count); }
+    int givePackSizeOfLong(int count) override { return send_buff->givePackSizeOfLong(count); }
 
     using DataStream::write;
-    virtual int write(const int *data, int count) { return send_buff->write(data, count); }
-    virtual int write(const long *data, int count) { return send_buff->write(data, count); }
-    virtual int write(const unsigned long *data, int count) { return send_buff->write(data, count); }
-    virtual int write(const double *data, int count) { return send_buff->write(data, count); }
-    virtual int write(const char *data, int count) { return send_buff->write(data, count); }
-    virtual int write(bool data) { return send_buff->write(data); }
+    int write(const int *data, int count) override { return send_buff->write(data, count); }
+    int write(const long *data, int count) override { return send_buff->write(data, count); }
+    int write(const unsigned long *data, int count) override { return send_buff->write(data, count); }
+    int write(const double *data, int count) override { return send_buff->write(data, count); }
+    int write(const char *data, int count) override { return send_buff->write(data, count); }
+    int write(bool data) override { return send_buff->write(data); }
 
     using DataStream::read;
-    virtual int read(int *data, int count) { return this->recv_buff->read(data, count); }
-    virtual int read(long *data, int count) { return this->recv_buff->read(data, count); }
-    virtual int read(unsigned long *data, int count) { return this->recv_buff->read(data, count); }
-    virtual int read(double *data, int count) { return this->recv_buff->read(data, count); }
-    virtual int read(char *data, int count) { return this->recv_buff->read(data, count); }
-    virtual int read(bool &data) { return recv_buff->read(data); }
+    int read(int *data, int count) override { return this->recv_buff->read(data, count); }
+    int read(long *data, int count) override { return this->recv_buff->read(data, count); }
+    int read(unsigned long *data, int count) override { return this->recv_buff->read(data, count); }
+    int read(double *data, int count) override { return this->recv_buff->read(data, count); }
+    int read(char *data, int count) override { return this->recv_buff->read(data, count); }
+    int read(bool &data) override { return recv_buff->read(data); }
 
     /// Initializes send buffer to empty state. All packed data are lost.
     void initSendBuff() { send_buff->init(); }
@@ -160,11 +160,11 @@ public:
     /**
      * Returns send buffer of receiver.
      */
-    CommunicationBuffer *giveSendBuff() { return send_buff; }
+    CommunicationBuffer &giveSendBuff() { return *send_buff; }
     /**
      * Returns receive buffer of receiver.
      */
-    CommunicationBuffer *giveRecvBuff() { return recv_buff; }
+    CommunicationBuffer &giveRecvBuff() { return *recv_buff; }
 };
 
 
@@ -198,8 +198,6 @@ public:
      * @param m Mode of communicator.
      */
     ProcessCommunicator(ProcessCommunicatorBuff * b, int irank, CommunicatorMode m = CommMode_Static);
-    /// Destructor
-    ~ProcessCommunicator() { }
 
     /**
      * Returns corresponding rank of associated partition
@@ -220,11 +218,11 @@ public:
     /**
      * Returns receiver to send map.
      */
-    const IntArray *giveToSendMap() { return & toSend; }
+    const IntArray &giveToSendMap() { return toSend; }
     /**
      * Returns receiver to receive map.
      */
-    const IntArray *giveToRecvMap() { return & toReceive; }
+    const IntArray &giveToRecvMap() { return toReceive; }
 
 
     /**
@@ -399,7 +397,7 @@ ProcessCommunicator :: resizeSendBuff(T *emodel, int packUnpackType)
 {
     int size;
     // determine space for send buffer
-    size = emodel->estimateMaxPackSize(toSend, * giveProcessCommunicatorBuff()->giveSendBuff(), packUnpackType);
+    size = emodel->estimateMaxPackSize(toSend, giveProcessCommunicatorBuff()->giveSendBuff(), packUnpackType);
     giveProcessCommunicatorBuff()->resizeSendBuffer(size);
     //giveSendBuff()->resize (size);
     return 1;
@@ -412,7 +410,7 @@ ProcessCommunicator :: resizeRecvBuff(T *emodel, int packUnpackType)
     int size;
 
     // determine space for recv buffer
-    size = emodel->estimateMaxPackSize(toReceive, * giveProcessCommunicatorBuff()->giveRecvBuff(), packUnpackType);
+    size = emodel->estimateMaxPackSize(toReceive, giveProcessCommunicatorBuff()->giveRecvBuff(), packUnpackType);
     giveProcessCommunicatorBuff()->resizeReceiveBuffer(size);
     //giveRecvBuff()->resize (size);
 

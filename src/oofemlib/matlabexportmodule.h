@@ -44,6 +44,7 @@
 #define _IFT_MatlabExportModule_Name "matlab"
 #define _IFT_MatlabExportModule_mesh "mesh"
 #define _IFT_MatlabExportModule_data "data"
+#define _IFT_MatlabExportModule_DataNodeSet "datanodeset"   // dofmanager set from which data should be exported //JF 
 #define _IFT_MatlabExportModule_area "area"
 #define _IFT_MatlabExportModule_specials "specials"
 #define _IFT_MatlabExportModule_homogenizeInternalVars "homogenizeivars"
@@ -96,6 +97,7 @@ protected:
     bool exportHomogenizeIST;
 
     int reactionForcesNodeSet;
+    int dataNodeSet;
     int IPFieldsElSet;
 
     bool noscaling;
@@ -105,14 +107,16 @@ private:
 
     // Export reaction forces
     IntArray reactionForcesDofManList; // Holds which dof managers reaction forces should be exported from.
+    IntArray dataDofManList;           // Holds which dof managers data should be exported from.
 
 public:
     MatlabExportModule(int n, EngngModel * e);
     virtual ~MatlabExportModule();
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void doOutput(TimeStep *tStep, bool forcedOutput = false);
-    virtual void initialize();
-    virtual void terminate();
+
+    void initializeFrom(InputRecord &ir) override;
+    void doOutput(TimeStep *tStep, bool forcedOutput = false) override;
+    void initialize() override;
+    void terminate() override;
 
     void doOutputMesh(TimeStep *tStep, FILE *FID);
     void doOutputData(TimeStep *tStep, FILE *FID);
@@ -121,8 +125,8 @@ public:
     void doOutputIntegrationPointFields(TimeStep *tStep, FILE *FID);
     void doOutputHomogenizeDofIDs(TimeStep *tStep, FILE *FID);
 
-    virtual const char *giveClassName() const { return "MatlabExportModule"; }
-    virtual const char *giveInputRecordName() const { return _IFT_MatlabExportModule_Name; }
+    const char *giveClassName() const override { return "MatlabExportModule"; }
+    const char *giveInputRecordName() const { return _IFT_MatlabExportModule_Name; }
 };
 } // end namespace oofem
 #endif // matlabexportmodule_h_

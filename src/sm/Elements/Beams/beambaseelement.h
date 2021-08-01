@@ -35,9 +35,9 @@
 #ifndef beambaseelement_h
 #define beambaseelement_h
 
-#include "../sm/Elements/structuralelement.h"
-#include "../sm/CrossSections/fiberedcs.h"
-#include "../sm/Materials/winklermodel.h"
+#include "sm/Elements/structuralelement.h"
+#include "sm/CrossSections/fiberedcs.h"
+#include "sm/Materials/winklermodel.h"
 #include "dofmanager.h"
 
 namespace oofem {
@@ -55,7 +55,7 @@ protected:
     BeamBaseElement (int n, Domain *d);
     virtual ~BeamBaseElement();
 
-public:
+protected:
     /** Computes element end force vector from applied loading in local coordinate system
      * @param answer computed end force vector due to non-nodal loading
      * @param tStep solution step

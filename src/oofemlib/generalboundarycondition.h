@@ -113,13 +113,25 @@ public:
     /// Gives the number of internal dof managers.
     virtual int giveNumberOfInternalDofManagers() { return 0; }
     /// Gives an internal dof manager from receiver.
-    virtual DofManager *giveInternalDofManager(int i) { return NULL; }
+    virtual DofManager *giveInternalDofManager(int i) { return nullptr; }
 
 
     /**
      * @return Associated load time function of receiver.
      */
     Function *giveTimeFunction();
+
+    /**
+     * Gets the activity time function number.
+     */
+    int getIsImposedTimeFunctionNumber(){ return this->isImposedTimeFunction; }
+
+
+    /**
+     * Sets the activity time function of receiver.
+     * @param funcIndx Index of new time function.
+     */
+    void setIsImposedTimeFunctionNumber(int funcIndx){ this->isImposedTimeFunction = funcIndx; }
 
     /**
      * Returns receiver load type. It distinguish particular boundary conditions according to
@@ -162,11 +174,11 @@ public:
     virtual void postInitialize() { }
 
     // Overloaded methods:
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 };
 } // end namespace oofem
 #endif // generalbc_h

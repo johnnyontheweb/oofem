@@ -71,10 +71,10 @@ namespace oofem {
 		delete elemSet;
 	}
 
-	IRResultType
-		NodalRecoveryModule::initializeFrom(InputRecord *ir)
+	void
+		NodalRecoveryModule::initializeFrom(InputRecord &ir)
 	{
-		IRResultType result;                 // Required by IR_GIVE_FIELD macro
+		ExportModule::initializeFrom(ir);
 		int val;
 
 		val = NodalRecoveryModel::NRM_NodalAveraging;
@@ -88,7 +88,7 @@ namespace oofem {
 			if (ist==InternalStateType::IST_Undefined) OOFEM_ERROR("NodalRecoveryModule - Invalid response type defined at pos %d", i);
 		}
 
-		isRespSpec = ir->hasField(_IFT_NodalRecoveryModule_isrespspec);
+		isRespSpec = ir.hasField(_IFT_NodalRecoveryModule_isrespspec);
 
 		if (isRespSpec) {
 			const char* name = this->emodel->giveClassName();
@@ -96,8 +96,6 @@ namespace oofem {
 			rs = dynamic_cast<ResponseSpectrum*>(this->emodel);
 			if (!rs) OOFEM_ERROR("NodalRecoveryModule - Error retrieving engmodel.");
 		}
-
-		return ExportModule::initializeFrom(ir);
 	}
 
 	void

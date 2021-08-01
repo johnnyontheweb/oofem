@@ -46,27 +46,36 @@
 namespace oofem {
 REGISTER_ExportModule(OutputExportModule)
 
-OutputExportModule :: OutputExportModule(int n, EngngModel *e) : ExportModule(n, e)
+OutputExportModule :: OutputExportModule(int n, EngngModel *e) : ExportModule(n, e), outputStream(NULL)
 {
 }
 
-IRResultType
-OutputExportModule :: initializeFrom(InputRecord *ir)
+void
+OutputExportModule :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
     nodeSets.clear();
     IR_GIVE_OPTIONAL_FIELD(ir, nodeSets, _IFT_OutputExportModule_nodeSets);
     elementSets.clear();
     IR_GIVE_OPTIONAL_FIELD(ir, elementSets, _IFT_OutputExportModule_elementSets);
 
-    return ExportModule :: initializeFrom(ir);
+    ExportModule :: initializeFrom(ir);
+
+    auto *file = giveOutputStream();
+
+    fprintf(file, "%s", PRG_HEADER);
+    fprintf(file, "\nStarting analysis on: %s\n", ctime(& emodel->giveStartTime()) );
+    fprintf(file, "%s\n", emodel->giveDescription().c_str());
 }
 
 FILE *
 OutputExportModule :: giveOutputStream()
 {
-    return emodel->giveOutputStream();
+    if ( this->outputStream ) return this->outputStream;
+    this->outputStream = fopen(emodel->giveOutputBaseFileName().c_str(), "w");
+    if ( !this->outputStream ) {
+        OOFEM_ERROR("Can't open output file %s", emodel->giveOutputBaseFileName().c_str());
+    }
+    return this->outputStream;
 }
 
 void
@@ -76,28 +85,13 @@ OutputExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
         return;
     }
 
-    if ( domainMask.containsOnlyZeroes() && domainMask.giveSize() > 0 ) {
-        return;
-    }
-
     FILE *file = this->giveOutputStream();
 
     fprintf(file, "\n==============================================================");
     fprintf(file, "\nOutput for time %.8e ", tStep->giveTargetTime() * emodel->giveVariableScale(VST_Time) );
     fprintf(file, "\n==============================================================\n");
 
-    for ( int idomain = 1; idomain <= emodel->giveNumberOfDomains(); idomain++ ) {
-        if ( domainMask.giveSize() > 0 && domainMask.at(idomain) == 0 ) {
-            continue;
-        }
-        fprintf(file, "Output for domain %3d\n", idomain );
-
-        Domain *domain = emodel->giveDomain(idomain);
-        this->doDofManOutput(file, domain, tStep);
-        this->doElementOutput(file, domain, tStep);
-        ///@todo This module should handle printing reaction forces, we need more information from the domain/engineering model though.
-        //emodel->printReactionForces(tStep, idomain);
-    }
+    emodel->printOutputAt(file, tStep, nodeSets, elementSets);
 
     fprintf(file, "\nUser time consumed by solution step %d: %.3f [s]\n\n", tStep->giveNumber(), emodel->giveSolutionStepTime());
 }
@@ -114,70 +108,6 @@ OutputExportModule :: terminate()
     fprintf(out, "\nFinishing analysis on: %s\n", ctime(& endTime) );
     fprintf(out, "Real time consumed: %03dh:%02dm:%02ds\n", rhrs, rmin, rsec);
     fprintf(out, "User time consumed: %03dh:%02dm:%02ds\n\n\n", uhrs, umin, usec);
-}
-
-void
-OutputExportModule :: doDofManOutput(FILE *file, Domain *domain, TimeStep *tStep)
-{
-    fprintf(file, "\n\nDofManager output:\n------------------\n");
-
-    int setNum = nodeSets.isEmpty() ? 0 : nodeSets.at(domain->giveNumber()) ;
-
-    if ( nodeSets.isEmpty() ) {
-        for ( auto &dman : domain->giveDofManagers() ) {
-            if ( dman->giveParallelMode() == DofManager_null ) {
-                continue;
-            }
-
-            dman->printOutputAt(file, tStep);
-        }
-    } else {
-        Set *set = domain->giveSet(setNum);
-        const IntArray &nodes = set->giveNodeList();
-
-        for ( int inode : nodes ) {
-            DofManager *dman = domain->giveDofManager(inode);
-
-            if ( dman->giveParallelMode() == DofManager_null ) {
-                continue;
-            }
-
-            dman->printOutputAt(file, tStep);
-        }
-    }
-
-    fprintf(file, "\n\n");
-}
-
-void
-OutputExportModule :: doElementOutput(FILE *file, Domain *domain, TimeStep *tStep)
-{
-    fprintf(file, "\n\nElement output:\n---------------\n");
-
-    int setNum = elementSets.isEmpty() ? 0 : elementSets.at(domain->giveNumber()) ;
-
-    if ( setNum == 0 ) {
-        for ( auto &elem : domain->giveElements() ) {
-            if ( elem->giveParallelMode() == Element_remote ) {
-                continue;
-            }
-
-            elem->printOutputAt(file, tStep);
-        }
-    } else {
-        Set *set = domain->giveSet(setNum);
-        for ( int ielem : set->giveElementList() ) {
-            Element *element = domain->giveElement(ielem);
-
-            if ( element->giveParallelMode() == Element_remote ) {
-                continue;
-            }
-
-            element->printOutputAt(file, tStep);
-        }
-    }
-
-    fprintf(file, "\n\n");
 }
 
 } // end namespace oofem

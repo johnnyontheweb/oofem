@@ -39,6 +39,8 @@
 
 #include <sstream>
 #include <cstdio>
+#include <exception>
+#include <stdexcept>
 
 namespace oofem {
 /**
@@ -133,36 +135,45 @@ public:
  */
 class OOFEM_EXPORT FileDataStream : public DataStream
 {
+public:
+    class CantOpen : public std::runtime_error
+    {
+    public:
+        std::string filename;
+        CantOpen(std::string file): std::runtime_error("can't open file"), filename(std::move(file)) {}
+    };
+
 private:
     /// FILE pointer of associated stream
     FILE *stream;
+    /// Filename
+    std :: string filename;
 public:
     /// Constructor, takes associated stream pointer as parameter
-    FileDataStream(FILE * s) {
-        stream = s;
-    }
+    FileDataStream(std :: string filename, bool write);
+
     /// Destructor (will not close stream!)
-    virtual ~FileDataStream() { }
+    virtual ~FileDataStream();
 
-    virtual int read(int *data, int count);
-    virtual int read(unsigned long *data, int count);
-    virtual int read(long *data, int count);
-    virtual int read(double *data, int count);
-    virtual int read(char *data, int count);
-    virtual int read(bool &data);
+    int read(int *data, int count) override;
+    int read(unsigned long *data, int count) override;
+    int read(long *data, int count) override;
+    int read(double *data, int count) override;
+    int read(char *data, int count) override;
+    int read(bool &data) override;
 
-    virtual int write(const int *data, int count);
-    virtual int write(const unsigned long *data, int count);
-    virtual int write(const long *data, int count);
-    virtual int write(const double *data, int count);
-    virtual int write(const char *data, int count);
-    virtual int write(bool data);
+    int write(const int *data, int count) override;
+    int write(const unsigned long *data, int count) override;
+    int write(const long *data, int count) override;
+    int write(const double *data, int count) override;
+    int write(const char *data, int count) override;
+    int write(bool data) override;
 
-    virtual int givePackSizeOfInt(int count);
-    virtual int givePackSizeOfDouble(int count);
-    virtual int givePackSizeOfChar(int count);
-    virtual int givePackSizeOfBool(int count);
-    virtual int givePackSizeOfLong(int count);
+    int givePackSizeOfInt(int count) override;
+    int givePackSizeOfDouble(int count) override;
+    int givePackSizeOfChar(int count) override;
+    int givePackSizeOfBool(int count) override;
+    int givePackSizeOfLong(int count) override;
 };
 
 } // end namespace oofem

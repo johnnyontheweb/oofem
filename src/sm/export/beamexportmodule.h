@@ -68,11 +68,11 @@ protected:
     FILE *stream;
     /// Array for the beam diagrams
     FloatArray *res;
-	bool isRespSpec=false; // tStep 0 does the magic
-	FloatArray periods;
-	RSpecComboType modalCombo;
-	double csi;
-	ResponseSpectrum *rs;
+    bool isRespSpec=false; // tStep 0 does the magic
+    FloatArray periods;
+    RSpecComboType modalCombo;
+    double csi;
+    ResponseSpectrum *rs;
 
 #ifdef MEMSTR
 	bool usestream = true;
@@ -83,35 +83,35 @@ public:
     BeamExportModule(int n, EngngModel *e);
     /// Destructor.
     virtual ~BeamExportModule();
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void doOutput(TimeStep *tStep, bool forcedOutput = false);
-    virtual void initialize();
-    virtual void terminate();
-    virtual const char *giveClassName() const { return "BeamExportModule"; }
+    void initializeFrom(InputRecord &ir);
+    void doOutput(TimeStep *tStep, bool forcedOutput = false) override;
+    void initialize() override;
+    void terminate() override;
+    const char *giveClassName() const override { return "BeamExportModule"; }
     virtual const char *giveInputRecordName() const { return _IFT_BeamExportModule_Name; }
 
-	static int checkValidType(const char* name) { return (strcmp(name, "Beam3d") == 0) || (strcmp(name, "Beam2d") == 0) || (strcmp(name, "beam3d") == 0) || (strcmp(name, "beam2d") == 0); };
+    static int checkValidType(const char* name) { return (strcmp(name, "Beam3d") == 0) || (strcmp(name, "Beam2d") == 0) || (strcmp(name, "beam3d") == 0) || (strcmp(name, "beam2d") == 0); };
 
 private:
-	
-	std::map< int, std::map< double, FloatArray > >BeamForces;
-	std::map< int, std::map< double, FloatArray > >BeamDisplacements;
-	std::map< int, std::map< double, FloatArray > >BeamWinkler;
+    
+    std::map< int, std::map< double, FloatArray > >BeamForces;
+    std::map< int, std::map< double, FloatArray > >BeamDisplacements;
+    std::map< int, std::map< double, FloatArray > >BeamWinkler;
 
-	std::list<std::map< int, std::map< double, FloatArray > > >BeamForcesList;
-	std::list<std::map< int, std::map< double, FloatArray > > >BeamDisplacementsList;
-	std::list<std::map< int, std::map< double, FloatArray > > >BeamWinklerList;
+    std::list<std::map< int, std::map< double, FloatArray > > >BeamForcesList;
+    std::list<std::map< int, std::map< double, FloatArray > > >BeamDisplacementsList;
+    std::list<std::map< int, std::map< double, FloatArray > > >BeamWinklerList;
 
-	std::map< int, std::map< double, FloatArray > >combBeamForces;
-	std::map< int, std::map< double, FloatArray > >combBeamDisplacements;
-	std::map< int, std::map< double, FloatArray > >combBeamWinkler;
+    std::map< int, std::map< double, FloatArray > >combBeamForces;
+    std::map< int, std::map< double, FloatArray > >combBeamDisplacements;
+    std::map< int, std::map< double, FloatArray > >combBeamWinkler;
 
-	virtual void populateElResults(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src);
-	virtual void addMultiply(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src, std::map<int, std::map<double, FloatArray>> &src2, double fact = 1.0);
-	virtual void calcRoot(std::map<int, std::map<double, FloatArray>> &answer);
-	void correctSigns(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src, bool use1stmode = true);
-	virtual void SRSS();
-	virtual void CQC();
+    virtual void populateElResults(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src);
+    virtual void addMultiply(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src, std::map<int, std::map<double, FloatArray>> &src2, double fact = 1.0);
+    virtual void calcRoot(std::map<int, std::map<double, FloatArray>> &answer);
+    void correctSigns(std::map<int, std::map<double, FloatArray>> &answer, std::map<int, std::map<double, FloatArray>> &src, bool use1stmode = true);
+    virtual void SRSS();
+    virtual void CQC();
 
 };
 } // end namespace oofem

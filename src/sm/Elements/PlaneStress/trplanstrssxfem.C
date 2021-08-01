@@ -5,10 +5,10 @@
  *      Author: svennine
  */
 
-#include "../sm/Elements/PlaneStress/trplanstrssxfem.h"
+#include "sm/Elements/PlaneStress/trplanstrssxfem.h"
 
-#include "../sm/Materials/structuralmaterial.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
+#include "sm/Materials/structuralmaterial.h"
+#include "sm/CrossSections/structuralcrosssection.h"
 #include "vtkxmlexportmodule.h"
 #include "xfem/xfemelementinterface.h"
 #include "xfem/enrichmentfunction.h"
@@ -25,6 +25,7 @@
 #include "intarray.h"
 #include "mathfem.h"
 #include "classfactory.h"
+#include "dynamicinputrecord.h"
 
 #ifdef __OOFEG
  #include "oofeggraphiccontext.h"
@@ -160,8 +161,9 @@ void TrPlaneStress2dXFEM :: computeStiffnessMatrix(FloatMatrix &answer, MatRespo
     TrPlaneStress2d :: computeStiffnessMatrix(answer, rMode, tStep);
     XfemStructuralElementInterface :: computeCohesiveTangent(answer, tStep);
 
-    const double tol = 1.0e-6;
-    const double regularizationCoeff = 1.0e-6;
+
+    const double tol = mRegCoeffTol;
+    const double regularizationCoeff = mRegCoeff;
     int numRows = answer.giveNumberOfRows();
     for(int i = 0; i < numRows; i++) {
         if( fabs(answer(i,i)) < tol ) {
@@ -181,6 +183,31 @@ TrPlaneStress2dXFEM :: giveInternalForcesVector(FloatArray &answer, TimeStep *tS
 {
     TrPlaneStress2d :: giveInternalForcesVector(answer, tStep, useUpdatedGpRecord);
     XfemStructuralElementInterface :: computeCohesiveForces(answer, tStep);
+
+
+#if 0
+    ////////////////////////////////////////////
+    // Contribution from regularization
+    FloatMatrix K;
+	computeStiffnessMatrix(K, TangentStiffness, tStep);
+
+    FloatArray u;
+    this->computeVectorOf(VM_Total, tStep, u);
+    // subtract initial displacements, if defined
+    if ( initialDisplacements ) {
+        u.subtract(* initialDisplacements);
+    }
+
+    const double tol = mRegCoeffTol+mRegCoeff;
+    const double regularizationCoeff = mRegCoeff;
+    int numRows = K.giveNumberOfRows();
+    for(int i = 0; i < numRows; i++) {
+        if( fabs(K(i,i)) < tol ) {
+            answer(i) += regularizationCoeff*u(i);
+//          printf("Found zero on diagonal.\n");
+        }
+    }
+#endif
 }
 
 
@@ -269,17 +296,19 @@ void TrPlaneStress2dXFEM :: drawScalar(oofegGraphicContext &gc, TimeStep *tStep)
 }
 #endif
 
-IRResultType
-TrPlaneStress2dXFEM :: initializeFrom(InputRecord *ir)
+void
+TrPlaneStress2dXFEM :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                   // Required by IR_GIVE_FIELD macro
-    result = TrPlaneStress2d :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
+    TrPlaneStress2d :: initializeFrom(ir);
+    XfemStructuralElementInterface :: initializeCZFrom(ir);
+
+    if ( ir.hasField(_IFT_TrPlaneStress2dXFEM_RegCoeff) ) {
+        ir.giveOptionalField(mRegCoeff, _IFT_TrPlaneStress2dXFEM_RegCoeff);
     }
 
-    result = XfemStructuralElementInterface :: initializeCZFrom(ir);
-    return result;
+    if ( ir.hasField(_IFT_TrPlaneStress2dXFEM_RegCoeffTol) ) {
+        ir.giveOptionalField(mRegCoeffTol, _IFT_TrPlaneStress2dXFEM_RegCoeffTol);
+    }
 }
 
 MaterialMode TrPlaneStress2dXFEM :: giveMaterialMode()
@@ -291,6 +320,10 @@ void TrPlaneStress2dXFEM :: giveInputRecord(DynamicInputRecord &input)
 {
     TrPlaneStress2d :: giveInputRecord(input);
     XfemStructuralElementInterface :: giveCZInputRecord(input);
+
+    input.setField(mRegCoeff, _IFT_TrPlaneStress2dXFEM_RegCoeff);
+    input.setField(mRegCoeffTol, _IFT_TrPlaneStress2dXFEM_RegCoeffTol);
+
 }
 
 
@@ -322,10 +355,9 @@ TrPlaneStress2dXFEM :: giveCompositeExportData(std::vector< VTKPiece > &vtkPiece
     vtkPieces.resize(1);
 
     const int numCells = mSubTri.size();
-
     if(numCells == 0) {
         // Enriched but uncut element
-        // Visualize as a quad
+        // Visualize as a triangle
         vtkPieces[0].setNumberOfCells(1);
 
         int numTotalNodes = 3;
@@ -334,7 +366,7 @@ TrPlaneStress2dXFEM :: giveCompositeExportData(std::vector< VTKPiece > &vtkPiece
         // Node coordinates
         std :: vector< FloatArray >nodeCoords;
         for(int i = 1; i <= 3; i++) {
-            FloatArray &x = *(giveDofManager(i)->giveCoordinates());
+            const auto &x = giveDofManager(i)->giveCoordinates();
             nodeCoords.push_back(x);
 
             vtkPieces[0].setNodeCoords(i, x);
@@ -355,7 +387,7 @@ TrPlaneStress2dXFEM :: giveCompositeExportData(std::vector< VTKPiece > &vtkPiece
 
 
         // Export nodal variables from primary fields
-        vtkPieces[0].setNumberOfPrimaryVarsToExport(primaryVarsToExport.giveSize(), numTotalNodes);
+        vtkPieces[0].setNumberOfPrimaryVarsToExport(primaryVarsToExport,  numTotalNodes);
 
         for ( int fieldNum = 1; fieldNum <= primaryVarsToExport.giveSize(); fieldNum++ ) {
             UnknownType type = ( UnknownType ) primaryVarsToExport.at(fieldNum);
@@ -388,7 +420,7 @@ TrPlaneStress2dXFEM :: giveCompositeExportData(std::vector< VTKPiece > &vtkPiece
                             u = {uTemp[0], uTemp[1], 0.0};
                         }
 
-                        vtkPieces[0].setPrimaryVarInNode(fieldNum, nodeInd, u);
+                        vtkPieces[0].setPrimaryVarInNode(type, nodeInd, u);
                 } else {
                     printf("fieldNum: %d\n", fieldNum);
                     // TODO: Implement
@@ -403,26 +435,35 @@ TrPlaneStress2dXFEM :: giveCompositeExportData(std::vector< VTKPiece > &vtkPiece
 
 
         // Export nodal variables from internal fields
-        vtkPieces[0].setNumberOfInternalVarsToExport(0, numTotalNodes);
+        vtkPieces[0].setNumberOfInternalVarsToExport(internalVarsToExport, numTotalNodes);
 
 
         // Export cell variables
-        vtkPieces[0].setNumberOfCellVarsToExport(cellVarsToExport.giveSize(), 1);
+        vtkPieces[0].setNumberOfCellVarsToExport(cellVarsToExport, 1);
         for ( int i = 1; i <= cellVarsToExport.giveSize(); i++ ) {
             InternalStateType type = ( InternalStateType ) cellVarsToExport.at(i);
             FloatArray average;
             std :: unique_ptr< IntegrationRule > &iRule = integrationRulesArray [ 0 ];
             VTKXMLExportModule :: computeIPAverage(average, iRule.get(), this, type, tStep);
+            if(average.giveSize() == 0) {
+            	average = {0., 0., 0., 0., 0., 0.};
+            }
 
-            FloatArray averageV9(9);
-            averageV9.at(1) = average.at(1);
-            averageV9.at(5) = average.at(2);
-            averageV9.at(9) = average.at(3);
-            averageV9.at(6) = averageV9.at(8) = average.at(4);
-            averageV9.at(3) = averageV9.at(7) = average.at(5);
-            averageV9.at(2) = averageV9.at(4) = average.at(6);
+            if(average.giveSize() == 1) {
+				vtkPieces[0].setCellVar( type, 1, average );
+            }
 
-            vtkPieces[0].setCellVar( i, 1, averageV9 );
+            if(average.giveSize() == 6) {
+				FloatArray averageV9(9);
+				averageV9.at(1) = average.at(1);
+				averageV9.at(5) = average.at(2);
+				averageV9.at(9) = average.at(3);
+				averageV9.at(6) = averageV9.at(8) = average.at(4);
+				averageV9.at(3) = averageV9.at(7) = average.at(5);
+				averageV9.at(2) = averageV9.at(4) = average.at(6);
+
+				vtkPieces[0].setCellVar( type, 1, averageV9 );
+            }
         }
 
 
@@ -457,7 +498,7 @@ TrPlaneStress2dXFEM :: giveCompositeExportData(std::vector< VTKPiece > &vtkPiece
 
                             for(int elNodeInd = 1; elNodeInd <= nDofMan; elNodeInd++) {
                                 DofManager *dMan = giveDofManager(elNodeInd);
-                                ei->evalLevelSetNormalInNode(levelSetInNode, dMan->giveGlobalNumber(), *(dMan->giveCoordinates()) );
+                                ei->evalLevelSetNormalInNode(levelSetInNode, dMan->giveGlobalNumber(), dMan->giveCoordinates() );
 
                                 levelSet += N.at(elNodeInd)*levelSetInNode;
                             }
@@ -471,7 +512,7 @@ TrPlaneStress2dXFEM :: giveCompositeExportData(std::vector< VTKPiece > &vtkPiece
 
                             for(int elNodeInd = 1; elNodeInd <= nDofMan; elNodeInd++) {
                                 DofManager *dMan = giveDofManager(elNodeInd);
-                                ei->evalLevelSetTangInNode(levelSetInNode, dMan->giveGlobalNumber(), *(dMan->giveCoordinates()) );
+                                ei->evalLevelSetTangInNode(levelSetInNode, dMan->giveGlobalNumber(), dMan->giveCoordinates() );
 
                                 levelSet += N.at(elNodeInd)*levelSetInNode;
                             }

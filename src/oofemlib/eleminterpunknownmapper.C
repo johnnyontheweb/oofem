@@ -84,7 +84,7 @@ EIPrimaryUnknownMapper :: mapAndUpdate(FloatArray &answer, ValueModeType mode,
 
 #endif
         ///@todo Shouldn't we pass a primary field or something to this function?
-        if ( this->evaluateAt(unknownValues, dofidMask, mode, oldd, * node->giveCoordinates(), reglist, tStep) ) {
+        if ( this->evaluateAt(unknownValues, dofidMask, mode, oldd, node->giveCoordinates(), reglist, tStep) ) {
             ///@todo This doesn't respect local coordinate systems in nodes. Supporting that would require major reworking.
             for ( int ii = 1; ii <= dofidMask.giveSize(); ii++ ) {
                 // exclude slaves; they are determined from masters
@@ -109,7 +109,7 @@ EIPrimaryUnknownMapper :: mapAndUpdate(FloatArray &answer, ValueModeType mode,
 
 int
 EIPrimaryUnknownMapper :: evaluateAt(FloatArray &answer, IntArray &dofMask, ValueModeType mode,
-                                     Domain *oldd, FloatArray &coords, IntArray &regList, TimeStep *tStep)
+                                     Domain *oldd, const FloatArray &coords, IntArray &regList, TimeStep *tStep)
 {
     Element *oelem;
     SpatialLocalizer *sl = oldd->giveSpatialLocalizer();
@@ -120,11 +120,11 @@ EIPrimaryUnknownMapper :: evaluateAt(FloatArray &answer, IntArray &dofMask, Valu
     } else {
         // Take the minimum of any region
         double mindist = 0.0, distance;
-        oelem = NULL;
+        oelem = nullptr;
         for ( int i = 1; i <= regList.giveSize(); ++i ) {
             Element *tmpelem = sl->giveElementClosestToPoint( lcoords, closest, coords, regList.at(i) );
-            if ( tmpelem != NULL ) {
-                distance = closest.distance_square(coords);
+            if ( tmpelem ) {
+                distance = distance_square(closest, coords);
                 if ( distance < mindist || i == 1 ) {
                     mindist = distance;
                     oelem = tmpelem;

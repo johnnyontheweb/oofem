@@ -32,7 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Quasicontinuum/geometrygenerator.h"
+#include "sm/Quasicontinuum/geometrygenerator.h"
 #include <stdlib.h>
 #include <time.h>
 
@@ -47,16 +47,13 @@ GeometryGenerator :: ~GeometryGenerator()
 // Destructor
 { }
 
-IRResultType
-GeometryGenerator :: initializeParticleGenerator(InputRecord *ir)
+void
+GeometryGenerator :: initializeParticleGenerator(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
     IR_GIVE_FIELD(ir, maxNumOfParticles, _IFT_GeometryGenerator_numOfParticles);
     IR_GIVE_FIELD(ir, maxNumOfIterations, _IFT_GeometryGenerator_numOfIterations);
     IR_GIVE_FIELD(ir, maxNumOfItOnePar, _IFT_GeometryGenerator_numOfItOnePar);
     IR_GIVE_FIELD(ir, ParticleRadius, _IFT_GeometryGenerator_particleRadius);
-
 
     //...
 
@@ -68,8 +65,6 @@ GeometryGenerator :: initializeParticleGenerator(InputRecord *ir)
      * }
      */
 #endif
-
-    return IRRT_OK;
 }
 
 void
@@ -153,7 +148,7 @@ GeometryGenerator :: CheckDistances(double R, FloatArray coords, int n)
 
     double R2 = R * R;
     for ( int i = 1; i <= n; i++ ) {
-        double distance2 = coords.distance_square(Particles [ i - 1 ]);
+        double distance2 = distance_square(coords, Particles [ i - 1 ]);
         if ( distance2 < R2 ) {
             return false;
         }
@@ -167,12 +162,9 @@ void
 GeometryGenerator :: loadParticles()
 {}
 
-IRResultType
-GeometryGenerator :: initializeLinkGenerator(InputRecord *ir)
+void
+GeometryGenerator :: initializeLinkGenerator(InputRecord &ir)
 {
-    //IRResultType result;                // Required by IR_GIVE_FIELD macro
-    return IRRT_OK;
-
 }
 
 void

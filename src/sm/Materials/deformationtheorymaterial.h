@@ -35,7 +35,7 @@
 #ifndef deformationtheorymaterial_h
 #define deformationtheorymaterial_h
 
-#include "../sm/Materials/structuralmaterial.h"
+#include "sm/Materials/structuralmaterial.h"
 
 namespace oofem {
 /**
@@ -46,11 +46,8 @@ class DeformationTheoryMaterial : public StructuralMaterial
 {
 public:
     DeformationTheoryMaterial(int n, Domain * d) : StructuralMaterial(n, d) { }
-    virtual ~DeformationTheoryMaterial()  { }
 
-    // identification and auxiliary functions
-    virtual int hasNonLinearBehaviour() { return 1; }
-    virtual const char *giveClassName() const { return "DeformationTheoryMaterial"; }
+    const char *giveClassName() const override { return "DeformationTheoryMaterial"; }
 };
 } // end namespace oofem
 #endif // deformationtheorymaterial_h

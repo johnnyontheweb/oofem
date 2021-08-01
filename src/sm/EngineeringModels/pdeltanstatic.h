@@ -141,35 +141,35 @@ public:
     PdeltaNstatic(int i, EngngModel * _master = NULL);
     virtual ~PdeltaNstatic();
 
-    virtual void solveYourself();
-    virtual void solveYourselfAt(TimeStep *tStep);
-    virtual void terminate(TimeStep *tStep);
+    void solveYourself() override;
+    void solveYourselfAt(TimeStep *tStep) override;
+    void terminate(TimeStep *tStep) override;
 
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    void printOutputAt(FILE *file, TimeStep *tStep) override;
 
-    virtual void updateComponent(TimeStep *tStep, NumericalCmpn, Domain *d);
-    virtual void updateAttributes(MetaStep *mStep);
+    void updateComponent(TimeStep *tStep, NumericalCmpn, Domain *d) override;
+    void updateAttributes(MetaStep *mStep) override;
 
-    virtual double giveUnknownComponent(ValueModeType type, TimeStep *tStep, Domain *d, Dof *dof);
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual TimeStep *giveSolutionStepWhenIcApply(bool force = false);
-    virtual TimeStep *giveNextStep();
-    virtual NumericalMethod *giveNumericalMethod(MetaStep *mStep);
+    double giveUnknownComponent(ValueModeType type, TimeStep *tStep, Domain *d, Dof *dof) override;
+    void initializeFrom(InputRecord &ir) override;
+    TimeStep *giveSolutionStepWhenIcApply(bool force = false) override;
+    TimeStep *giveNextStep() override;
+    NumericalMethod *giveNumericalMethod(MetaStep *mStep) override;
 
-    virtual double giveLoadLevel() { return cumulatedLoadLevel + loadLevel; }
+    double giveLoadLevel() override { return cumulatedLoadLevel + loadLevel; }
 
-    virtual contextIOResultType saveContext(DataStream *stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream *stream, ContextMode mode, void *obj = NULL);
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 
-    virtual void updateDomainLinks();
+    void updateDomainLinks() override;
 
     // identification
-    virtual const char *giveClassName() const { return "PdeltaNstatic"; }
-    virtual fMode giveFormulation() { return nonLinFormulation; }
-    virtual int useNonlocalStiffnessOption() { return this->nonlocalStiffnessFlag; }
+    const char *giveClassName() const override { return "PdeltaNstatic"; }
+    fMode giveFormulation() override { return nonLinFormulation; }
+    int useNonlocalStiffnessOption() override { return this->nonlocalStiffnessFlag; }
     /// For load balancing purposes we store all values so hash is computed from mode value only
     virtual int giveUnknownDictHashIndx(ValueModeType mode, TimeStep *tStep) { return ( int ) mode; }
-    virtual int giveCurrentNumberOfIterations() {return currentIterations;}
+    virtual int giveCurrentNumberOfIterations() override {return currentIterations;}
 
 #ifdef __OOFEG
     void showSparseMtrxStructure(int type, oofegGraphicContext &gc, TimeStep *tStep);
@@ -184,7 +184,7 @@ public:
 
 protected:
     virtual void assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAssembler &ma,
-                          const UnknownNumberingScheme &, Domain *domain);
+                          const UnknownNumberingScheme &, Domain *domain) override;
     void proceedStep(int di, TimeStep *tStep);
     virtual void updateLoadVectors(TimeStep *tStep);
     virtual void computeExternalLoadReactionContribution(FloatArray &reactions, TimeStep *tStep, int di);

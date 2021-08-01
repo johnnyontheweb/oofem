@@ -34,11 +34,11 @@
  */
 
 
-#include "../sm/Elements/graddpelement.h"
-#include "../sm/Materials/structuralms.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
-#include "../sm/Elements/nlstructuralelement.h"
-#include "../sm/Materials/graddpmaterialextensioninterface.h"
+#include "sm/Elements/graddpelement.h"
+#include "sm/Materials/structuralms.h"
+#include "sm/CrossSections/structuralcrosssection.h"
+#include "sm/Elements/nlstructuralelement.h"
+#include "sm/Materials/graddpmaterialextensioninterface.h"
 #include "node.h"
 #include "material.h"
 #include "gausspoint.h"
@@ -736,12 +736,9 @@ GradDpElement :: computeStiffnessMatrix_uk(FloatMatrix &answer, MatResponseMode 
 }
 
 
-IRResultType
-GradDpElement :: initializeFrom(InputRecord *ir)
+void
+GradDpElement :: initializeFrom(InputRecord &ir)
 {
-    //IRResultType result;                // Required by IR_GIVE_FIELD macro
     //nlGeo = 0;
-
-    return IRRT_OK;
 }
 } // end namespace oofem

@@ -32,9 +32,9 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/tria1platesubsoil.h"
-#include "../sm/Materials/structuralms.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
+#include "sm/Elements/tria1platesubsoil.h"
+#include "sm/Materials/structuralms.h"
+#include "sm/CrossSections/structuralcrosssection.h"
 #include "fei2dtrlin.h"
 #include "node.h"
 #include "material.h"
@@ -55,7 +55,7 @@ FEI2dTrLin Tria1PlateSubSoil :: interp_lin(1, 2);
 
 Tria1PlateSubSoil :: Tria1PlateSubSoil(int n, Domain *aDomain) :
     StructuralElement(n, aDomain), ZZNodalRecoveryModelInterface(this),
-	SPRNodalRecoveryModelInterface()  // , NodalAveragingRecoveryModelInterface()
+    SPRNodalRecoveryModelInterface()  // , NodalAveragingRecoveryModelInterface()
 {
     numberOfGaussPoints = 1;
     numberOfDofMans = 3;
@@ -79,7 +79,7 @@ Tria1PlateSubSoil :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize( 1 );
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 5) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 5);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], numberOfGaussPoints, this);
     }
 }
@@ -118,31 +118,29 @@ Tria1PlateSubSoil :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int l
 void
 Tria1PlateSubSoil :: computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->giveGeneralizedStress_PlateSubSoil(answer, gp, strain, tStep);
+    answer = this->giveStructuralCrossSection()->giveGeneralizedStress_PlateSubSoil(strain, gp, tStep);
 }
 
 
 void
 Tria1PlateSubSoil :: computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->give2dPlateSubSoilStiffMtrx(answer, rMode, gp, tStep);
+    answer = this->giveStructuralCrossSection()->give2dPlateSubSoilStiffMtrx(rMode, gp, tStep);
 }
 
 
-IRResultType
-Tria1PlateSubSoil :: initializeFrom(InputRecord *ir)
+void
+Tria1PlateSubSoil :: initializeFrom(InputRecord &ir)
 {
     this->numberOfGaussPoints = 1;
-	IRResultType result = StructuralElement::initializeFrom(ir);
-	// optional record for 1st local axes - here it is not used, unuseful
-	la1.resize(3);
-	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
-	IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_Tria1PlateSubSoil_lcs);
+    StructuralElement::initializeFrom(ir);
+    // optional record for 1st local axes - here it is not used, unuseful
+    la1.resize(3);
+    la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
+    IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_Tria1PlateSubSoil_lcs);
 
-	this->macroElem = 0;
-	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_Tria1PlateSubSoil_macroelem);
-
-	return IRRT_OK;
+    this->macroElem = 0;
+    IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_Tria1PlateSubSoil_macroelem);
 }
 
 
@@ -157,8 +155,8 @@ void
 Tria1PlateSubSoil :: computeMidPlaneNormal(FloatArray &answer, const GaussPoint *gp)
 {
     FloatArray u, v;
-    u.beDifferenceOf( * this->giveNode(2)->giveCoordinates(), * this->giveNode(1)->giveCoordinates() );
-    v.beDifferenceOf( * this->giveNode(3)->giveCoordinates(), * this->giveNode(1)->giveCoordinates() );
+    u.beDifferenceOf( this->giveNode(2)->giveCoordinates(), this->giveNode(1)->giveCoordinates() );
+    v.beDifferenceOf( this->giveNode(3)->giveCoordinates(), this->giveNode(1)->giveCoordinates() );
 
     answer.beVectorProductOf(u, v);
     answer.normalize();
@@ -215,8 +213,8 @@ Tria1PlateSubSoil :: giveInterface(InterfaceType interface)
         return static_cast< ZZNodalRecoveryModelInterface * >(this);
     } else if ( interface == SPRNodalRecoveryModelInterfaceType ) {
         return static_cast< SPRNodalRecoveryModelInterface * >(this);
-	//} else if (interface == NodalAveragingRecoveryModelInterfaceType) {
-	//	return static_cast< NodalAveragingRecoveryModelInterface * >(this);
+    //} else if (interface == NodalAveragingRecoveryModelInterfaceType) {
+    //	return static_cast< NodalAveragingRecoveryModelInterface * >(this);
     }
 
     return NULL;
@@ -250,48 +248,26 @@ Tria1PlateSubSoil :: SPRNodalRecoveryMI_giveDofMansDeterminedByPatch(IntArray &a
     }
 }
 
-
 void
-Tria1PlateSubSoil :: computeSurfaceNMatrixAt(FloatMatrix &answer, int iSurf, GaussPoint *sgp)
+Tria1PlateSubSoil ::computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer)
+// Returns the [1x3] displacement interpolation matrix {N}
 {
-  this->computeNmatrixAt(sgp->giveNaturalCoordinates(), answer);
+    FloatArray N(3);
+    giveInterpolation()->evalN(N, iLocCoord, FEIElementGeometryWrapper(this) );
+    answer.beNMatrixOf(N, 1);
 }
 
+
 void
-Tria1PlateSubSoil :: giveSurfaceDofMapping(IntArray &answer, int iSurf) const
+Tria1PlateSubSoil :: computeSurfaceNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords)
 {
-    answer.resize(3);
-    answer.zero();
-    if ( iSurf == 1 ) {
-        for (int i = 1; i<=3; i++) {
-            answer.at(i) = i;
-        }
+    if (boundaryID == 1) {
+        this->computeNmatrixAt(lcoords, answer);
     } else {
-        OOFEM_ERROR("wrong surface number");
+        OOFEM_ERROR("computeSurfaceNMatrix: Only one surface is supported with id=1");
     }
 }
 
-IntegrationRule *
-Tria1PlateSubSoil :: GetSurfaceIntegrationRule(int approxOrder)
-{
-    IntegrationRule *iRule = new GaussIntegrationRule(1, this, 1, 1);
-    int npoints = iRule->getRequiredNumberOfIntegrationPoints(_Triangle, approxOrder);
-    iRule->SetUpPointsOnTriangle(npoints, _Unknown);
-    return iRule;
-}
-
-double
-Tria1PlateSubSoil :: computeSurfaceVolumeAround(GaussPoint *gp, int iSurf)
-{
-    return this->computeVolumeAround(gp);
-}
-
-
-int
-Tria1PlateSubSoil :: computeLoadLSToLRotationMatrix(FloatMatrix &answer, int isurf, GaussPoint *gp)
-{
-    return 0;
-}
 
 void
 Tria1PlateSubSoil :: printOutputAt(FILE *file, TimeStep *tStep)

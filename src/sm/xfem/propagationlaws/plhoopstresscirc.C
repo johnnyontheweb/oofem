@@ -42,7 +42,7 @@
 #include "spatiallocalizer.h"
 #include "floatmatrix.h"
 #include "gausspoint.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Materials/structuralms.h"
 #include "xfem/enrichmentitem.h"
 #include "feinterpol.h"
 #include "xfem/xfemmanager.h"
@@ -53,10 +53,8 @@ namespace oofem {
 REGISTER_PropagationLaw(PLHoopStressCirc)
 
 /////////////////////////////////////////////
-IRResultType PLHoopStressCirc :: initializeFrom(InputRecord *ir)
+void PLHoopStressCirc :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;
-
     IR_GIVE_FIELD(ir, mRadius,                          _IFT_PLHoopStressCirc_Radius);
     IR_GIVE_FIELD(ir, mAngleInc,                        _IFT_PLHoopStressCirc_AngleInc);
     IR_GIVE_FIELD(ir, mIncrementLength,         _IFT_PLHoopStressCirc_IncLength);
@@ -67,8 +65,6 @@ IRResultType PLHoopStressCirc :: initializeFrom(InputRecord *ir)
     if ( useRadialBasisFunc == 1 ) {
         mUseRadialBasisFunc = true;
     }
-
-    return IRRT_OK;
 }
 
 void PLHoopStressCirc :: giveInputRecord(DynamicInputRecord &input)
@@ -142,14 +138,14 @@ bool PLHoopStressCirc :: propagateInterface(Domain &iDomain, EnrichmentFront &iE
                 // crack tip multiplied by a constant factor.
                 // ( This choice implies that we hope that the element has reasonable
                 // aspect ratio.)
-                const FloatArray &x1 = * ( el->giveDofManager(1)->giveCoordinates() );
-                const FloatArray &x2 = * ( el->giveDofManager(2)->giveCoordinates() );
-                const double l = 1.0 * x1.distance(x2);
+                const auto &x1 = el->giveDofManager(1)->giveCoordinates();
+                const auto &x2 = el->giveDofManager(2)->giveCoordinates();
+                const double l = 1.0 * distance(x1, x2);
 
                 // Use the octree to get all elements that have
                 // at least one Gauss point in a certain region around the tip.
                 const double searchRadius = 3.0 * l;
-                std :: set< int >elIndices;
+                IntArray elIndices;
                 localizer->giveAllElementsWithIpWithinBox(elIndices, circPoints [ pointIndex ], searchRadius);
 
 
@@ -189,7 +185,7 @@ bool PLHoopStressCirc :: propagateInterface(Domain &iDomain, EnrichmentFront &iE
                             inFrontOfCrack = false;
                         }
 
-                        double r = circPoints [ pointIndex ].distance(globalCoord);
+                        double r = distance(circPoints [ pointIndex ], globalCoord);
 
                         if ( r < l && inFrontOfCrack ) {
                             double w = ( ( l - r ) / ( pow(2.0 * M_PI, 1.5) * pow(l, 3) ) ) * exp( -0.5 * pow(r, 2) / pow(l, 2) );

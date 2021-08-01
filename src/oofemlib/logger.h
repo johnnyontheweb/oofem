@@ -36,9 +36,13 @@
 #define logger_h
 
 #include "oofemcfg.h"
+//#include "util.h"
 
 #include <cstdio>
 #include <string>
+#ifdef __PARALLEL_MODE
+#include <mpi.h>
+#endif
 
 // MSVC doesn't properly implement C99. (might need to wrap __func__ behind a macro to support all platforms correctly(?))
 #ifdef _MSC_VER
@@ -71,10 +75,13 @@ protected:
     logLevelType logLevel;
     /// Counter of all warning and error messages.
     int numberOfWrn, numberOfErr;
-
+#ifdef __PARALLEL_MODE
+    /// Parallell comm
+    MPI_Comm comm;
+#endif
 public:
 #ifdef MEMSTR
-	bool usestream = true;
+    bool usestream = true;
 #endif
     Logger(logLevelType level);
     ~Logger();
@@ -86,9 +93,14 @@ public:
     void appendLogTo(FILE* stream);
     /// Redirects error output to given stream.
     void appendErrorTo(FILE* stream);
+#ifdef __PARALLEL_MODE
+    /// Parallell comm
+    void setComm(MPI_Comm comm);
+#endif
+
 #ifdef MEMSTR
-	/// Give filename of the stream // std::string &logName
-	void setLogName();
+    /// Give filename of the stream // std::string &logName
+    void setLogName();
 #endif
 	
     /// Writes the normal log message.

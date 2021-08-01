@@ -33,7 +33,7 @@
  */
 
 #include "datastream.h"
-
+#include "error.h"
 #include <vector>
 
 namespace oofem
@@ -62,9 +62,27 @@ int DataStream :: write(const std :: string &data)
     return this->write(data.data(), n);
 }
 
+FileDataStream :: FileDataStream(std::string filename, bool write): 
+    stream(nullptr),
+    filename(std::move(filename))
+{
+    //stream.open(filename, (write ? std::ios::out : std::ios:in) | std::ios::binary );
+    this->stream = fopen(this->filename.c_str(), write ? "wb" : "rb" );
+    if ( !this->stream ) {
+        throw CantOpen(this->filename);
+    }
+}
+
+FileDataStream :: ~FileDataStream()
+{
+    fclose(this->stream);
+}
+
 int FileDataStream :: read(int *data, int count)
 {
     return ( (int)fread(data, sizeof( int ), count, stream) == count );
+    //this->stream.read(reinterpret_cast< char* >(data), sizeof(int)*count);
+    //return this->stream.good();
 }
 
 int FileDataStream :: read(unsigned long *data, int count)

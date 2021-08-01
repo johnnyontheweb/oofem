@@ -43,8 +43,10 @@ namespace oofem {
 //@{
 #define _IFT_CohesiveInterfaceMaterial_Name "cohint"
 #define _IFT_CohesiveInterfaceMaterial_kn "kn"
+#define _IFT_CohesiveInterfaceMaterial_transitionopening "transitionopening"
 #define _IFT_CohesiveInterfaceMaterial_ks "ks"
 #define _IFT_CohesiveInterfaceMaterial_stiffCoeffKn "stiffcoeffkn"
+#define _IFT_CohesiveInterfaceMaterial_smoothMag "smoothmag"
 //@}
 
 /**
@@ -55,31 +57,36 @@ class CohesiveInterfaceMaterial : public StructuralInterfaceMaterial
 {
 protected:
     /// Elastic properties (normal and shear moduli).
-    double kn, ks;
-    
+    double kn = 0., ks = 0.;
+
     /// Reduction of normal stiffness when in tension
-    double stiffCoeffKn;
+    double stiffCoeffKn = 0.;
+
+    /// Opening when material stiffness changes from kn to kn*stiffCoeffKn
+    double transitionOpening = 0.;
+
+    /// Smoothing region between tension and compression stiffness.
+    /// Uses atan(smoothMag*x) function, where (smoothMag*x) needs to be 6
+    /// to be 10% off the asymptotic value. SmoothMag is by default 1.e+4.
+    /// Higher values mean sharper transition.
+    double smoothMag = 0.;
+
 public:
     /// Constructor
     CohesiveInterfaceMaterial(int n, Domain * d);
-    /// Destructor
-    virtual ~CohesiveInterfaceMaterial() { }
 
-    virtual int hasNonLinearBehaviour() { return 0; }
-    virtual bool hasAnalyticalTangentStiffness() const { return true; }
+    bool hasAnalyticalTangentStiffness() const override { return true; }
 
-    virtual const char *giveClassName() const { return "CohesiveInterfaceMaterial"; }
-    virtual const char *giveInputRecordName() const { return _IFT_CohesiveInterfaceMaterial_Name; }
+    const char *giveClassName() const override { return "CohesiveInterfaceMaterial"; }
+    const char *giveInputRecordName() const override { return _IFT_CohesiveInterfaceMaterial_Name; }
 
-    virtual void giveEngTraction_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &jump, TimeStep *tStep);
-    virtual void give3dStiffnessMatrix_Eng(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep);
+    FloatArrayF<3> giveEngTraction_3d(const FloatArrayF<3> &jump, GaussPoint *gp, TimeStep *tStep) const override;
+    FloatMatrixF<3,3> give3dStiffnessMatrix_Eng(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
-
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const { return new StructuralInterfaceMaterialStatus(1, FEMComponent :: domain, gp); }
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new StructuralInterfaceMaterialStatus(gp); }
 };
 } // namespace oofem
 #endif

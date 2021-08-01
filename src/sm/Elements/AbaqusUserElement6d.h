@@ -164,11 +164,11 @@ private:
     /// File containing the uel function
     std :: string filename;
 
-	/// Pointer to the dynamically loaded uelInit function (translated to C)
-	void(*uelInit)();
+    /// Pointer to the dynamically loaded uelInit function (translated to C)
+    void(*uelInit)();
 
-	// macro element number
-	int macroElem;
+    // macro element number
+    int macroElem;
 
 public:
     /// Constructor
@@ -176,21 +176,21 @@ public:
 
     /// Destructor
     virtual ~AbaqusUserElement6d();
-	virtual double computeLength();
-    virtual void computeConsistentMassMatrix(FloatMatrix &answer, TimeStep *tStep, double &mass, const double *ipDensity = NULL);
+    virtual double computeLength();
+    virtual void computeConsistentMassMatrix(FloatMatrix &answer, TimeStep *tStep, double &mass, const double *ipDensity = NULL) override;
     //virtual void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep);
-    virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep);
-    virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord = 0);
+    void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep) override;
+    void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord = 0) override;
     virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, FloatArray &U, FloatMatrix &DU, int useUpdatedGpRecord);
-    virtual int computeNumberOfDofs() { return 12; }
-    virtual void giveDofManDofIDMask(int inode, IntArray &answer) const;
-    virtual void computeField(ValueModeType mode, TimeStep *tStep, const FloatArray &lcoords, FloatArray &answer)
+    int computeNumberOfDofs() override { return 12; }
+    void giveDofManDofIDMask(int inode, IntArray &answer) const override;
+    void computeField(ValueModeType mode, TimeStep *tStep, const FloatArray &lcoords, FloatArray &answer) override
     { OOFEM_ERROR("Abaqus user element cannot support computation of local unknown vector\n"); }
-    virtual void updateYourself(TimeStep *tStep);
-    virtual void updateInternalState(TimeStep *tStep);
+    void updateYourself(TimeStep *tStep) override;
+    void updateInternalState(TimeStep *tStep) override;
 
-	virtual int computeNumberOfGlobalDofs() { return 12; }
-	virtual void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep);
+    int computeNumberOfGlobalDofs() override { return 12; }
+    void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep) override;
     bool hasTangent() const {
         return hasTangentFlag;
     }
@@ -216,37 +216,41 @@ public:
 
     virtual Interface *giveInterface(InterfaceType it);
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
-	virtual void postInitialize();
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
+	void postInitialize() override;
 
-	virtual void printOutputAt(FILE *file, TimeStep *tStep);
+	virtual void printOutputAt(FILE *file, TimeStep *tStep) override;
 
     // definition & identification
-    virtual const char *giveClassName() const { return "AbaqusUserElement6d"; }
-    virtual const char *giveInputRecordName() const { return _IFT_AbaqusUserElement6d_Name; }
-    virtual integrationDomain giveIntegrationDomain() const {
+    const char *giveClassName() const override { return "AbaqusUserElement6d"; }
+    const char *giveInputRecordName() const override { return _IFT_AbaqusUserElement6d_Name; }
+    integrationDomain giveIntegrationDomain() const override {
         // return _Unknown_integrationDomain;
 		return _UnknownIntegrationDomain;
     }
-    virtual Element_Geometry_Type giveGeometryType() const {
+    Element_Geometry_Type giveGeometryType() const override {
         return EGT_line_1;
     }
 
 protected:
-    virtual void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep) {
+    void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep) override {
         OOFEM_ERROR("function not defined for AbaqusUserElement6d and should never be called.");
     }
 
-    virtual void computeBmatrixAt(GaussPoint *, FloatMatrix &, int = 1, int = ALL_STRAINS) {
+    void computeConstitutiveMatrixAt(FloatMatrix& answer, MatResponseMode rMode, GaussPoint* gp, TimeStep* tStep) override {
+        OOFEM_ERROR("calling of this function is not allowed");
+    }
+
+    void computeBmatrixAt(GaussPoint *, FloatMatrix &, int = 1, int = ALL_STRAINS) override {
         OOFEM_ERROR("function not defined for AbaqusUserElement6d and should never be called.");
     }
 
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) {
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override {
         OOFEM_ERROR("function not defined for AbaqusUserElement6d and should never be called.");
         return 0;
     }
-	virtual bool computeGtoLRotationMatrix(FloatMatrix &answer);
+	bool computeGtoLRotationMatrix(FloatMatrix &answer) override;
 	/**
 	* Orientation vector. Defines orientation of spring element- for spring it defines the direction of spring,
 	* for torsional spring it defines the axis of rotation.

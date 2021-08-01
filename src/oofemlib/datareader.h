@@ -62,7 +62,7 @@ public:
         IR_emodelRec, IR_mstepRec, IR_expModuleRec, IR_dofmanRec, IR_elemRec,
         IR_crosssectRec, IR_matRec, IR_nlocBarRec, IR_bcRec, IR_icRec, IR_funcRec, IR_setRec,
         IR_xfemManRec, IR_enrichFuncRec, IR_geoRec, IR_enrichItemRec,
-        IR_enrichFrontRec, IR_propagationLawRec, IR_fracManRec, IR_failCritRec, 
+        IR_enrichFrontRec, IR_propagationLawRec, IR_crackNucleationRec, IR_fracManRec, IR_failCritRec,
         IR_contactManRec, IR_contactDefRec
     };
 
@@ -75,7 +75,7 @@ public:
      * @param irType Determines type of record to be returned.
      * @param recordId Determines the record  number corresponding to component number.
      */
-    virtual InputRecord *giveInputRecord(InputRecordType irType, int recordId) = 0;
+    virtual InputRecord &giveInputRecord(InputRecordType irType, int recordId) = 0;
 
     /**
      * Peak in advance into the record list.
@@ -88,15 +88,12 @@ public:
      */
     virtual void finish() = 0;
 
+    /// Gives the reference file name (e.g. file name)
+    virtual std :: string giveReferenceName() const = 0;
     /// Gives the output file name
     std :: string giveOutputFileName() { return this->outputFileName; }
     /// Gives the problem description
     std :: string giveDescription() { return this->description; }
-
-    /// Prints the name (shortened) of data source.
-    virtual const char *giveDataSourceName() const = 0;
-    /// Prints the error message.
-    void report_error(const char *_class, const char *proc, const char *kwd, IRResultType result, const char *file, int line);
 };
 } // end namespace oofem
 #endif // datareader_h

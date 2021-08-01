@@ -32,10 +32,10 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/Shells/tr2shell7xfem.h"
-#include "../sm/Materials/structuralms.h"
-#include "../sm/xfem/enrichmentitems/crack.h"
-#include "../sm/xfem/enrichmentitems/shellcrack.h"
+#include "sm/Elements/Shells/tr2shell7xfem.h"
+#include "sm/Materials/structuralms.h"
+#include "sm/xfem/enrichmentitems/crack.h"
+#include "sm/xfem/enrichmentitems/shellcrack.h"
 #include "node.h"
 #include "load.h"
 #include "mathfem.h"
@@ -119,7 +119,7 @@ Tr2Shell7XFEM :: computeGaussPoints()
             int numberOfInterfaces = this->layeredCS->giveNumberOfLayers()-1;
             czIntegrationRulesArray.resize( numberOfInterfaces );
             for ( int j = 0; j < numberOfInterfaces; j++ ) {
-                czIntegrationRulesArray [ j ].reset( new GaussIntegrationRule(1, this) );
+                czIntegrationRulesArray [ j ] = std::make_unique<GaussIntegrationRule>(1, this);
                 czIntegrationRulesArray [ j ]->SetUpPointsOnTriangle(nPointsTri, _3dInterface);
             }
         
@@ -161,7 +161,7 @@ bool Tr2Shell7XFEM :: updateIntegrationRuleMultiCrack()
                 if ( dynamic_cast< ShellCrack*> (ei) ) {
 
                     // Determine if the crack goes through the current layer
-                    if( this->evaluateHeavisideGamma(xiMid_i, static_cast< ShellCrack* >(ei)) > 0) {
+                    if( this->evaluateHeavisideXi(xiMid_i, static_cast< ShellCrack* >(ei)) > 0) {
 
                         // Get the points describing each subdivision of the element
                         double startXi, endXi;
@@ -175,23 +175,21 @@ bool Tr2Shell7XFEM :: updateIntegrationRuleMultiCrack()
                                 this->XfemElementInterface_partitionElement(this->crackSubdivisions [ i ], pointPartitions [ j ]);
                             }
 
-                     
-                            integrationRulesArray [ i ].reset( new PatchIntegrationRule(i + 1, this, this->crackSubdivisions [ i ]) );
-                            int nPointsTriSubTri = 3; 
-                            integrationRulesArray [ i ]->SetUpPointsOnWedge(nPointsTriSubTri, numPointsThickness, _3dMat);         
+                            integrationRulesArray [ i ] = std::make_unique<PatchIntegrationRule>(i + 1, this, this->crackSubdivisions [ i ]);
+                            integrationRulesArray [ i ]->SetUpPointsOnWedge(3, numPointsThickness, _3dMat);
                             this->numSubDivisionsArray [ i ] = this->crackSubdivisions [ i ].size();
-                            createdRule = true;         
+                            createdRule = true;
                             continue;
                         }
-                    }            
+                    }
                 }
             }
         }
-            
+        
         if( !createdRule ) {
-            integrationRulesArray [ i ].reset( new LayeredIntegrationRule(i + 1, this) );
+            integrationRulesArray [ i ] = std::make_unique<LayeredIntegrationRule>(i + 1, this);
             integrationRulesArray [ i ]->SetUpPointsOnWedge(nPointsTri, numPointsThickness, _3dMat);
-            this->numSubDivisionsArray [ i ] = 1;                 
+            this->numSubDivisionsArray [ i ] = 1;
         }
         
     }
@@ -204,7 +202,7 @@ bool Tr2Shell7XFEM :: updateIntegrationRuleMultiCrack()
         int numberOfInterfaces = this->layeredCS->giveNumberOfLayers()-1;
         czIntegrationRulesArray.resize(numberOfInterfaces);
         for ( int j = 0; j < numberOfInterfaces; j++ ) {
-            czIntegrationRulesArray [ j ].reset( new GaussIntegrationRule(1, this) );
+            czIntegrationRulesArray [ j ] = std::make_unique<GaussIntegrationRule>(1, this);
             czIntegrationRulesArray [ j ]->SetUpPointsOnTriangle(nPointsTri, _3dInterface);
         }
     }
@@ -259,17 +257,15 @@ Tr2Shell7XFEM :: giveSurfaceDofMapping(IntArray &answer, int iSurf) const
 double 
 Tr2Shell7XFEM :: computeAreaAround(GaussPoint *gp, double xi)
 {
-    FloatArray G1, G2, temp;
-    FloatMatrix Gcov;
-    FloatArray lCoords(3);
+    FloatArrayF<3> lCoords;
     lCoords.at(1) = gp->giveNaturalCoordinate(1);
     lCoords.at(2) = gp->giveNaturalCoordinate(2);
     lCoords.at(3) = xi;
-    this->evalInitialCovarBaseVectorsAt(lCoords, Gcov);
-    G1.beColumnOf(Gcov,1);
-    G2.beColumnOf(Gcov,2);
-    temp.beVectorProductOf(G1, G2);
-    double detJ = temp.computeNorm();
+    auto Gcov = this->evalInitialCovarBaseVectorsAt(lCoords);
+    auto G1 = Gcov.column(0);
+    auto G2 = Gcov.column(1);
+    auto temp = cross(G1, G2);
+    double detJ = norm(temp);
     return detJ *gp->giveWeight();
 }
 
@@ -277,15 +273,11 @@ Tr2Shell7XFEM :: computeAreaAround(GaussPoint *gp, double xi)
 double 
 Tr2Shell7XFEM :: computeVolumeAroundLayer(GaussPoint *gp, int layer)
 {
-    double detJ;
-    FloatMatrix Gcov;
-    FloatArray lcoords;
-    lcoords = gp->giveNaturalCoordinates();
-    this->evalInitialCovarBaseVectorsAt(lcoords, Gcov);
-    detJ = Gcov.giveDeterminant() * 0.5 * this->layeredCS->giveLayerThickness(layer);
+    const auto &lcoords = gp->giveNaturalCoordinates();
+    auto Gcov = this->evalInitialCovarBaseVectorsAt(lcoords);
+    double detJ = det(Gcov) * 0.5 * this->layeredCS->giveLayerThickness(layer);
     return detJ *gp->giveWeight();
 }
-
 
 
 } // end namespace oofem

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2021   Borek Patzak
  *
  *
  *
@@ -32,8 +32,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/Beams/libeam2d.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Elements/Beams/libeam2d.h"
+#include "sm/Materials/structuralms.h"
 #include "fei2dlinelin.h"
 #include "node.h"
 #include "material.h"
@@ -50,7 +50,8 @@ namespace oofem {
 REGISTER_Element(LIBeam2d);
 
 // Set up interpolation coordinates
-FEI2dLineLin LIBeam2d :: interpolation(1, 3);
+FEI2dLineLin LIBeam2d :: interpolationXZ(1, 3);
+FEI2dLineLin LIBeam2d :: interpolationXY(1, 2);
 
 LIBeam2d :: LIBeam2d(int n, Domain *aDomain) : StructuralElement(n, aDomain), LayeredCrossSectionInterface()
 {
@@ -60,7 +61,7 @@ LIBeam2d :: LIBeam2d(int n, Domain *aDomain) : StructuralElement(n, aDomain), La
 }
 
 
-FEInterpolation *LIBeam2d :: giveInterpolation() const { return & interpolation; }
+FEInterpolation *LIBeam2d :: giveInterpolation() const { if (xy) {return & interpolationXY;} else {return & interpolationXZ;} }
 
 
 Interface *
@@ -111,7 +112,7 @@ LIBeam2d :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize( 1 );
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 2) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 2);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], 1, this);
     }
 }
@@ -120,14 +121,14 @@ LIBeam2d :: computeGaussPoints()
 void
 LIBeam2d :: computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->give2dBeamStiffMtrx(answer, rMode, gp, tStep);
+    answer = this->giveStructuralCrossSection()->give2dBeamStiffMtrx(rMode, gp, tStep);
 }
 
 
 void
 LIBeam2d :: computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->giveGeneralizedStress_Beam2d(answer, gp, strain, tStep);
+    answer = this->giveStructuralCrossSection()->giveGeneralizedStress_Beam2d(strain, gp, tStep);
 }
 
 
@@ -142,7 +143,11 @@ LIBeam2d :: computeGlobalCoordinates(FloatArray &answer, const FloatArray &lcoor
 
     answer.resize(3);
     answer.at(1) = n1 * this->giveNode(1)->giveCoordinate(1) + n2 *this->giveNode(2)->giveCoordinate(1);
-    answer.at(3) = n1 * this->giveNode(1)->giveCoordinate(3) + n2 *this->giveNode(2)->giveCoordinate(3);
+    if (xy) {
+        answer.at(2) = n1 * this->giveNode(1)->giveCoordinate(2) + n2 *this->giveNode(2)->giveCoordinate(2);
+    } else {
+        answer.at(3) = n1 * this->giveNode(1)->giveCoordinate(3) + n2 *this->giveNode(2)->giveCoordinate(3);
+    }
 
     return 1;
 }
@@ -272,7 +277,11 @@ LIBeam2d :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType ty
 void
 LIBeam2d :: giveDofManDofIDMask(int inode, IntArray &answer) const
 {
-    answer = {D_u, D_w, R_v};
+    if (xy) {
+        answer = {D_u, D_v, R_w};
+    } else {
+        answer = {D_u, D_w, R_v};
+    }
 }
 
 
@@ -287,7 +296,11 @@ LIBeam2d :: computeLength()
         nodeA   = this->giveNode(1);
         nodeB   = this->giveNode(2);
         dx      = nodeB->giveCoordinate(1) - nodeA->giveCoordinate(1);
-        dy      = nodeB->giveCoordinate(3) - nodeA->giveCoordinate(3);
+        if (xy) {
+            dy      = nodeB->giveCoordinate(2) - nodeA->giveCoordinate(2);
+        } else {
+            dy      = nodeB->giveCoordinate(3) - nodeA->giveCoordinate(3);
+        }
         length  = sqrt(dx * dx + dy * dy);
     }
 
@@ -307,8 +320,13 @@ LIBeam2d :: givePitch()
         nodeB  = this->giveNode(2);
         xA     = nodeA->giveCoordinate(1);
         xB     = nodeB->giveCoordinate(1);
-        yA     = nodeA->giveCoordinate(3);
-        yB     = nodeB->giveCoordinate(3);
+        if (xy) {
+            yA     = nodeA->giveCoordinate(2);
+            yB     = nodeB->giveCoordinate(2);
+        } else {
+            yA     = nodeA->giveCoordinate(3);
+            yB     = nodeB->giveCoordinate(3);
+        }
         pitch  = atan2(yB - yA, xB - xA);
     }
 
@@ -316,10 +334,13 @@ LIBeam2d :: givePitch()
 }
 
 
-IRResultType
-LIBeam2d :: initializeFrom(InputRecord *ir)
+void
+LIBeam2d :: initializeFrom(InputRecord &ir)
 {
-    return StructuralElement :: initializeFrom(ir);
+    StructuralElement :: initializeFrom(ir);
+    xy = ir.hasField(_IFT_LIBeam2d_XY);
+    xz = ir.hasField(_IFT_LIBeam2d_XZ);
+    xy ? (xz = false) : (xz = true);
 }
 
 

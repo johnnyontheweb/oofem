@@ -140,7 +140,7 @@ public:
      * @param gp Integration point
      * @return Property value.
      */
-    virtual double give(CrossSectionProperty a, GaussPoint *gp);
+    virtual double give(CrossSectionProperty a, GaussPoint *gp) const;
     /**
      * Returns the value of cross section property at given point (belonging to given element).
      * the point coordinates can be specified using its local element coordinates or
@@ -152,7 +152,7 @@ public:
      * @param gp Integration point
      * @return Property value.
      */
-    virtual double give(CrossSectionProperty a, const FloatArray &coords, Element *elem, bool local = true);
+    virtual double give(CrossSectionProperty a, const FloatArray &coords, Element *elem, bool local = true) const;
 
     /**
      * Returns the value of cross section property.
@@ -160,7 +160,7 @@ public:
      * @param gp Integration point.
      * @return Property value.
      */
-    virtual double give(int aProperty, GaussPoint *gp) { return 0.0; }
+    virtual double give(int aProperty, GaussPoint *gp) const { return 0.0; }
 
     /**
      * Check for symmetry of stiffness matrix.
@@ -169,8 +169,9 @@ public:
      * @param rMode Response mode of material.
      * @return True if stiffness matrix of receiver is symmetric.
      */
-    virtual bool isCharacteristicMtrxSymmetric(MatResponseMode rMode) { return false; }
-    virtual void printYourself();
+    virtual bool isCharacteristicMtrxSymmetric(MatResponseMode rMode) const { return false; }
+
+    void printYourself() override;
 
     /**
      * Sets up integration rule for the given element.
@@ -263,36 +264,34 @@ public:
      */
     virtual double predictRelativeRedistributionCost(GaussPoint *gp) { return 1.0; }
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
     /**
      * Returns the material associated with the GP.
      * Default implementation uses gp->giveMaterial() for backwards compatibility, but it should be overloaded in each specialized cross-section.
      */
-    virtual Material *giveMaterial(IntegrationPoint *ip) { return ip->giveMaterial(); }
+    virtual Material *giveMaterial(IntegrationPoint *ip) const = 0;
 
     /**
      * Stores integration point state to output stream.
      * @param stream Output stream.
      * @param mode Determines amount of info required in stream (state, definition, ...).
      * @param gp integration point.
-     * @return contextIOResultType.
      * @exception throws an ContextIOERR exception if error encountered.
      */
-    virtual contextIOResultType saveIPContext(DataStream &stream, ContextMode mode, GaussPoint *gp);
+    virtual void saveIPContext(DataStream &stream, ContextMode mode, GaussPoint *gp);
     /**
      * Reads integration point state to output stream.
      * @param stream Output stream.
      * @param mode Determines amount of info required in stream (state, definition, ...).
      * @param gp integration point.
-     * @return contextIOResultType.
      * @exception throws an ContextIOERR exception if error encountered.
      */
-    virtual contextIOResultType restoreIPContext(DataStream &stream, ContextMode mode, GaussPoint *gp);
+    virtual void restoreIPContext(DataStream &stream, ContextMode mode, GaussPoint *gp);
 
-	contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL) override;
-	contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL) override;
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 };
 } // end namespace oofem
 #endif // crosssection_h

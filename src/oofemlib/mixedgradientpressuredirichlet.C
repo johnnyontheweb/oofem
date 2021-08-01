@@ -53,6 +53,10 @@
 #include "unknownnumberingscheme.h"
 #include "assemblercallback.h"
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 namespace oofem {
 REGISTER_BoundaryCondition(MixedGradientPressureDirichlet);
 
@@ -132,10 +136,10 @@ Dof *MixedGradientPressureDirichlet :: giveMasterDof(ActiveDof *dof, int mdof)
 void MixedGradientPressureDirichlet :: computeDofTransformation(ActiveDof *dof, FloatArray &masterContribs)
 {
     DofIDItem id = dof->giveDofID();
-    FloatArray *coords = dof->giveDofManager()->giveCoordinates();
+    const auto &coords = dof->giveDofManager()->giveCoordinates();
 
     FloatArray dx;
-    dx.beDifferenceOf(* coords, this->centerCoord);
+    dx.beDifferenceOf(coords, this->centerCoord);
 
     int nsd = dx.giveSize(); // Number of spatial dimensions
 
@@ -185,14 +189,10 @@ void MixedGradientPressureDirichlet :: computeDofTransformation(ActiveDof *dof, 
 double MixedGradientPressureDirichlet :: giveUnknown(double vol, const FloatArray &dev, ValueModeType mode, TimeStep *tStep, ActiveDof *dof)
 {
     DofIDItem id = dof->giveDofID();
-    FloatArray *coords = dof->giveDofManager()->giveCoordinates();
-
-    if ( coords == NULL || coords->giveSize() != this->centerCoord.giveSize() ) {
-        OOFEM_ERROR("Size of coordinate system different from center coordinate (%d) in b.c.", this->centerCoord.giveSize() );
-    }
+    const auto &coords = dof->giveDofManager()->giveCoordinates();
 
     FloatArray dx;
-    dx.beDifferenceOf(* coords, this->centerCoord);
+    dx.beDifferenceOf(coords, this->centerCoord);
 
     int nsd = dx.giveSize(); // Number of spatial dimensions
 
@@ -397,7 +397,10 @@ void MixedGradientPressureDirichlet :: setPrescribedDeviatoricGradientFromVoigt(
 
 
 void MixedGradientPressureDirichlet :: assembleVector(FloatArray &answer, TimeStep *tStep,
-                                                      CharType type, ValueModeType mode, const UnknownNumberingScheme &s, FloatArray *eNorms)
+                                                      CharType type, ValueModeType mode, 
+                                                      const UnknownNumberingScheme &s, 
+                                                      FloatArray *eNorms,
+                                                      void* lock)
 {
     if ( type != ExternalForcesVector ) {
         return;
@@ -407,10 +410,16 @@ void MixedGradientPressureDirichlet :: assembleVector(FloatArray &answer, TimeSt
     int vol_loc = vol->giveEquationNumber(s);
     if ( vol_loc ) {
         double rve_size = this->domainSize();
+#ifdef _OPENMP
+        if (lock) omp_set_lock(static_cast<omp_lock_t*>(lock));
+#endif
         answer.at(vol_loc) -= rve_size * pressure; // Note the negative sign (pressure as opposed to mean stress)
         if ( eNorms ) {
             eNorms->at( vol->giveDofID() ) = rve_size * pressure * rve_size * pressure;
         }
+#ifdef _OPENMP
+        if (lock) omp_unset_lock(static_cast<omp_lock_t*>(lock));
+#endif
     }
 }
 
@@ -443,15 +452,13 @@ bool MixedGradientPressureDirichlet :: isDevDof(Dof *dof)
 }
 
 
-IRResultType MixedGradientPressureDirichlet :: initializeFrom(InputRecord *ir)
+void MixedGradientPressureDirichlet :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;
+    MixedGradientPressureBC :: initializeFrom(ir);
 
     this->centerCoord.resize( domain->giveNumberOfSpatialDimensions() );
     this->centerCoord.zero();
     IR_GIVE_OPTIONAL_FIELD(ir, this->centerCoord, _IFT_MixedGradientPressure_centerCoords)
-
-    return MixedGradientPressureBC :: initializeFrom(ir);
 }
 
 

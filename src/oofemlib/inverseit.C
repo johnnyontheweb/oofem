@@ -44,42 +44,41 @@
 #include <memory>
 
 namespace oofem {
+REGISTER_GeneralizedEigenValueSolver(InverseIteration, GES_InverseIt);
+
 
 InverseIteration :: InverseIteration(Domain *d, EngngModel *m) :
-    SparseGeneralEigenValueSystemNM(d, m)
+    SparseGeneralEigenValueSystemNM(d, m),
+    nitem(100)
 {
-    nitem = 100; // max number of iterations
 }
 
 
-InverseIteration :: ~InverseIteration() { }
-
 NM_Status
-InverseIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatrix &_r, double rtol, int nroot)
+InverseIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &eigv, FloatMatrix &r, double rtol, int nroot)
 {
 	FILE *outStream;
     if ( a.giveNumberOfColumns() != b.giveNumberOfColumns() ) {
         OOFEM_ERROR("matrices size mismatch");
     }
 
-    // SparseLinearSystemNM *solver = GiveClassFactory().createSparseLinSolver(ST_Direct, domain, engngModel);
-	std::unique_ptr< SparseLinearSystemNM > solver(GiveClassFactory().createSparseLinSolver(ST_Direct, domain, engngModel));
-   
+    auto solver = GiveClassFactory().createSparseLinSolver(ST_Direct, domain, engngModel);
+
     int nn = a.giveNumberOfColumns();
     int nc = min(2 * nroot, nroot + 8);
     nc = min(nc, nn);
 
-	//// control of diagonal zeroes in mass matrix, to be avoided
-	//int i;
-	//for (i = 1; i <= nn; i++) {
-	//	if (b.at(i, i) == 0) {
-	//		b.at(i, i) = 1.0e-12;
-	//	}
-	//}
+    //// control of diagonal zeroes in mass matrix, to be avoided
+    //int i;
+    //for (i = 1; i <= nn; i++) {
+    //	if (b.at(i, i) == 0) {
+    //		b.at(i, i) = 1.0e-12;
+    //	}
+    //}
 
     FloatArray w(nc), ww(nc), t;
     std :: vector< FloatArray > z(nc, nn), zz(nc, nn), x(nc, nn);
-	outStream = domain->giveEngngModel()->giveOutputStream();
+    outStream = domain->giveEngngModel()->giveOutputStream();
 
     /*  initial setting  */
 #if 0
@@ -88,21 +87,21 @@ InverseIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Float
         z[j].add(1.0);
     }
 #else
-	{
-		FloatArray ad(nn), bd(nn);
-		for (int i = 1; i <= nn; i++) {
-			ad.at(i) = fabs(a.at(i, i));
-			bd.at(i) = fabs(b.at(i, i));
-			}
-		IntArray order;
-		order.enumerate(nn);
-		std::sort(order.begin(), order.end(), [&ad, &bd](int a, int b) { return bd.at(a) * ad.at(b) > bd.at(b) * ad.at(a); });
-		for (int i = 0; i < nc; i++) {
-			x[i].at(order[i]) = 1.0;
-			b.times(x[i], z[i]);
-			ww.at(i + 1) = z[i].dotProduct(x[i]);
-		}
-	}
+    {
+        FloatArray ad(nn), bd(nn);
+        for ( int i = 1; i <= nn; i++ ) {
+            ad.at(i) = fabs(a.at(i, i));
+            bd.at(i) = fabs(b.at(i, i));
+        }
+        IntArray order;
+        order.enumerate(nn);
+        std :: sort(order.begin(), order.end(), [&ad, &bd](int a, int b) { return bd.at(a) * ad.at(b) > bd.at(b) * ad.at(a); });
+        for ( int i = 0; i < nc; i++ ) {
+            x[i].at(order[i]) = 1.0;
+            b.times(x[i], z[i]);
+            ww.at(i + 1) = z[i].dotProduct(x[i]);
+        }
+    }
 #endif
 
     int it;
@@ -172,17 +171,17 @@ InverseIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Float
     order.enumerate(w.giveSize());
     std :: sort(order.begin(), order.end(), [&w](int a, int b) { return w.at(a) < w.at(b); });
 
-    _eigv.resize(nroot);
-    _r.resize(nn, nroot);
+    eigv.resize(nroot);
+    r.resize(nn, nroot);
     for ( int i = 1; i <= nroot; i++ ) {
-        _eigv.at(i) = w.at(order.at(i));
-        _r.setColumn(x[order.at(i) - 1], i);
+        eigv.at(i) = w.at(order.at(i));
+        r.setColumn(x[order.at(i) - 1], i);
     }
 
     if ( it < nitem ) {
-		fprintf(outStream, "InverseIteration :: convergence reached in %d iterations\n", it);
+	fprintf(outStream, "InverseIteration :: convergence reached in %d iterations\n", it);
     } else {
-		fprintf(outStream, "InverseIteration :: convergence not reached after %d iterations\n", it);
+	fprintf(outStream, "InverseIteration :: convergence not reached after %d iterations\n", it);
     }
 
     return NM_Success;

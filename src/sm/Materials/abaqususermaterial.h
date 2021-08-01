@@ -35,9 +35,10 @@
 #ifndef abaqususermaterial_h
 #define abaqususermaterial_h
 
-#include "../sm/Materials/structuralmaterial.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Materials/structuralmaterial.h"
+#include "sm/Materials/structuralms.h"
 #include "floatarray.h"
+#include "floatarrayf.h"
 #include "floatmatrix.h"
 
 ///@name Input fields for AbaqusUserMaterial
@@ -80,10 +81,8 @@ namespace oofem {
 class AbaqusUserMaterial : public StructuralMaterial
 {
 private:
-    /// Gausspoint counter
-    static int n;
     /// Dynamically loaded umat.
-    void *umatobj;
+    void *umatobj = nullptr;
 
     /// Pointer to the dynamically loaded umat-function (translated to C)
     void ( * umat )(double *stress, double *statev, double *ddsdde, double *sse, double *spd, // 5
@@ -92,33 +91,37 @@ private:
                     double *dtemp, double predef [ 1 ], double dpred [ 1 ], char cmname [ 80 ], int *ndi, // 5
                     int *nshr, int *ntens, int *nstatv, double *props, int *nprops, double coords [ 3 ], // 6
                     double *drot, double *pnewdt, double *celent, double *dfgrd0, double *dfgrd1, // 5
-                    int *noel, int *npt, int *layer, int *kspt, int *kstep, int *kinc); // 6
+                    int *noel, int *npt, int *layer, int *kspt, int *kstep, int *kinc) = nullptr; // 6
     /// Name for material routine.
     char cmname [ 80 ];
     /// Size of the state vector.
-    int numState;
+    int numState = 0;
+
     /// Material properties.
     FloatArray properties;
     /// Initial stress.
-    FloatArray initialStress;
+    FloatArrayF<6> initialStress;
     /**
      * Flag to determine how the stress and Jacobian are interpreted.
      * 0 implies that the P and dPdF are returned from the umat routine.
      */
-    int mStressInterpretation;
+    int mStressInterpretation = 0;
 
     /**
      * Flag to determine if numerical tangent should be used.
      */
-    bool mUseNumericalTangent;
+    bool mUseNumericalTangent = false;
 
     /**
      * Size of perturbation if numerical tangent is used.
      */
-    double mPerturbation;
+    double mPerturbation = 1e-7;
 
     /// Name of the file that contains the umat function
     std :: string filename;
+    
+    static int const abq2oo9[9];
+    static int const abq2oo6[6];
 
 public:
     /// Constructor.
@@ -133,34 +136,30 @@ public:
      *  - umat (required, string): Filename of umat file dynamically library.
      *  - name (optional, string, default "umat"): Name of material model (used for input to umat routine).
      */
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const;
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
 
-    virtual void give3dMaterialStiffnessMatrix(FloatMatrix &answer,
-                                               MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
+    FloatMatrixF<6,6> give3dMaterialStiffnessMatrix(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual void give3dMaterialStiffnessMatrix_dPdF(FloatMatrix &answer,
-                                                    MatResponseMode mode,
-                                                    GaussPoint *gp,
-                                                    TimeStep *tStep);
+    FloatMatrixF<9,9> give3dMaterialStiffnessMatrix_dPdF(MatResponseMode mode,
+                                            GaussPoint *gp,
+                                            TimeStep *tStep) const override;
 
-    virtual void givePlaneStrainStiffMtrx_dPdF(FloatMatrix &answer,
-                                               MatResponseMode mmode, GaussPoint *gp,
-                                               TimeStep *tStep);
+    FloatMatrixF<5,5> givePlaneStrainStiffMtrx_dPdF(MatResponseMode mmode, GaussPoint *gp,
+                                       TimeStep *tStep) const override;
 
-    virtual void giveRealStressVector_3d(FloatArray &answer, GaussPoint *gp,
-                                         const FloatArray &reducedStrain, TimeStep *tStep);
+    FloatArrayF<6> giveRealStressVector_3d(const FloatArrayF<6> &strain, GaussPoint *gp,
+                                           TimeStep *tStep) const override;
 
-    virtual void giveFirstPKStressVector_3d(FloatArray &answer, GaussPoint *gp,
-                                            const FloatArray &reducedF, TimeStep *tStep);
+    FloatArrayF<9> giveFirstPKStressVector_3d(const FloatArrayF<9> &vF, GaussPoint *gp,
+                                              TimeStep *tStep) const override;
 
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 
-    virtual int hasNonLinearBehaviour() { return true; }
-    virtual const char *giveClassName() const { return "AbaqusUserMaterial"; }
-    virtual const char *giveInputRecordName() const { return _IFT_AbaqusUserMaterial_Name; }
+    const char *giveClassName() const override { return "AbaqusUserMaterial"; }
+    const char *giveInputRecordName() const override { return _IFT_AbaqusUserMaterial_Name; }
 };
 
 class AbaqusUserMaterialStatus : public StructuralMaterialStatus
@@ -180,12 +179,10 @@ protected:
 
 public:
     /// Constructor.
-    AbaqusUserMaterialStatus(int n, Domain * d, GaussPoint * gp, int numState);
-    /// Destructor.
-    virtual ~AbaqusUserMaterialStatus() { }
+    AbaqusUserMaterialStatus(GaussPoint * gp, int numState);
 
-    virtual void initTempStatus();
-    virtual void updateYourself(TimeStep *tStep);
+    void initTempStatus() override;
+    void updateYourself(TimeStep *tStep) override;
 
     bool hasTangent() const { return hasTangentFlag; }
 
@@ -199,11 +196,9 @@ public:
         hasTangentFlag = true;
     }
 
- 
+    void printOutputAt(FILE *file, TimeStep *tStep) const override;
 
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
-
-    virtual const char *giveClassName() const { return "AbaqusUserMaterialStatus"; }
+    const char *giveClassName() const override { return "AbaqusUserMaterialStatus"; }
 };
 } // end namespace oofem
 #endif // abaqususermaterial_h

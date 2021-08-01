@@ -35,7 +35,7 @@
 #ifndef druckerpragercatmat_h
 #define druckerpragercatmat_h
 
-#include "Materials/ConcreteMaterials/mplasticmaterial2.h"
+#include "sm/Materials/ConcreteMaterials/mplasticmaterial2.h"
 
 ///@name Input fields for DruckerPragerCutMat
 //@{
@@ -67,91 +67,91 @@ protected:
     //LinearElasticMaterial *linearElasticMaterial;
 
     /// Elastic shear modulus.
-    double G;
+    double G = 0.;
 
     /// Elastic bulk modulus.
-    double K;
+    double K = 0.;
 
     /// Hardening modulus.
-    double H;
+    double H = 0.;
 
     /// Uniaxial tensile strength for cut-off.
-    double sigT;
+    double sigT = 0.;
 
     /// Initial yield stress under pure shear.
-    double tau0;
+    double tau0 = 0.;
 
     /// Friction coefficient.
-    double alpha;
+    double alpha = 0.;
 
     ///Dilatancy coefficient (allowing non-associated plasticity).
-    double alphaPsi;
+    double alphaPsi = 0.;
 
     /// Tolerance of the error in the yield criterion.
-    double yieldTol;
+    double yieldTol = 0.;
 
     /// Maximum number of iterations in lambda search.
-    int newtonIter;
+    int newtonIter = 30;
 
     /// Maximum damage value.
-    double omegaCrit;
+    double omegaCrit = 0.;
 
     /// Parameter for damage computation from cumulative plastic strain
-    double a;
+    double a = 0.;
 
 public:
     DruckerPragerCutMat(int n, Domain * d);
-    virtual ~DruckerPragerCutMat();
 
-    virtual int hasMaterialModeCapability(MaterialMode mode);
+    bool hasMaterialModeCapability(MaterialMode mode) const override;
+    
+    bool hasCastingTimeSupport() const override { return true; }
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const;
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
 
-    virtual int hasNonLinearBehaviour() { return 1; }
-    virtual bool isCharacteristicMtrxSymmetric(MatResponseMode rMode) { return false; }
+    bool isCharacteristicMtrxSymmetric(MatResponseMode rMode) const override { return false; }
 
-    virtual const char *giveClassName() const { return "DruckerPragerCutMat"; }
-    virtual const char *giveInputRecordName() const { return _IFT_DruckerPragerCutMat_Name; }
+    const char *giveClassName() const override { return "DruckerPragerCutMat"; }
+    const char *giveInputRecordName() const override { return _IFT_DruckerPragerCutMat_Name; }
 
     /// Returns a reference to the basic elastic material.
     LinearElasticMaterial *giveLinearElasticMaterial() { return linearElasticMaterial; }
 
-    virtual int giveSizeOfFullHardeningVarsVector() { return 4; }
-    virtual int giveSizeOfReducedHardeningVarsVector(GaussPoint *) const { return 4; } //cummulative strain = one per each surface
+    int giveSizeOfFullHardeningVarsVector() const override { return 4; }
+    int giveSizeOfReducedHardeningVarsVector(GaussPoint *) const override { return 4; } //cummulative strain = one per each surface
 
 protected:
-    virtual int giveMaxNumberOfActiveYieldConds(GaussPoint *gp) { return 3; } //normally one less than number of all conditions
+    int giveMaxNumberOfActiveYieldConds(GaussPoint *gp) const override { return 3; } //normally one less than number of all conditions
 
-    virtual double computeYieldValueAt(GaussPoint *gp, int isurf, const FloatArray &stressVector, const FloatArray &strainSpaceHardeningVariables);
+    double computeYieldValueAt(GaussPoint *gp, int isurf, const FloatArray &stressVector, const FloatArray &strainSpaceHardeningVariables) const override;
 
-    virtual void computeStressGradientVector(FloatArray &answer, functType ftype, int isurf, GaussPoint *gp, const FloatArray &stressVector, const FloatArray &stressSpaceHardeningVars);
+    void computeStressGradientVector(FloatArray &answer, functType ftype, int isurf, GaussPoint *gp, const FloatArray &stressVector, const FloatArray &stressSpaceHardeningVars) const override;
 
     /// Computes second derivative of yield/loading function with respect to stress
-    virtual void computeReducedSSGradientMatrix(FloatMatrix &gradientMatrix,  int isurf, GaussPoint *gp, const FloatArray &fullStressVector, const FloatArray &strainSpaceHardeningVariables);
+    void computeReducedSSGradientMatrix(FloatMatrix &gradientMatrix,  int isurf, GaussPoint *gp, const FloatArray &fullStressVector, const FloatArray &strainSpaceHardeningVariables) const override;
 
-    virtual void computeReducedElasticModuli(FloatMatrix &answer, GaussPoint *gp, TimeStep *tStep);
+    void computeReducedElasticModuli(FloatMatrix &answer, GaussPoint *gp, TimeStep *tStep) const override;
 
     /// Functions related to hardening
-    virtual int hasHardening() { return 1; }
+    int hasHardening() const override { return 1; }
 
     /// Compute dot(kappa_1), dot(kappa_2) etc.
-    virtual void computeStrainHardeningVarsIncrement(FloatArray &answer, GaussPoint *gp, const FloatArray &stress, const FloatArray &dlambda, const FloatArray &dplasticStrain, const IntArray &activeConditionMap);
+    void computeStrainHardeningVarsIncrement(FloatArray &answer, GaussPoint *gp, const FloatArray &stress, const FloatArray &dlambda, const FloatArray &dplasticStrain, const IntArray &activeConditionMap) const override;
 
     /// Computes the derivative of yield/loading function with respect to kappa_1, kappa_2 etc.
-    virtual void computeKGradientVector(FloatArray &answer, functType ftype, int isurf, GaussPoint *gp, FloatArray &fullStressVector, const FloatArray &strainSpaceHardeningVariables);
+    void computeKGradientVector(FloatArray &answer, functType ftype, int isurf, GaussPoint *gp, FloatArray &fullStressVector, const FloatArray &strainSpaceHardeningVariables) const override;
 
     /// computes mixed derivative of load function with respect to stress and hardening variables
-    virtual void computeReducedSKGradientMatrix(FloatMatrix &gradientMatrix, int isurf, GaussPoint *gp, const FloatArray &fullStressVector, const FloatArray &strainSpaceHardeningVariables);
+    void computeReducedSKGradientMatrix(FloatMatrix &gradientMatrix, int isurf, GaussPoint *gp, const FloatArray &fullStressVector, const FloatArray &strainSpaceHardeningVariables) const override;
 
     /// computes dk(i)/dsig(j) gradient matrix
-    virtual void computeReducedHardeningVarsSigmaGradient(FloatMatrix &answer, GaussPoint *gp, const IntArray &activeConditionMap, const FloatArray &fullStressVector, const FloatArray &strainSpaceHardeningVars, const FloatArray &dlambda);
+    void computeReducedHardeningVarsSigmaGradient(FloatMatrix &answer, GaussPoint *gp, const IntArray &activeConditionMap, const FloatArray &fullStressVector, const FloatArray &strainSpaceHardeningVars, const FloatArray &dlambda) const override;
 
     /// computes dKappa_i/dLambda_j
-    virtual void computeReducedHardeningVarsLamGradient(FloatMatrix &answer, GaussPoint *gp, int actSurf, const IntArray &activeConditionMap, const FloatArray &fullStressVector, const FloatArray &strainSpaceHardeningVars, const FloatArray &dlambda);
+    void computeReducedHardeningVarsLamGradient(FloatMatrix &answer, GaussPoint *gp, int actSurf, const IntArray &activeConditionMap, const FloatArray &fullStressVector, const FloatArray &strainSpaceHardeningVars, const FloatArray &dlambda) const override;
 
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 };
 } // end namespace oofem
 #endif // druckerpragercatmat_h

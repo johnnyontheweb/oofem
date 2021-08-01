@@ -54,12 +54,12 @@ SpatialLocalizerInterface :: SpatialLocalizerI_containsPoint(const FloatArray &c
 void
 SpatialLocalizerInterface :: SpatialLocalizerI_giveBBox(FloatArray &bb0, FloatArray &bb1)
 {
-    bb1 = bb0 = * element->giveNode(1)->giveCoordinates();
+    bb1 = bb0 = element->giveNode(1)->giveCoordinates();
 
     for ( int i = 2; i <= element->giveNumberOfNodes(); ++i ) {
-        FloatArray *coordinates = element->giveNode(i)->giveCoordinates();
-        bb0.beMinOf(bb0, * coordinates);
-        bb1.beMaxOf(bb1, * coordinates);
+        const auto &coordinates = element->giveNode(i)->giveCoordinates();
+        bb0.beMinOf(bb0, coordinates);
+        bb1.beMaxOf(bb1, coordinates);
     }
 }
 
@@ -71,7 +71,7 @@ SpatialLocalizerInterface :: SpatialLocalizerI_giveClosestPoint(FloatArray &lcoo
 
     if ( !interp->global2local( lcoords, gcoords, FEIElementGeometryWrapper(element) ) ) { // Outside element
         interp->local2global( closest, lcoords, FEIElementGeometryWrapper(element) );
-        return closest.distance(gcoords);
+        return distance(closest, gcoords);
     } else {
         closest = gcoords;
         return 0.0;
@@ -113,7 +113,7 @@ SpatialLocalizer :: giveAllElementsWithNodesWithinBox(elementContainerType &elem
     for ( int node: nodesWithinBox ) {
         dofmanConnectivity = ct->giveDofManConnectivityArray(node);
         for ( int i = 1; i <= dofmanConnectivity->giveSize(); i++ ) {
-            elemSet.insert( dofmanConnectivity->at(i) );
+            elemSet.insertSortedOnce( dofmanConnectivity->at(i) );
         }
     }
 }

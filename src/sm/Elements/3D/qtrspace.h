@@ -35,8 +35,8 @@
 #ifndef qtrspace_h
 #define qtrspace_h
 
-#include "Elements/structural3delement.h"
-#include "ErrorEstimators/huertaerrorestimator.h"
+#include "sm/Elements/structural3delement.h"
+#include "sm/ErrorEstimators/huertaerrorestimator.h"
 #include "zznodalrecoverymodel.h"
 #include "nodalaveragingrecoverymodel.h"
 #include "sprnodalrecoverymodel.h"
@@ -58,7 +58,6 @@ class FEI3dTetQuad;
  * - calculating its B,D,N matrices and dV.
  */
 class QTRSpace : public Structural3DElement, public SPRNodalRecoveryModelInterface, public ZZNodalRecoveryModelInterface, public NodalAveragingRecoveryModelInterface
-
 {
 protected:
     static FEI3dTetQuad interpolation;
@@ -67,25 +66,24 @@ public:
     QTRSpace(int, Domain *);
     virtual ~QTRSpace() { }
 
-    virtual FEInterpolation *giveInterpolation() const;
+    FEInterpolation *giveInterpolation() const override;
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual Interface *giveInterface(InterfaceType);
-    virtual int testElementExtension(ElementExtension ext) { return ( ( ext == Element_SurfaceLoadSupport ) ? 1 : 0 ); }
-    virtual int giveNumberOfIPForMassMtrxIntegration() { return 5; }
+    Interface *giveInterface(InterfaceType) override;
+    int testElementExtension(ElementExtension ext) override { return ( ( ext == Element_SurfaceLoadSupport ) ? 1 : 0 ); }
+    int giveNumberOfIPForMassMtrxIntegration() override { return 5; }
 
-    virtual void SPRNodalRecoveryMI_giveSPRAssemblyPoints(IntArray &pap);
-    virtual void SPRNodalRecoveryMI_giveDofMansDeterminedByPatch(IntArray &answer, int pap);
-    virtual int SPRNodalRecoveryMI_giveNumberOfIP();
-    virtual SPRPatchType SPRNodalRecoveryMI_givePatchType();
+    void SPRNodalRecoveryMI_giveSPRAssemblyPoints(IntArray &pap) override;
+    void SPRNodalRecoveryMI_giveDofMansDeterminedByPatch(IntArray &answer, int pap) override;
+    int SPRNodalRecoveryMI_giveNumberOfIP() override;
+    SPRPatchType SPRNodalRecoveryMI_givePatchType() override;
 
-    virtual void NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node, InternalStateType type, TimeStep *tStep);
+    void NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node, InternalStateType type, TimeStep *tStep) override;
 
     // definition & identification
-    virtual const char *giveInputRecordName() const { return _IFT_QTRSpace_Name; }
-    virtual const char *giveClassName() const { return "QTRSpace"; }
-
+    const char *giveInputRecordName() const override { return _IFT_QTRSpace_Name; }
+    const char *giveClassName() const override { return "QTRSpace"; }
 };
 } // end namespace oofem
 #endif

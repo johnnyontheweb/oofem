@@ -48,32 +48,22 @@
 #include <list>
 
 namespace oofem {
-IRResultType Set :: initializeFrom(InputRecord *ir)
+void Set :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;
+    FEMComponent :: initializeFrom(ir);
 
     IntArray inputNodes;
     std :: list< Range >inputNodeRanges;
-    if ( ir->hasField(_IFT_Set_allNodes) ) { // generate a list with all the node numbers
-       // this->nodes.enumerate(this->giveDomain()->giveNumberOfDofManagers()); 
-		int maxValue = this->giveDomain()->giveNumberOfDofManagers();
-		this->nodes.resize(maxValue);
-		for (int i = 1; i <= maxValue; ++i) {
-			this->nodes.at(i) = this->giveDomain()->giveDofManager(i)->giveLabel();
-		}
+    if ( ir.hasField(_IFT_Set_allNodes) ) { // generate a list with all the node numbers
+       this->nodes.enumerate(this->giveDomain()->giveNumberOfDofManagers()); 
     } else {
         IR_GIVE_OPTIONAL_FIELD(ir, inputNodes, _IFT_Set_nodes);
         IR_GIVE_OPTIONAL_FIELD(ir, inputNodeRanges, _IFT_Set_nodeRanges);
         this->computeIntArray(this->nodes, inputNodes, inputNodeRanges);
     }
 
-    if ( ir->hasField(_IFT_Set_allElements) ) { // generate a list with all the element numbers
-        // this->elements.enumerate(this->giveDomain()->giveNumberOfElements());
-		int maxValue = this->giveDomain()->giveNumberOfElements();
-		this->elements.resize(maxValue);
-		for (int i = 1; i <= maxValue; ++i) {
-			this->elements.at(i) = this->giveDomain()->giveElement(i)->giveLabel();
-		}
+    if ( ir.hasField(_IFT_Set_allElements) ) { // generate a list with all the element numbers
+        this->elements.enumerate(this->giveDomain()->giveNumberOfElements());
         mElementListIsSorted = false;
     } else {
         IntArray inputElements;
@@ -93,8 +83,6 @@ IRResultType Set :: initializeFrom(InputRecord *ir)
 
     this->elementSurfaces.clear();
     IR_GIVE_OPTIONAL_FIELD(ir, this->elementSurfaces, _IFT_Set_elementSurfaces);
-
-    return FEMComponent :: initializeFrom(ir);
 }
 
 
@@ -160,46 +148,42 @@ const IntArray &Set :: giveNodeList()
         IntArray afflictedNodes( this->domain->giveNumberOfDofManagers() );
         afflictedNodes.zero();
         for ( int ielem = 1; ielem <= this->elements.giveSize(); ++ielem ) {
-            Element *e = this->domain->giveElement( this->elements.at(ielem) );
+            auto e = this->domain->giveElement( this->elements.at(ielem) );
             for ( int inode = 1; inode <= e->giveNumberOfNodes(); ++inode ) {
                 afflictedNodes.at( e->giveNode(inode)->giveNumber() ) = 1;
             }
         }
         
         /* boundary entities are obsolete, use edges and/or surfaces instead */
-        IntArray bNodes;
         for ( int ibnd = 1; ibnd <= this->elementBoundaries.giveSize() / 2; ++ibnd ) {
-            Element *e = this->domain->giveElement( this->elementBoundaries.at(ibnd * 2 - 1) );
-            int boundary = this->elementBoundaries.at(ibnd * 2);
-            FEInterpolation *fei = e->giveInterpolation();
-            fei->boundaryGiveNodes(bNodes, boundary);
+            auto e = this->domain->giveElement( this->elementBoundaries.at(ibnd * 2 - 1) );
+            auto boundary = this->elementBoundaries.at(ibnd * 2);
+            auto fei = e->giveInterpolation();
+            auto bNodes = fei->boundaryGiveNodes(boundary);
             for ( int inode = 1; inode <= bNodes.giveSize(); ++inode ) {
                 afflictedNodes.at( e->giveNode( bNodes.at(inode) )->giveNumber() ) = 1;
             }
         }
 
-        IntArray eNodes;
         for ( int iedge = 1; iedge <= this->elementEdges.giveSize() / 2; ++iedge ) {
-            Element *e = this->domain->giveElement( this->elementEdges.at(iedge * 2 - 1) );
-            int edge = this->elementEdges.at(iedge * 2);
-            FEInterpolation *fei = e->giveInterpolation();
-            fei->boundaryEdgeGiveNodes(eNodes, edge);
+            auto e = this->domain->giveElement( this->elementEdges.at(iedge * 2 - 1) );
+            auto edge = this->elementEdges.at(iedge * 2);
+            auto fei = e->giveInterpolation();
+            auto eNodes = fei->boundaryEdgeGiveNodes(edge);
             for ( int inode = 1; inode <= eNodes.giveSize(); ++inode ) {
                 afflictedNodes.at( e->giveNode( eNodes.at(inode) )->giveNumber() ) = 1;
             }
         }
 
         for ( int isurf = 1; isurf <= this->elementSurfaces.giveSize() / 2; ++isurf ) {
-            Element *e = this->domain->giveElement( this->elementSurfaces.at(isurf * 2 - 1) );
-            int surf = this->elementSurfaces.at(isurf * 2);
-            FEInterpolation *fei = e->giveInterpolation();
-            fei->boundarySurfaceGiveNodes(eNodes, surf);
+            auto e = this->domain->giveElement( this->elementSurfaces.at(isurf * 2 - 1) );
+            auto surf = this->elementSurfaces.at(isurf * 2);
+            auto fei = e->giveInterpolation();
+            auto eNodes = fei->boundarySurfaceGiveNodes(surf);
             for ( int inode = 1; inode <= eNodes.giveSize(); ++inode ) {
                 afflictedNodes.at( e->giveNode( eNodes.at(inode) )->giveNumber() ) = 1;
             }
         }
-
-        
 
         for ( int inode = 1; inode <= this->nodes.giveSize(); ++inode ) {
             afflictedNodes.at( this->nodes.at(inode) ) = 1;
@@ -274,15 +258,12 @@ void Set :: updateLocalElementNumbering(EntityRenumberingFunctor &f)
 }
 
 
-contextIOResultType Set :: saveContext(DataStream &stream, ContextMode mode, void *obj)
+void Set :: saveContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-
-    if ( ( iores = FEMComponent :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
+    FEMComponent :: saveContext(stream, mode);
 
     if ( ( mode & CM_Definition ) ) {
+        contextIOResultType iores;
         if ( ( iores = elements.storeYourself(stream) ) != CIO_OK ) {
             THROW_CIOERR(iores);
         }
@@ -296,19 +277,14 @@ contextIOResultType Set :: saveContext(DataStream &stream, ContextMode mode, voi
             THROW_CIOERR(iores);
         }
     }
-
-    return CIO_OK;
 }
 
-contextIOResultType Set :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
+void Set :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-
-    if ( ( iores = FEMComponent :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
+    FEMComponent :: restoreContext(stream, mode);
 
     if ( mode & CM_Definition ) {
+        contextIOResultType iores;
         if ( ( iores = elements.restoreYourself(stream) ) != CIO_OK ) {
             THROW_CIOERR(iores);
         }
@@ -324,7 +300,5 @@ contextIOResultType Set :: restoreContext(DataStream &stream, ContextMode mode, 
     }
 
     this->totalNodes.clear();
-
-    return CIO_OK;
 }
 }

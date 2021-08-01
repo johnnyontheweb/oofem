@@ -33,8 +33,8 @@
  */
 
 #include "angle.h"
-#include "../sm/Elements/Plates/dkt3d.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Elements/Plates/dkt3d.h"
+#include "sm/Materials/structuralms.h"
 #include "fei2dtrlin.h"
 #include "node.h"
 #include "load.h"
@@ -54,23 +54,17 @@ DKTPlate3d :: DKTPlate3d(int n, Domain *aDomain) : DKTPlate(n, aDomain)
 
 
 void
-DKTPlate3d :: giveLocalCoordinates(FloatArray &answer, FloatArray &global)
-// Returns global coordinates given in global vector
-// transformed into local coordinate system of the
-// receiver
+DKTPlate3d :: giveLocalCoordinates(FloatArray &answer, const FloatArray &global)
 {
-    FloatArray offset;
-    // test the parametr
     if ( global.giveSize() != 3 ) {
         OOFEM_ERROR("cannot transform coordinates - size mismatch");
-        exit(1);
     }
 
     // first ensure that receiver's GtoLRotationMatrix[3,3] is defined
     this->computeGtoLRotationMatrix();
 
-    offset = global;
-    offset.subtract( * this->giveNode(1)->giveCoordinates() );
+    FloatArray offset;
+    offset.beDifferenceOf(global, this->giveNode(1)->giveCoordinates() );
     answer.beProductOf(GtoLRotationMatrix, offset);
 }
 
@@ -82,9 +76,9 @@ DKTPlate3d :: giveNodeCoordinates(double &x1, double &x2, double &x3,
 {
     FloatArray nc1(3), nc2(3), nc3(3);
 
-    this->giveLocalCoordinates( nc1, * ( this->giveNode(1)->giveCoordinates() ) );
-    this->giveLocalCoordinates( nc2, * ( this->giveNode(2)->giveCoordinates() ) );
-    this->giveLocalCoordinates( nc3, * ( this->giveNode(3)->giveCoordinates() ) );
+    this->giveLocalCoordinates( nc1, this->giveNode(1)->giveCoordinates() );
+    this->giveLocalCoordinates( nc2, this->giveNode(2)->giveCoordinates() );
+    this->giveLocalCoordinates( nc3, this->giveNode(3)->giveCoordinates() );
 
     x1 = nc1.at(1);
     x2 = nc2.at(1);
@@ -124,8 +118,8 @@ DKTPlate3d :: computeGtoLRotationMatrix()
         FloatArray e1, e2, e3, help;
 
         // compute e1' = [N2-N1]  and  help = [N3-N1]
-        e1.beDifferenceOf(*this->giveNode(2)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
-        help.beDifferenceOf(*this->giveNode(3)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
+        e1.beDifferenceOf(this->giveNode(2)->giveCoordinates(), this->giveNode(1)->giveCoordinates());
+        help.beDifferenceOf(this->giveNode(3)->giveCoordinates(), this->giveNode(1)->giveCoordinates());
 
         // let us normalize e1'
         e1.normalize();
@@ -135,20 +129,20 @@ DKTPlate3d :: computeGtoLRotationMatrix()
         // let us normalize
         e3.normalize();
 
-		//if (la1.computeNorm() != 0) {
-		//	// custom local axes
-		//	e1 = la1;
-		//}
+	//if (la1.computeNorm() != 0) {
+	//  // custom local axes
+	//  e1 = la1;
+	//}
 
         // now from e3' x e1' compute e2'
         e2.beVectorProductOf(e3, e1);
 
-		// rotate as to have the 1st local axis equal to la1
-		if (la1.computeNorm() != 0) {
-			double ang = -Angle::giveAngleIn3Dplane(la1, e1, e3); // radians
-			e1 = Angle::rotate(e1, e3, ang);
-			e2 = Angle::rotate(e2, e3, ang);
-		}
+	// rotate as to have the 1st local axis equal to la1
+	if (la1.computeNorm() != 0) {
+	    double ang = -Angle::giveAngleIn3Dplane(la1, e1, e3); // radians
+	    e1 = Angle::rotate(e1, e3, ang);
+	    e2 = Angle::rotate(e2, e3, ang);
+	}
         // rot. matrix
         GtoLRotationMatrix.resize(3, 3);
 
@@ -202,10 +196,8 @@ DKTPlate3d :: giveCharacteristicTensor(FloatMatrix &answer, CharTensor type, Gau
         answer.at(3, 1) = charVect.at(4);
         answer.at(2, 3) = charVect.at(5);
         answer.at(3, 2) = charVect.at(5);
-    } else if ( ( type == LocalMomentumTensor ) || ( type == GlobalMomentumTensor ) ) {
-		//FloatArray strain;
-		//this->computeStrainVector(strain, gp, tStep);
-		//this->computeStressVector(charVect, strain, gp, tStep);
+    } else if ( ( type == LocalMomentTensor ) || ( type == GlobalMomentTensor ) ) {
+        //this->computeStressVector(charVect, gp, tStep);
         charVect = ms->giveStressVector();
 
         answer.at(1, 1) = charVect.at(1);
@@ -213,11 +205,11 @@ DKTPlate3d :: giveCharacteristicTensor(FloatMatrix &answer, CharTensor type, Gau
         answer.at(1, 2) = charVect.at(3);
         answer.at(2, 1) = charVect.at(3);
 
-		// shear contributions
-		answer.at(1, 3) = charVect.at(4);
-		answer.at(3, 1) = charVect.at(4);
-		answer.at(2, 3) = charVect.at(5);
-		answer.at(3, 2) = charVect.at(5);
+	// shear contributions
+	answer.at(1, 3) = charVect.at(4);
+	answer.at(3, 1) = charVect.at(4);
+	answer.at(2, 3) = charVect.at(5);
+	answer.at(3, 2) = charVect.at(5);
     } else if ( ( type == LocalStrainTensor ) || ( type == GlobalStrainTensor ) ) {
         //this->computeStrainVector(charVect, gp, tStep);
         charVect = ms->giveStrainVector();
@@ -239,7 +231,7 @@ DKTPlate3d :: giveCharacteristicTensor(FloatMatrix &answer, CharTensor type, Gau
         exit(1);
     }
 
-    if ( ( type == GlobalForceTensor  ) || ( type == GlobalMomentumTensor  ) ||
+    if ( ( type == GlobalForceTensor  ) || ( type == GlobalMomentTensor  ) ||
         ( type == GlobalStrainTensor ) || ( type == GlobalCurvatureTensor ) ) {
         this->computeGtoLRotationMatrix();
         answer.rotatedWith(GtoLRotationMatrix);
@@ -257,9 +249,9 @@ DKTPlate3d :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
 
     if (  type == IST_CurvatureTensor || type == IST_ShellStrainTensor ) {
         if ( type == IST_CurvatureTensor ) {
-			cht = GlobalCurvatureTensor;
+            cht = GlobalCurvatureTensor;
         } else {
-			cht = GlobalStrainTensor;
+            cht = GlobalStrainTensor;
         }
 
         this->giveCharacteristicTensor(globTensor, cht, gp, tStep);
@@ -274,9 +266,9 @@ DKTPlate3d :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
         return 1;
     } else if ( type == IST_ShellMomentTensor || type == IST_ShellForceTensor ) {
         if ( type == IST_ShellMomentTensor ) {
-			cht = GlobalMomentumTensor;
+            cht = GlobalMomentTensor;
         } else {
-			cht = GlobalForceTensor;
+            cht = GlobalForceTensor;
         }
 
         this->giveCharacteristicTensor(globTensor, cht, gp, tStep);
@@ -357,14 +349,6 @@ DKTPlate3d :: giveSurfaceDofMapping(IntArray &answer, int iSurf) const
     }
 }
 
-IntegrationRule *
-DKTPlate3d :: GetSurfaceIntegrationRule(int approxOrder)
-{
-    IntegrationRule *iRule = new GaussIntegrationRule(1, this, 1, 1);
-    int npoints = iRule->getRequiredNumberOfIntegrationPoints(_Triangle, approxOrder);
-    iRule->SetUpPointsOnTriangle(npoints, _Unknown);
-    return iRule;
-}
 
 double
 DKTPlate3d :: computeSurfaceVolumeAround(GaussPoint *gp, int iSurf)
@@ -470,26 +454,22 @@ DKTPlate3d :: computeLoadLEToLRotationMatrix(FloatMatrix &answer, int iEdge, Gau
     //
     // i.e. f(element local) = T * f(edge local)
     //
-    double dx, dy, length;
-    IntArray edgeNodes;
-    Node *nodeA, *nodeB;
+
+    const auto &edgeNodes = this->interp_lin.computeLocalEdgeMapping(iEdge);
+
+    auto nodeA = this->giveNode( edgeNodes.at(1) );
+    auto nodeB = this->giveNode( edgeNodes.at(2) );
+
+    FloatArray cb(3), ca(3);
+    this->giveLocalCoordinates (ca, nodeA->giveCoordinates() );
+    this->giveLocalCoordinates (cb, nodeB->giveCoordinates() );
+
+    double dx = cb.at(1) - ca.at(1);
+    double dy = cb.at(2) - ca.at(2);
+    double length = sqrt(dx * dx + dy * dy);
 
     answer.resize(3, 3);
     answer.zero();
-
-    this->interp_lin.computeLocalEdgeMapping(edgeNodes, iEdge);
-
-    nodeA = this->giveNode( edgeNodes.at(1) );
-    nodeB = this->giveNode( edgeNodes.at(2) );
-
-    FloatArray cb(3), ca(3);
-    this->giveLocalCoordinates (ca, * (nodeA->giveCoordinates() ) );
-    this->giveLocalCoordinates (cb, * (nodeB->giveCoordinates() ) );
-
-    dx = cb.at(1) - ca.at(1);
-    dy = cb.at(2) - ca.at(2);
-    length = sqrt(dx * dx + dy * dy);
-
     answer.at(1, 1) = 1.0;
     answer.at(2, 2) = dx / length;
     answer.at(2, 3) = -dy / length;
@@ -509,9 +489,9 @@ DKTPlate3d :: computeLocalCoordinates(FloatArray &answer, const FloatArray &coor
     FloatArray inputCoords_ElCS;
     std::vector< FloatArray > lc(3);
     FloatArray llc;
-    this->giveLocalCoordinates( inputCoords_ElCS, const_cast< FloatArray & >(coords) );
+    this->giveLocalCoordinates( inputCoords_ElCS, coords );
     for ( int _i = 0; _i < 3; _i++ ) {
-        this->giveLocalCoordinates( lc [ _i ], * this->giveNode(_i + 1)->giveCoordinates() );
+        this->giveLocalCoordinates( lc [ _i ], this->giveNode(_i + 1)->giveCoordinates() );
     }
     FEI2dTrLin _interp(1, 2);
     bool inplane = _interp.global2local(llc, inputCoords_ElCS, FEIVertexListGeometryWrapper(lc)) > 0;
@@ -532,7 +512,7 @@ DKTPlate3d :: computeGlobalCoordinates(FloatArray &answer, const FloatArray &lco
     double l1 = lcoords.at(1);
     double l2 = lcoords.at(2);
     double l3 = 1. - l2 - l1;
-
+    
     answer.resize(3);
     for ( int _i = 1; _i <= 3; _i++ ) {
         answer.at(_i) = l1 * this->giveNode(1)->giveCoordinate(_i) + l2 *this->giveNode(2)->giveCoordinate(_i) + l3 *this->giveNode(3)->giveCoordinate(_i);

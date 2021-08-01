@@ -101,13 +101,13 @@ ScalarFunction :: setReference(int val)
 void
 ScalarFunction::setMultiplierReference(int val)
 {
-	this->dvType = DV_FunctionMultiplierType;
-	this->fReference = val;
+    this->dvType = DV_FunctionMultiplierType;
+    this->fReference = val;
 }
 
 
 double
-ScalarFunction :: eval(std :: map< std :: string, FunctionArgument >valDict, Domain *d, GaussPoint *gp, double param) const
+ScalarFunction :: eval(const std :: map< std :: string, FunctionArgument >valDict, Domain *d, GaussPoint *gp, double param) const
 {
     if ( this->dvType == DV_ValueType ) {
         return this->dValue;
@@ -147,13 +147,13 @@ ScalarFunction :: eval(std :: map< std :: string, FunctionArgument >valDict, Dom
             OOFEM_ERROR( "Function @%d did not return a scalar (size = %d)", this->fReference, val.giveSize() );
         }
         return val.at(1);
-	} else if (this->dvType == DV_FunctionMultiplierType) {
-		FloatArray val;
-		d->giveFunction(this->fReference)->evaluate(val, valDict, gp, param);
-		if (val.giveSize() != 1) {
-			OOFEM_ERROR("Function @%d did not return a scalar (size = %d)", this->fReference, val.giveSize());
-		}
-		return val.at(1) * this->dValue;
+    } else if (this->dvType == DV_FunctionMultiplierType) {
+	FloatArray val;
+	d->giveFunction(this->fReference)->evaluate(val, valDict, gp, param);
+	if (val.giveSize() != 1) {
+	    OOFEM_ERROR("Function @%d did not return a scalar (size = %d)", this->fReference, val.giveSize());
+	}
+	return val.at(1) * this->dValue;
     }
     return 0.;
 }

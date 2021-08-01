@@ -35,8 +35,8 @@
 #ifndef quad2platesubsoil_H
 #define quad2platesubsoil_H
 
-#include "../sm/Elements/structuralelement.h"
-#include "../sm/Elements/quad1platesubsoil.h"
+#include "sm/Elements/structuralelement.h"
+#include "sm/Elements/quad1platesubsoil.h"
 
 #define _IFT_Quad2PlateSubSoil_Name "quad2platesubsoil"
 #define _IFT_Quad2PlateSubSoil_lcs "lcs1"
@@ -68,23 +68,30 @@ public:
     Quad2PlateSubSoil(int n, Domain * d);
     virtual ~Quad2PlateSubSoil() { }
 
-    virtual FEInterpolation *giveInterpolation() const;
-    virtual FEInterpolation *giveInterpolation(DofIDItem id) const;
+    FEInterpolation *giveInterpolation() const override;
+    FEInterpolation *giveInterpolation(DofIDItem id) const override;
 
     // definition & identification
-    virtual const char *giveInputRecordName() const { return _IFT_Quad2PlateSubSoil_Name; }
-    virtual const char *giveClassName() const { return "Quad2PlateSubSoil"; }
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    const char *giveInputRecordName() const override { return _IFT_Quad2PlateSubSoil_Name; }
+    const char *giveClassName() const override { return "Quad2PlateSubSoil"; }
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual int computeNumberOfDofs() { return 8; }
+    int computeNumberOfDofs() override { return 8; }
 
 protected:
-    virtual void computeGaussPoints();
-    virtual void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int = 1, int = ALL_STRAINS);
-	virtual void NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,
-		InternalStateType type, TimeStep *tStep);
-    virtual void SPRNodalRecoveryMI_giveSPRAssemblyPoints(IntArray &pap);
-    virtual void SPRNodalRecoveryMI_giveDofMansDeterminedByPatch(IntArray &answer, int pap);
+    void computeGaussPoints() override;
+    void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int = 1, int = ALL_STRAINS) override;
+
+    void NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,
+        InternalStateType type, TimeStep *tStep) override;
+    void SPRNodalRecoveryMI_giveSPRAssemblyPoints(IntArray &pap) override;
+    void SPRNodalRecoveryMI_giveDofMansDeterminedByPatch(IntArray &answer, int pap) override;
+    /**
+     * @name Surface load support
+     */
+    void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer) override;    
+    void computeSurfaceNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords) override;
+    
 };
 } // end namespace oofem
 #endif // quad2platesubsoil_H

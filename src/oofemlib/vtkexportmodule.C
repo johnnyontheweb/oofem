@@ -66,24 +66,17 @@
 namespace oofem {
 REGISTER_ExportModule(VTKExportModule)
 
-VTKExportModule :: VTKExportModule(int n, EngngModel *e) : ExportModule(n, e), internalVarsToExport(), primaryVarsToExport()
+VTKExportModule :: VTKExportModule(int n, EngngModel *e) : ExportModule(n, e), internalVarsToExport(), primaryVarsToExport() { }
+
+
+VTKExportModule :: ~VTKExportModule() { }
+
+
+void
+VTKExportModule :: initializeFrom(InputRecord &ir)
 {
-    smoother = NULL;
-}
+    ExportModule :: initializeFrom(ir);
 
-
-VTKExportModule :: ~VTKExportModule()
-{
-    if ( this->smoother ) {
-        delete this->smoother;
-    }
-}
-
-
-IRResultType
-VTKExportModule :: initializeFrom(InputRecord *ir)
-{
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
     int val;
 
     IR_GIVE_OPTIONAL_FIELD(ir, cellVarsToExport, _IFT_VTKExportModule_cellvars);
@@ -93,8 +86,6 @@ VTKExportModule :: initializeFrom(InputRecord *ir)
     val = NodalRecoveryModel :: NRM_ZienkiewiczZhu;
     IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_VTKExportModule_stype);
     stype = ( NodalRecoveryModel :: NodalRecoveryModelType ) val;
-
-    return ExportModule :: initializeFrom(ir);
 }
 
 
@@ -115,8 +106,7 @@ VTKExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 
 
     Domain *d  = emodel->giveDomain(1);
-    FloatArray *coords;
-    int i, inode, nnodes = d->giveNumberOfDofManagers();
+    int inode, nnodes = d->giveNumberOfDofManagers();
     this->giveSmoother(); // make sure smoother is created
 
     // output points
@@ -131,12 +121,12 @@ VTKExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 
     OOFEM_LOG_DEBUG("vktexportModule: %d %d\n", nnodes, regionDofMans);
     for ( inode = 1; inode <= regionDofMans; inode++ ) {
-        coords = d->giveNode( map.at(inode) )->giveCoordinates();
-        for ( i = 1; i <= coords->giveSize(); i++ ) {
-            fprintf( stream, "%e ", coords->at(i) );
+        const auto &coords = d->giveNode( map.at(inode) )->giveCoordinates();
+        for ( double s : coords ) {
+            fprintf( stream, "%e ", s );
         }
 
-        for ( i = coords->giveSize() + 1; i <= 3; i++ ) {
+        for ( int i = coords.giveSize() + 1; i <= 3; i++ ) {
             fprintf(stream, "%e ", 0.0);
         }
 
@@ -176,7 +166,7 @@ VTKExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
         nelemNodes = this->giveNumberOfNodesPerCell(vtkCellType); //elem->giveNumberOfNodes(); // It HAS to be the same size as giveNumberOfNodesPerCell, otherwise the file will be incorrect.
         this->giveElementCell(cellNodes, elem.get(), 0);
         fprintf(stream, "%d ", nelemNodes);
-        for ( i = 1; i <= nelemNodes; i++ ) {
+        for ( int i = 1; i <= nelemNodes; i++ ) {
             fprintf(stream, "%d ", regionNodalNumbers.at( cellNodes.at(i) ) - 1);
         }
 
@@ -212,10 +202,7 @@ VTKExportModule :: doOutput(TimeStep *tStep, bool forcedOutput)
 void
 VTKExportModule :: initialize()
 {
-    if ( this->smoother ) {
-        delete this->smoother;
-        this->smoother = NULL;
-    }
+    this->smoother.reset();
     ExportModule :: initialize();
 }
 
@@ -553,7 +540,7 @@ VTKExportModule :: initRegionNodeNumbering(IntArray &regionNodalNumbers, int &re
                                            int offset, Domain *domain, int reg, int mode)
 {
     // if mode == 0 then regionNodalNumbers is array with mapping from global numbering to local region numbering.
-    // The i-th value contains the corresponding local region number (or zero, if global numbar is not in region).
+    // The i-th value contains the corresponding local region number (or zero, if global number is not in region).
 
     // if mode == 1 then regionNodalNumbers is array with mapping from local to global numbering.
     // The i-th value contains the corresponding global node number.
@@ -751,11 +738,11 @@ VTKExportModule :: giveSmoother()
 {
     Domain *d = emodel->giveDomain(1);
 
-    if ( this->smoother == NULL ) {
+    if ( !this->smoother ) {
         this->smoother = classFactory.createNodalRecoveryModel(this->stype, d);
     }
 
-    return this->smoother;
+    return this->smoother.get();
 }
 
 

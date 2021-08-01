@@ -74,77 +74,77 @@ namespace oofem {
 class DummyEnum : public StructuralEngngModel
 {
 protected:
-	int ist = 0;
-	int unktype = 0;
-	int doftype = 0;
-	int domtype = 0;
-	int matmode = 0;
-	int elgeom = 0;
-	int valmode = 0;
-	int matrespmode = 0;
-	int dofid = 0;
-	int chartype = 0;
-	int matmapalgo = 0;
-	int meshpack = 0;
-	int xfemstate = 0;
+    int ist = 0;
+    int unktype = 0;
+    int doftype = 0;
+    int domtype = 0;
+    int matmode = 0;
+    int elgeom = 0;
+    int valmode = 0;
+    int matrespmode = 0;
+    int dofid = 0;
+    int chartype = 0;
+    int matmapalgo = 0;
+    int meshpack = 0;
+    int xfemstate = 0;
 
-	int writeall = 1;
+    int writeall = 1;
 
 public:
-	DummyEnum(int i, EngngModel * _master = NULL) : StructuralEngngModel(i, _master) { }
+    DummyEnum(int i, EngngModel * _master = NULL) : StructuralEngngModel(i, _master) { }
     virtual ~DummyEnum() { }
 
-    virtual void updateYourself(TimeStep *tStep);
+    void updateYourself(TimeStep *tStep) override;
 
-    virtual void terminate(TimeStep *tStep);
+    void terminate(TimeStep *tStep) override;
 
-	virtual int instanciateYourself(DataReader *dr, InputRecord *ir, const char *dataOutputFileName, const char *desc);
+    int instanciateYourself(DataReader &dr, InputRecord &ir, const char* outFileName, const char* desc) override;
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-	virtual void postInitialize() {}
-	virtual int checkProblemConsistency() { return 1; }
-	//virtual void initStepIncrements() {};
+    void initializeFrom(InputRecord &ir) override;
+    void postInitialize() override {} 
+    virtual int checkProblemConsistency() { return 1; }
+    //virtual void initStepIncrements() {};
 
-	virtual void init() {}
+    void init() override {}
 
-	virtual void solveYourself();
+    void solveYourself() override;
 
     // identification
-    virtual const char *giveClassName() const { return "DummyEnum"; }
+    const char *giveClassName() const override { return "DummyEnum"; }
     virtual const char *giveInputRecordName() const { return _IFT_DummyEnum_Name; }
 
 private:
 
-	// the boolean is kept for eventual future writeall flags for each enum
-	template <typename T, typename std::enable_if<std::is_enum<T>::value>::type* = nullptr>
-	void doPrint(int num, bool all, const char* (*func)(T))
-	{
-		fprintf(outputStream, "\n\n");
+    // the boolean is kept for eventual future writeall flags for each enum
+    template <typename T, typename std::enable_if<std::is_enum<T>::value>::type* = nullptr>
+    void doPrint(int num, bool all, const char* (*func)(T))
+    {
+	fprintf(outputStream, "\n\n");
 
-		if (num){
-			fprintf(outputStream, "##############################");
-			fprintf(outputStream, "\n%s\n", typeid(T).name());
-			fprintf(outputStream, "%d - %d  ---  ", 0 , num);
-			if (all) {
-				fprintf(outputStream, "complete\n", 0, num);
-			} else {
-				fprintf(outputStream, "filtered\n", 0, num);
-			}
+	if (num){
+	    fprintf(outputStream, "##############################");
+	    fprintf(outputStream, "\n%s\n", typeid(T).name());
+	    fprintf(outputStream, "%d - %d  ---  ", 0 , num);
+	    if (all) {
+		fprintf(outputStream, "complete\n", 0, num);
+	    } else {
+		fprintf(outputStream, "filtered\n", 0, num);
+	    }
 
-			for (int c = 0; c <= num; c++){
-				T enVal = (T)(c);
-				const char *st = (*func)(enVal);
-				// write everything only if requested, else filter out "Unknown" entries
-				if (!all){
-					if (strcmp(st, "Unknown") == 0){ continue; }
-				}
-				// else write
-				fprintf(outputStream, "  %4d : ", c);
-				fprintf(outputStream, st);
-				fprintf(outputStream, "\n");
-			}
+	    for (int c = 0; c <= num; c++){
+		T enVal = (T)(c);
+		const char *st = (*func)(enVal);
+		// write everything only if requested, else filter out "Unknown" entries
+		if (!all){
+		    if (strcmp(st, "Unknown") == 0){ continue; }
 		}
+		// else write
+		fprintf(outputStream, "  %4d : ", c);
+		fprintf(outputStream, st);
+		fprintf(outputStream, "\n");
+	    }
 	}
+    }
 }; // end of class
 
 } // end namespace oofem

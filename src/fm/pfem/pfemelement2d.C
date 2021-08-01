@@ -67,10 +67,10 @@ PFEMElement2d :: ~PFEMElement2d()
 { }
 
 
-IRResultType
-PFEMElement2d :: initializeFrom(InputRecord *ir)
+void
+PFEMElement2d :: initializeFrom(InputRecord &ir)
 {
-    return this->PFEMElement :: initializeFrom(ir);
+    PFEMElement :: initializeFrom(ir);
 }
 
 int
@@ -328,42 +328,4 @@ PFEMElement2d :: computeEdgeVolumeAround(GaussPoint *gp, int iEdge)
     return detJ *gp->giveWeight();
 }
 
-
-void
-PFEMElement2d :: updateYourself(TimeStep *tStep)
-{
-    PFEMElement :: updateYourself(tStep);
-}
-
-
-void
-PFEMElement2d :: printOutputAt(FILE *file, TimeStep *stepN)
-// Performs end-of-step operations.
-{
-    PFEMElement :: printOutputAt(file, stepN);
-}
-
-
-contextIOResultType PFEMElement2d :: saveContext(DataStream *stream, ContextMode mode, void *obj)
-{
-    contextIOResultType iores;
-
-    if ( ( iores = PFEMElement :: saveContext(*stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    return CIO_OK;
-}
-
-
-contextIOResultType PFEMElement2d :: restoreContext(DataStream *stream, ContextMode mode, void *obj)
-{
-    contextIOResultType iores;
-
-    if ( ( iores = PFEMElement :: restoreContext(*stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    return CIO_OK;
-}
 } // end namespace oofem

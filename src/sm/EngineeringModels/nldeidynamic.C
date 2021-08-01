@@ -32,7 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/EngineeringModels/nldeidynamic.h"
+#include "sm/EngineeringModels/nldeidynamic.h"
 #include "timestep.h"
 #include "dofmanager.h"
 #include "element.h"
@@ -59,40 +59,29 @@ REGISTER_EngngModel(NlDEIDynamic);
 NlDEIDynamic :: NlDEIDynamic(int i, EngngModel *_master) : StructuralEngngModel(i, _master), massMatrix(), loadVector(),
     previousIncrementOfDisplacementVector(), displacementVector(),
     velocityVector(), accelerationVector(), internalForces(),
-    nMethod(NULL)
+    initFlag(1)
 {
     ndomains = 1;
-    initFlag = 1;
 }
 
 
 NlDEIDynamic :: ~NlDEIDynamic()
 { }
 
+
 NumericalMethod *NlDEIDynamic :: giveNumericalMethod(MetaStep *mStep)
-// Only one has reason for NlDEIDynamic
-//     - SolutionOfLinearEquations
-
 {
-    //return NULL;  // Not necessary here - Diagonal matrix and simple inversion is used.
-    if ( nMethod ) {
-        return nMethod;
+    if ( !nMethod ) {
+        nMethod = classFactory.createSparseLinSolver(solverType, this->giveDomain(1), this);
     }
-
-    nMethod = classFactory.createSparseLinSolver(solverType, this->giveDomain(1), this);
-
-    return nMethod;
+    return nMethod.get();
 }
 
-IRResultType
-NlDEIDynamic :: initializeFrom(InputRecord *ir)
-{
-    IRResultType result;                   // Required by IR_GIVE_FIELD macro
 
-    result = StructuralEngngModel :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+void
+NlDEIDynamic :: initializeFrom(InputRecord &ir)
+{
+    StructuralEngngModel :: initializeFrom(ir);
 
     IR_GIVE_FIELD(ir, dumpingCoef, _IFT_NlDEIDynamic_dumpcoef); // C = dumpingCoef * M
     IR_GIVE_FIELD(ir, deltaT, _IFT_NlDEIDynamic_deltat);
@@ -112,15 +101,13 @@ NlDEIDynamic :: initializeFrom(InputRecord *ir)
     communicator = new NodeCommunicator(this, commBuff, this->giveRank(),
                                         this->giveNumberOfProcesses());
 
-    if ( ir->hasField(_IFT_NlDEIDynamic_nonlocalext) ) {
+    if ( ir.hasField(_IFT_NlDEIDynamic_nonlocalext) ) {
         nonlocalExt = 1;
         nonlocCommunicator = new ElementCommunicator(this, commBuff, this->giveRank(),
                                                      this->giveNumberOfProcesses());
     }
 
 #endif
-
-    return IRRT_OK;
 }
 
 
@@ -160,6 +147,7 @@ double NlDEIDynamic :: giveUnknownComponent(ValueModeType mode, TimeStep *tStep,
     return 0.;
 }
 
+
 TimeStep *NlDEIDynamic :: giveNextStep()
 {
     int istep = 0;
@@ -173,11 +161,10 @@ TimeStep *NlDEIDynamic :: giveNextStep()
     }
 
     previousStep = std :: move(currentStep);
-    currentStep.reset( new TimeStep(istep, this, 1, totalTime, deltaT, counter) );
+    currentStep = std::make_unique<TimeStep>(istep, this, 1, totalTime, deltaT, counter);
 
     return currentStep.get();
 }
-
 
 
 void NlDEIDynamic :: solveYourself()
@@ -203,13 +190,7 @@ void NlDEIDynamic :: solveYourselfAt(TimeStep *tStep)
 
     Domain *domain = this->giveDomain(1);
     int neq = this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() );
-    int nman  = domain->giveNumberOfDofManagers();
-
-    DofManager *node;
-
-    int i, k, j, jj;
-    double coeff, maxDt, maxOm = 0.;
-    double prevIncrOfDisplacement, incrOfDisplacement;
+    double maxOm = 0.;
 
     if ( initFlag ) {
 #ifdef VERBOSE
@@ -231,16 +212,12 @@ void NlDEIDynamic :: solveYourselfAt(TimeStep *tStep)
 #ifdef __PARALLEL_MODE
             // Compute the processor part of load vector norm pMp
             this->pMp = 0.0;
-            double my_pMp = 0.0, coeff = 1.0;
-            int eqNum, ndofman = domain->giveNumberOfDofManagers();
-            dofManagerParallelMode dofmanmode;
-            DofManager *dman;
-            for ( int dm = 1; dm <= ndofman; dm++ ) {
-                dman = domain->giveDofManager(dm);
-                dofmanmode = dman->giveParallelMode();
+            double my_pMp = 0.0;
+            for ( auto &dman : domain->giveDofManagers() ) {
+                dofManagerParallelMode dofmanmode = dman->giveParallelMode();
 
                 // Skip all remote and null dofmanagers
-                coeff = 1.0;
+                double coeff = 1.0;
                 if ( ( dofmanmode == DofManager_remote ) || ( ( dofmanmode == DofManager_null ) ) ) {
                     continue;
                 } else if ( dofmanmode == DofManager_shared ) {
@@ -248,7 +225,8 @@ void NlDEIDynamic :: solveYourselfAt(TimeStep *tStep)
                 }
 
                 // For shared nodes we add locally an average = 1/givePartitionsConnectivitySize()*contribution,
-                for ( Dof *dof: *dman ) {
+                for ( auto &dof: *dman ) {
+                    int eqNum;
                     if ( dof->isPrimaryDof() && ( eqNum = dof->__giveEquationNumber() ) ) {
                         my_pMp += coeff * loadRefVector.at(eqNum) * loadRefVector.at(eqNum) / massMatrix.at(eqNum);
                     }
@@ -259,7 +237,7 @@ void NlDEIDynamic :: solveYourselfAt(TimeStep *tStep)
             MPI_Allreduce(& my_pMp, & pMp, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #else
             this->pMp = 0.0;
-            for ( i = 1; i <= neq; i++ ) {
+            for ( int i = 1; i <= neq; i++ ) {
                 pMp += loadRefVector.at(i) * loadRefVector.at(i) / massMatrix.at(i);
             }
 #endif
@@ -289,9 +267,7 @@ void NlDEIDynamic :: solveYourselfAt(TimeStep *tStep)
         accelerationVector.resize(neq);
         accelerationVector.zero();
 
-        for ( j = 1; j <= nman; j++ ) {
-            node = domain->giveDofManager(j);
-
+        for ( auto &node : domain->giveDofManagers()) {
             for ( Dof *dof: *node ) {
                 // Ask for initial values obtained from
                 // bc (boundary conditions) and ic (initial conditions)
@@ -300,7 +276,7 @@ void NlDEIDynamic :: solveYourselfAt(TimeStep *tStep)
                     continue;
                 }
 
-                jj = dof->__giveEquationNumber();
+                int jj = dof->__giveEquationNumber();
                 if ( jj ) {
                     displacementVector.at(jj) = dof->giveUnknown(VM_Total, tStep);
                     velocityVector.at(jj)     = dof->giveUnknown(VM_Velocity, tStep);
@@ -330,7 +306,7 @@ void NlDEIDynamic :: solveYourselfAt(TimeStep *tStep)
 	  OOFEM_LOG_RELEVANT("deltaT reduced to %e, Tmin is %e, nsteps is %d\n", this->deltaT, maxDt * M_PI, newNumberOfSteps);	  
         }
 
-        for ( j = 1; j <= neq; j++ ) {
+        for ( int j = 1; j <= neq; j++ ) {
             previousIncrementOfDisplacementVector.at(j) =  velocityVector.at(j) * ( deltaT );
             displacementVector.at(j) -= previousIncrementOfDisplacementVector.at(j);
         }
@@ -350,7 +326,7 @@ void NlDEIDynamic :: solveYourselfAt(TimeStep *tStep)
     tStep->incrementStateCounter();
 
     // Compute internal forces.
-    this->giveInternalForces(internalForces, false, 1, tStep);
+    this->updateInternalRHS(internalForces, tStep, this->giveDomain(1), nullptr);
 
     if ( !drFlag ) {
         //
@@ -367,15 +343,11 @@ void NlDEIDynamic :: solveYourselfAt(TimeStep *tStep)
         pt = 0.0;
 
 #ifdef __PARALLEL_MODE
-        double my_pt = 0.0, coeff = 1.0;
-        int eqNum, ndofman = domain->giveNumberOfDofManagers();
-        dofManagerParallelMode dofmanmode;
-        DofManager *dman;
-        for ( int dm = 1; dm <= ndofman; dm++ ) {
-            dman = domain->giveDofManager(dm);
-            dofmanmode = dman->giveParallelMode();
+        double my_pt = 0.0;
+        for ( auto &dman : domain->giveDofManagers() ) {
+            dofManagerParallelMode dofmanmode = dman->giveParallelMode();
             // skip all remote and null dofmanagers
-            coeff = 1.0;
+            double coeff = 1.0;
             if ( ( dofmanmode == DofManager_remote ) || ( dofmanmode == DofManager_null ) ) {
                 continue;
             } else if ( dofmanmode == DofManager_shared ) {
@@ -383,7 +355,8 @@ void NlDEIDynamic :: solveYourselfAt(TimeStep *tStep)
             }
 
             // For shared nodes we add locally an average= 1/givePartitionsConnectivitySize()*contribution.
-            for ( Dof *dof: *dman ) {
+            for ( auto &dof: *dman ) {
+                int eqNum;
                 if ( dof->isPrimaryDof() && ( eqNum = dof->__giveEquationNumber() ) ) {
                     my_pt += coeff * internalForces.at(eqNum) * loadRefVector.at(eqNum) / massMatrix.at(eqNum);
                 }
@@ -393,7 +366,7 @@ void NlDEIDynamic :: solveYourselfAt(TimeStep *tStep)
         // Sum up the contributions from processors.
         MPI_Allreduce(& my_pt, & pt, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #else
-        for ( k = 1; k <= neq; k++ ) {
+        for ( int k = 1; k <= neq; k++ ) {
             pt += internalForces.at(k) * loadRefVector.at(k) / massMatrix.at(k);
         }
 
@@ -406,7 +379,7 @@ void NlDEIDynamic :: solveYourselfAt(TimeStep *tStep)
         }
 
         loadVector.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ) );
-        for ( k = 1; k <= neq; k++ ) {
+        for ( int k = 1; k <= neq; k++ ) {
             loadVector.at(k) = pt * loadRefVector.at(k) - internalForces.at(k);
         }
 
@@ -416,11 +389,10 @@ void NlDEIDynamic :: solveYourselfAt(TimeStep *tStep)
 #ifdef __PARALLEL_MODE
         double my_err = 0.0;
 
-        for ( int dm = 1; dm <= ndofman; dm++ ) {
-            dman = domain->giveDofManager(dm);
-            dofmanmode = dman->giveParallelMode();
+        for ( auto &dman : domain->giveDofManagers() ) {
+            auto dofmanmode = dman->giveParallelMode();
             // Skip all remote and null dofmanagers.
-            coeff = 1.0;
+            double coeff = 1.0;
             if ( ( dofmanmode == DofManager_remote ) || ( dofmanmode == DofManager_null ) ) {
                 continue;
             } else if ( dofmanmode == DofManager_shared ) {
@@ -428,7 +400,8 @@ void NlDEIDynamic :: solveYourselfAt(TimeStep *tStep)
             }
 
             // For shared nodes we add locally an average= 1/givePartitionsConnectivitySize()*contribution.
-            for ( Dof *dof: *dman ) {
+            for ( auto &dof: *dman ) {
+                int eqNum;
                 if ( dof->isPrimaryDof() && ( eqNum = dof->__giveEquationNumber() ) ) {
                     my_err += coeff * loadVector.at(eqNum) * loadVector.at(eqNum) / massMatrix.at(eqNum);
                 }
@@ -439,7 +412,7 @@ void NlDEIDynamic :: solveYourselfAt(TimeStep *tStep)
         MPI_Allreduce(& my_err, & err, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
 #else
-        for ( k = 1; k <= neq; k++ ) {
+        for ( int k = 1; k <= neq; k++ ) {
             err = loadVector.at(k) * loadVector.at(k) / massMatrix.at(k);
         }
 
@@ -448,10 +421,9 @@ void NlDEIDynamic :: solveYourselfAt(TimeStep *tStep)
         OOFEM_LOG_RELEVANT("Relative error is %e, loadlevel is %e\n", err, pt);
     }
 
-    for ( j = 1; j <= neq; j++ ) {
-        coeff =  massMatrix.at(j);
+    for ( int j = 1; j <= neq; j++ ) {
         loadVector.at(j) +=
-            coeff * ( ( 1. / ( deltaT * deltaT ) ) - dumpingCoef * 1. / ( 2. * deltaT ) ) *
+            massMatrix.at(j) * ( ( 1. / ( deltaT * deltaT ) ) - dumpingCoef * 1. / ( 2. * deltaT ) ) *
             previousIncrementOfDisplacementVector.at(j);
     }
 
@@ -475,9 +447,9 @@ void NlDEIDynamic :: solveYourselfAt(TimeStep *tStep)
     //    }
 
 
-    for ( i = 1; i <= neq; i++ ) {
-        prevIncrOfDisplacement = previousIncrementOfDisplacementVector.at(i);
-        incrOfDisplacement = loadVector.at(i) /
+    for ( int i = 1; i <= neq; i++ ) {
+        double prevIncrOfDisplacement = previousIncrementOfDisplacementVector.at(i);
+        double incrOfDisplacement = loadVector.at(i) /
         ( massMatrix.at(i) * ( 1. / ( deltaT * deltaT ) + dumpingCoef / ( 2. * deltaT ) ) );
 
         accelerationVector.at(i) = ( incrOfDisplacement - prevIncrOfDisplacement ) / ( deltaT * deltaT );
@@ -523,11 +495,8 @@ NlDEIDynamic :: computeMassMtrx(FloatArray &massMatrix, double &maxOm, TimeStep 
     Domain *domain = this->giveDomain(1);
     int nelem = domain->giveNumberOfElements();
     int neq = this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() );
-    int i, j, jj, n;
-    double maxOmi, maxOmEl;
     FloatMatrix charMtrx, charMtrx2, R;
     IntArray loc;
-    Element *element;
     EModelDefaultEquationNumbering en;
 
 #ifndef LOCAL_ZERO_MASS_REPLACEMENT
@@ -537,8 +506,8 @@ NlDEIDynamic :: computeMassMtrx(FloatArray &massMatrix, double &maxOm, TimeStep 
     maxOm = 0.;
     massMatrix.resize(neq);
     massMatrix.zero();
-    for ( i = 1; i <= nelem; i++ ) {
-        element = domain->giveElement(i);
+    for ( int i = 1; i <= nelem; i++ ) {
+        Element *element = domain->giveElement(i);
 
         // skip remote elements (these are used as mirrors of remote elements on other domains
         // when nonlocal constitutive models are used. They introduction is necessary to
@@ -550,20 +519,20 @@ NlDEIDynamic :: computeMassMtrx(FloatArray &massMatrix, double &maxOm, TimeStep 
         element->giveLocationArray(loc, en);
         element->giveCharacteristicMatrix(charMtrx, LumpedMassMatrix, tStep);
         if ( charMtrx.isNotEmpty() ) {
-          ///@todo This rotation matrix is not flexible enough.. it can only work with full size matrices and doesn't allow for flexibility in the matrixassembler.
-          if ( element->giveRotationMatrix(R) ) {
-            charMtrx.rotatedWith(R);
-          }
+            ///@todo This rotation matrix is not flexible enough.. it can only work with full size matrices and doesn't allow for flexibility in the matrixassembler.
+            if ( element->giveRotationMatrix(R) ) {
+                charMtrx.rotatedWith(R);
+            }
         }
 
 #ifdef LOCAL_ZERO_MASS_REPLACEMENT
         element->giveCharacteristicMatrix(charMtrx2, TangentStiffnessMatrix, tStep);
         if ( charMtrx2.isNotEmpty() ) {
-          ///@todo This rotation matrix is not flexible enough.. it can only work with full size matrices and doesn't allow for flexibility in the matrixassembler.
-          if ( R.isNotEmpty() ) {
-            charMtrx2.rotatedWith(R);
-          }
-        }       
+            ///@todo This rotation matrix is not flexible enough.. it can only work with full size matrices and doesn't allow for flexibility in the matrixassembler.
+            if ( R.isNotEmpty() ) {
+                charMtrx2.rotatedWith(R);
+            }
+        }
 #endif
 
 #ifdef DEBUG
@@ -572,13 +541,12 @@ NlDEIDynamic :: computeMassMtrx(FloatArray &massMatrix, double &maxOm, TimeStep 
         }
 #endif
 
-        n = loc.giveSize();
+        int n = loc.giveSize();
 
 #ifdef LOCAL_ZERO_MASS_REPLACEMENT
-        maxOmEl = 0.;
 
         double maxElmass = -1.0;
-        for ( j = 1; j <= n; j++ ) {
+        for ( int j = 1; j <= n; j++ ) {
             maxElmass = max( maxElmass, charMtrx.at(j, j) );
         }
 
@@ -586,30 +554,31 @@ NlDEIDynamic :: computeMassMtrx(FloatArray &massMatrix, double &maxOm, TimeStep 
             OOFEM_WARNING("Element (%d) with zero (or negative) lumped mass encountered\n", i);
         } else {
 
-          if (charMtrx2.isNotEmpty() ) {
-            // in case stifness matrix defined, we can generate artificial mass
-            // in those DOFs without mass
-            for ( j = 1; j <= n; j++ ) {
-              if ( charMtrx.at(j, j) > maxElmass * ZERO_REL_MASS ) {
-                maxOmi =  charMtrx2.at(j, j) / charMtrx.at(j, j);
-                maxOmEl = ( maxOmEl > maxOmi ) ? ( maxOmEl ) : ( maxOmi );
-              }
+            if (charMtrx2.isNotEmpty() ) {
+                // in case stifness matrix defined, we can generate artificial mass
+                // in those DOFs without mass
+                double maxOmEl = 0.;
+                for ( int j = 1; j <= n; j++ ) {
+                    if ( charMtrx.at(j, j) > maxElmass * ZERO_REL_MASS ) {
+                        double maxOmi =  charMtrx2.at(j, j) / charMtrx.at(j, j);
+                        maxOmEl = ( maxOmEl > maxOmi ) ? ( maxOmEl ) : ( maxOmi );
+                    }
+                }
+
+                maxOm = ( maxOm > maxOmEl ) ? ( maxOm ) : ( maxOmEl );
+
+                for ( int j = 1; j <= n; j++ ) {
+                    int jj = loc.at(j);
+                    if ( ( jj ) && ( charMtrx.at(j, j) <= maxElmass * ZERO_REL_MASS ) ) {
+                        charMtrx.at(j, j) = charMtrx2.at(j, j) / maxOmEl;
+                    }
+                }
             }
-            
-            maxOm = ( maxOm > maxOmEl ) ? ( maxOm ) : ( maxOmEl );
-            
-            for ( j = 1; j <= n; j++ ) {
-              jj = loc.at(j);
-              if ( ( jj ) && ( charMtrx.at(j, j) <= maxElmass * ZERO_REL_MASS ) ) {
-                charMtrx.at(j, j) = charMtrx2.at(j, j) / maxOmEl;
-              }
-            }
-          }
         }
 #endif
 
-        for ( j = 1; j <= n; j++ ) {
-            jj = loc.at(j);
+        for ( int j = 1; j <= n; j++ ) {
+            int jj = loc.at(j);
             if ( jj ) {
                 massMatrix.at(jj) += charMtrx.at(j, j);
             }
@@ -620,20 +589,19 @@ NlDEIDynamic :: computeMassMtrx(FloatArray &massMatrix, double &maxOm, TimeStep 
     // If init step - find minimun period of vibration in order to
     // determine maximal admisible time step
     // global variant
-    for ( i = 1; i <= nelem; i++ ) {
-        element = domain->giveElement(i);
+    for ( auto &element : domain->giveElements() ) {
         element->giveLocationArray(loc, en);
         element->giveCharacteristicMatrix(charMtrx, TangentStiffnessMatrix, tStep);
         if ( charMtrx.isNotEmpty() ) {
-          ///@todo This rotation matrix is not flexible enough.. it can only work with full size matrices and doesn't allow for flexibility in the matrixassembler.
-          if ( element->giveRotationMatrix(R) ) {
-            charMtrx.rotatedWith(R);
-          }
+            ///@todo This rotation matrix is not flexible enough.. it can only work with full size matrices and doesn't allow for flexibility in the matrixassembler.
+            if ( element->giveRotationMatrix(R) ) {
+                charMtrx.rotatedWith(R);
+            }
         }
 
-        n = loc.giveSize();
-        for ( j = 1; j <= n; j++ ) {
-            jj = loc.at(j);
+        int n = loc.giveSize();
+        for ( int j = 1; j <= n; j++ ) {
+            int jj = loc.at(j);
             if ( jj ) {
                 diagonalStiffMtrx.at(jj) += charMtrx.at(j, j);
             }
@@ -642,7 +610,7 @@ NlDEIDynamic :: computeMassMtrx(FloatArray &massMatrix, double &maxOm, TimeStep 
 
     // Find find global minimun period of vibration
     double maxElmass = -1.0;
-    for ( j = 1; j <= n; j++ ) {
+    for ( int j = 1; j <= n; j++ ) {
         maxElmass = max( maxElmass, charMtrx.at(j, j) );
     }
 
@@ -650,15 +618,15 @@ NlDEIDynamic :: computeMassMtrx(FloatArray &massMatrix, double &maxOm, TimeStep 
         OOFEM_ERROR("Element with zero (or negative) lumped mass encountered");
     }
 
-    for ( j = 1; j <= neq; j++ ) {
+    for ( int j = 1; j <= neq; j++ ) {
         if ( massMatrix.at(j) > maxElmass * ZERO_REL_MASS ) {
-            maxOmi =  diagonalStiffMtrx.at(j) / massMatrix.at(j);
-            maxOm  = ( maxOm > maxOmi ) ? ( maxOm ) : ( maxOmi );
+            double maxOmi = diagonalStiffMtrx.at(j) / massMatrix.at(j);
+            maxOm = ( maxOm > maxOmi ) ? ( maxOm ) : ( maxOmi );
         }
     }
 
     // Set ZERO MASS members in massMatrix to value which corresponds to global maxOm.
-    for ( i = 1; i <= neq; i++ ) {
+    for ( int i = 1; i <= neq; i++ ) {
         if ( massMatrix.at(i) <= maxElmass * ZERO_REL_MASS ) {
             massMatrix.at(i) = diagonalStiffMtrx.at(i) / maxOm;
         }
@@ -724,106 +692,59 @@ NlDEIDynamic :: estimateMaxPackSize(IntArray &commMap, DataStream &buff, int pac
     return 0;
 }
 
-contextIOResultType NlDEIDynamic :: saveContext(DataStream *stream, ContextMode mode, void *obj)
+void NlDEIDynamic :: saveContext(DataStream &stream, ContextMode mode)
 {
     contextIOResultType iores;
-    int closeFlag = 0;
-    FILE *file = NULL;
 
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, this->giveCurrentStep()->giveNumber(),
-                                    this->giveCurrentStep()->giveVersion(), contextMode_write) ) {
-            THROW_CIOERR(CIO_IOERR); // override
-        }
+    StructuralEngngModel :: saveContext(stream, mode);
 
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
-
-    if ( ( iores = StructuralEngngModel :: saveContext(stream, mode) ) != CIO_OK ) {
+    if ( ( iores = previousIncrementOfDisplacementVector.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = previousIncrementOfDisplacementVector.storeYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = displacementVector.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = displacementVector.storeYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = velocityVector.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = velocityVector.storeYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = accelerationVector.storeYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = accelerationVector.storeYourself(*stream) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( !stream->write(deltaT) ) {
+    if ( !stream.write(deltaT) ) {
         THROW_CIOERR(CIO_IOERR);
     }
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete stream;
-        stream = NULL;
-    } // Ensure consistent records
-
-    return CIO_OK;
 }
 
 
-contextIOResultType NlDEIDynamic :: restoreContext(DataStream *stream, ContextMode mode, void *obj)
+void NlDEIDynamic :: restoreContext(DataStream &stream, ContextMode mode)
 {
     contextIOResultType iores;
-    int closeFlag = 0;
-    int istep, iversion;
-    FILE *file = NULL;
 
-    this->resolveCorrespondingStepNumber(istep, iversion, obj);
+    StructuralEngngModel :: restoreContext(stream, mode);
 
-    if ( stream == NULL ) {
-        if ( !this->giveContextFile(& file, istep, iversion, contextMode_read) ) {
-            THROW_CIOERR(CIO_IOERR); // override
-        }
-
-        stream = new FileDataStream(file);
-        closeFlag = 1;
-    }
-
-    // Save element context.
-    if ( ( iores = StructuralEngngModel :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
+    if ( ( iores = previousIncrementOfDisplacementVector.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = previousIncrementOfDisplacementVector.restoreYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = displacementVector.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = displacementVector.restoreYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = velocityVector.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = velocityVector.restoreYourself(*stream) ) != CIO_OK ) {
+    if ( ( iores = accelerationVector.restoreYourself(stream) ) != CIO_OK ) {
         THROW_CIOERR(iores);
     }
 
-    if ( ( iores = accelerationVector.restoreYourself(*stream) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-
-    if ( !stream->read(deltaT) ) {
+    if ( !stream.read(deltaT) ) {
         THROW_CIOERR(CIO_IOERR);
     }
-
-    if ( closeFlag ) {
-        fclose(file);
-        delete stream;
-        stream = NULL;
-    } // ensure consistent records
-
-    return CIO_OK;
 }
 
 
@@ -838,28 +759,29 @@ NlDEIDynamic :: printDofOutputAt(FILE *stream, Dof *iDof, TimeStep *tStep)
     iDof->printMultipleOutputAt(stream, tStep, dofchar, dofmodes, 3);
 }
 
+
 void
 NlDEIDynamic :: terminate(TimeStep *tStep)
 {
     StructuralEngngModel :: terminate(tStep);
-    this->printReactionForces(tStep, 1);
+    this->printReactionForces(tStep, 1, this->giveOutputStream());
     fflush( this->giveOutputStream() );
 }
 
 
 void
-NlDEIDynamic :: printOutputAt(FILE *File, TimeStep *tStep)
+NlDEIDynamic :: printOutputAt(FILE *file, TimeStep *tStep)
 {
     if ( !this->giveDomain(1)->giveOutputManager()->testTimeStepOutput(tStep) ) {
         return;                                                                      // do not print even Solution step header
     }
 
-    fprintf( File, "\n\nOutput for time %.8e, solution step number %d\n", tStep->giveTargetTime(), tStep->giveNumber() );
+    fprintf(file, "\n\nOutput for time %.8e, solution step number %d\n", tStep->giveTargetTime(), tStep->giveNumber() );
     if ( drFlag ) {
-        fprintf(File, "Reached load level : %e\n\n", this->pt);
+        fprintf(file, "Reached load level : %e\n\n", this->pt);
     }
 
-    this->giveDomain(1)->giveOutputManager()->doDofManOutput(File, tStep);
-    this->giveDomain(1)->giveOutputManager()->doElementOutput(File, tStep);
+    this->giveDomain(1)->giveOutputManager()->doDofManOutput(file, tStep);
+    this->giveDomain(1)->giveOutputManager()->doElementOutput(file, tStep);
 }
 } // end namespace oofem

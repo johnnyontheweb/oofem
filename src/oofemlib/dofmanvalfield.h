@@ -36,9 +36,24 @@
 #define dofmanvalfield_h
 
 #include "field.h"
-
+#include "elementgeometrytype.h"
+#include "error.h"
+#include "engngm.h"
+#include "domain.h"
 #include <vector>
+#include "internalstatetype.h"
+#include "intarray.h"
+#include "materialmappingalgorithm.h"
+#include "mmashapefunctprojection.h"
+#include "cltypes.h"
 
+#ifdef _PYBIND_BINDINGS
+    #include <pybind11/pybind11.h>
+    #include <pybind11/stl.h>//Conversion for lists
+    namespace py = pybind11;
+#endif
+
+    
 namespace oofem {
 class Domain;
 
@@ -46,7 +61,9 @@ class Domain;
  * Class representing field defined by nodal values associated to given domain.
  * Field represent the spatial distribution of certain variable.
  * The implementation allows to set individual dofMan values;
- * However, in the current implementation doe not allow to specify values for different time steps.
+ * However, in the current implementation does not allow to specify values for different time steps.
+ * It is also possible to create a separate, virtual domain by adding particular
+ * nodes and elements with nodal values.
  */
 class OOFEM_EXPORT DofManValueField : public Field
 {
@@ -55,23 +72,37 @@ protected:
     Domain *domain;
     /// Array of dofman values
     std::vector< FloatArray >dmanvallist;
+    /// Pointer to engineering model
+    std::unique_ptr< EngngModel >eModel;
+    /// Pointer to single cross-section;
+    std::unique_ptr< CrossSection >crossSect;
 
 public:
     /**
      * Constructor. Creates an empty field of given type associated to given domain.
      */
-    DofManValueField(FieldType b, Domain * d);
-    virtual ~DofManValueField() { }
+    DofManValueField(FieldType ft, Domain *d);
+
     /**
-     * Evaluates the field at given point.
-     * @param coords Coordinates of the point of interest
-     * @param answer Field evaluated at coordinate.
-     * @param tStep Time step to evaluate for.
-     * @param mode Mode of value (total, velocity,...).
-     * @return Zero if ok, otherwise nonzero.
+     * Constructor. Creates a virtual empty domain which needs to be populated
+     * by nodes, elements and nodal values.
      */
-    virtual int evaluateAt(FloatArray &answer, const FloatArray &coords,
-                           ValueModeType mode, TimeStep *tStep);
+
+    DofManValueField(FieldType ft, int nNodes, int nElements, const std::string engngModel,  const std::string domainDofsDefaults);
+
+    virtual ~DofManValueField() { }
+
+    /**
+     * Add node to the domain
+     */
+    void addNode(int i, const FloatArray &coords);
+
+    /**
+     * Add element to the domain
+     */
+    void addElement(int i, const char *name, const IntArray &nodes);
+
+    int evaluateAt(FloatArray &answer, const FloatArray &coords, ValueModeType mode, TimeStep *tStep) override;
 
     /**
      * Evaluates the field at given DofManager. This potentially can be resolved quickly, as
@@ -84,39 +115,27 @@ public:
      * @param[out] answer Evaluated field for dman.
      * @param dman Reference to dof manager.
      * @param mode Mode of value (total, velocity,...).
-     * @param tStep Time step to evaluate for.
+     * @param tStep TimInternalStateType valID, IntArray regions, TimeStep *tStepe step to evaluate for.
      * @return Zero if ok, nonzero Error code (0-ok, 1-failed)
      */
-    virtual int evaluateAt(FloatArray &answer, DofManager *dman,
-                           ValueModeType mode, TimeStep *tStep);
-
-    /**
-     * Stores receiver state to output stream.
-     * Writes the FEMComponent class-id in order to allow test whether correct data are then restored.
-     * @param stream Output stream.
-     * @param mode Determines amount of info in stream (state, definition,...).
-     * @return contextIOResultType.
-     * @exception Throws an ContextIOERR exception if error encountered.
-     */
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode);
-    /**
-     * Restores the receiver state previously written in stream.
-     * Reads the FEMComponent class-id in order to allow test consistency.
-     * @param stream Input stream.
-     * @param mode Determines amount of info in stream (state, definition,...).
-     * @return contextIOResultType.
-     * @exception Throws an ContextIOERR exception if error encountered.
-     */
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode);
-
+    int evaluateAt(FloatArray &answer, DofManager *dman, ValueModeType mode, TimeStep *tStep) override;
 
     /**
      * Sets the value associated to given dofManager
      */
     void setDofManValue(int dofMan, FloatArray value);
 
-    /// @return Class name of the receiver.
-    virtual const char *giveClassName() const { return "DofManValueField"; }
+    /**
+     * Obtain coordinates of a node
+     */
+    const FloatArray &getNodeCoordinates(int i);
+
+    void saveContext(DataStream &stream) override;
+    void restoreContext(DataStream &stream) override;
+
+    const char *giveClassName() const override {
+        return "DofManValueField";
+    }
 };
 } // end namespace oofem
 #endif // dofmanvalfield_h

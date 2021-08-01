@@ -36,7 +36,7 @@
 #define trabbonenlembed_h
 
 #include "trabboneembed.h"
-#include "Materials/structuralnonlocalmaterialext.h"
+#include "sm/Materials/structuralnonlocalmaterialext.h"
 #include "nonlocmatstiffinterface.h"
 #include "cltypes.h"
 
@@ -57,29 +57,27 @@ class TrabBoneNLEmbedStatus : public TrabBoneEmbedStatus, public StructuralNonlo
 {
 protected:
     /// Equivalent strain for averaging.
-    double localCumPlastStrainForAverage;
+    double localCumPlastStrainForAverage = 0.;
 
 public:
-    TrabBoneNLEmbedStatus(int n, Domain * d, GaussPoint * g);
-    virtual ~TrabBoneNLEmbedStatus();
+    TrabBoneNLEmbedStatus(GaussPoint * g);
 
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    void printOutputAt(FILE *file, TimeStep *tStep) const override;
 
     /// Gives the local cumulative plastic strain.
-    double giveLocalCumPlastStrainForAverage() { return localCumPlastStrainForAverage; }
+    double giveLocalCumPlastStrainForAverage() const { return localCumPlastStrainForAverage; }
     /// Sets the local cumulative plastic strain.
     void setLocalCumPlastStrainForAverage(double ls) { localCumPlastStrainForAverage = ls; }
 
-    // definition
-    virtual const char *giveClassName() const { return "TrabBoneNLEmbedStatus"; }
+    const char *giveClassName() const override { return "TrabBoneNLEmbedStatus"; }
 
-    virtual void initTempStatus();
-    virtual void updateYourself(TimeStep *tStep);
+    void initTempStatus() override;
+    void updateYourself(TimeStep *tStep) override;
 
-    virtual contextIOResultType saveContext(DataStream &stream, ContextMode mode, void *obj = NULL);
-    virtual contextIOResultType restoreContext(DataStream &stream, ContextMode mode, void *obj = NULL);
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 
-    virtual Interface *giveInterface(InterfaceType it);
+    Interface *giveInterface(InterfaceType it) override;
 };
 
 /**
@@ -88,40 +86,39 @@ public:
 class TrabBoneNLEmbed : public TrabBoneEmbed, public StructuralNonlocalMaterialExtensionInterface
 {
 protected:
-    double R;
-    double mParam;
+    double R = 0.;
+    double mParam = 0.;
 
 public:
     TrabBoneNLEmbed(int n, Domain * d);
-    virtual ~TrabBoneNLEmbed();
 
-    virtual const char *giveClassName() const { return "TrabBoneNLEmbed"; }
-    virtual const char *giveInputRecordName() const { return _IFT_TrabBoneNLEmbed_Name; }
+    const char *giveClassName() const override { return "TrabBoneNLEmbed"; }
+    const char *giveInputRecordName() const override { return _IFT_TrabBoneNLEmbed_Name; }
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual void giveInputRecord(DynamicInputRecord &input);
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
-    virtual Interface *giveInterface(InterfaceType);
+    Interface *giveInterface(InterfaceType) override;
 
-    virtual void computeCumPlastStrain(double &alpha, GaussPoint *gp, TimeStep *tStep);
+    double computeCumPlastStrain(GaussPoint *gp, TimeStep *tStep) const override;
 
-    virtual void giveRealStressVector_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &strainVector, TimeStep *tStep);
+    FloatArrayF<6> giveRealStressVector_3d(const FloatArrayF<6> &strain, GaussPoint *gp, TimeStep *tStep) const override;
 
-    void computeLocalCumPlastStrain(double &alpha, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
+    double computeLocalCumPlastStrain(const FloatArrayF<6> &strain, GaussPoint *gp, TimeStep *tStep) const
     {
-        TrabBoneEmbed :: computeCumPlastStrain(alpha, gp, tStep);
+        return TrabBoneEmbed :: computeCumPlastStrain(gp, tStep);
     }
 
-    virtual void updateBeforeNonlocAverage(const FloatArray &strainVector, GaussPoint *gp, TimeStep *tStep);
-    virtual double computeWeightFunction(const FloatArray &src, const FloatArray &coord);
+    void updateBeforeNonlocAverage(const FloatArray &strainVector, GaussPoint *gp, TimeStep *tStep) const override;
+    double computeWeightFunction(const FloatArray &src, const FloatArray &coord) const override;
 
-    virtual int hasBoundedSupport() { return 1; }
+    int hasBoundedSupport() const override { return 1; }
 
     /// Determines the width (radius) of limited support of weighting function.
     virtual void giveSupportRadius(double &radius) { radius = this->R; }
 
 protected:
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const { return new TrabBoneNLEmbedStatus(1, TrabBoneEmbed :: domain, gp); }
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new TrabBoneNLEmbedStatus(gp); }
 };
 } // end namespace oofem
 #endif

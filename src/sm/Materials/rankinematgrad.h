@@ -37,7 +37,7 @@
 #include "rankinemat.h"
 #include "structuralnonlocalmaterialext.h"
 #include "nonlocmatstiffinterface.h"
-#include "graddpmaterialextensioninterface.h"
+#include "graddamagematerialextensioninterface.h"
 #include "cltypes.h"
 
 ///@name Input fields for RankineMatGrad
@@ -46,90 +46,123 @@
 #define _IFT_RankineMatGrad_L "l"
 #define _IFT_RankineMatGrad_m "m"
 #define _IFT_RankineMatGrad_negligibleDamage "negligible_damage"
+#define _IFT_RankineMatGrad_formulationType "formtype"
 //@}
 
 namespace oofem {
 /**
  * Gradient rankine material status.
  */
-class RankineMatGradStatus : public RankineMatStatus, public GradDpMaterialStatusExtensionInterface
+class RankineMatGradStatus : public RankineMatStatus, public GradientDamageMaterialStatusExtensionInterface
 {
 protected:
-    double kappa_nl;
-    double kappa_hat;
+
+    /**  Type characterizing the dependence of the internal lenght on variable of the state
+     *  Note that the assigned numbers to enum values have to correspond to values
+     *  used in initializeFrom to resolve internalLenghtDependence. If not, the consistency
+     *  between initializeFrom and giveInputRecord methods is lost.
+     */
+
+    double kappa_nl = 0.;
+    double kappa_hat = 0.;
 
 public:
-    RankineMatGradStatus(int n, Domain * d, GaussPoint * g);
-    virtual ~RankineMatGradStatus() { }
 
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    RankineMatGradStatus(GaussPoint *g);
+
+    void printOutputAt(FILE *file, TimeStep *tStep) const override;
 
     // definition
-    virtual const char *giveClassName() const { return "RankineMatGradStatus"; }
+    const char *giveClassName() const override { return "RankineMatGradStatus"; }
 
-    virtual void initTempStatus();
-    virtual void updateYourself(TimeStep *tStep);
+    void initTempStatus() override;
+    void updateYourself(TimeStep *tStep) override;
 
     void setKappa_nl(double kap) { kappa_nl = kap; }
     void setKappa_hat(double kap) { kappa_hat = kap; }
     double giveKappa_nl() { return kappa_nl; }
     double giveKappa_hat() { return kappa_hat; }
-    virtual double giveNonlocalCumulatedStrain() { return nonlocalCumulatedStrain; }
-    virtual void setNonlocalCumulatedStrain(double nonlocalCumulatedStrain) { this->nonlocalCumulatedStrain = nonlocalCumulatedStrain; }
+    virtual double giveNonlocalCumulatedStrain() { return nonlocalDamageDrivingVariable; }
+    virtual void setNonlocalCumulatedStrain(double nonlocalCumulatedStrain) { this->nonlocalDamageDrivingVariable = nonlocalCumulatedStrain; }
 };
 
 
 /**
  * Gradient Rankine material.
  */
-class RankineMatGrad : public RankineMat, GradDpMaterialExtensionInterface
+class RankineMatGrad : public RankineMat, GradientDamageMaterialExtensionInterface
 {
 protected:
-    double L;
-    double mParam;
-    double negligible_damage;
+    double L = 0.;
+    double mParam = 0.;
+    double negligible_damage = 0.;
+
+    enum GradientDamageFormulationType {
+        GDFT_Standard = 0,
+        GDFT_Eikonal = 2
+    };
+
+    GradientDamageFormulationType gradientDamageFormulationType = GDFT_Standard;
+
 
 public:
-    RankineMatGrad(int n, Domain * d);
-    virtual ~RankineMatGrad() { }
+    RankineMatGrad(int n, Domain *d);
 
-    virtual const char *giveClassName() const { return "RankineMatGrad"; }
-    virtual const char *giveInputRecordName() const { return _IFT_RankineMatGrad_Name; }
+    const char *giveClassName() const override { return "RankineMatGrad"; }
+    const char *giveInputRecordName() const override  { return _IFT_RankineMatGrad_Name; }
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
-    virtual int hasMaterialModeCapability(MaterialMode mode);
-    virtual Interface *giveInterface(InterfaceType t) {
-        if ( t == GradDpMaterialExtensionInterfaceType ) {
-            return static_cast< GradDpMaterialExtensionInterface * >(this);
+    void initializeFrom(InputRecord &ir) override;
+    bool hasMaterialModeCapability(MaterialMode mode) const override;
+    Interface *giveInterface(InterfaceType t) override {
+        if ( t == GradientDamageMaterialExtensionInterfaceType ) {
+            return static_cast< GradientDamageMaterialExtensionInterface * >( this );
         } else {
-            return NULL;
+            return nullptr;
         }
     }
 
-    virtual void giveStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep);
+    void giveStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) override;
 
-    virtual void givePDGradMatrix_uu(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void givePDGradMatrix_uk(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void givePDGradMatrix_ku(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void givePDGradMatrix_kk(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void givePDGradMatrix_LD(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
-    virtual void giveRealStressVectorGrad(FloatArray &answer1, double &answer2, GaussPoint *gp, const FloatArray &totalStrain, double nonlocalCumulatedStrain, TimeStep *tStep);
+    void giveGradientDamageStiffnessMatrix_uu(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) override;
+    void giveGradientDamageStiffnessMatrix_ud(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) override;
+    void giveGradientDamageStiffnessMatrix_du(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) override;
+    void giveGradientDamageStiffnessMatrix_du_NB(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
+    void giveGradientDamageStiffnessMatrix_du_BB(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
+    void giveGradientDamageStiffnessMatrix_dd_NN(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) override;
+    void giveGradientDamageStiffnessMatrix_dd_BB(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) override;
+    void giveGradientDamageStiffnessMatrix_dd_BN(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) override;
 
-    virtual void givePlaneStressStiffMtrx(FloatMatrix &answer, MatResponseMode, GaussPoint *gp,  TimeStep *tStep);
+    void computeLocalDamageDrivingVariable(double &answer, GaussPoint *gp, TimeStep *tStep) override;
+
+    void giveNonlocalInternalForces_N_factor(double &answer, double nlddv, GaussPoint *gp, TimeStep *tStep) override;
+    void giveNonlocalInternalForces_B_factor(FloatArray &answer, const FloatArray &nlddv, GaussPoint *gp, TimeStep *tStep) override;
+
+
+    void giveRealStressVectorGradientDamage(FloatArray &answer1, double &answer2, GaussPoint *gp, const FloatArray &totalStrain, double nonlocalCumulatedStrain, TimeStep *tStep) override;
+
+    FloatMatrixF<3,3> givePlaneStressStiffMtrx(MatResponseMode, GaussPoint * gp,  TimeStep * tStep) const override;
     void givePlaneStressGprime(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
     void givePlaneStressKappaMatrix(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
     void giveInternalLength(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
 
-    virtual void computeCumPlastStrain(double &kappa, GaussPoint *gp, TimeStep *tStep);
+    double computeCumPlastStrain(GaussPoint *gp, TimeStep *tStep) const override;
     double giveNonlocalCumPlasticStrain(GaussPoint *gp);
     void performPlasticityReturn(GaussPoint *gp, const FloatArray &totalStrain);
 
     LinearElasticMaterial *giveLinearElasticMaterial() { return linearElasticMaterial; }
 
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 
 protected:
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const { return new RankineMatGradStatus(1, RankineMat :: domain, gp); }
+    double computeInternalLength(GaussPoint *gp);
+    int giveDimension(GaussPoint *gp);
+
+    double computeEikonalInternalLength_a(GaussPoint *gp);
+    double computeEikonalInternalLength_b(GaussPoint *gp);
+    double computeEikonalInternalLength_aPrime(GaussPoint *gp);
+    double computeEikonalInternalLength_bPrime(GaussPoint *gp);
+
+    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new RankineMatGradStatus(gp); }
 };
 } // end namespace oofem
 #define RankineMatGrad_h

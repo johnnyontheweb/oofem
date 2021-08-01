@@ -32,7 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/ErrorEstimators/combinedzzsiee.h"
+#include "sm/ErrorEstimators/combinedzzsiee.h"
 #include "domain.h"
 #include "element.h"
 #include "connectivitytable.h"
@@ -84,14 +84,14 @@ RemeshingCriteria *
 CombinedZZSIErrorEstimator :: giveRemeshingCrit()
 {
     if ( !this->rc ) {
-        this->rc.reset( new CombinedZZSIRemeshingCriteria(1, this) );
+        this->rc = std::make_unique<CombinedZZSIRemeshingCriteria>(1, this);
     }
 
     return this->rc.get();
 }
 
-IRResultType
-CombinedZZSIErrorEstimator :: initializeFrom(InputRecord *ir)
+void
+CombinedZZSIErrorEstimator :: initializeFrom(InputRecord &ir)
 {
     zzee.initializeFrom(ir);
     siee.initializeFrom(ir);
@@ -160,14 +160,11 @@ CombinedZZSIRemeshingCriteria :: estimateMeshDensities(TimeStep *tStep)
     return 1;
 }
 
-IRResultType
-CombinedZZSIRemeshingCriteria :: initializeFrom(InputRecord *ir)
+void
+CombinedZZSIRemeshingCriteria :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result = zzrc.initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
-    return dirc.initializeFrom(ir);
+    zzrc.initializeFrom(ir);
+    dirc.initializeFrom(ir);
 }
 
 

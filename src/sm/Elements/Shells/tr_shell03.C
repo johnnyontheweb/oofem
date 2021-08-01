@@ -32,8 +32,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/Shells/TR_SHELL03.h"
-#include "../sm/Materials/structuralms.h"
+#include "sm/Elements/Shells/TR_SHELL03.h"
+#include "sm/Materials/structuralms.h"
 #include "fei2dtrlin.h"
 #include "contextioerr.h"
 #include "gaussintegrationrule.h"
@@ -62,14 +62,11 @@ TR_SHELL03 :: TR_SHELL03(int n, Domain *aDomain) : StructuralElement(n, aDomain)
 }
 
 
-IRResultType
-TR_SHELL03 :: initializeFrom(InputRecord *ir)
+void
+TR_SHELL03 :: initializeFrom(InputRecord &ir)
 {
     // proc tady neni return = this...   ??? termitovo
-    IRResultType result = StructuralElement :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    StructuralElement :: initializeFrom(ir);
 
 //#if 0
 	//int val=-1;
@@ -77,12 +74,10 @@ TR_SHELL03 :: initializeFrom(InputRecord *ir)
 	
     //if ( val != -1 ) {
     //    OOFEM_WARNING("key word NIP is not allowed for element TR_SHELL03");
-    //    //return result;
     //}
     //IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_TrPlaneStrRot_niprot, "niprot");
     //if ( val != -1 ) {
     //    OOFEM_WARNING("key word NIProt is not allowed for element TR_SHELL03");
-    //    //return result;
     //}
 //#endif
 
@@ -94,19 +89,11 @@ TR_SHELL03 :: initializeFrom(InputRecord *ir)
 	this->macroElem = 0;
 	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_TR_SHELL03_macroElem);
 
-    result = plate->initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    plate->initializeFrom(ir);
 	plate->la1 = la1;
 
-    result = membrane->initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    membrane->initializeFrom(ir);
 	membrane->la1 = la1;
-
-    return IRRT_OK;
 }
 
 void
@@ -120,31 +107,19 @@ TR_SHELL03 :: postInitialize()
 }
 
 void
-TR_SHELL03::giveNodeCoordinates(double &x1, double &x2, double &x3,
-double &y1, double &y2, double &y3,
-double &z1, double &z2, double &z3)
+TR_SHELL03::giveNodeCoordinates(FloatArray& nc1, FloatArray& nc2, FloatArray& nc3)
 {
-	FloatArray nc1(3), nc2(3), nc3(3);
+    nc1.resize(3);
+    nc2.resize(3);
+    nc3.resize(3);
 
-	this->giveLocalCoordinates(nc1, *(this->giveNode(1)->giveCoordinates()));
-	this->giveLocalCoordinates(nc2, *(this->giveNode(2)->giveCoordinates()));
-	this->giveLocalCoordinates(nc3, *(this->giveNode(3)->giveCoordinates()));
-
-	x1 = nc1.at(1);
-	x2 = nc2.at(1);
-	x3 = nc3.at(1);
-
-	y1 = nc1.at(2);
-	y2 = nc2.at(2);
-	y3 = nc3.at(2);
-
-	z1 = nc1.at(3);
-	z2 = nc2.at(3);
-	z3 = nc3.at(3);
+    this->giveLocalCoordinates(nc1, this->giveNode(1)->giveCoordinates());
+    this->giveLocalCoordinates(nc2, this->giveNode(2)->giveCoordinates());
+    this->giveLocalCoordinates(nc3, this->giveNode(3)->giveCoordinates());
 }
 
 void
-TR_SHELL03::giveLocalCoordinates(FloatArray &answer, FloatArray &global)
+TR_SHELL03::giveLocalCoordinates(FloatArray &answer, const FloatArray &global)
 // Returns global coordinates given in global vector
 // transformed into local coordinate system of the
 // receiver
@@ -159,7 +134,7 @@ TR_SHELL03::giveLocalCoordinates(FloatArray &answer, FloatArray &global)
 	this->computeGtoLRotationMatrix();
 
 	offset = global;
-	offset.subtract(*this->giveNode(1)->giveCoordinates());
+	offset.subtract(this->giveNode(1)->giveCoordinates());
 	answer.beProductOf(this->plate->GtoLRotationMatrix, offset);
 }
 
@@ -262,9 +237,8 @@ TR_SHELL03::computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
 	FloatMatrix Kgx{ 3, 3 }, Kgy{ 3, 3 }, Kgxy{ 3, 3 };
 
 	// calculate the matrices - hp constant thickness
-	double x1, x2, x3, y1, y2, y3, z1, z2, z3;
-	this->giveNodeCoordinates(x1, x2, x3, y1, y2, y3, z1, z2, z3);
-	FloatArray n1{ x1, y1, z1 }, n2{ x2, y2, z2 }, n3{ x3, y3, z3 };
+    FloatArray n1, n2, n3;
+	this->giveNodeCoordinates(n1, n2, n3);
 
 	double x12, x23, x13, y12, y23, y13;
 	x12 = n1.at(1) - n2.at(1);
@@ -564,36 +538,20 @@ TR_SHELL03 :: printOutputAt(FILE *file, TimeStep *tStep)
 }
 
 
-contextIOResultType
-TR_SHELL03 :: saveContext(DataStream &stream, ContextMode mode, void *obj)
+void
+TR_SHELL03 :: saveContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-    if ( ( iores =  StructuralElement :: saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    if ( ( iores =  this->plate->saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    if ( ( iores = this->membrane->saveContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    return iores;
+    StructuralElement::saveContext(stream, mode);
+    this->plate->saveContext(stream, mode);
+    this->membrane->saveContext(stream, mode);
 }
 
-contextIOResultType
-TR_SHELL03 :: restoreContext(DataStream &stream, ContextMode mode, void *obj)
+void 
+TR_SHELL03 :: restoreContext(DataStream &stream, ContextMode mode)
 {
-    contextIOResultType iores;
-    if ( ( iores =  StructuralElement :: restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    if ( ( iores =   this->plate->restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    if ( ( iores =  this->membrane->restoreContext(stream, mode, obj) ) != CIO_OK ) {
-        THROW_CIOERR(iores);
-    }
-    return iores;
+    StructuralElement::restoreContext(stream, mode);
+    this->plate->restoreContext(stream, mode);
+    this->membrane->restoreContext(stream, mode);
 }
 
 IntegrationRule *
@@ -679,9 +637,9 @@ TR_SHELL03 :: SpatialLocalizerI_giveBBox(FloatArray &bb0, FloatArray &bb1)
     FloatArray _c;
 
     for ( int i = 1; i <= this->giveNumberOfNodes(); ++i ) {
-        FloatArray *coordinates = this->giveNode(i)->giveCoordinates();
+        FloatArray coordinates = this->giveNode(i)->giveCoordinates();
 
-        _c = * coordinates;
+        _c = coordinates;
         _c.add(gt3);
         if ( i == 1 ) {
             bb0 = bb1 = _c;
@@ -690,7 +648,7 @@ TR_SHELL03 :: SpatialLocalizerI_giveBBox(FloatArray &bb0, FloatArray &bb1)
             bb1.beMaxOf(bb1, _c);
         }
 
-        _c = * coordinates;
+        _c = coordinates;
         _c.subtract(gt3);
         bb0.beMinOf(bb0, _c);
         bb1.beMaxOf(bb1, _c);
@@ -703,8 +661,8 @@ TR_SHELL03::computeLoadLEToLRotationMatrix(FloatMatrix &answer, int iEdge, Gauss
 	FloatArray e1, e2, e3, help, xl, yl;
 
 	// compute e1' = [N2-N1]  and  help = [N3-N1]
-	e1.beDifferenceOf(*this->giveNode(2)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
-	help.beDifferenceOf(*this->giveNode(3)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
+	e1.beDifferenceOf(this->giveNode(2)->giveCoordinates(), this->giveNode(1)->giveCoordinates());
+	help.beDifferenceOf(this->giveNode(3)->giveCoordinates(), this->giveNode(1)->giveCoordinates());
 
 	// let us normalize e1'
 	e1.normalize();
@@ -729,9 +687,9 @@ TR_SHELL03::computeLoadLEToLRotationMatrix(FloatMatrix &answer, int iEdge, Gauss
 		e2 = Angle::rotate(e2, e3, ang);
 	}
 	IntArray edgeNodes;
-	((FEI2dTrLin*)(this->giveInterpolation()))->computeLocalEdgeMapping(edgeNodes, iEdge);
+    edgeNodes = ((FEI2dTrLin*)(this->giveInterpolation()))->computeLocalEdgeMapping(iEdge);
 
-	xl.beDifferenceOf(*this->giveNode(edgeNodes.at(2))->giveCoordinates(), *this->giveNode(edgeNodes.at(1))->giveCoordinates());
+	xl.beDifferenceOf(this->giveNode(edgeNodes.at(2))->giveCoordinates(), this->giveNode(edgeNodes.at(1))->giveCoordinates());
 
 	xl.normalize();
 	yl.beVectorProductOf(e3, xl);
@@ -790,10 +748,7 @@ TR_SHELL03::computeEdgeVolumeAround(GaussPoint *gp, int iEdge)
 	std::vector< FloatArray >lc = {
 		FloatArray(3), FloatArray(3), FloatArray(3)
 	};
-	this->giveNodeCoordinates(lc[0].at(1), lc[1].at(1), lc[2].at(1),
-		lc[0].at(2), lc[1].at(2), lc[2].at(2),
-		lc[0].at(3), lc[1].at(3), lc[2].at(3));
-
+	this->giveNodeCoordinates(lc[0], lc[1], lc[2]);
 
 	double detJ = this->plate->interp_lin.edgeGiveTransformationJacobian(iEdge, gp->giveNaturalCoordinates(), FEIVertexListGeometryWrapper(lc));
 	return detJ * gp->giveWeight();

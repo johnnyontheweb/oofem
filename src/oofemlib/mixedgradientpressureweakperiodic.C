@@ -56,6 +56,10 @@
 #include "feinterpol.h"
 #include "unknownnumberingscheme.h"
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 namespace oofem {
 REGISTER_BoundaryCondition(MixedGradientPressureWeakPeriodic);
 
@@ -90,10 +94,9 @@ DofManager *MixedGradientPressureWeakPeriodic :: giveInternalDofManager(int i)
 }
 
 
-IRResultType MixedGradientPressureWeakPeriodic :: initializeFrom(InputRecord *ir)
+void MixedGradientPressureWeakPeriodic :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;
-
+    MixedGradientPressureBC :: initializeFrom(ir);
 
     IR_GIVE_FIELD(ir, this->order, _IFT_MixedGradientPressureWeakPeriodic_order);
     if ( this->order < 0 ) {
@@ -111,8 +114,6 @@ IRResultType MixedGradientPressureWeakPeriodic :: initializeFrom(InputRecord *ir
         // then the linear terms, [x,0,0], [0,x,0] ... and so on
         this->tractionsdman->appendDof( new MasterDof( tractionsdman.get(), ( DofIDItem ) dofid ) );
     }
-
-    return MixedGradientPressureBC :: initializeFrom(ir);
 }
 
 
@@ -169,7 +170,6 @@ void MixedGradientPressureWeakPeriodic :: giveLocationArrays(std :: vector< IntA
     this->voldman->giveLocationArray(v_id, e_loc_c, c_s);
 
     Set *set = this->giveDomain()->giveSet(this->set);
-    IntArray bNodes;
     const IntArray &boundaries = set->giveBoundaryList();
 
     rows.resize(boundaries.giveSize() + 2);
@@ -179,7 +179,7 @@ void MixedGradientPressureWeakPeriodic :: giveLocationArrays(std :: vector< IntA
         Element *e = this->giveDomain()->giveElement( boundaries.at(pos * 2 - 1) );
         int boundary = boundaries.at(pos * 2);
 
-        e->giveInterpolation()->boundaryGiveNodes(bNodes, boundary);
+        const auto &bNodes = e->giveInterpolation()->boundaryGiveNodes(boundary);
         e->giveBoundaryLocationArray(loc_r, bNodes, this->dofs, r_s);
         e->giveBoundaryLocationArray(loc_c, bNodes, this->dofs, c_s);
         // For most uses, *loc_r == *loc_c
@@ -340,7 +340,10 @@ void MixedGradientPressureWeakPeriodic :: integrateTractionDev(FloatArray &answe
 
 
 void MixedGradientPressureWeakPeriodic :: assembleVector(FloatArray &answer, TimeStep *tStep,
-                                                         CharType type, ValueModeType mode, const UnknownNumberingScheme &s, FloatArray *eNorms)
+                                                         CharType type, ValueModeType mode, 
+                                                         const UnknownNumberingScheme &s, 
+                                                         FloatArray *eNorms,
+                                                         void*lock)
 {
     Set *set = this->giveDomain()->giveSet(this->set);
     const IntArray &boundaries = set->giveBoundaryList();
@@ -355,10 +358,16 @@ void MixedGradientPressureWeakPeriodic :: assembleVector(FloatArray &answer, Tim
         double rve_size = this->domainSize();
 
         if ( e_loc.at(1) ) {
+#ifdef _OPENMP
+            if (lock) omp_set_lock(static_cast<omp_lock_t*>(lock));
+#endif
             answer.at( e_loc.at(1) ) -= rve_size * pressure; // Note the negative sign (pressure as opposed to mean stress)
             if ( eNorms ) {
                 eNorms->at( v_id.at(1) ) += rve_size * pressure * rve_size * pressure;
             }
+#ifdef _OPENMP
+            if (lock) omp_unset_lock(static_cast<omp_lock_t*>(lock));
+#endif
         }
 
         // The second contribution is on the momentumbalance equation; int t . [[ d_dev . x ]] dA = int t . [[ d_dev . x ]] dA
@@ -369,11 +378,16 @@ void MixedGradientPressureWeakPeriodic :: assembleVector(FloatArray &answer, Tim
 
             this->integrateTractionDev(fe, e, boundary, this->devGradient);
             fe.negated();
-
+#ifdef _OPENMP
+            if (lock) omp_set_lock(static_cast<omp_lock_t*>(lock));
+#endif
             answer.assemble(fe, t_loc);
             if ( eNorms ) {
                 eNorms->assembleSquared(fe, velocityDofIDs);
             }
+#ifdef _OPENMP
+            if (lock) omp_unset_lock(static_cast<omp_lock_t*>(lock));
+#endif
         }
     } else if ( type == InternalForcesVector ) {
         FloatMatrix Ke_v, Ke_e;
@@ -392,7 +406,7 @@ void MixedGradientPressureWeakPeriodic :: assembleVector(FloatArray &answer, Tim
             int boundary = boundaries.at(pos * 2);
 
             // Fetch the element information;
-            el->giveInterpolation()->boundaryGiveNodes(bNodes, boundary);
+            const auto &bNodes = el->giveInterpolation()->boundaryGiveNodes(boundary);
             el->giveBoundaryLocationArray(v_loc, bNodes, this->dofs, s, & velocityDofIDs);
             el->computeBoundaryVectorOf(bNodes, this->dofs, mode, tStep, v);
 
@@ -408,7 +422,9 @@ void MixedGradientPressureWeakPeriodic :: assembleVector(FloatArray &answer, Tim
             fe_t2.beProductOf(Ke_e, e);
             fe_t.add(fe_t2);
             fe_e.beTProductOf(Ke_e, t);
-
+#ifdef _OPENMP
+            if (lock) omp_set_lock(static_cast<omp_lock_t*>(lock));
+#endif
             answer.assemble(fe_v, v_loc); // Contributions to delta_v equations
             answer.assemble(fe_t, t_loc); // Contribution to delta_t equations
             answer.assemble(fe_e, e_loc); // Contribution to delta_e equations
@@ -417,18 +433,22 @@ void MixedGradientPressureWeakPeriodic :: assembleVector(FloatArray &answer, Tim
                 eNorms->assembleSquared(fe_t, t_id);
                 eNorms->assembleSquared(fe_e, v_id);
             }
+#ifdef _OPENMP
+            if (lock) omp_unset_lock(static_cast<omp_lock_t*>(lock));
+#endif
         }
     }
 }
 
 
 void MixedGradientPressureWeakPeriodic :: assemble(SparseMtrx &answer, TimeStep *tStep,
-                                                   CharType type, const UnknownNumberingScheme &r_s, const UnknownNumberingScheme &c_s)
+                                                   CharType type, const UnknownNumberingScheme &r_s, 
+                                                   const UnknownNumberingScheme &c_s, double scale,
+                                                   void*lock)
 {
     if ( type == TangentStiffnessMatrix || type == SecantStiffnessMatrix || type == ElasticStiffnessMatrix ) {
         FloatMatrix Ke_v, Ke_vT, Ke_e, Ke_eT;
         IntArray v_loc_r, v_loc_c, t_loc_r, t_loc_c, e_loc_r, e_loc_c;
-        IntArray bNodes;
         Set *set = this->giveDomain()->giveSet(this->set);
         const IntArray &boundaries = set->giveBoundaryList();
 
@@ -444,22 +464,29 @@ void MixedGradientPressureWeakPeriodic :: assemble(SparseMtrx &answer, TimeStep 
             int boundary = boundaries.at(pos * 2);
 
             // Fetch the element information;
-            el->giveInterpolation()->boundaryGiveNodes(bNodes, boundary);
+            const auto &bNodes = el->giveInterpolation()->boundaryGiveNodes(boundary);
             el->giveBoundaryLocationArray(v_loc_r, bNodes, this->dofs, r_s);
             el->giveBoundaryLocationArray(v_loc_c, bNodes, this->dofs, c_s);
 
             this->integrateTractionVelocityTangent(Ke_v, el, boundary);
             this->integrateTractionXTangent(Ke_e, el, boundary);
-
             Ke_v.negated();
+            Ke_v.times(scale);
+            Ke_e.times(scale);
             Ke_vT.beTranspositionOf(Ke_v);
             Ke_eT.beTranspositionOf(Ke_e);
 
+#ifdef _OPENMP
+            if (lock) omp_set_lock(static_cast<omp_lock_t*>(lock));
+#endif
             answer.assemble(t_loc_r, v_loc_c, Ke_v);
             answer.assemble(v_loc_r, t_loc_c, Ke_vT);
 
             answer.assemble(t_loc_r, e_loc_c, Ke_e);
             answer.assemble(e_loc_r, t_loc_c, Ke_eT);
+#ifdef _OPENMP
+            if (lock) omp_unset_lock(static_cast<omp_lock_t*>(lock));
+#endif
         }
     }
 }

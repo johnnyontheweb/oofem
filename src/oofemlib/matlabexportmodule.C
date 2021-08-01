@@ -54,14 +54,18 @@
 #include "feinterpol.h"
     
 #ifdef __FM_MODULE
-#include "../fm/tr21stokes.h"
-#include "../fm/tet21stokes.h"
-#include "../fm/stokesflow.h"
+#include "fm/tr21stokes.h"
+#include "fm/tet21stokes.h"
+#include "fm/stokesflow.h"
 #endif
 
 #ifdef __SM_MODULE
-#include "../sm/Elements/nlstructuralelement.h"
-#include "../sm/EngineeringModels/structengngmodel.h"
+#include "sm/Elements/nlstructuralelement.h"
+#include "sm/EngineeringModels/structengngmodel.h"
+#include "sm/prescribeddispslipbcdirichletrc.h"
+#include "sm/prescribeddispslipbcneumannrc.h"
+#include "sm/prescribeddispslipmultiple.h"
+#include "sm/transversereinfconstraint.h"
 #endif
 
 
@@ -77,9 +81,11 @@ MatlabExportModule :: MatlabExportModule(int n, EngngModel *e) : ExportModule(n,
     exportSpecials = false;
     exportReactionForces = false;
     reactionForcesDofManList.clear();
+    dataDofManList.clear();
     exportIntegrationPointFields = false;
     elList.clear();
     reactionForcesNodeSet = 0;
+    dataNodeSet = 0;
     IPFieldsElSet = 0;
     noscaling = false;
 }
@@ -89,21 +95,24 @@ MatlabExportModule :: ~MatlabExportModule()
 { }
 
 
-IRResultType
-MatlabExportModule :: initializeFrom(InputRecord *ir)
+void
+MatlabExportModule :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                    // Required by IR_GIVE_FIELD macro
-
     ExportModule :: initializeFrom(ir);
 
-    exportMesh = ir->hasField(_IFT_MatlabExportModule_mesh);
-    exportData = ir->hasField(_IFT_MatlabExportModule_data);
-    exportArea = ir->hasField(_IFT_MatlabExportModule_area);
-    exportSpecials = ir->hasField(_IFT_MatlabExportModule_specials);
-    exportHomogenizeIST = ir->hasField(_IFT_MatlabExportModule_homogenizeInternalVars);
+    exportMesh = ir.hasField(_IFT_MatlabExportModule_mesh);
+    
+    exportData = ir.hasField(_IFT_MatlabExportModule_data);
+    if ( exportData ) {
+        IR_GIVE_OPTIONAL_FIELD(ir, this->dataNodeSet, _IFT_MatlabExportModule_DataNodeSet);
+    }
+    
+    exportArea = ir.hasField(_IFT_MatlabExportModule_area);
+    exportSpecials = ir.hasField(_IFT_MatlabExportModule_specials);
+    exportHomogenizeIST = ir.hasField(_IFT_MatlabExportModule_homogenizeInternalVars);
 
 
-    exportReactionForces = ir->hasField(_IFT_MatlabExportModule_ReactionForces);
+    exportReactionForces = ir.hasField(_IFT_MatlabExportModule_ReactionForces);
     reactionForcesDofManList.resize(0);
     if ( exportReactionForces ) {
         IR_GIVE_OPTIONAL_FIELD(ir, reactionForcesDofManList, _IFT_MatlabExportModule_DofManList);
@@ -111,7 +120,7 @@ MatlabExportModule :: initializeFrom(InputRecord *ir)
         IR_GIVE_OPTIONAL_FIELD(ir, this->reactionForcesNodeSet, _IFT_MatlabExportModule_ReactionForcesNodeSet);
     }
 
-    exportIntegrationPointFields = ir->hasField(_IFT_MatlabExportModule_IntegrationPoints);
+    exportIntegrationPointFields = ir.hasField(_IFT_MatlabExportModule_IntegrationPoints);
     elList.resize(0);
     IR_GIVE_OPTIONAL_FIELD(ir, internalVarsToExport, _IFT_MatlabExportModule_internalVarsToExport);
     if ( exportIntegrationPointFields ) {
@@ -120,9 +129,8 @@ MatlabExportModule :: initializeFrom(InputRecord *ir)
         IR_GIVE_OPTIONAL_FIELD(ir, IPFieldsElSet, _IFT_MatlabExportModule_IPFieldsElSet);
     }
 
-    noscaling = ir->hasField(_IFT_MatlabExportModule_noScaledHomogenization);
+    noscaling = ir.hasField(_IFT_MatlabExportModule_noScaledHomogenization);
 
-    return ExportModule :: initializeFrom(ir);
 }
 
 
@@ -334,21 +342,45 @@ MatlabExportModule :: doOutputData(TimeStep *tStep, FILE *FID)
     std :: vector< int >DofIDList;
     std :: vector< int > :: iterator it;
     std :: vector< std :: vector< double > >valuesList;
+    
+    if ( this->dataNodeSet > 0 ) {
+        // Export data based on node set
+        Set *set = domain->giveSet( this->dataNodeSet );
+        dataDofManList = set->giveNodeList();
+        for (auto iDM : dataDofManList) {
+            DofManager *dman = domain->giveDofManager(iDM);
+            for ( Dof *thisDof: *dman ) {
+                it = std :: find( DofIDList.begin(), DofIDList.end(), thisDof->giveDofID() );
 
-    for ( auto &dman : domain->giveDofManagers() ) {
-        for ( Dof *thisDof: *dman ) {
-            it = std :: find( DofIDList.begin(), DofIDList.end(), thisDof->giveDofID() );
+                double value = thisDof->giveUnknown(VM_Total, tStep);
+                if ( it == DofIDList.end() ) {
+                    DofIDList.push_back( thisDof->giveDofID() );
+                    valuesList.push_back({value});
+                } else {
+                    std::size_t pos = it - DofIDList.begin();
+                    valuesList[pos].push_back(value);
+                }
+            }
+        }
+    } else {
+        // Export data from all dofmanagers
+        for ( auto &dman : domain->giveDofManagers() ) {
+            for ( Dof *thisDof: *dman ) {
+                it = std :: find( DofIDList.begin(), DofIDList.end(), thisDof->giveDofID() );
 
-            double value = thisDof->giveUnknown(VM_Total, tStep);
-            if ( it == DofIDList.end() ) {
-                DofIDList.push_back( thisDof->giveDofID() );
-                valuesList.push_back({value});
-            } else {
-                std::size_t pos = it - DofIDList.begin();
-                valuesList[pos].push_back(value);
+                double value = thisDof->giveUnknown(VM_Total, tStep);
+                if ( it == DofIDList.end() ) {
+                    DofIDList.push_back( thisDof->giveDofID() );
+                    valuesList.push_back({value});
+                } else {
+                    std::size_t pos = it - DofIDList.begin();
+                    valuesList[pos].push_back(value);
+                }
             }
         }
     }
+
+
 
     fprintf(FID, "\tdata.DofIDs=[");
     for ( auto &dofid : DofIDList ) {
@@ -422,7 +454,7 @@ MatlabExportModule :: doOutputSpecials(TimeStep *tStep,    FILE *FID)
     */
 
     // Output weak periodic boundary conditions
-    unsigned int wpbccount = 1, sbsfcount = 1, mcount = 1;
+    unsigned int wpbccount = 1, sbsfcount = 1, mcount = 1, pdsdcount=1, pdsncount=1, pdsmcount=1, trccount=1;
 
     for ( auto &gbc : domain->giveBcs() ) {
         WeakPeriodicBoundaryCondition *wpbc = dynamic_cast< WeakPeriodicBoundaryCondition * >( gbc.get() );
@@ -458,6 +490,86 @@ MatlabExportModule :: doOutputSpecials(TimeStep *tStep,    FILE *FID)
             }
             fprintf(FID, "];\n");
             mcount++;
+        }
+        PrescribedDispSlipBCDirichletRC *pdsd = dynamic_cast<PrescribedDispSlipBCDirichletRC *>( gbc.get() );
+        if (pdsd) {
+            FloatArray stress, bStress, rStress;
+            pdsd->computeStress(stress, tStep);
+            pdsd->computeTransferStress(bStress, tStep);
+            pdsd->computeReinfStress(rStress, tStep);
+            fprintf(FID, "\tspecials.prescribeddispslipbcdirichletrc{%u}.stress=[", pdsdcount);
+            for ( auto i : stress ) {
+                fprintf(FID, "%e\t", i);
+            }
+            fprintf(FID, "];\n");
+            fprintf(FID, "\tspecials.prescribeddispslipbcdirichletrc{%u}.transferstress=[", pdsdcount);
+            for ( auto i : bStress ) {
+                fprintf(FID, "%e\t", i);
+            }
+            fprintf(FID, "];\n");
+            fprintf(FID, "\tspecials.prescribeddispslipbcdirichletrc{%u}.reinfstress=[", pdsdcount);
+            for ( auto i : rStress ) {
+                fprintf(FID, "%e\t", i);
+            }
+            fprintf(FID, "];\n");
+            pdsdcount++;
+        }
+        PrescribedDispSlipBCNeumannRC *pdsn = dynamic_cast<PrescribedDispSlipBCNeumannRC *>( gbc.get() );
+        if (pdsn) {
+            FloatArray stress, bStress, rStress;
+            pdsn->computeStress(stress, tStep);
+            pdsn->computeTransferStress(bStress, tStep);
+            pdsn->computeReinfStress(rStress, tStep);
+            fprintf(FID, "\tspecials.prescribeddispslipbcneumannrc{%u}.stress=[", pdsncount);
+            for ( auto i : stress ) {
+                fprintf(FID, "%e\t", i);
+            }
+            fprintf(FID, "];\n");
+            fprintf(FID, "\tspecials.prescribeddispslipbcneumannrc{%u}.transferstress=[", pdsncount);
+            for ( auto i : bStress ) {
+                fprintf(FID, "%e\t", i);
+            }
+            fprintf(FID, "];\n");
+            fprintf(FID, "\tspecials.prescribeddispslipbcneumannrc{%u}.reinfstress=[", pdsncount);
+            for ( auto i : rStress ) {
+                fprintf(FID, "%e\t", i);
+            }
+            fprintf(FID, "];\n");
+            pdsncount++;
+        }
+        PrescribedDispSlipMultiple *pdsm = dynamic_cast<PrescribedDispSlipMultiple *>( gbc.get() );
+        if (pdsm) {
+            FloatArray stress, bStress, rStress;
+            pdsm->computeStress(stress, tStep);
+            pdsm->computeTransferStress(bStress, tStep);
+            pdsm->computeReinfStress(rStress, tStep);
+            fprintf(FID, "\tspecials.prescribeddispslipmultiple{%u}.stress=[", pdsncount);
+            for ( auto i : stress ) {
+                fprintf(FID, "%e\t", i);
+            }
+            fprintf(FID, "];\n");
+            fprintf(FID, "\tspecials.prescribeddispslipmultiple{%u}.transferstress=[", pdsncount);
+            for ( auto i : bStress ) {
+                fprintf(FID, "%e\t", i);
+            }
+            fprintf(FID, "];\n");
+            fprintf(FID, "\tspecials.prescribeddispslipmultiple{%u}.reinfstress=[", pdsncount);
+            for ( auto i : rStress ) {
+                fprintf(FID, "%e\t", i);
+            }
+            fprintf(FID, "];\n");
+            pdsmcount++;
+        }
+        TransverseReinfConstraint *trc = dynamic_cast<TransverseReinfConstraint *> ( gbc.get() );
+        if (trc) {
+            FloatArray lambda;
+            trc->computeField(lambda, tStep);
+            fprintf(FID, "\tspecials.transversereinfconstraint{%u}.stress=[", trccount);
+            for ( auto i : lambda ) {
+                fprintf(FID, "%e\t", i);
+            }
+            fprintf(FID, "];\n");
+            trccount++;
         }
     }
 }
@@ -552,6 +664,12 @@ MatlabExportModule :: doOutputReactionForces(TimeStep *tStep,    FILE *FID)
         }
         fprintf(FID, "];\n");
     }
+            
+    // Output the current load level (useful for CALM solver)
+    double loadLevel = domain->giveEngngModel()->giveLoadLevel();
+    fprintf( FID, "\tReactionForces.LoadLevel = [" );
+    fprintf( FID, "%.9e", loadLevel);
+    fprintf( FID, "];\n" );
 }
 
 
@@ -621,6 +739,10 @@ MatlabExportModule :: doOutputIntegrationPointFields(TimeStep *tStep,    FILE *F
                     fprintf( FID, "%e ", coords.at(ic) );
                 }
                 fprintf( FID, "]; \n" );
+
+                //export volume around Gauss point
+                fprintf( FID, "\tIntegrationPointFields.Elements{%i}.integrationRule{%i}.ip{%i}.volume = %e; \n ",
+                         ielem, i, ip->giveNumber(), el->computeVolumeAround(ip));
 
                 // export internal variables
                 fprintf( FID, "\tIntegrationPointFields.Elements{%i}.integrationRule{%i}.ip{%i}.valArray = cell(%i,1); \n",
@@ -716,60 +838,51 @@ MatlabExportModule :: giveOutputStream(TimeStep *tStep)
 }
 
 void
-MatlabExportModule :: doOutputHomogenizeDofIDs(TimeStep *tStep,    FILE *FID)
+MatlabExportModule :: doOutputHomogenizeDofIDs(TimeStep *tStep, FILE *FID)
 {
-
-    std :: vector <FloatArray*> HomQuantities;
-    double Vol = 0.0;
+    std :: vector <FloatArray> HomQuantities;
+    double vol = 0.0;
 
     // Initialize vector of arrays constaining homogenized quantities
     HomQuantities.resize(internalVarsToExport.giveSize());
-
-    for (int j=0; j<internalVarsToExport.giveSize(); j++) {
-        HomQuantities.at(j) = new FloatArray;
-    }
 
     int nelem = this->elList.giveSize();
     for (int i = 1; i<=nelem; i++) {
         Element *e = this->emodel->giveDomain(1)->giveElement(elList.at(i));
         FEInterpolation *Interpolation = e->giveInterpolation();
 
-        Vol = Vol + e->computeVolumeAreaOrLength();
+        vol += e->computeVolumeAreaOrLength();
 
-        for ( GaussPoint *gp: *e->giveDefaultIntegrationRulePtr() ) {
+        for ( auto &gp: *e->giveDefaultIntegrationRulePtr() ) {
 
             for (int j=0; j<internalVarsToExport.giveSize(); j++) {
                 FloatArray elementValues;
-                e->giveIPValue(elementValues, gp, (InternalStateType) internalVarsToExport(j), tStep);
+                e->giveIPValue(elementValues, gp, (InternalStateType) internalVarsToExport[j], tStep);
                 double detJ=fabs(Interpolation->giveTransformationJacobian( gp->giveNaturalCoordinates(), FEIElementGeometryWrapper(e)));
 
                 elementValues.times(gp->giveWeight()*detJ);
-                if (HomQuantities.at(j)->giveSize() == 0) {
-                    HomQuantities.at(j)->resize(elementValues.giveSize());
-                    HomQuantities.at(j)->zero();
+                if (HomQuantities[j].giveSize() == 0) {
+                    HomQuantities[j].resize(elementValues.giveSize());
                 };
-                HomQuantities.at(j)->add(elementValues);
+                HomQuantities[j].add(elementValues);
             }
         }
     }
 
-
-    if (noscaling) Vol=1.0;
+    if (noscaling) vol = 1.0;
 
     for ( std :: size_t i = 0; i < HomQuantities.size(); i ++) {
-        FloatArray *thisIS;
-        thisIS = HomQuantities.at(i);
-        thisIS->times(1.0/Vol);
-        fprintf(FID, "\tspecials.%s = [", __InternalStateTypeToString ( InternalStateType (internalVarsToExport(i)) ) );
+        FloatArray &thisIS = HomQuantities[i];
+        thisIS.times(1.0/vol);
+        fprintf(FID, "\tspecials.%s = [", __InternalStateTypeToString ( (InternalStateType) internalVarsToExport[i] ) );
 
-        for (int j = 0; j<thisIS->giveSize(); j++) {
-            fprintf(FID, "%e", thisIS->at(j+1));
-            if (j!=(thisIS->giveSize()-1) ) {
+        for (int j = 0; j<thisIS.giveSize(); j++) {
+            fprintf(FID, "%e", thisIS.at(j+1));
+            if (j!=(thisIS.giveSize()-1) ) {
                 fprintf(FID, ", ");
             }
         }
         fprintf(FID, "];\n");
-        delete HomQuantities.at(i);
     }
 
 }

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2019   Borek Patzak
  *
  *
  *
@@ -68,7 +68,41 @@ namespace oofem {
     ENUM_ITEM_WITH_VALUE(D_v_edge_lin, 22) /* Linear part of boundary v-displacement used by Trefftz element*/ \
     ENUM_ITEM_WITH_VALUE(Warp_PsiTheta, 23) /* Relative twist times deplanation function, used by Trwarp element*/ \
     ENUM_ITEM_WITH_VALUE(Warp_Theta, 24) /* Relative twist, used by Trwarp element*/ \
-
+  \
+	ENUM_ITEM_WITH_VALUE(LMP_u, 25) /* Lagrange multiplier in x-direction*/ \
+	ENUM_ITEM_WITH_VALUE(LMP_v, 26) /* Lagrange multiplier in y-direction*/ \
+	ENUM_ITEM_WITH_VALUE(LMP_w, 27) /* Lagrange multiplier in z-direction*/ \
+  \
+	ENUM_ITEM_WITH_VALUE(Trac_u, 28) /* Independent traction field in x-direction*/ \
+	ENUM_ITEM_WITH_VALUE(Trac_v, 29) /* Independent traction field in y-direction*/ \
+	ENUM_ITEM_WITH_VALUE(Trac_w, 30) /* Independent traction field in z-direction*/ \
+  \
+	ENUM_ITEM_WITH_VALUE(E_xx, 31) /* Macroscopic strain component xx*/ \
+	ENUM_ITEM_WITH_VALUE(E_yy, 32) /* Macroscopic strain component yy*/ \
+	ENUM_ITEM_WITH_VALUE(E_zz, 33) /* Macroscopic strain component zz*/ \
+	ENUM_ITEM_WITH_VALUE(E_yz, 34) /* Macroscopic strain component yz*/ \
+	ENUM_ITEM_WITH_VALUE(E_zy, 35) /* Macroscopic strain component yz*/ \
+  	ENUM_ITEM_WITH_VALUE(E_xz, 36) /* Macroscopic strain component xz*/ \
+        ENUM_ITEM_WITH_VALUE(E_zx, 37) /* Macroscopic strain component xz*/ \
+	ENUM_ITEM_WITH_VALUE(E_xy, 38) /* Macroscopic strain component xy*/ \
+      	ENUM_ITEM_WITH_VALUE(E_yx, 39) /* Macroscopic strain component xy*/ \
+ \
+	ENUM_ITEM_WITH_VALUE(G_yz, 40) /* Macroscopic shear strain component xy (E_yz+E_zy)*/ \
+      	ENUM_ITEM_WITH_VALUE(G_xz, 41) /* Macroscopic shear strain component xz (E_xz+E_zx)*/ \
+      	ENUM_ITEM_WITH_VALUE(G_xy, 42) /* Macroscopic shear strain component xz (E_xz+E_zx)*/ \
+\
+        ENUM_ITEM_WITH_VALUE(K_xx, 43) /* Macroscopic curvature component xx*/ \
+      	ENUM_ITEM_WITH_VALUE(K_yy, 44) /* Macroscopic curvature component yy*/ \
+	ENUM_ITEM_WITH_VALUE(K_zz, 45) /* Macroscopic curvature component zz*/ \
+      	ENUM_ITEM_WITH_VALUE(K_yz, 46) /* Macroscopic curvature component yz*/ \
+      	ENUM_ITEM_WITH_VALUE(K_zy, 47) /* Macroscopic curvature component zy*/ \
+        ENUM_ITEM_WITH_VALUE(K_zx, 48) /* Macroscopic curvature component zx*/ \
+        ENUM_ITEM_WITH_VALUE(K_xy, 49) /* Macroscopic curvature component xy*/ \
+        ENUM_ITEM_WITH_VALUE(K_yx, 50) /* Macroscopic curvature component yx*/ \
+\
+        ENUM_ITEM_WITH_VALUE(S_u, 51) /* Macroscopic reinforcement slip field in x-direction */          \
+        ENUM_ITEM_WITH_VALUE(S_v, 52) /* Macroscopic reinforcement slip field in y-direction */          \
+        ENUM_ITEM_WITH_VALUE(S_w, 53) /* Macroscopic reinforcement slip field in z-direction */          \
 /**
  * Type representing particular dof type. Values of this type describe the physical meaning of
  * available DOFs.

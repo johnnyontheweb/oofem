@@ -47,12 +47,10 @@
 namespace oofem {
 REGISTER_BoundaryCondition(NeumannMomentLoad);
 
-IRResultType
-NeumannMomentLoad :: initializeFrom(InputRecord *ir)
+void
+NeumannMomentLoad :: initializeFrom(InputRecord &ir)
 {
     BoundaryLoad :: initializeFrom(ir);
-
-    IRResultType result;
 
     IR_GIVE_FIELD(ir, g, _IFT_NeumannMomentLoad_Gradient);
     p = 0.;
@@ -60,8 +58,6 @@ NeumannMomentLoad :: initializeFrom(InputRecord *ir)
     IR_GIVE_FIELD(ir, cset, _IFT_NeumannMomentLoad_CenterSet);
 
     xbar.resize(0);
-
-    return result;
 }
 
 void
@@ -73,34 +69,29 @@ NeumannMomentLoad :: computeXbar()
 
     celements = this->giveDomain()->giveSet(cset)->giveElementList();
 
-    double V=0.0;
+    double V = 0.0;
 
     for ( auto elementID : celements ) {
 
         Element *thisElement = this->giveDomain()->giveElement(elementID);
         FEInterpolation *i = thisElement->giveInterpolation();
 
-        IntegrationRule *iRule = i->giveIntegrationRule(3);
+        auto iRule = i->giveIntegrationRule(3);
 
-        for ( GaussPoint * gp: * iRule ) {
-            FloatArray coord;
+        FloatArray coord;
+        for ( auto &gp: *iRule ) {
             FloatArray lcoords = gp->giveNaturalCoordinates();
             double detJ = i->giveTransformationJacobian(lcoords, FEIElementGeometryWrapper(thisElement));
 
             i->local2global(coord, lcoords, FEIElementGeometryWrapper(thisElement));
             coord.times(gp->giveWeight()*fabs(detJ));
 
-            V=V+gp->giveWeight()*fabs(detJ);
+            V += gp->giveWeight()*fabs(detJ);
 
             xbar.add(coord);
         }
-
-        delete iRule;
-
     }
-
     xbar.times(1.0/V);
-
 }
 
 void

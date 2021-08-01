@@ -39,7 +39,7 @@
 #include "material.h"
 #include "gausspoint.h"
 #include "gaussintegrationrule.h"
-#include "fluiddynamicmaterial.h"
+#include "fm/Materials/fluiddynamicmaterial.h"
 #include "fluidcrosssection.h"
 #include "floatmatrix.h"
 #include "floatarray.h"
@@ -62,14 +62,9 @@ FEI3dTetLin Tet1_3D_SUPG :: interpolation;
 
 Tet1_3D_SUPG :: Tet1_3D_SUPG(int n, Domain *aDomain) :
     SUPGElement2(n, aDomain)
-    // Constructor.
 {
     numberOfDofMans  = 4;
 }
-
-Tet1_3D_SUPG :: ~Tet1_3D_SUPG()
-// Destructor
-{ }
 
 int
 Tet1_3D_SUPG :: computeNumberOfDofs()
@@ -90,13 +85,13 @@ Tet1_3D_SUPG :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize(3);
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 3) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 3);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], 1, this);
 
-        integrationRulesArray [ 1 ].reset( new GaussIntegrationRule(2, this, 1, 3) );
+        integrationRulesArray [ 1 ] = std::make_unique<GaussIntegrationRule>(2, this, 1, 3);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 1 ], 4, this);
 
-        integrationRulesArray [ 2 ].reset( new GaussIntegrationRule(3, this, 1, 3) );
+        integrationRulesArray [ 2 ] = std::make_unique<GaussIntegrationRule>(3, this, 1, 3);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 2 ], 4, this);
     }
 }
@@ -364,14 +359,14 @@ Tet1_3D_SUPG :: computeCriticalTimeStep(TimeStep *tStep)
         jnode = this->giveNode(j);
         knode = this->giveNode(k);
         lnode = this->giveNode(l);
-        t1.beDifferenceOf(*inode->giveCoordinates(), *jnode->giveCoordinates());
+        t1.beDifferenceOf(inode->giveCoordinates(), jnode->giveCoordinates());
 
-        t2.beDifferenceOf(*knode->giveCoordinates(), *jnode->giveCoordinates());
+        t2.beDifferenceOf(knode->giveCoordinates(), jnode->giveCoordinates());
 
         n.beVectorProductOf(t1, t2);
         n.normalize();
 
-        n3.beDifferenceOf(*lnode->giveCoordinates(), *jnode->giveCoordinates());
+        n3.beDifferenceOf(lnode->giveCoordinates(), jnode->giveCoordinates());
 
         ln = min( ln, sqrt( fabs( n.dotProduct(n3) ) ) );
     }
@@ -396,6 +391,20 @@ Tet1_3D_SUPG :: computeVolumeAround(GaussPoint *gp)
     volume = determinant * weight;
 
     return volume;
+}
+
+
+void
+Tet1_3D_SUPG :: computeDeviatoricStress(FloatArray &answer, const FloatArray &eps, GaussPoint *gp, TimeStep *tStep)
+{
+    answer = static_cast< FluidCrossSection * >( this->giveCrossSection() )->giveFluidMaterial()->computeDeviatoricStress3D(eps, gp, tStep);
+}
+
+
+void
+Tet1_3D_SUPG :: computeTangent(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep)
+{
+    answer = static_cast< FluidCrossSection * >( this->giveCrossSection() )->giveFluidMaterial()->computeTangent3D(mode, gp, tStep);
 }
 
 

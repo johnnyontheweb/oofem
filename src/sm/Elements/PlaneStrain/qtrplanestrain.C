@@ -32,7 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/PlaneStrain/qtrplanestrain.h"
+#include "sm/Elements/PlaneStrain/qtrplanestrain.h"
 #include "fei2dtrquad.h"
 #include "floatmatrix.h"
 #include "floatarray.h"
@@ -43,7 +43,7 @@
  #include "oofeggraphiccontext.h"
  #include "connectivitytable.h"
  #include "oofegutils.h"
- #include "Materials/rcm2.h"
+ #include "sm/Materials/rcm2.h"
 #endif
 
 
@@ -60,6 +60,9 @@ QTrPlaneStrain :: QTrPlaneStrain(int n, Domain *aDomain) :
 }
 
 
+FEInterpolation *
+QTrPlaneStrain :: giveInterpolation() const { return & interpolation; }
+
 Interface *
 QTrPlaneStrain :: giveInterface(InterfaceType interface)
 {
@@ -74,7 +77,6 @@ QTrPlaneStrain :: giveInterface(InterfaceType interface)
 
     return NULL;
 }
-
 
 #ifdef __OOFEG
  #define TR_LENGHT_REDUCT 0.3333

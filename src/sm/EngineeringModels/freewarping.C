@@ -34,19 +34,20 @@
 
 #include "freewarping.h"
 #include "crosssection.h"
-#include "Elements/trwarp.h"
+#include "sm/Elements/trwarp.h"
 #include "nummet.h"
 #include "timestep.h"
 #include "element.h"
 #include "dof.h"
 #include "sparsemtrx.h"
 #include "verbose.h"
-#include "Elements/structuralelement.h"
+#include "sm/Elements/structuralelement.h"
 #include "unknownnumberingscheme.h"
-#include "Elements/structuralelementevaluator.h"
+#include "sm/Elements/structuralelementevaluator.h"
 #include "datastream.h"
 #include "contextioerr.h"
 #include "classfactory.h"
+#include "outputmanager.h"
 #include <math.h>
 
 //#define THROW_CIOERR(e) throw ContextIOERR(e, __FILE__, __LINE__); // km???
@@ -78,10 +79,10 @@ NumericalMethod *FreeWarping :: giveNumericalMethod(MetaStep *mStep)
 {
     if ( isParallel() ) {
         if ( ( solverType == ST_Petsc ) || ( solverType == ST_Feti ) ) {
-            nMethod.reset( classFactory.createSparseLinSolver(solverType, this->giveDomain(1), this) );
+            nMethod = classFactory.createSparseLinSolver(solverType, this->giveDomain(1), this);
         }
     } else {
-        nMethod.reset( classFactory.createSparseLinSolver(solverType, this->giveDomain(1), this) );
+        nMethod = classFactory.createSparseLinSolver(solverType, this->giveDomain(1), this);
     }
 
     if ( !nMethod ) {
@@ -91,15 +92,10 @@ NumericalMethod *FreeWarping :: giveNumericalMethod(MetaStep *mStep)
     return nMethod.get();
 }
 
-IRResultType
-FreeWarping :: initializeFrom(InputRecord *ir)
+void
+FreeWarping :: initializeFrom(InputRecord &ir)
 {
-    IRResultType result;                // Required by IR_GIVE_FIELD macro
-
-    result = StructuralEngngModel :: initializeFrom(ir);
-    if ( result != IRRT_OK ) {
-        return result;
-    }
+    StructuralEngngModel :: initializeFrom(ir);
 
     int val = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_EngngModel_lstype);
@@ -109,9 +105,6 @@ FreeWarping :: initializeFrom(InputRecord *ir)
     IR_GIVE_OPTIONAL_FIELD(ir, val, _IFT_EngngModel_smtype);
     sparseMtrxType = ( SparseMtrxType ) val;
 
-
-
-
 #ifdef __PARALLEL_MODE
     if ( isParallel() ) {
         commBuff = new CommunicatorBuff( this->giveNumberOfProcesses() );
@@ -120,9 +113,6 @@ FreeWarping :: initializeFrom(InputRecord *ir)
     }
 
 #endif
-
-
-    return IRRT_OK;
 }
 
 
@@ -241,7 +231,7 @@ TimeStep *FreeWarping :: giveNextStep()
     }
 
     previousStep = std :: move(currentStep);
-    currentStep.reset( new TimeStep(istep, this, 1, ( double ) istep, 0., counter) );
+    currentStep = std::make_unique<TimeStep>(istep, this, 1, ( double ) istep, 0., counter);
     return currentStep.get();
 }
 
@@ -279,7 +269,7 @@ void FreeWarping :: solveYourselfAt(TimeStep *tStep)
         //
         // first step  assemble stiffness Matrix
         //
-        stiffnessMatrix.reset( classFactory.createSparseMtrx(sparseMtrxType) );
+        stiffnessMatrix = classFactory.createSparseMtrx(sparseMtrxType);
         if ( !stiffnessMatrix ) {
             OOFEM_ERROR("sparse matrix creation failed");
         }
@@ -364,7 +354,7 @@ void
 FreeWarping :: terminate(TimeStep *tStep)
 {
     fflush( this->giveOutputStream() );
-    this->printReactionForces(tStep, 1); // computed reaction forces have the mening of torsional stiffness
+    this->printReactionForces(tStep, 1, this->giveOutputStream()); // computed reaction forces have the mening of torsional stiffness
     StructuralEngngModel :: terminate(tStep);
 }
 
@@ -374,6 +364,22 @@ FreeWarping :: updateDomainLinks()
 {
     EngngModel :: updateDomainLinks();
     this->giveNumericalMethod( this->giveCurrentMetaStep() )->setDomain( this->giveDomain(1) );
+}
+
+
+void
+FreeWarping::printOutputAt(FILE* file, TimeStep* tStep)
+{
+    if (this->giveDomain(1)->giveOutputManager()->testTimeStepOutput(tStep)) {
+        return;
+    }
+
+    EngngModel::printOutputAt(file, tStep);
+
+    fprintf(file, "\n Center of gravity:");
+    for (int j = 1; j <= this->giveDomain(1)->giveNumberOfCrossSectionModels(); ++j) {
+        fprintf(file, "\n  CrossSection %d  x = %f     y = %f", j, CG.at(j, 1), CG.at(j, 2));
+    }
 }
 
 

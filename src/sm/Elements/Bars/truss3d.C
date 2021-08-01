@@ -32,8 +32,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "../sm/Elements/Bars/truss3d.h"
-#include "../sm/CrossSections/structuralcrosssection.h"
+#include "sm/Elements/Bars/truss3d.h"
+#include "sm/CrossSections/structuralcrosssection.h"
 #include "fei3dlinelin.h"
 #include "node.h"
 #include "material.h"
@@ -59,7 +59,7 @@ REGISTER_Element(Truss3d);
 FEI3dLineLin Truss3d :: interp;
 
 Truss3d :: Truss3d(int n, Domain *aDomain) :
-NLStructuralElement(n, aDomain), ZZNodalRecoveryModelInterface(this)
+    NLStructuralElement(n, aDomain), ZZNodalRecoveryModelInterface(this)
 {
     numberOfDofMans = 2;
 }
@@ -110,13 +110,20 @@ Truss3d :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int ui)
 }
 
 
+  void
+Truss3d :: computeBHmatrixAt(GaussPoint *gp, FloatMatrix &answer)
+{
+    this->computeBmatrixAt(gp, answer);
+}
+
+  
 void
 Truss3d :: computeGaussPoints()
 // Sets up the array of Gauss Points of the receiver.
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize( 1 );
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 2) );
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 2);
         this->giveCrossSection()->setupIntegrationPoints(* integrationRulesArray [ 0 ], 1, this);
     }
 }
@@ -176,7 +183,7 @@ Truss3d :: computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
 	N2.beSubArrayOf(endForces, ind2);
 
 	FloatArray lx;
-	lx.beDifferenceOf(*this->giveNode(2)->giveCoordinates(), *this->giveNode(1)->giveCoordinates());
+	lx.beDifferenceOf(this->giveNode(2)->giveCoordinates(), this->giveNode(1)->giveCoordinates());
 	lx.normalize();
 
 	// sign of N
@@ -239,7 +246,7 @@ Truss3d :: giveLocalCoordinateSystem(FloatMatrix &answer)
 {
     FloatArray lx, ly(3), lz;
 
-    lx.beDifferenceOf( * this->giveNode(2)->giveCoordinates(), * this->giveNode(1)->giveCoordinates() );
+    lx.beDifferenceOf( this->giveNode(2)->giveCoordinates(), this->giveNode(1)->giveCoordinates() );
     lx.normalize();
 
     ly(0) = lx(1);
@@ -263,28 +270,26 @@ Truss3d :: giveLocalCoordinateSystem(FloatMatrix &answer)
 }
 
 
-IRResultType
-Truss3d :: initializeFrom(InputRecord *ir)
+void
+Truss3d :: initializeFrom(InputRecord &ir)
 {
-	IRResultType result;                    // Required by IR_GIVE_FIELD macro
+    NLStructuralElement :: initializeFrom(ir);
 
-	this->macroElem = 0;
-	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_Truss3d_macroElem);
-
-    return NLStructuralElement :: initializeFrom(ir);
+    this->macroElem = 0;
+    IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_Truss3d_macroElem);
 }
 
 
 void
 Truss3d :: computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->giveRealStress_1d(answer, gp, strain, tStep);
+    answer = this->giveStructuralCrossSection()->giveRealStress_1d(strain, gp, tStep);
 }
 
 void
 Truss3d :: computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
 {
-    this->giveStructuralCrossSection()->giveStiffnessMatrix_1d(answer, rMode, gp, tStep);
+    answer = this->giveStructuralCrossSection()->giveStiffnessMatrix_1d(rMode, gp, tStep);
 }
 
 void
@@ -461,7 +466,7 @@ Truss3d::printOutputAt(FILE *file, TimeStep *tStep)
 	//FloatMatrix dir;
 	//this->giveLocalCoordinateSystem(dir);
 	this->computeStrainVector(strain, this->integrationRulesArray[0]->getIntegrationPoint(0), tStep);
-	this->giveStructuralCrossSection()->giveRealStress_1d(Fl, this->integrationRulesArray[0]->getIntegrationPoint(0), strain, tStep);
+    Fl = this->giveStructuralCrossSection()->giveRealStress_1d(strain, this->integrationRulesArray[0]->getIntegrationPoint(0), tStep);
 	// fprintf(file, "truss3D %d (%8d) dir 3 %.4e %.4e %.4e macroelem %d : %.4e\n", this->giveLabel(), number, dir.at(1,1), dir.at(1,2), dir.at(1,3), this->macroElem, Fl.at(1)); // 1st component only
 	fprintf(file, "truss3D %d (%8d) macroelem %d : %.4e\n", this->giveLabel(), number, this->macroElem, Fl.at(1)); // 1st component only
 }

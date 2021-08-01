@@ -35,7 +35,7 @@
 #ifndef SpringElement3D_h
 #define SpringElement3D_h
 
-#include "../sm/Elements/structuralelement.h"
+#include "sm/Elements/structuralelement.h"
 
 ///@name Input fields for spring element
 //@{
@@ -72,52 +72,54 @@ protected:
      * for torsional spring it defines the axis of rotation.
      */
     FloatArray dir;
-	// macro element number
-	int macroElem;
-	double referenceAngle = 0;
-	// length of element for rigid link transport terms
-	double d = 0;
+    // macro element number
+    int macroElem;
+    double referenceAngle = 0;
+    // length of element for rigid link transport terms
+    double d = 0;
 public:
     SpringElement3D(int n, Domain * d);
     virtual ~SpringElement3D() { }
-	virtual double computeLength();
-    virtual void computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep);
-    virtual void computeMassMatrix(FloatMatrix &answer, TimeStep *tStep)
+    virtual double computeLength();
+    void computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep) override;
+    void computeMassMatrix(FloatMatrix &answer, TimeStep *tStep) override
     { computeLumpedMassMatrix(answer, tStep); }
-    virtual void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep);
-	virtual void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep);
+    void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep) override;
+    void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep) override;
     // { answer.clear(); }
-	virtual int giveLocalCoordinateSystem(FloatMatrix &answer);
-    virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord = 0);
+    int giveLocalCoordinateSystem(FloatMatrix &answer) override;
+    void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord = 0) override;
 
-    virtual int computeNumberOfDofs() { return 12; }
-    virtual int computeNumberOfGlobalDofs();
+    int computeNumberOfDofs() override { return 12; }
+    int computeNumberOfGlobalDofs() override;
 
-    virtual void giveDofManDofIDMask(int inode, IntArray &answer) const;
+    void giveDofManDofIDMask(int inode, IntArray &answer) const override;
 
-    virtual void updateInternalState(TimeStep *tStep) { }
-    virtual void updateYourself(TimeStep *tStep) { }
+    void updateInternalState(TimeStep *tStep) override { }
+    void updateYourself(TimeStep *tStep) override { }
     virtual int checkConsistency() { return 1; }
-    virtual void printOutputAt(FILE *file, TimeStep *tStep);
+    void printOutputAt(FILE *file, TimeStep *tStep) override;
     virtual bool isCast(TimeStep *tStep) {return true;}
     
     // definition & identification
-    virtual const char *giveInputRecordName() const { return _IFT_SpringElement3D_Name; }
-    virtual const char *giveClassName() const { return "SpringElement3D"; }
-    virtual IRResultType initializeFrom(InputRecord *ir);
-	virtual void postInitialize();
-    virtual Element_Geometry_Type giveGeometryType() const { return EGT_point; }
+    const char *giveInputRecordName() const override { return _IFT_SpringElement3D_Name; }
+    const char *giveClassName() const override { return "SpringElement3D"; }
+    void initializeFrom(InputRecord &ir) override;
+    void postInitialize() override;
+    Element_Geometry_Type giveGeometryType() const override { return EGT_point; }
 
 protected:
-    virtual void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
+    void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep) override
     { answer.clear(); }
 
-    virtual void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer,
-                                  int lowerIndx = 1, int upperIndx = ALL_STRAINS)
+    void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer,
+                                  int lowerIndx = 1, int upperIndx = ALL_STRAINS) override
     { answer.clear(); }
-    virtual void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer) { answer.clear(); }
-    virtual bool computeGtoLRotationMatrix(FloatMatrix &answer);
-	FloatArray computeSpringInternalForce(TimeStep *tStep);
+    void computeConstitutiveMatrixAt(FloatMatrix& answer, MatResponseMode rMode, GaussPoint* gp, TimeStep* tStep) override
+    { OOFEM_ERROR("calling of this function is not allowed"); }
+    void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer) override { answer.clear(); }
+    bool computeGtoLRotationMatrix(FloatMatrix &answer) override;
+    FloatArray computeSpringInternalForce(TimeStep *tStep);
 };
 } // end namespace oofem
 #endif // SpringElement3D_h

@@ -39,10 +39,12 @@
 #include "gausspoint.h"
 #include "gaussintegrationrule.h"
 #include "floatmatrix.h"
+#include "floatmatrixf.h"
 #include "floatarray.h"
+#include "floatarrayf.h"
 #include "intarray.h"
 #include "mathfem.h"
-#include "../sm/CrossSections/structuralinterfacecrosssection.h"
+#include "sm/CrossSections/structuralinterfacecrosssection.h"
 #include "classfactory.h"
 
 #ifdef __OOFEG
@@ -93,8 +95,8 @@ InterfaceElement3dTrLin :: computeGaussPoints()
 {
     if ( integrationRulesArray.size() == 0 ) {
         integrationRulesArray.resize( 1 );
-        //integrationRulesArray[0].reset( new LobattoIntegrationRule (1,domain, 1, 2) );
-        integrationRulesArray [ 0 ].reset( new GaussIntegrationRule(1, this, 1, 3) );
+        //integrationRulesArray[0] = std::make_unique<LobattoIntegrationRule>(1,domain, 1, 2);
+        integrationRulesArray [ 0 ] = std::make_unique<GaussIntegrationRule>(1, this, 1, 3);
         integrationRulesArray [ 0 ]->SetUpPointsOnTriangle(4, _3dInterface);
     }
 }
@@ -138,7 +140,7 @@ InterfaceElement3dTrLin :: computeVolumeAround(GaussPoint *gp)
     FloatMatrix lcs(3, 3);
     this->computeLCS(lcs);
     for ( int i = 1; i <= 3; i++ ) {
-        lncp[ i - 1 ].beProductOf(lcs, *this->giveNode(i)->giveCoordinates());
+        lncp[ i - 1 ].beProductOf(lcs, this->giveNode(i)->giveCoordinates());
     }
 
     determinant = fabs( this->interpolation.giveTransformationJacobian( gp->giveNaturalCoordinates(), FEIVertexListGeometryWrapper(lncp) ) );
@@ -153,21 +155,21 @@ InterfaceElement3dTrLin :: computeVolumeAround(GaussPoint *gp)
 void
 InterfaceElement3dTrLin :: computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep)
 {
-    static_cast< StructuralInterfaceCrossSection* >(this->giveCrossSection())->giveEngTraction_3d(answer, gp, strain, tStep);
+    answer = static_cast< StructuralInterfaceCrossSection* >(this->giveCrossSection())->giveEngTraction_3d(strain, gp, tStep);
 }
 
 
 void
 InterfaceElement3dTrLin :: computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
 {
-    static_cast< StructuralInterfaceCrossSection* >(this->giveCrossSection())->give3dStiffnessMatrix_Eng(answer, rMode, gp, tStep);
+    answer = static_cast< StructuralInterfaceCrossSection* >(this->giveCrossSection())->give3dStiffnessMatrix_Eng(rMode, gp, tStep);
 }
 
 
-IRResultType
-InterfaceElement3dTrLin :: initializeFrom(InputRecord *ir)
+void
+InterfaceElement3dTrLin :: initializeFrom(InputRecord &ir)
 {
-    return StructuralElement :: initializeFrom(ir);
+    StructuralElement :: initializeFrom(ir);
 }
 
 
