@@ -991,6 +991,8 @@ tests/sm/t3d.bmf
 /.vs/oofem/v16/ipch/AutoPCH/da0f5e7ead8bd56a/ASSEMBLERCALLBACK.ipch
 /.vs/oofem/v16/ipch/AutoPCH/dec30583120432ac/FLOATARRAY.ipch
 /.vs/oofem/v16/ipch/AutoPCH/ffd8604b2000ac35/ENGNGM.ipch
+.vs
+CMakeFiles
 /64_2019/.vs/oofem/v16/.suo
 /64_2019/.vs/oofem/v16/Browse.VC.db
 /64_2019/.vs/oofem/v16/Solution.VC.db
