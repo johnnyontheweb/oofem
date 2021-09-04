@@ -56,6 +56,11 @@
  #include "oofeggraphiccontext.h"
 #endif
 
+#ifdef MEMSTR
+    #include <io.h>
+    #include <fcntl.h>
+#endif
+
 namespace oofem {
 REGISTER_EngngModel(LinearStability);
 
@@ -132,9 +137,19 @@ LinearStability :: initializeFrom(InputRecord &ir)
     if (suppressOutput) {
         printf("Suppressing output.\n");
     } else {
-        if ( ( outputStream = fopen(this->dataOutputFileName.c_str(), "w") ) == NULL ) {
-            OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str());
+#ifdef MEMSTR
+        outputStream = nullptr;
+        FILE* source = classFactory.giveMemoryStream("out");
+        int sourceFD = _open_osfhandle((intptr_t)source, _O_APPEND);
+        if (sourceFD != -1) { outputStream = _fdopen(sourceFD, "a"); }
+        if (!(outputStream)) {
+            // if not, write to file
+#endif
+            if ((outputStream = fopen(this->dataOutputFileName.c_str(), "w")) == NULL) { OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str()); }
+#ifdef MEMSTR
+            usestream = false;
         }
+#endif
 
         fprintf(outputStream, "%s", PRG_HEADER);
         fprintf(outputStream, "\nStarting analysis on: %s\n", ctime(& this->startTime) );

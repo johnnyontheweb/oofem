@@ -156,6 +156,7 @@ EngngModel :: ~EngngModel()
     //fclose (inputStream) ;
     if ( outputStream ) {
 // #ifndef MEMSTR
+        fflush(outputStream);
         fclose(outputStream);
 // #endif
     }
@@ -209,27 +210,10 @@ int EngngModel :: instanciateYourself(DataReader &dr, InputRecord &ir, const cha
         this->dataOutputFileName.append(".oofeg");
     }
 
-#ifdef MEMSTR
-    outputStream = nullptr;
-    FILE *source = classFactory.giveMemoryStream( "out" );
-    int sourceFD = _open_osfhandle( (intptr_t)source, _O_APPEND );
-    if ( sourceFD != -1 ) { outputStream = _fdopen( sourceFD, "a" ); }
-    if ( !( outputStream ) ) {
-        // if not, write to file
-#endif
-        if ( ( outputStream = fopen( this->dataOutputFileName.c_str(), "w" ) ) == NULL ) { OOFEM_ERROR( "Can't open output file %s", this->dataOutputFileName.c_str() ); }
-#ifdef MEMSTR
-        usestream = false;
-    }
-#endif
 
     this->Instanciate_init(); // Must be done after initializeFrom
 
-    fprintf(outputStream, "%s", PRG_HEADER);
     this->startTime = time(NULL);
-    fprintf( outputStream, "\nStarting analysis on: %s\n", ctime(& this->startTime) );
-
-    fprintf(outputStream, "%s\n", desc);
 
 #  ifdef VERBOSE
     OOFEM_LOG_DEBUG( "Reading all data from \"%s\"\n", referenceFileName.c_str() );
@@ -331,10 +315,20 @@ EngngModel :: initializeFrom(InputRecord &ir)
     }
     else {
 
-        if ( ( outputStream = fopen(this->dataOutputFileName.c_str(), "w") ) == NULL ) {
-            OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str());
+#ifdef MEMSTR
+        outputStream = nullptr;
+        FILE* source = classFactory.giveMemoryStream("out");
+        int sourceFD = _open_osfhandle((intptr_t)source, _O_APPEND);
+        if (sourceFD != -1) { outputStream = _fdopen(sourceFD, "a"); }
+        if (!(outputStream)) {
+            // if not, write to file
+#endif
+            if ((outputStream = fopen(this->dataOutputFileName.c_str(), "w")) == NULL) { OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str()); }
+#ifdef MEMSTR
+            usestream = false;
         }
-
+#endif
+        
         fprintf(outputStream, "%s", PRG_HEADER);
         fprintf(outputStream, "\nStarting analysis on: %s\n", ctime(& this->startTime) );
         fprintf(outputStream, "%s\n", simulationDescription.c_str());
