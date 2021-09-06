@@ -67,6 +67,11 @@
  #include "oofeggraphiccontext.h"
 #endif
 
+#ifdef MEMSTR
+    #include <io.h>
+    #include <fcntl.h>
+#endif
+
 using namespace std;
 
 namespace oofem {
@@ -135,6 +140,32 @@ ResponseSpectrum::initializeFrom( InputRecord &ir )
     double damp = 0.05; // default damping ratio
     IR_GIVE_OPTIONAL_FIELD( ir, damp, _IFT_ResponseSpectrum_damp );
     csi = damp;
+
+    suppressOutput = ir.hasField(_IFT_EngngModel_suppressOutput);
+
+    if (suppressOutput) {
+        //printf("Suppressing output.\n");
+    }
+    else {
+
+#ifdef MEMSTR
+        outputStream = nullptr;
+        FILE* source = classFactory.giveMemoryStream("out");
+        int sourceFD = _open_osfhandle((intptr_t)source, _O_APPEND);
+        if (sourceFD != -1) { outputStream = _fdopen(sourceFD, "a"); }
+        if (!(outputStream)) {
+            // if not, write to file
+#endif
+            if ((outputStream = fopen(this->dataOutputFileName.c_str(), "w")) == NULL) { OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str()); }
+#ifdef MEMSTR
+            usestream = false;
+        }
+#endif
+
+        fprintf(outputStream, "%s", PRG_HEADER);
+        fprintf(outputStream, "\nStarting analysis on: %s\n", ctime(&this->startTime));
+        fprintf(outputStream, "%s\n", simulationDescription.c_str());
+    }
 }
 
 
@@ -1320,6 +1351,7 @@ void ResponseSpectrum::terminate( TimeStep *tStep )
     //    tStep->setNumber(i);
     exportModuleManager.doOutput( tStep ); // forcing bem with intrinsicTime=0 to compute the square root for SRSS and print results
     //}
+    fprintf(outputStream, "strTerm\n");
     fflush( this->giveOutputStream() );
     this->saveStepContext( tStep, CM_State | CM_Definition );
 }
