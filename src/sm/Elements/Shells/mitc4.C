@@ -477,7 +477,8 @@ MITC4Shell::computeStiffnessMatrix( FloatMatrix &answer, MatResponseMode rMode, 
     // This element adds an additional stiffness for the so called drilling dofs.
     NLStructuralElement::computeStiffnessMatrix( answer, rMode, tStep );
 
-    bool drillType = this->giveStructuralCrossSection()->give( CS_DrillingType, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint( 0 ) );
+    // bool drillType = this->giveStructuralCrossSection()->give( CS_DrillingType, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint( 0 ) );
+    bool drillType = true; // NF mod - drilling always accounted in
     if ( drillType == 1 ) {
         double relDrillCoeff = this->giveStructuralCrossSection()->give( CS_RelDrillingStiffness, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint( 0 ) );
         if ( relDrillCoeff == 0.0 ) {
@@ -495,11 +496,13 @@ MITC4Shell::computeStiffnessMatrix( FloatMatrix &answer, MatResponseMode rMode, 
         IntArray drillDofs  = { 6, 12, 18, 24 };
         auto drillStiffness = eye<4>() * drillCoeff;
 #if 0
-        FloatMatrix drillStiffness;
+        // NF mod - use drilling from section input
+        FloatArray n;
+        //FloatMatrix drillStiffness;
         for ( auto &gp : *integrationRulesArray [ 0 ] ) {
             double dV = this->computeVolumeAround(gp);
             // double drillCoeff = this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp);
-            double coeff = drillCoeff;
+            // double coeff = drillCoeff;
             if ( this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp)> 0)
                 drillCoeff *= this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp);
             // Drilling stiffness is here for improved numerical properties
@@ -507,7 +510,7 @@ MITC4Shell::computeStiffnessMatrix( FloatMatrix &answer, MatResponseMode rMode, 
             for ( int j = 0; j < 4; j++ ) {
                 n[j] -= 0.25;
             }
-            drillStiffness.plusDyadSymmUpper(n, coeff * dV);
+            drillStiffness.plusDyadSymmUpper( n, drillCoeff * dV );
         }
         drillStiffness.symmetrized();
 #endif
@@ -521,8 +524,8 @@ MITC4Shell::giveInternalForcesVector( FloatArray &answer, TimeStep *tStep, int u
     // This element adds an additional stiffness for the so called drilling dofs.
     NLStructuralElement::giveInternalForcesVector( answer, tStep, useUpdatedGpRecord );
 
-    bool drillType = this->giveStructuralCrossSection()->give( CS_DrillingType, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint( 0 ) );
-
+    //bool drillType = this->giveStructuralCrossSection()->give( CS_DrillingType, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint( 0 ) );
+    bool drillType = true; // NF mod - drilling always accounted in
     if ( drillType == 1 ) {
         FloatArray n, tmp;
         FloatArray drillUnknowns, drillMoment;
@@ -536,7 +539,7 @@ MITC4Shell::giveInternalForcesVector( FloatArray &answer, TimeStep *tStep, int u
         for ( auto &gp : *integrationRulesArray [ 0 ] ) {
             double dV = this->computeVolumeAround(gp);
             // double drillCoeff = this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp);
-            double coeff = drillCoeff;
+            //double coeff = drillCoeff;
             if ( this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp)> 0)
                 drillCoeff *= this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp);
          
@@ -545,7 +548,7 @@ MITC4Shell::giveInternalForcesVector( FloatArray &answer, TimeStep *tStep, int u
                 n[j] -= 0.25;
             }
             double dtheta = n.dotProduct(drillUnknowns);
-            drillMoment.add(coeff * dV * dtheta, n);
+            drillMoment.add( drillCoeff * dV * dtheta, n );
          }
 #endif
 
@@ -894,7 +897,7 @@ MITC4Shell::printOutputAt( FILE *file, TimeStep *tStep )
         fprintf( file, "\n          curvatures " );
         for ( auto &val : this->giveMidplaneIPValue( i, IST_CurvatureTensor, tStep ) ) { fprintf( file, " %.4e", val ); }
 
-#if 0
+//#if 0
         for ( int j = 0; j < nPointsZ; j++ ) {
             auto gp = integrationRulesArray [ 0 ]->getIntegrationPoint(nPointsZ * i + j);
 
@@ -912,7 +915,7 @@ MITC4Shell::printOutputAt( FILE *file, TimeStep *tStep )
                 fprintf(file, " %.4e", val);
             }
         }
-#endif
+//#endif
 
         fprintf( file, "\n" );
     }
