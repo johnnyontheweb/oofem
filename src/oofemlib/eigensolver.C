@@ -54,6 +54,8 @@
 // using namespace Spectra;
 
 namespace oofem {
+REGISTER_GeneralizedEigenValueSolver( EigenSolver, GES_Eigen );
+
 
 EigenSolver :: EigenSolver(Domain *d, EngngModel *m) :
     SparseGeneralEigenValueSystemNM(d, m)
