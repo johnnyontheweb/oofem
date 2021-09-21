@@ -330,15 +330,15 @@ void AbaqusUserElement6d :: updateYourself(TimeStep *tStep)
     hasTangentFlag = false;
 
 #ifdef DEBUG
-	std::ofstream fs;
-	std::string fout = "svars" + std::to_string(this->giveLabel());
-	fs.open(fout + ".csv", std::ios_base::app);
-	for (int i = 1; i <= svars.giveSize(); i++) {
-		fs << svars.at(i) << ";";
-	}
-	fs << "\n";
-	fs.close();
-	// svars.printYourself();
+	//std::ofstream fs;
+	//std::string fout = "svars" + std::to_string(this->giveLabel());
+	//fs.open(fout + ".csv", std::ios_base::app);
+	//for (int i = 1; i <= svars.giveSize(); i++) {
+	//	fs << svars.at(i) << ";";
+	//}
+	//fs << "\n";
+	//fs.close();
+	//// svars.printYourself();
 #endif
 }
 
