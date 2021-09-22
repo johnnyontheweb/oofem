@@ -87,7 +87,8 @@ protected:
      * Transformation Matrix form GtoL(3,3) is stored
      * at the element level for computation efficiency.
      */
-    FloatMatrixF<3,3> GtoLRotationMatrix;
+    //FloatMatrixF<3, 3> GtoLRotationMatrix;
+    FloatMatrix GtoLRotationMatrix;
     int nPointsXY = 0, nPointsZ = 0, directorType = 0;
     double drillCoeff = 0.;
     // macro element number

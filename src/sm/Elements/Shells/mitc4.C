@@ -220,9 +220,9 @@ MITC4Shell::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
     strmat.at( 1, 3 ) = str.at( 5 );
     strmat.at( 2, 3 ) = str.at( 4 );
     strmat.symmetrized();
-    FloatMatrix rot;
-    this->computeGtoLRotationMatrix(rot);
-    strmat.rotatedWith( rot, 't' ); // back to local
+    //FloatMatrix rot;
+    //this->computeGtoLRotationMatrix(rot);
+    strmat.rotatedWith( GtoLRotationMatrix, 't' ); // back to local
 
     // if above are local and Forces by unit length
     // first average them
@@ -830,19 +830,29 @@ MITC4Shell::computeLToDirectorRotationMatrix()
 
 bool
 MITC4Shell::computeGtoLRotationMatrix( FloatMatrix &answer )
-// Returns the rotation matrix of the receiver of the size [24,24]
-// r(local) = T * r(global)
-// for one node (r written transposed): {u,v,w,alpha,beta} = T * {u,v,w,r1,r2,r3}
 {
-    auto LtoDir = this->computeLToDirectorRotationMatrix();
+//// Returns the rotation matrix of the receiver of the size [24,24]
+//// r(local) = T * r(global)
+//// for one node (r written transposed): {u,v,w,alpha,beta} = T * {u,v,w,r1,r2,r3}
+//    auto LtoDir = this->computeLToDirectorRotationMatrix();
+//
+//    answer.resize( 24, 24 );
+//    answer.zero();
+//
+//    for ( int i = 0; i <= 3; i++ ) {
+//        answer.setSubMatrix( GtoLRotationMatrix, i * 6 + 1, i * 6 + 1 );
+//        auto help = dot( LtoDir[i], GtoLRotationMatrix );
+//        answer.setSubMatrix( help, i * 6 + 4, i * 6 + 4 );
+//    }
 
-    answer.resize( 24, 24 );
-    answer.zero();
-
-    for ( int i = 0; i <= 3; i++ ) {
-        answer.setSubMatrix( GtoLRotationMatrix, i * 6 + 1, i * 6 + 1 );
-        auto help = dot( LtoDir[i], GtoLRotationMatrix );
-        answer.setSubMatrix( help, i * 6 + 4, i * 6 + 4 );
+    if ( !GtoLRotationMatrix.isNotEmpty() ) {
+        // already done in post-initialize
+        auto e = this->computeLocalBaseVectors();
+        for ( int i = 1; i <= 3; i++ ) {
+            GtoLRotationMatrix.at( 1, i ) = e[0].at( i );
+            GtoLRotationMatrix.at( 2, i ) = e[1].at( i );
+            GtoLRotationMatrix.at( 3, i ) = e[2].at( i );
+        }
     }
 
     return 1;
