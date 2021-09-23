@@ -93,8 +93,8 @@ EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatri
 	//// define sparse matrix A
 	EigenSolverMatrix* A = dynamic_cast<EigenSolverMatrix*>(&a);
 	EigenSolverMatrix* B = dynamic_cast<EigenSolverMatrix*>(&b);
-	//if (!A || !B)
-	//	OOFEM_ERROR("Error casting matrices");
+	if (!A || !B)
+		OOFEM_ERROR("Error casting matrices");
 	////...
 	//// calculate the two smallest eigenvalues
 	//arpack.compute(*A, *B, nroot, "SM");
