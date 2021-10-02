@@ -50,6 +50,7 @@ set (sm_element
     Elements/Shells/tr_shell01.C 
     Elements/Shells/tr_shell02.C 
     Elements/Shells/tr_shell03.C
+    Elements/Shells/tr_shell11.C
     Elements/Shells/cct3d.C
     Elements/Shells/quad1mindlinshell3d.C
     Elements/Shells/shell7base.C
@@ -299,8 +300,10 @@ set (sm_material
     Materials/LatticeMaterials/latticeplasticitydamageviscoelastic.C
 )
 
+if (USE_MFRONT)
+    list (APPEND sm_material Materials/mfrontusermaterial.C)
+endif ()
     
-
 if (USE_BOOSTPYTHON_BINDINGS AND USE_PYTHON_EXTENSION)
     list (APPEND sm_material Materials/structuralpythonmaterial.C)
 endif ()

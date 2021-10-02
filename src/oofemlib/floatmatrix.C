@@ -792,7 +792,7 @@ void FloatMatrix :: plusDyadUnsym(const FloatArray &a, const FloatArray &b, doub
 }
 
 
-void FloatMatrix :: beInverseOf(const FloatMatrix &src)
+bool FloatMatrix :: beInverseOf(const FloatMatrix &src)
 // Receiver becomes inverse of given parameter src. If necessary, size is adjusted.
 {
     double det;
@@ -806,20 +806,28 @@ void FloatMatrix :: beInverseOf(const FloatMatrix &src)
     RESIZE(src.nRows, src.nColumns);
 
     if ( nRows == 1 ) {
+        if (fabs(src.at(1,1)) > 1.e-30) {
         this->at(1, 1) = 1. / src.at(1, 1);
-        return;
+            return true;
+        } else {
+            return false;
+        }
     } else if ( nRows == 2 ) {
         det = src.at(1, 1) * src.at(2, 2) - src.at(1, 2) * src.at(2, 1);
+        if (fabs(det)>1.e-30) {
         this->at(1, 1) =  src.at(2, 2) / det;
         this->at(2, 1) = -src.at(2, 1) / det;
         this->at(1, 2) = -src.at(1, 2) / det;
         this->at(2, 2) =  src.at(1, 1) / det;
-        return;
+            return true;
+        } else {
+            return false;
+        }
     } else if ( nRows == 3 ) {
         det = src.at(1, 1) * src.at(2, 2) * src.at(3, 3) + src.at(1, 2) * src.at(2, 3) * src.at(3, 1) +
               src.at(1, 3) * src.at(2, 1) * src.at(3, 2) - src.at(1, 3) * src.at(2, 2) * src.at(3, 1) -
               src.at(2, 3) * src.at(3, 2) * src.at(1, 1) - src.at(3, 3) * src.at(1, 2) * src.at(2, 1);
-
+        if (fabs(det)>1.e-30) {
         this->at(1, 1) = ( src.at(2, 2) * src.at(3, 3) - src.at(2, 3) * src.at(3, 2) ) / det;
         this->at(2, 1) = ( src.at(2, 3) * src.at(3, 1) - src.at(2, 1) * src.at(3, 3) ) / det;
         this->at(3, 1) = ( src.at(2, 1) * src.at(3, 2) - src.at(2, 2) * src.at(3, 1) ) / det;
@@ -829,17 +837,10 @@ void FloatMatrix :: beInverseOf(const FloatMatrix &src)
         this->at(1, 3) = ( src.at(1, 2) * src.at(2, 3) - src.at(1, 3) * src.at(2, 2) ) / det;
         this->at(2, 3) = ( src.at(1, 3) * src.at(2, 1) - src.at(1, 1) * src.at(2, 3) ) / det;
         this->at(3, 3) = ( src.at(1, 1) * src.at(2, 2) - src.at(1, 2) * src.at(2, 1) ) / det;
-
-        //p[0]= (values[4]*values[8]-values[7]*values[5])/det ;
-        //p[1]= (values[7]*values[2]-values[1]*values[8])/det ;
-        //p[2]= (values[1]*values[5]-values[4]*values[2])/det ;
-        //p[3]= (values[6]*values[5]-values[3]*values[8])/det ;
-        //p[4]= (values[0]*values[8]-values[6]*values[2])/det ;
-        //p[5]= (values[3]*values[2]-values[0]*values[5])/det ;
-        //p[6]= (values[3]*values[7]-values[6]*values[4])/det ;
-        //p[7]= (values[6]*values[1]-values[0]*values[7])/det ;
-        //p[8]= (values[0]*values[4]-values[3]*values[1])/det ;
-        return;
+            return true;
+    } else {
+            return false;
+        }
     } else {
 #ifdef __LAPACK_MODULE
         int n = this->nRows;
@@ -850,7 +851,8 @@ void FloatMatrix :: beInverseOf(const FloatMatrix &src)
         // LU-factorization
         dgetrf_(& n, & n, this->givePointer(), & n, ipiv.givePointer(), & info);
         if ( info != 0 ) {
-            OOFEM_ERROR("dgetrf error %d", info);
+            OOFEM_WARNING("dgetrf error %d", info);
+            return false;
         }
 
         // Inverse
@@ -858,7 +860,8 @@ void FloatMatrix :: beInverseOf(const FloatMatrix &src)
         FloatArray work(lwork);
         dgetri_(& this->nRows, this->givePointer(), & this->nRows, ipiv.givePointer(), work.givePointer(), & lwork, & info);
         if ( info > 0 ) {
-            OOFEM_ERROR("Singular at %d", info);
+            OOFEM_WARNING("Singular at %d", info);
+            return false;
         } else if ( info < 0 ) {
             OOFEM_ERROR("Error on input %d", info);
         }
@@ -876,8 +879,9 @@ void FloatMatrix :: beInverseOf(const FloatMatrix &src)
         // lower triangle elimination by columns
         for ( int i = 1; i < nRows; i++ ) {
             piv = tmp.at(i, i);
-            if ( fabs(piv) < 1.e-20 ) {
-                OOFEM_ERROR("cannot inverse a %d by %d matrix", nRows, nColumns);
+            if ( fabs(piv) < 1.e-30 ) {
+                OOFEM_WARNING("pivot (%d,%d) to close to small (< 1.e-20)", i, i);
+                return false;
             }
 
             for ( int j = i + 1; j <= nRows; j++ ) {
@@ -914,6 +918,7 @@ void FloatMatrix :: beInverseOf(const FloatMatrix &src)
                 this->at(i, j) /= tmp.at(i, i);
             }
         }
+        return true;
 #endif
     }
 }
@@ -1161,7 +1166,7 @@ bool FloatMatrix :: solveForRhs(const FloatArray &b, FloatArray &answer, bool tr
 }
 
 
-void FloatMatrix :: solveForRhs(const FloatMatrix &b, FloatMatrix &answer, bool transpose)
+bool FloatMatrix :: solveForRhs(const FloatMatrix &b, FloatMatrix &answer, bool transpose)
 // solves equation b = this * x
 // returns x. this and b are kept untouched
 //
@@ -1187,7 +1192,7 @@ void FloatMatrix :: solveForRhs(const FloatMatrix &b, FloatMatrix &answer, bool 
         dgetrs_(transpose ? "t" : "n", & this->nRows, & answer.nColumns, this->givePointer(), & this->nRows, ipiv.givePointer(), answer.givePointer(), & this->nRows, & info);
     }
     if ( info != 0 ) {
-        OOFEM_ERROR("error %d", info);
+        return false; //OOFEM_ERROR("error %d", info);
     }
 #else
     int pivRow, nPs;
@@ -1216,7 +1221,7 @@ void FloatMatrix :: solveForRhs(const FloatMatrix &b, FloatMatrix &answer, bool 
         }
 
         if ( fabs(piv) < 1.e-20 ) {
-            OOFEM_ERROR("pivot too small, cannot solve %d by %d matrix", nRows, nColumns);
+            return false; //OOFEM_ERROR("pivot too small, cannot solve %d by %d matrix", nRows, nColumns);
         }
 
         // exchange rows
@@ -1232,10 +1237,6 @@ void FloatMatrix :: solveForRhs(const FloatMatrix &b, FloatMatrix &answer, bool 
                 answer.at(i, j) = answer.at(pivRow, j);
                 answer.at(pivRow, j) = help;
             }
-        }
-
-        if ( fabs(piv) < 1.e-20 ) {
-            OOFEM_ERROR("cannot solve, zero pivot encountered");
         }
 
         for ( int j = i + 1; j <= nRows; j++ ) {
@@ -1261,6 +1262,7 @@ void FloatMatrix :: solveForRhs(const FloatMatrix &b, FloatMatrix &answer, bool 
             answer.at(i, k) = ( answer.at(i, k) - help ) / mtrx->at(i, i);
         }
     }
+    return true;
 #endif
 }
 
