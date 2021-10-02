@@ -1008,15 +1008,16 @@ MITC4Shell::setupIRForMassMtrxIntegration( IntegrationRule &iRule ) { iRule.setU
 int
 MITC4Shell::giveIPValue( FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep )
 {
-    if ( type == IST_StrainTensor ) {
-        // auto globTensor = this->giveCharacteristicTensor(GlobalStrainTensor, gp, tStep);
-        // answer = to_voigt_strain(globTensor);
-        return 1;
-    } else if ( type == IST_StressTensor ) {
-        // auto globTensor = this->giveCharacteristicTensor(GlobalForceTensor, gp, tStep);
-        // answer = to_voigt_stress(globTensor);
-        return 1;
-    } else if ( type == IST_ShellMomentTensor || type == IST_ShellForceTensor || type == IST_CurvatureTensor || type == IST_ShellStrainTensor ) {
+    //if ( type == IST_StrainTensor ) {
+    //    // auto globTensor = this->giveCharacteristicTensor(GlobalStrainTensor, gp, tStep);
+    //    // answer = to_voigt_strain(globTensor);
+    //    return 1;
+    //} else if ( type == IST_StressTensor ) {
+    //    // auto globTensor = this->giveCharacteristicTensor(GlobalForceTensor, gp, tStep);
+    //    // answer = to_voigt_stress(globTensor);
+    //    return 1;
+    //} else 
+    if ( type == IST_ShellMomentTensor || type == IST_ShellForceTensor || type == IST_CurvatureTensor || type == IST_ShellStrainTensor ) {
         int gpnXY = ( gp->giveNumber() - 1 ) / 2;
         answer    = this->giveMidplaneIPValue( gpnXY, type, tStep );
 

@@ -1280,3 +1280,15 @@ CMakeFiles
 /2019_new/src/tm/tm.vcxproj.filters
 /2019_new/liboofem.vcxproj.user
 /2019_new/src/fm/fm.vcxproj.user
+/64_2019/INSTALL.vcxproj.user
+/64_2019/PACKAGE.vcxproj.user
+/64_2019/ZERO_CHECK.vcxproj.user
+/64_2019/beam01.vcxproj.user
+/64_2019/beam2d_1.vcxproj
+/64_2019/beam2d_1.vcxproj.filters
+/64_2019/benchmarks.vcxproj.user
+/64_2019/dream3d_analysis.vcxproj
+/64_2019/dream3d_analysis.vcxproj.filters
+/64_2019/liboofem_benchmark.vcxproj
+/64_2019/liboofem_benchmark.vcxproj.filters
+/lanciaOOFEM.bat
