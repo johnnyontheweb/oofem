@@ -73,12 +73,9 @@ EigenSolverMatrix::EigenSolverMatrix(const EigenSolverMatrix &S) : SparseMtrx(S.
 //    OOFEM_ERROR("not implemented");
 }
 
-SparseMtrx *EigenSolverMatrix :: GiveCopy() const
+std::unique_ptr<SparseMtrx> EigenSolverMatrix :: clone() const
 {
-	EigenSolverMatrix *answer;
-
-	answer = new EigenSolverMatrix(*this);
-	return answer;
+	return std::make_unique<EigenSolverMatrix>( *this );
 }
 
 void EigenSolverMatrix :: times(const FloatArray &x, FloatArray &answer) const

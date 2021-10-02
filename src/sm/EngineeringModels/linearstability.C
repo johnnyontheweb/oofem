@@ -90,7 +90,7 @@ NumericalMethod *LinearStability :: giveNumericalMethod(MetaStep *mStep)
 SparseLinearSystemNM *LinearStability :: giveNumericalMethodForLinStaticProblem(TimeStep *tStep)
 {
     if ( !nMethodLS ) {
-        nMethodLS = classFactory.createSparseLinSolver(ST_Direct, this->giveDomain(1), this); ///@todo Support other solvers
+        nMethodLS = classFactory.createSparseLinSolver( linStype, this->giveDomain( 1 ), this ); ///@todo Support other solvers
         if ( !nMethodLS ) {
             OOFEM_ERROR("solver creation failed");
         }
@@ -212,7 +212,7 @@ void LinearStability :: solveYourselfAt(TimeStep *tStep)
         //
         // first step - solve linear static problem
         //
-        stiffnessMatrix = classFactory.createSparseMtrx(SMT_Skyline); ///@todo Don't hardcode skyline matrix only
+        stiffnessMatrix = classFactory.createSparseMtrx( sparseMtrxType );
         stiffnessMatrix->buildInternalStructure( this, 1, EModelDefaultEquationNumbering() );
     }
 

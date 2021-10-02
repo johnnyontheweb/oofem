@@ -74,7 +74,7 @@ public:
     virtual ~EigenSolverMatrix();
 
     // Overloaded methods
-    virtual SparseMtrx *GiveCopy() const;
+    virtual std::unique_ptr<SparseMtrx> clone() const override;
     virtual void times(const FloatArray &x, FloatArray &answer) const;
     virtual void times(double x);
 	virtual void add(double x, SparseMtrx &m);
