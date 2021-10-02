@@ -1278,3 +1278,5 @@ CMakeFiles
 /2019_new/src/tm/cmake_install.cmake
 /2019_new/src/tm/tm.vcxproj
 /2019_new/src/tm/tm.vcxproj.filters
+/2019_new/liboofem.vcxproj.user
+/2019_new/src/fm/fm.vcxproj.user

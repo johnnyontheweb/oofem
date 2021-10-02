@@ -337,13 +337,16 @@ void LinearStability :: doStepOutput(TimeStep *tStep)
 
     Domain *domain = this->giveDomain(1);
     // i = 0  represents the linear solution, which is followed by the eigen vectors starting at i = 1
-    for ( int i = 0; i <= numberOfRequiredEigenValues; i++ ) {
+    for ( int i = 1; i <= numberOfRequiredEigenValues; i++ ) {
         TimeStep step = *tStep;
         step.setTime( ( double ) i );
         step.setNumber(i);
 
         for ( auto &dman : domain->giveDofManagers() ) {
             dman->updateYourself(&step);
+        }
+        for ( auto &elem : domain->giveElements() ) {
+            elem->updateYourself(&step);
         }
 
         exportModuleManager.doOutput(&step);
@@ -370,28 +373,33 @@ void LinearStability :: printOutputAt(FILE *file, TimeStep *tStep)
 
     fprintf(file, "\n\n");
 
-    for ( int i = 0; i <= numberOfRequiredEigenValues; i++ ) {
+    for ( int i = 1; i <= numberOfRequiredEigenValues; i++ ) {
         TimeStep step = *tStep;
         step.setTime( ( double ) i );
         step.setNumber(i);
-
-        if ( i == 0 ) {
-            fprintf(file, "\nLinear solution\n\n");
-        } else {
-            fprintf(file, "\nEigen vector no. %d, corresponding eigen value is %15.8e\n\n", i, eigVal.at(i));
-        }
+        // added for output
+        fprintf( file, "\nOutput for eigen value no.  %.3e \n", (double)i );
+        fprintf( file,"Printing eigen vector no. %d, corresponding eigen value is %15.8e\n\n", i, eigVal.at( i ) );
+        // end added for output
+        
+        //if ( i == 0 ) {
+        //    fprintf(file, "\nLinear solution\n\n");
+        //} else {
+        //    fprintf(file, "\nEigen vector no. %d, corresponding eigen value is %15.8e\n\n", i, eigVal.at(i));
+        //}
 
         for ( auto &dman : domain->giveDofManagers() ) {
             dman->updateYourself(&step);
             dman->printOutputAt(file, &step);
         }
 
-        if ( i == 0 ) {
-            for ( auto &elem : domain->giveElements() ) {
-                elem->printOutputAt(file, &step);
-            }
-            this->printReactionForces(&step, 1., file);
-        }
+        //if ( i == 0 ) {
+            //for ( auto &elem : domain->giveElements() ) {
+            //    elem->updateYourself( &step );
+            //    elem->printOutputAt(file, &step);
+            //}
+        //this->printReactionForces(&step, 1., file);
+        //}
     }
 }
 
