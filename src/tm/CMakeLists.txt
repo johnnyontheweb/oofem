@@ -51,6 +51,7 @@ set (tm_material
     Materials/hydratinghemomat.C
     Materials/hydratingisoheatmat.C
     Materials/isoheatmat.C
+    isoheatadvmat.C
     Materials/isolinmoisturemat.C
     Materials/isomoisturemat.C
     Materials/LatticeMaterials/latticetransmat.C

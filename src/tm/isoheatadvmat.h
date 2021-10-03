@@ -35,10 +35,11 @@
 #ifndef isoheatadvmat_h
 #define isoheatadvmat_h
 
-#include "transportmaterial.h"
+#include "tm/Materials/transportmaterial.h"
 #include "floatarray.h"
 #include "floatmatrix.h"
 #include "scalarfunction.h"
+#include "floatmatrixf.h"
 
 ///@name Input fields for IsotropicHeatAdvTransferMaterial
 //@{
@@ -69,42 +70,28 @@ protected:
 
 public:
     IsotropicHeatAdvTransferMaterial(int n, Domain * d);
-    virtual ~IsotropicHeatAdvTransferMaterial();
 
-    virtual void giveFluxVector(FloatArray &answer, GaussPoint *gp, const FloatArray &grad, const FloatArray &field, TimeStep *tStep);
+    FloatArrayF<3> computeFlux3D( const FloatArrayF<3> &grad, double field, GaussPoint *gp, TimeStep *tStep ) const override;
+    FloatMatrixF<3, 3> computeTangent3D( MatResponseMode mode, GaussPoint *gp, TimeStep *tStep ) const override;
 
-    virtual void giveCharacteristicMatrix(FloatMatrix &answer,
-                                          MatResponseMode mode,
-                                          GaussPoint *gp,
-                                          TimeStep *tStep);
+    virtual double giveIsotropicConductivity(GaussPoint *gp, TimeStep *tStep) const;
 
-    virtual double giveIsotropicConductivity(GaussPoint *gp, TimeStep *tStep);
-
-    virtual double giveCharacteristicValue(MatResponseMode mode,
+    double giveCharacteristicValue(MatResponseMode mode,
                                            GaussPoint *gp,
-                                           TimeStep *tStep);
+                                           TimeStep *tStep) const override;
 
-    virtual double  giveMaturityT0() { return maturityT0; }
+    virtual double giveMaturityT0() const { return maturityT0; }
 
-    virtual int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep);
+    int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 
-    virtual const char *giveInputRecordName() const { return _IFT_IsotropicHeatAdvTransferMaterial_Name; }
-    virtual const char *giveClassName() const { return "IsotropicHeatAdvTransferMaterial"; }
+    const char *giveInputRecordName() const override { return _IFT_IsotropicHeatAdvTransferMaterial_Name; }
+    const char *giveClassName() const override { return "IsotropicHeatAdvTransferMaterial"; }
 
-    virtual IRResultType initializeFrom(InputRecord *ir);
+    void initializeFrom(InputRecord &ir) override;
 
-    virtual double give(int aProperty, GaussPoint *gp, TimeStep *tStep);
-    virtual MaterialStatus *CreateStatus(GaussPoint *gp) const;
-    double giveTemperature(GaussPoint *gp);
-	virtual void postInitialize();
-};
-
-class IsotropicHeatAdvTransferMaterialStatus : public TransportMaterialStatus
-{
-public:
-    IsotropicHeatAdvTransferMaterialStatus(int n, Domain * d, GaussPoint * g);
-    virtual ~IsotropicHeatAdvTransferMaterialStatus();
-    virtual void updateYourself(TimeStep *tStep);
+    double give(int aProperty, GaussPoint *gp, TimeStep *tStep) const;
+    double giveTemperature( GaussPoint *gp ) const;
+	void postInitialize();
 };
 
 } // end namespace oofem
