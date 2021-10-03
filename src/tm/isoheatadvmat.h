@@ -91,7 +91,6 @@ public:
 
     double give(int aProperty, GaussPoint *gp, TimeStep *tStep) const;
     double giveTemperature( GaussPoint *gp ) const;
-	void postInitialize();
 };
 
 } // end namespace oofem

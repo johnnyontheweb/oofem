@@ -64,23 +64,20 @@ IsotropicHeatAdvTransferMaterial :: initializeFrom(InputRecord &ir)
 	if (funcK) conductivity.setMultiplierReference(funcK);
 	IR_GIVE_OPTIONAL_FIELD(ir, funcC, _IFT_IsotropicHeatAdvTransferMaterial_cFunc);
 	if (funcC) capacity.setMultiplierReference(funcC);
-}
 
-void IsotropicHeatAdvTransferMaterial::postInitialize() // not called
-{
-	// we check whether the function exists or not.
-	if (funcD > 0) {
-		Function *fD = this->giveDomain()->giveFunction(funcD);
-		if (fD == NULL) OOFEM_ERROR("Invalid function given");
-	}
-	if (funcK > 0) {
-		Function *fK = this->giveDomain()->giveFunction(funcK);
-		if (fK == NULL) OOFEM_ERROR("Invalid function given");
-	}
-	if (funcC > 0) {
-		Function *fC = this->giveDomain()->giveFunction(funcC);
-		if (fC == NULL) OOFEM_ERROR("Invalid function given");
-	}
+    //// we check whether the function exists or not. - not loaded yet
+    //if ( funcD > 0 ) {
+    //    Function *fD = this->giveDomain()->giveFunction( funcD );
+    //    if ( fD == NULL ) OOFEM_ERROR( "Invalid function given" );
+    //}
+    //if ( funcK > 0 ) {
+    //    Function *fK = this->giveDomain()->giveFunction( funcK );
+    //    if ( fK == NULL ) OOFEM_ERROR( "Invalid function given" );
+    //}
+    //if ( funcC > 0 ) {
+    //    Function *fC = this->giveDomain()->giveFunction( funcC );
+    //    if ( fC == NULL ) OOFEM_ERROR( "Invalid function given" );
+    //}
 }
 
 double
@@ -125,41 +122,15 @@ IsotropicHeatAdvTransferMaterial ::computeTangent3D( MatResponseMode mode, Gauss
     /*
      * returns constitutive (conductivity) matrix of receiver
      */
-    MaterialMode mMode = gp->giveMaterialMode();
-    double cond = this->giveIsotropicConductivity(gp, tStep);
-    switch  ( mMode ) {
-    case _1dHeat: {
-        FloatMatrixF<1, 1> answer;
-        answer.at(1, 1) = cond;
-        return answer;
-    }
-    case _2dHeat: {
-
-        FloatMatrixF<2, 2> answer;
-        answer.at(1, 1) = cond;
-        answer.at(2, 2) = cond;
-        return answer;
-    }
-    case _3dHeat: {
-
-        FloatMatrixF<3, 3> answer;
-        answer.at(1, 1) = cond;
-        answer.at(2, 2) = cond;
-        answer.at(3, 3) = cond;
-        return answer;
-    }
-    default:
-        // default is 3D
-        //OOFEM_ERROR("unknown mode (%s)", __MaterialModeToString(mMode) );
-        double cond = this->giveIsotropicConductivity( gp, tStep );
-        return cond * eye<3>();
-    }
+    double cond = this->giveIsotropicConductivity( gp, tStep );
+    return cond * eye<3>();
 }
+
 
 double
 IsotropicHeatAdvTransferMaterial :: giveIsotropicConductivity(GaussPoint *gp, TimeStep *tStep) const
 {
-    return this->give( 'k', gp, tStep );
+    return give('k', gp, tStep);
 }
 
 double
@@ -175,6 +146,7 @@ IsotropicHeatAdvTransferMaterial :: giveCharacteristicValue(MatResponseMode mode
 
     return 0.;
 }
+
 
 int
 IsotropicHeatAdvTransferMaterial :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep)
@@ -196,6 +168,9 @@ IsotropicHeatAdvTransferMaterial :: giveIPValue(FloatArray &answer, GaussPoint *
         return 1;
     } else if ( type == IST_ThermalConductivityIsotropic ) {
         answer = FloatArray{ this->give('k', gp, tStep) };
+        return 1;
+    } else if ( type == IST_EnergyMassCapacity ) {
+        answer = FloatArray{ this->give('c', gp, tStep) * this->give('d', gp, tStep) * this->giveTemperature(gp) };
         return 1;
     }
 

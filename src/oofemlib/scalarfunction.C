@@ -148,12 +148,12 @@ ScalarFunction :: eval(const std :: map< std :: string, FunctionArgument >valDic
         }
         return val.at(1);
     } else if (this->dvType == DV_FunctionMultiplierType) {
-	FloatArray val;
-	d->giveFunction(this->fReference)->evaluate(val, valDict, gp, param);
-	if (val.giveSize() != 1) {
-	    OOFEM_ERROR("Function @%d did not return a scalar (size = %d)", this->fReference, val.giveSize());
-	}
-	return val.at(1) * this->dValue;
+	    FloatArray val;
+	    d->giveFunction(this->fReference)->evaluate(val, valDict, gp, param);
+	    if (val.giveSize() != 1) {
+	        OOFEM_ERROR("Function @%d did not return a scalar (size = %d)", this->fReference, val.giveSize());
+	    }
+	    return val.at(1) * this->dValue;
     }
     return 0.;
 }
