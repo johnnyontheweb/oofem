@@ -89,6 +89,8 @@ NRSolver :: NRSolver(Domain *d, EngngModel *m) :
 
     smConstraintVersion = 0;
     mCalcStiffBeforeRes = true;
+
+    maxIncAllowed = 1.0e20;
 }
 
 

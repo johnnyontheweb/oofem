@@ -951,7 +951,9 @@ MITC4Shell::giveMidplaneIPValue( int gpXY, InternalStateType type, TimeStep *tSt
             this->computeStressVector( localStress, localStrain, gp, tStep );
             mLocal += w * FloatArrayF<6>( localStress );
         }
-
+        if ( type == IST_ShellMomentTensor ) {
+            mLocal *= -1;
+        } // tension at bottom is positive bending
         // local to global
         return StructuralMaterial::transformStressVectorTo( GtoLRotationMatrix, mLocal, false );
     } else if ( type == IST_CurvatureTensor ) {
@@ -973,7 +975,7 @@ MITC4Shell::giveMidplaneIPValue( int gpXY, InternalStateType type, TimeStep *tSt
         cLocal.at( 1 ) = dot( rotY, hk[0] );
         cLocal.at( 2 ) = -dot( rotX, hk[1] );
         cLocal.at( 6 ) = dot( rotY, hk[1] ) - dot( rotX, hk[0] );
-
+        cLocal *= -1; // tension at bottom is positive bending
         return StructuralMaterial::transformStrainVectorTo( GtoLRotationMatrix, cLocal, false );
     } else if ( type == IST_ShellStrainTensor ) {
         auto gp        = integrationRulesArray[0]->getIntegrationPoint( nPointsZ * gpXY );

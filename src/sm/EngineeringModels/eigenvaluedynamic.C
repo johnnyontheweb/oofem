@@ -183,21 +183,20 @@ void EigenValueDynamic :: solveYourself()
     std :: unique_ptr< SparseMtrx > stiffnessMatrix;
     std :: unique_ptr< SparseMtrx > massMatrix;
 
-    if ( tStep->giveNumber() == 1 ) {
+    //if ( tStep->giveNumber() == 1 ) {
+    stiffnessMatrix = classFactory.createSparseMtrx(sparseMtrxType);
+    stiffnessMatrix->buildInternalStructure( this, 1, EModelDefaultEquationNumbering() );
 
-        stiffnessMatrix = classFactory.createSparseMtrx(sparseMtrxType);
-        stiffnessMatrix->buildInternalStructure( this, 1, EModelDefaultEquationNumbering() );
+    massMatrix = classFactory.createSparseMtrx(sparseMtrxType);
+    massMatrix->buildInternalStructure( this, 1, EModelDefaultEquationNumbering() );
 
-        massMatrix = classFactory.createSparseMtrx(sparseMtrxType);
-        massMatrix->buildInternalStructure( this, 1, EModelDefaultEquationNumbering() );
+    this->assemble( *stiffnessMatrix, tStep, TangentAssembler(TangentStiffness), EModelDefaultEquationNumbering(), this->giveDomain(1) );
+    this->assemble( *massMatrix, tStep, MassMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain(1) );
 
-        this->assemble( *stiffnessMatrix, tStep, TangentAssembler(TangentStiffness), EModelDefaultEquationNumbering(), this->giveDomain(1) );
-        this->assemble( *massMatrix, tStep, MassMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain(1) );
-
-        this->giveNumericalMethod( this->giveMetaStep( tStep->giveMetaStepNumber() ) );
-        OOFEM_LOG_INFO("Solving ...\n");
-        nMethod->solve(*stiffnessMatrix, *massMatrix, eigVal, eigVec, rtolv, numberOfRequiredEigenValues);
-    }
+    this->giveNumericalMethod( this->giveMetaStep( tStep->giveMetaStepNumber() ) );
+    OOFEM_LOG_INFO("Solving ...\n");
+    nMethod->solve(*stiffnessMatrix, *massMatrix, eigVal, eigVec, rtolv, numberOfRequiredEigenValues);
+    //}
     this->field->updateAll(eigVec, EModelDefaultEquationNumbering());
 
     // custom code for output

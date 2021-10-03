@@ -335,22 +335,22 @@ void LinearStability :: doStepOutput(TimeStep *tStep)
         fflush( this->giveOutputStream() );
     }
 
-    Domain *domain = this->giveDomain(1);
-    // i = 0  represents the linear solution, which is followed by the eigen vectors starting at i = 1
-    for ( int i = 1; i <= numberOfRequiredEigenValues; i++ ) {
-        TimeStep step = *tStep;
-        step.setTime( ( double ) i );
-        step.setNumber(i);
+    //Domain *domain = this->giveDomain(1);
+    //// i = 0  represents the linear solution, which is followed by the eigen vectors starting at i = 1
+    //for ( int i = 1; i <= numberOfRequiredEigenValues; i++ ) {
+    //    TimeStep step = *tStep;
+    //    step.setTime( ( double ) i );
+    //    step.setNumber(i);
 
-        for ( auto &dman : domain->giveDofManagers() ) {
-            dman->updateYourself(&step);
-        }
-        for ( auto &elem : domain->giveElements() ) {
-            elem->updateYourself(&step);
-        }
+    //    for ( auto &dman : domain->giveDofManagers() ) {
+    //        dman->updateYourself(&step);
+    //    }
+    //    for ( auto &elem : domain->giveElements() ) {
+    //        elem->updateYourself(&step);
+    //    }
 
-        exportModuleManager.doOutput(&step);
-    }
+    //    exportModuleManager.doOutput(&step);
+    //}
 }
 
 
@@ -400,6 +400,12 @@ void LinearStability :: printOutputAt(FILE *file, TimeStep *tStep)
             //}
         //this->printReactionForces(&step, 1., file);
         //}
+
+        for ( auto &elem : domain->giveElements() ) {
+            elem->updateYourself( &step );
+        }
+
+        exportModuleManager.doOutput( &step );
     }
 }
 
