@@ -1292,3 +1292,8 @@ CMakeFiles
 /64_2019/liboofem_benchmark.vcxproj
 /64_2019/liboofem_benchmark.vcxproj.filters
 /lanciaOOFEM.bat
+/64_2019/dream3d_analysis.vcxproj.user
+/64_2019/liboofem_benchmark.vcxproj.user
+/64_2019/src/dss/dss.vcxproj.user
+/64_2019/src/fm/fm.vcxproj.user
+/64_2019/src/tm/tm.vcxproj.user

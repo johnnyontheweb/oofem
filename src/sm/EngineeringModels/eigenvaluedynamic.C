@@ -180,9 +180,10 @@ void EigenValueDynamic :: solveYourself()
     OOFEM_LOG_INFO("Assembling stiffness and mass matrices\n");
 
     FloatMatrix eigVec;
-    {
-        std :: unique_ptr< SparseMtrx > stiffnessMatrix;
-        std :: unique_ptr< SparseMtrx > massMatrix;
+    std :: unique_ptr< SparseMtrx > stiffnessMatrix;
+    std :: unique_ptr< SparseMtrx > massMatrix;
+
+    if ( tStep->giveNumber() == 1 ) {
 
         stiffnessMatrix = classFactory.createSparseMtrx(sparseMtrxType);
         stiffnessMatrix->buildInternalStructure( this, 1, EModelDefaultEquationNumbering() );
@@ -199,11 +200,7 @@ void EigenValueDynamic :: solveYourself()
     }
     this->field->updateAll(eigVec, EModelDefaultEquationNumbering());
 
-    this->terminate( tStep );
-
-    double steptime = this->giveSolutionStepTime();
-    OOFEM_LOG_INFO("EngngModel info: user time consumed by solution: %.2fs\n", steptime);
-
+    // custom code for output
     FloatMatrix *unitDisp = new FloatMatrix();
     FloatArray *tempCol   = new FloatArray();
     FloatArray *tempCol2  = new FloatArray();
@@ -560,6 +557,11 @@ void EigenValueDynamic :: solveYourself()
     delete tempCol;
     delete tempCol2;
     delete dofIdArray;
+
+    this->terminate( tStep );
+
+    double steptime = this->giveSolutionStepTime();
+    OOFEM_LOG_INFO( "EngngModel info: user time consumed by solution: %.2fs\n", steptime );
 }
 
 

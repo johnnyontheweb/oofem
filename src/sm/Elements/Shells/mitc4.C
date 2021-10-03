@@ -907,7 +907,7 @@ MITC4Shell::printOutputAt( FILE *file, TimeStep *tStep )
         fprintf( file, "\n          curvatures " );
         for ( auto &val : this->giveMidplaneIPValue( i, IST_CurvatureTensor, tStep ) ) { fprintf( file, " %.4e", val ); }
 
-//#if 0
+#if 0
         for ( int j = 0; j < nPointsZ; j++ ) {
             auto gp = integrationRulesArray [ 0 ]->getIntegrationPoint(nPointsZ * i + j);
 
@@ -925,7 +925,7 @@ MITC4Shell::printOutputAt( FILE *file, TimeStep *tStep )
                 fprintf(file, " %.4e", val);
             }
         }
-//#endif
+#endif
 
         fprintf( file, "\n" );
     }
