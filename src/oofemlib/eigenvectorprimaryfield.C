@@ -60,7 +60,7 @@ EigenVectorPrimaryField :: ~EigenVectorPrimaryField()
 double
 EigenVectorPrimaryField :: giveUnknownValue(Dof *dof, ValueModeType mode, TimeStep *tStep)
 {
-    if ( mode != VM_Total ) OOFEM_ERROR("Only VM_Total is applicable to eigen vector fields");
+    // if ( mode != VM_Total ) OOFEM_ERROR("Only VM_Total is applicable to eigen vector fields"); // commented out to let abaqususerlement work with accel. and vel.
     return dof->giveUnknownsDictionaryValue(tStep, mode);
 }
 

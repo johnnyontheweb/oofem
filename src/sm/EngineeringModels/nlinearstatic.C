@@ -392,7 +392,7 @@ void
 NonLinearStatic :: terminate(TimeStep *tStep)
 {
     this->doStepOutput(tStep);
-    this->printReactionForces(tStep, 1, this->giveOutputStream());
+    //this->printReactionForces(tStep, 1, this->giveOutputStream());
     // update load vectors before storing context
     fflush( this->giveOutputStream() );
     this->updateLoadVectors(tStep);

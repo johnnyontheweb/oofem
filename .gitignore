@@ -1298,3 +1298,17 @@ CMakeFiles
 /64_2019/src/fm/fm.vcxproj.user
 /64_2019/src/tm/tm.vcxproj.user
 src/tm/isoheatadvmat.C.bak
+2019_new/src/tm/tm.dir/MinSizeRel/tm.vcxproj.FileListAbsolute.txt
+2019_new/liboofem.dir/MinSizeRel/liboofem.vcxproj.FileListAbsolute.txt
+2019_new/liboofem.dir/MinSizeRel/oofem.dll.recipe
+/2019_new/oofem.dir/MinSizeRel/oofem.exe.recipe
+/2019_new/oofem.dir/MinSizeRel/oofem.vcxproj.FileListAbsolute.txt
+/2019_new/src/dss/dss.dir/MinSizeRel/dss.lib.recipe
+/2019_new/src/dss/dss.dir/MinSizeRel/dss.vcxproj.FileListAbsolute.txt
+/2019_new/src/fm/fm.dir/MinSizeRel/fm.lib.recipe
+/2019_new/src/fm/fm.dir/MinSizeRel/fm.vcxproj.FileListAbsolute.txt
+/2019_new/src/oofemlib/core.dir/MinSizeRel/core.lib.recipe
+/2019_new/src/oofemlib/core.dir/MinSizeRel/core.vcxproj.FileListAbsolute.txt
+/2019_new/src/sm/sm.dir/MinSizeRel/sm.lib.recipe
+/2019_new/src/sm/sm.dir/MinSizeRel/sm.vcxproj.FileListAbsolute.txt
+/2019_new/src/tm/tm.dir/MinSizeRel/tm.lib.recipe

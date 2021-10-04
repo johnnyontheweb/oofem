@@ -760,21 +760,21 @@ NRSolver :: checkConvergence(FloatArray &RT, FloatArray &F, FloatArray &rhs,  Fl
                     forceErr = sqrt( dg_forceErr.at(dg) );
                 }
 
+                if ( engngModel->giveProblemScale() == macroScale  && numPrintouts <= maxNumPrintouts ) {
+                    OOFEM_LOG_INFO(zeroFNorm ? " *%.3e" : "  %.3e", forceErr);
+                }
+
                 if ( forceErr > rtolf.at(1) * NRSOLVER_MAX_REL_ERROR_BOUND ) {
                     errorOutOfRange = true;
                 }
                 if ( forceErr > rtolf.at(1) ) {
                     answer = false;
                 }
-		if ( (forceErr > 0.0) && (nite == 0)) {
-		  // if forceError > 0 and first iteration we report no convergence to actually
-		  // apply the loading
-		  answer = false;
-		}
-
-                if ( engngModel->giveProblemScale() == macroScale  && numPrintouts <= maxNumPrintouts ) {
-                    OOFEM_LOG_INFO(zeroFNorm ? " *%.3e" : "  %.3e", forceErr);
-                }
+		        if ( (forceErr > 0.0) && (nite == 0)) {
+		          // if forceError > 0 and first iteration we report no convergence to actually
+		          // apply the loading
+		          answer = false;
+		        }
 
                 // Store the errors from the current iteration
                 if ( this->constrainedNRFlag ) {
@@ -792,15 +792,15 @@ NRSolver :: checkConvergence(FloatArray &RT, FloatArray &F, FloatArray &rhs,  Fl
                     //zeroDNorm = true;
                     dispErr = sqrt( dg_dispErr.at(dg) );
                 }
+                if ( engngModel->giveProblemScale() == macroScale  && numPrintouts <= maxNumPrintouts ) {
+                    OOFEM_LOG_INFO(zeroDNorm ? " *%.3e" : "  %.3e", dispErr);
+                }
+
                 if ( dispErr  > rtold.at(1) * NRSOLVER_MAX_REL_ERROR_BOUND ) {
                     errorOutOfRange = true;
                 }
                 if ( dispErr > rtold.at(1) ) {
                     answer = false;
-                }
-
-                if ( engngModel->giveProblemScale() == macroScale  && numPrintouts <= maxNumPrintouts ) {
-                    OOFEM_LOG_INFO(zeroDNorm ? " *%.3e" : "  %.3e", dispErr);
                 }
             }
         }
