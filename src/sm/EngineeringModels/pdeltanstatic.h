@@ -53,7 +53,7 @@
 #define _IFT_PdeltaNstatic_forceloadBalancingFlag "forceloadbalancingflag"
 #define _IFT_PdeltaNstatic_updateElasticStiffnessFlag "updateelasticstiffnessflag"
 #define _IFT_PdeltaNstatic_secondOrder "secorder"
-#define _IFT_PDeltaStatic_rtolv "rtolv"
+//#define _IFT_PDeltaStatic_rtolv "rtolv"
 //@}
 
 namespace oofem {
@@ -105,7 +105,7 @@ protected:
     FloatArray initialLoadVectorOfPrescribed;
     /// Incremental Load Vector for prescribed DOFs.
     FloatArray incrementalLoadVectorOfPrescribed;
-	double rtolv;
+	//double rtolv;
     double loadLevel, cumulatedLoadLevel;
     bool mstepCumulateLoadLevelFlag;
     int currentIterations;

@@ -203,7 +203,7 @@ PdeltaNstatic :: initializeFrom(InputRecord &ir)
 	solverType = ST_EigenLib;
 	//}
 
-	IR_GIVE_FIELD(ir, rtolv, _IFT_PDeltaStatic_rtolv);
+	//IR_GIVE_FIELD(ir, rtolv, _IFT_PDeltaStatic_rtolv);
     
 #ifdef __PARALLEL_MODE
     if ( isParallel() ) {
