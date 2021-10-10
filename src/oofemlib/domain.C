@@ -966,10 +966,10 @@ Domain :: postInitialize()
     }
 
     {
-        spatialLocalizer = std::make_unique<OctreeSpatialLocalizer>(this);
-        spatialLocalizer->init();
+        //spatialLocalizer = std::make_unique<OctreeSpatialLocalizer>(this);
+        //spatialLocalizer->init();
         connectivityTable = std::make_unique<ConnectivityTable>(this);
-        OOFEM_LOG_INFO("Spatial localizer init done\n");
+        //OOFEM_LOG_INFO("Spatial localizer init done\n");
     }
 
     if ( this->hasXfemManager() ) {
