@@ -887,10 +887,9 @@ MITC4Shell::printOutputAt( FILE *file, TimeStep *tStep )
 {
     fprintf( file, "element %d (%8d) macroelem %d :\n", this->giveLabel(), number, this->macroElem );
 
-#ifdef DEBUG
+#if 0
     FloatArray v;
     GaussPoint *gp;
-
 
     for ( int i = 0; i < nPointsXY; i++ ) {
         fprintf( file, "  GP %d :", i + 1 );
@@ -907,7 +906,7 @@ MITC4Shell::printOutputAt( FILE *file, TimeStep *tStep )
         fprintf( file, "\n          curvatures " );
         for ( auto &val : this->giveMidplaneIPValue( i, IST_CurvatureTensor, tStep ) ) { fprintf( file, " %.4e", val ); }
 
-#if 0
+//#if 0
         for ( int j = 0; j < nPointsZ; j++ ) {
             auto gp = integrationRulesArray [ 0 ]->getIntegrationPoint(nPointsZ * i + j);
 
@@ -925,7 +924,7 @@ MITC4Shell::printOutputAt( FILE *file, TimeStep *tStep )
                 fprintf(file, " %.4e", val);
             }
         }
-#endif
+//#endif
 
         fprintf( file, "\n" );
     }

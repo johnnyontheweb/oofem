@@ -728,7 +728,7 @@ void
 Beam3d :: printOutputAt(FILE *File, TimeStep *tStep)
 {
     fprintf(File, "beam element %d (%8d) macroelem %d :\n", this->giveLabel(), this->giveNumber(), this->macroElem);
-#ifdef DEBUG
+#if 0
     FloatArray rl, Fl;
     // ask for global element displacement vector
     this->computeVectorOf(VM_Total, tStep, rl);

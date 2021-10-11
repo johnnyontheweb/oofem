@@ -1277,7 +1277,7 @@ void ResponseSpectrum::terminate( TimeStep *tStep )
     //        }
     //    }
 
-
+#if 0
     fprintf( outputStream, "\n\nElement output:\n---------------\n" );
 
     for ( auto &elem : domain->giveElements() ) {
@@ -1331,8 +1331,7 @@ void ResponseSpectrum::terminate( TimeStep *tStep )
         }
     }
 
-
-    //}
+#endif
 
     fprintf( outputStream, "\n\n\tR E A C T I O N S  O U T P U T:\n\t_______________________________\n\n\n" );
 

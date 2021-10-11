@@ -253,11 +253,11 @@ void LinearStability :: solveYourselfAt(TimeStep *tStep)
         initialStressMatrix->zero();
     }
 
-    OOFEM_LOG_INFO("Assembling stiffness  matrix\n");
+    OOFEM_LOG_INFO("Assembling stiffness matrix\n");
     this->assemble( *stiffnessMatrix, tStep, TangentAssembler(TangentStiffness),
                    EModelDefaultEquationNumbering(), this->giveDomain(1) );
 
-    OOFEM_LOG_INFO("Assembling  initial stress matrix\n");
+    OOFEM_LOG_INFO("Assembling initial stress matrix\n");
     this->assemble( *initialStressMatrix, tStep, InitialStressMatrixAssembler(),
                    EModelDefaultEquationNumbering(), this->giveDomain(1) );
     initialStressMatrix->times(-1.0);
