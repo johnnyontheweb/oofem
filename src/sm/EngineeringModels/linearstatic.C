@@ -412,7 +412,7 @@ void
 LinearStatic::terminate(TimeStep *tStep)
 {
 	StructuralEngngModel::terminate(tStep);
-	this->printReactionForces(tStep, 1, this->giveOutputStream());
+	//this->printReactionForces(tStep, 1, this->giveOutputStream());
 	fflush(this->giveOutputStream());
 }
 

@@ -510,8 +510,13 @@ DIIDynamic :: assembleDirichletBcRhsVector (FloatArray& answer, Domain* d, TimeS
       continue;
     } else {
       element->giveCharacteristicMatrix(k, TangentStiffnessMatrix, tStep);
-      charVec.beProductOf(k, rp);
-      if (rotFlag) charVec.rotatedWith(R, 't');
+        if ( k.giveNumberOfRows() > 0 ) {
+            charVec.beProductOf( k, rp );
+            if ( rotFlag ) charVec.rotatedWith( R, 't' );
+        } else {
+            charVec.resize( rp.giveSize() );
+            charVec.zero();
+        }
       answer.assemble(charVec, loc);
     }
 
@@ -651,7 +656,7 @@ void
 DIIDynamic::terminate(TimeStep *tStep)
 {
     this->doStepOutput(tStep);
-    this->printReactionForces(tStep, 1, this->giveOutputStream());
+    //this->printReactionForces(tStep, 1, this->giveOutputStream());
     fflush(this->giveOutputStream());
     this->saveStepContext(tStep, CM_State | CM_Definition);
 }

@@ -302,7 +302,7 @@ void
 NonLinearDynamic :: terminate(TimeStep *tStep)
 {
     this->doStepOutput(tStep);
-    this->printReactionForces(tStep, 1, this->giveOutputStream());
+    //this->printReactionForces(tStep, 1, this->giveOutputStream());
     fflush( this->giveOutputStream() );
     this->saveStepContext(tStep, CM_State | CM_Definition);
 }
@@ -356,7 +356,59 @@ NonLinearDynamic :: initializeYourself(TimeStep *tStep)
                 }
             }
         }
-        proceedStep( 1, tStep );
+        // initial step moved from proceedStep ------------------------------------------------------
+        if ( initFlag ) {
+            // First assemble problem at current time step.
+            int di = 1;
+            // Option to take into account initial conditions.
+            if ( !effectiveStiffnessMatrix ) {
+                effectiveStiffnessMatrix = classFactory.createSparseMtrx( sparseMtrxType );
+                // create mass matrix as compcol storage, need only mass multiplication by vector, not linear system solution.
+                massMatrix = classFactory.createSparseMtrx( SMT_CompCol );
+            }
+
+            if ( !effectiveStiffnessMatrix || !massMatrix ) {
+                OOFEM_ERROR( "sparse matrix creation failed" );
+            }
+
+            if ( nonlocalStiffnessFlag ) {
+                if ( !effectiveStiffnessMatrix->isAsymmetric() ) {
+                    OOFEM_ERROR( "effectiveStiffnessMatrix does not support asymmetric storage" );
+                }
+            }
+
+            effectiveStiffnessMatrix->buildInternalStructure( this, di, EModelDefaultEquationNumbering() );
+            massMatrix->buildInternalStructure( this, di, EModelDefaultEquationNumbering() );
+
+            if ( secOrder ) {
+                initialStressMatrix = classFactory.createSparseMtrx( sparseMtrxType );
+                initialStressMatrix->buildInternalStructure( this, 1, EModelDefaultEquationNumbering() );
+            }
+
+            // Assemble mass matrix
+            this->assemble( *massMatrix, tStep, MassMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain( di ) );
+
+            // Initialize vectors
+            help.resize( neq );
+            help.zero();
+            rhs.resize( neq );
+            rhs.zero();
+            rhs2.resize( neq );
+            rhs2.zero();
+
+            previousIncrementOfDisplacement = incrementOfDisplacement;
+            previousTotalDisplacement       = totalDisplacement;
+            previousVelocityVector          = velocityVector;
+            previousAccelerationVector      = accelerationVector;
+            previousInternalForces          = internalForces;
+
+            forcesVector.resize( neq );
+            forcesVector.zero();
+
+            totIterations = 0;
+            initFlag      = 0;
+        }
+        // END initial step moved from proceedStep ------------------------------------------------------
         this->updateInternalRHS(internalForces, tStep, domain, &this->internalForcesEBENorm);
     }
 }
@@ -372,59 +424,7 @@ NonLinearDynamic :: proceedStep(int di, TimeStep *tStep)
     // Time-stepping constants
     this->determineConstants(tStep);
 
-
-
-    if ( initFlag ) {
-        // First assemble problem at current time step.
-        // Option to take into account initial conditions.
-        if ( !effectiveStiffnessMatrix ) {
-            effectiveStiffnessMatrix = classFactory.createSparseMtrx(sparseMtrxType);
-	    // create mass matrix as compcol storage, need only mass multiplication by vector, not linear system solution.
-            massMatrix = classFactory.createSparseMtrx(SMT_CompCol); 
-        }
-
-        if ( !effectiveStiffnessMatrix || !massMatrix ) {
-            OOFEM_ERROR("sparse matrix creation failed");
-        }
-
-        if ( nonlocalStiffnessFlag ) {
-            if ( !effectiveStiffnessMatrix->isAsymmetric() ) {
-                OOFEM_ERROR("effectiveStiffnessMatrix does not support asymmetric storage");
-            }
-        }
-
-        effectiveStiffnessMatrix->buildInternalStructure( this, di, EModelDefaultEquationNumbering() );
-        massMatrix->buildInternalStructure( this, di, EModelDefaultEquationNumbering() );
-
-	if (secOrder) {
-	    initialStressMatrix = classFactory.createSparseMtrx(sparseMtrxType);
-	    initialStressMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
-	}
-
-	// Assemble mass matrix
-	this->assemble(*massMatrix, tStep, MassMatrixAssembler(),
-	    EModelDefaultEquationNumbering(), this->giveDomain(di));
-
-        // Initialize vectors
-        help.resize(neq);
-        help.zero();
-        rhs.resize(neq);
-        rhs.zero();
-        rhs2.resize(neq);
-        rhs2.zero();
-
-        previousIncrementOfDisplacement = incrementOfDisplacement;
-        previousTotalDisplacement = totalDisplacement;
-        previousVelocityVector = velocityVector;
-        previousAccelerationVector = accelerationVector;
-        previousInternalForces = internalForces;
-
-        forcesVector.resize(neq);
-        forcesVector.zero();
-
-        totIterations = 0;
-        initFlag = 0;
-    }
+    // initial flag moved
 
 #ifdef VERBOSE
     OOFEM_LOG_DEBUG("Assembling load\n");
