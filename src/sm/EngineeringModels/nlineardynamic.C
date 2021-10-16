@@ -356,6 +356,7 @@ NonLinearDynamic :: initializeYourself(TimeStep *tStep)
                 }
             }
         }
+        proceedStep( 1, tStep );
         this->updateInternalRHS(internalForces, tStep, domain, &this->internalForcesEBENorm);
     }
 }
