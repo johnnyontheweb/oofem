@@ -1217,7 +1217,7 @@ void EngngModel :: assembleVectorFromBC(FloatArray &answer, TimeStep *tStep,
             NodalLoad *nLoad;
             Set *set = domain->giveSet( bc->giveSetNumber() );
 
-            if ( ( bodyLoad = dynamic_cast< BodyLoad * >(load) ) ) { // Body load:
+            if ( ( bodyLoad = static_cast<BodyLoad *>( load ) ) ) { // Body load:
                 const IntArray &elements = set->giveElementList();
                 for ( int ielem = 1; ielem <= elements.giveSize(); ++ielem ) {
                     Element *element = domain->giveElement( elements.at(ielem) );
@@ -1244,7 +1244,7 @@ void EngngModel :: assembleVectorFromBC(FloatArray &answer, TimeStep *tStep,
                         }
                     }
                 }
-            } else if ( ( sLoad = dynamic_cast< SurfaceLoad * >(load) ) ) { // Surface load:
+            } else if ( ( sLoad = static_cast<SurfaceLoad *>( load ) ) ) { // Surface load:
                 const IntArray &boundaries = set->giveBoundaryList();
                 for ( int ibnd = 1; ibnd <= boundaries.giveSize() / 2; ++ibnd ) {
                     Element *element = domain->giveElement( boundaries.at(ibnd * 2 - 1) );
@@ -1276,7 +1276,7 @@ void EngngModel :: assembleVectorFromBC(FloatArray &answer, TimeStep *tStep,
                         }
                     }
                 }
-            } else if ( ( eLoad = dynamic_cast< EdgeLoad * >(load) ) ) { // Edge load:
+            } else if ( ( eLoad = static_cast<EdgeLoad *>( load ) ) ) { // Edge load:
                 const IntArray &edgeBoundaries = set->giveEdgeList();
                 for ( int ibnd = 1; ibnd <= edgeBoundaries.giveSize() / 2; ++ibnd ) {
                     Element *element = domain->giveElement( edgeBoundaries.at(ibnd * 2 - 1) );
@@ -1307,7 +1307,7 @@ void EngngModel :: assembleVectorFromBC(FloatArray &answer, TimeStep *tStep,
                         }
                     }
                 }
-            } else if ( ( nLoad = dynamic_cast< NodalLoad * >(load) ) ) { // Nodal load:
+            } else if ( ( nLoad = static_cast< NodalLoad * >(load) ) ) { // Nodal load:
                 const IntArray &nodes = set->giveNodeList();
                 for ( int idman = 1; idman <= nodes.giveSize(); ++idman ) {
                     DofManager *node = domain->giveDofManager( nodes.at(idman) );

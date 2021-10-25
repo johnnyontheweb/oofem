@@ -1312,3 +1312,9 @@ src/tm/isoheatadvmat.C.bak
 /2019_new/src/sm/sm.dir/MinSizeRel/sm.lib.recipe
 /2019_new/src/sm/sm.dir/MinSizeRel/sm.vcxproj.FileListAbsolute.txt
 /2019_new/src/tm/tm.dir/MinSizeRel/tm.lib.recipe
+*.vcxproj
+*.filters
+*.user
+/2019_new/CTestTestfile.cmake
+/2019_new/Testing/Temporary/CTestCheckpoint.txt
+/2019_new/Testing/Temporary/LastTest.log.tmp
