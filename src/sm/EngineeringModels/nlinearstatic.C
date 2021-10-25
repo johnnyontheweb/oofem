@@ -264,6 +264,17 @@ double NonLinearStatic :: giveUnknownComponent(ValueModeType mode, TimeStep *tSt
         } else {
             return 0.;
         }
+    case VM_Residual:
+        // evaluate the residual of momentum balance for specific unknown
+        if (internalForces.isNotEmpty()) {
+            double ans = loadLevel*incrementalLoadVector.at(eq)-internalForces.at(eq);
+            if (initialLoadVector.isNotEmpty()) {
+                ans += initialLoadVector.at(eq);
+            }
+            return ans;
+        } else {
+            return 0.;
+        }
 
     case VM_Acceleration:
 	//if (incrementOfDisplacement.isNotEmpty()) {
