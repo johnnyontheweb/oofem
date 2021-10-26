@@ -54,7 +54,8 @@ namespace oofem {
 
 #define OOFEM_EXIT(code) \
     oofem_logger.printStatistics(); \
-    fprintf(stderr, "oofem exit code %d\n", code); \
+    fprintf( stderr, "oofem exit code %d\n", code ); \
+    oofem_logger.flush(); \
 	if (oofem::pid.empty()) { \
 		exit(code); \
 	} \
