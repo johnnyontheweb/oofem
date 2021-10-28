@@ -39,6 +39,7 @@
 #include "zznodalrecoverymodel.h"
 #include "sprnodalrecoverymodel.h"
 #include "nodalaveragingrecoverymodel.h"
+#include "sm/Materials/winklermodel.h"
 
 #define _IFT_Quad1PlateSubSoil_Name "quad1platesubsoil"
 #define _IFT_Quad1PlateSubSoil_lcs "lcs1"
@@ -59,7 +60,7 @@ class FEI2dQuadLin;
  */
 class Quad1PlateSubSoil : public StructuralElement,
 public ZZNodalRecoveryModelInterface,
-public SPRNodalRecoveryModelInterface //, public NodalAveragingRecoveryModelInterface
+public SPRNodalRecoveryModelInterface, public Plate3dSubsoilMaterialInterface //, public NodalAveragingRecoveryModelInterface
 {
 protected:
     static FEI2dQuadLin interp_lin;
@@ -67,6 +68,7 @@ protected:
     FloatArray la1;
     // macro element number
     int macroElem;
+    std::array<FloatArrayF<3>, 3> lcs;
 
 public:
     Quad1PlateSubSoil(int n, Domain * d);
@@ -97,6 +99,7 @@ public:
 
     int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
     Interface *giveInterface(InterfaceType it) override;
+    FloatMatrixF<3, 3> P3SSMI_getUnknownsGtoLRotationMatrix() const override;
 
 protected:
     void computeGaussPoints() override;
@@ -116,7 +119,7 @@ protected:
      */
     void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer) override;    
     void computeSurfaceNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords) override;
-    
+    void computeGtoLMatrix();
     //@{
     //virtual void computeSurfaceNMatrixAt(FloatMatrix &answer, int iSurf, GaussPoint *gp);
     //virtual void giveSurfaceDofMapping(IntArray &answer, int iSurf) const;

@@ -136,7 +136,7 @@ MITC4Shell::giveDirectorVectors()
 {
     if ( directorType == 0 ) {
         // normal to the midplane
-        auto e = this->computeLocalBaseVectors();
+        //auto e = this->computeLocalBaseVectors();
         return { e[2], e[2], e[2], e[2] };
     } else if ( directorType == 1 ) {
         // nodal average
@@ -156,7 +156,7 @@ MITC4Shell::giveDirectorVectors()
                 auto neighbour = dynamic_cast<MITC4Shell *>(this->giveDomain()->giveElement( neighbours.at( j ) ));
                 if ( neighbour ) {
                     if ( neighbour->giveCrossSection()->giveNumber() == csNum ) {
-                        auto e = neighbour->computeLocalBaseVectors();
+                        //auto e = neighbour->computeLocalBaseVectors();
                         nodeDir += e[2];
                     }
                 }
@@ -744,7 +744,7 @@ MITC4Shell::postInitialize()
 {
     NLStructuralElement::postInitialize();
 
-    auto e = this->computeLocalBaseVectors();
+    this->e = this->computeLocalBaseVectors();
 
     for ( int i = 1; i <= 3; i++ ) {
         GtoLRotationMatrix.at( 1, i ) = e[0].at( i );
@@ -804,7 +804,7 @@ MITC4Shell::computeLToDirectorRotationMatrix()
     }
 
     //auto [e1, e2, e3, e4] = this->computeLocalBaseVectors();
-    auto e = this->computeLocalBaseVectors();
+    //auto e = this->computeLocalBaseVectors();
     auto V = this->giveDirectorVectors();
 
     for ( int i = 0; i < 4; ++i ) {
@@ -1230,7 +1230,7 @@ MITC4Shell :: computeEdgeIpGlobalCoords(FloatArray &answer, GaussPoint *gp, int 
 int
 MITC4Shell::computeLoadLEToLRotationMatrix( FloatMatrix &answer, int iEdge, GaussPoint *gp )
 {
-    auto e = this->computeLocalBaseVectors();
+    //auto e = this->computeLocalBaseVectors();
 
     const auto &edgeNodes = this->interp_lin.computeLocalEdgeMapping( iEdge );
 

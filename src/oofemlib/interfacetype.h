@@ -80,6 +80,7 @@ enum InterfaceType {
 
     Beam3dSubsoilElementInterfaceType,
     Beam3dSubsoilMaterialInterfaceType,
+    Plate3dSubsoilMaterialInterfaceType,
 
     QCMaterialExtensionInterfaceType,
 

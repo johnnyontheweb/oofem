@@ -94,6 +94,7 @@ protected:
     // macro element number
     int macroElem;
     double ang = 0.;
+    std::array<FloatArrayF<3>, 3> e;
 
 private:
     //std::auto_ptr<FloatMatrix> NMatrix;

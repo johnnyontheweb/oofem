@@ -100,6 +100,16 @@ WinklerMaterial :: give2dPlateSubSoilStiffMtrx(MatResponseMode mode, GaussPoint 
     answer.at(1, 1) = c1.at(3);
     answer.at(2, 2) = c1.at(2);
     answer.at(3, 3) = c1.at(1);
+
+    if ( globalFromulation ) {
+        auto ei = static_cast<Plate3dSubsoilMaterialInterface *>( gp->giveElement()->giveInterface( Plate3dSubsoilMaterialInterfaceType ) );
+        if ( ei ) {
+            auto T = ei->P3SSMI_getUnknownsGtoLRotationMatrix();
+            answer = unrotate( answer, T );
+        } else {
+            OOFEM_ERROR( "Plate3dSubsoilMaterialInterface required from element" );
+        }
+    }
     return answer;
 }
 

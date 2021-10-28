@@ -47,6 +47,7 @@
 #include "load.h"
 #include "mathfem.h"
 #include "classfactory.h"
+#include "angle.h"
 
 namespace oofem {
 REGISTER_Element(Tria1PlateSubSoil);
@@ -192,6 +193,53 @@ Tria1PlateSubSoil :: computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tSte
   // OOFEM_ERROR("Mass matrix not provided");
 }
 
+void 
+Tria1PlateSubSoil ::computeGtoLmatrix( FloatMatrix &lc )
+{
+    FloatArray e1, e2, e3, help;
+    // compute e1' = [N2-N1]  and  help = [N3-N1]
+    e1.beDifferenceOf( this->giveNode( 2 )->giveCoordinates(), this->giveNode( 1 )->giveCoordinates() );
+    help.beDifferenceOf( this->giveNode( 3 )->giveCoordinates(), this->giveNode( 1 )->giveCoordinates() );
+
+    // let us normalize e1'
+    e1.normalize();
+
+    // compute e3' : vector product of e1' x help
+    e3.beVectorProductOf( e1, help );
+    // let us normalize
+    e3.normalize();
+
+    // now from e3' x e1' compute e2'
+    e2.beVectorProductOf( e3, e1 );
+
+    // rotate as to have the 1st local axis equal to la1
+    if ( la1.computeNorm() != 0 ) {
+        double ang = -Angle::giveAngleIn3Dplane( la1, e1, e3 ); // radians
+        e1         = Angle::rotate( e1, e3, ang );
+        e2         = Angle::rotate( e2, e3, ang );
+    }
+    // rot. matrix
+    lc.resize( 3, 3 );
+
+    for ( int i = 1; i <= 3; i++ ) {
+        lc.at( 1, i ) = e1.at( i );
+        lc.at( 2, i ) = e2.at( i );
+        lc.at( 3, i ) = e3.at( i );
+    }
+}
+
+FloatMatrixF<3, 3>
+Tria1PlateSubSoil ::P3SSMI_getUnknownsGtoLRotationMatrix() const
+// Returns the rotation matrix for element unknowns
+{
+    FloatMatrixF<3, 3> answer;
+    for ( int i = 1; i <= 3; i++ ) {
+        for ( int j = 1; j <= 3; j++ ) {
+            answer.at( i, j ) = this->lcs.at( i, j );
+        }
+    }
+    return answer;
+}
 
 int
 Tria1PlateSubSoil :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep)
@@ -213,8 +261,12 @@ Tria1PlateSubSoil :: giveInterface(InterfaceType interface)
         return static_cast< ZZNodalRecoveryModelInterface * >(this);
     } else if ( interface == SPRNodalRecoveryModelInterfaceType ) {
         return static_cast< SPRNodalRecoveryModelInterface * >(this);
-    //} else if (interface == NodalAveragingRecoveryModelInterfaceType) {
+    } else if (interface == NodalAveragingRecoveryModelInterfaceType) {
     //	return static_cast< NodalAveragingRecoveryModelInterface * >(this);
+        return NULL; // avoid results
+    } else if ( interface == Plate3dSubsoilMaterialInterfaceType ) {
+        if ( this->lcs.giveNumberOfRows() == 0 ) this->computeGtoLmatrix( this->lcs );
+        return static_cast<Plate3dSubsoilMaterialInterface *>( this );
     }
 
     return NULL;

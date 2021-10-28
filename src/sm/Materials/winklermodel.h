@@ -103,10 +103,24 @@ public:
     Beam3dSubsoilMaterialInterface() { }
     virtual ~Beam3dSubsoilMaterialInterface() { }
 
-    /// Evaluate transformation matrix for reciver unknowns
-    virtual FloatMatrixF<6,6> B3SSMI_getUnknownsGtoLRotationMatrix() const = 0;
+    /// Evaluate transformation matrix for receiver unknowns
+    virtual FloatMatrixF<6, 6> B3SSMI_getUnknownsGtoLRotationMatrix() const = 0;
 };
 
- 
+/**
+ * Interface defining required functionality from associated element. 
+ * The method for computing transformation matrix from global to local element c.s. is required.
+ */
+class OOFEM_EXPORT Plate3dSubsoilMaterialInterface : public Interface
+{
+public:
+    /// Constructor
+    Plate3dSubsoilMaterialInterface() {}
+    virtual ~Plate3dSubsoilMaterialInterface() {}
+
+    /// Evaluate transformation matrix for receiver unknowns
+    virtual FloatMatrixF<3, 3> P3SSMI_getUnknownsGtoLRotationMatrix() const = 0;
+}; 
+
 } // end namespace oofem
 #endif // winklermodel_h

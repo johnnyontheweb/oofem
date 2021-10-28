@@ -39,6 +39,7 @@
 #include "zznodalrecoverymodel.h"
 #include "sprnodalrecoverymodel.h"
 #include "nodalaveragingrecoverymodel.h"
+#include "sm/Materials/winklermodel.h"
 
 #define _IFT_Tria1PlateSubSoil_Name "tria1platesubsoil"
 #define _IFT_Tria1PlateSubSoil_lcs "lcs1"
@@ -59,7 +60,8 @@ class FEI2dTrLin;
  */
 class Tria1PlateSubSoil : public StructuralElement,
 public ZZNodalRecoveryModelInterface,
-public SPRNodalRecoveryModelInterface //, public NodalAveragingRecoveryModelInterface
+                          public SPRNodalRecoveryModelInterface,
+                          public Plate3dSubsoilMaterialInterface //, public NodalAveragingRecoveryModelInterface
 {
 protected:
     static FEI2dTrLin interp_lin;
@@ -67,6 +69,7 @@ protected:
     FloatArray la1;
     // macro element number
     int macroElem;
+    FloatMatrix lcs;
 
 public:
     Tria1PlateSubSoil(int n, Domain * d);
@@ -97,6 +100,8 @@ public:
 
     int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
     Interface *giveInterface(InterfaceType it) override;
+    FloatMatrixF<3, 3> P3SSMI_getUnknownsGtoLRotationMatrix() const override;
+    void computeGtoLmatrix( FloatMatrix &lc );
 
 protected:
     void computeGaussPoints() override;

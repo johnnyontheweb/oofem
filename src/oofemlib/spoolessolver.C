@@ -283,13 +283,13 @@ SpoolesSolver :: solve(SparseMtrx &A, FloatArray &b, FloatArray &x)
         }
 
         if ( rootchv != NULL ) {
-            fprintf( msgFile, "\n\n matrix found to be singular\n" );
+            //fprintf( msgFile, "\n\n matrix found to be singular\n" );
             OOFEM_ERROR( "error: matrix found to be singular" )
             //exit(-1);
         }
 
         if ( errorValue >= 0 ) {
-            fprintf( msgFile, "\n\n error encountered at front %d", errorValue );
+            //fprintf( msgFile, "\n\n error encountered at front %d", errorValue );
             OOFEM_ERROR( "error encountered at front %d", errorValue )
             //exit(-1);
         }

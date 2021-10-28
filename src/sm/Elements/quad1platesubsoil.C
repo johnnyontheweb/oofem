@@ -47,6 +47,7 @@
 #include "load.h"
 #include "mathfem.h"
 #include "classfactory.h"
+#include "angle.h"
 
 namespace oofem {
 REGISTER_Element(Quad1PlateSubSoil);
@@ -55,7 +56,7 @@ FEI2dQuadLin Quad1PlateSubSoil :: interp_lin(1, 2);
 
 Quad1PlateSubSoil :: Quad1PlateSubSoil(int n, Domain *aDomain) :
     StructuralElement(n, aDomain), ZZNodalRecoveryModelInterface(this),
-    SPRNodalRecoveryModelInterface() // , NodalAveragingRecoveryModelInterface()
+    SPRNodalRecoveryModelInterface() //, NodalAveragingRecoveryModelInterface()
 {
     numberOfGaussPoints = 4;
     numberOfDofMans = 4;
@@ -138,11 +139,53 @@ Quad1PlateSubSoil :: initializeFrom(InputRecord &ir)
     la1.resize(3);
     la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_Quad1PlateSubSoil_lcs);
-
+    
     this->macroElem = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_Quad1PlateSubSoil_macroelem);
 }
 
+void 
+Quad1PlateSubSoil :: computeGtoLMatrix() {
+    // compute A - (node2+node3)/2
+    auto coordA = 0.5 * ( FloatArrayF<3>( this->giveNode( 2 )->giveCoordinates() ) + FloatArrayF<3>( this->giveNode( 3 )->giveCoordinates() ) );
+    // compute B - (node1+node4)/2
+    auto coordB = 0.5 * ( FloatArrayF<3>( this->giveNode( 1 )->giveCoordinates() ) + FloatArrayF<3>( this->giveNode( 4 )->giveCoordinates() ) );
+    // compute e1' = [B-A]
+    auto e1 = normalize( coordB - coordA );
+
+    // compute C - (node3+node4)/2
+    auto coordC = 0.5 * ( FloatArrayF<3>( this->giveNode( 4 )->giveCoordinates() ) + FloatArrayF<3>( this->giveNode( 3 )->giveCoordinates() ) );
+    // compute D - (node2+node1)/2
+    auto coordD = 0.5 * ( FloatArrayF<3>( this->giveNode( 1 )->giveCoordinates() ) + FloatArrayF<3>( this->giveNode( 2 )->giveCoordinates() ) );
+
+    // compute help = [D-C]
+    auto help = coordD - coordC;
+    // compute e3' : vector product of e1' x help
+    auto e3 = normalize( cross( e1, help ) );
+    // now from e3' x e1' compute e2'
+    auto e2 = cross( e3, e1 );
+    if ( la1.computeNorm() != 0 ) {
+        // rotate as to have the 1st local axis equal to la1
+        double ang = -Angle::giveAngleIn3Dplane( la1, e1, e3 ); // radians
+        e1         = Angle::rotate( e1, e3, ang );
+        e2         = Angle::rotate( e2, e3, ang );
+    }
+
+    this->lcs = { e1, e2, e3 };
+}
+
+FloatMatrixF<3, 3>
+Quad1PlateSubSoil ::P3SSMI_getUnknownsGtoLRotationMatrix() const
+// Returns the rotation matrix for element unknowns
+{
+    FloatMatrixF<3, 3> answer;
+    for ( int i = 1; i <= 3; i++ ) {
+        for ( int j = 1; j <= 3; j++ ) {
+            answer.at( i, j ) = this->lcs[i-1].at( j );
+        }
+    }
+    return answer;
+}
 
 void
 Quad1PlateSubSoil::NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,
@@ -223,8 +266,12 @@ Quad1PlateSubSoil :: giveInterface(InterfaceType interface)
         return static_cast< ZZNodalRecoveryModelInterface * >(this);
     } else if ( interface == SPRNodalRecoveryModelInterfaceType ) {
         return static_cast< SPRNodalRecoveryModelInterface * >(this);
-    //} else if (interface == NodalAveragingRecoveryModelInterfaceType) {
+    } else if (interface == NodalAveragingRecoveryModelInterfaceType) {
     // return static_cast< NodalAveragingRecoveryModelInterface * >(this);
+        return NULL; // avoid results
+    } else if ( interface == Plate3dSubsoilMaterialInterfaceType ) {
+        if (iszero(this->lcs[0])) this->computeGtoLMatrix();
+        return static_cast<Plate3dSubsoilMaterialInterface *>( this );
     }
 
     return NULL;
