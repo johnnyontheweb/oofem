@@ -1202,7 +1202,7 @@ double
 MITC4Shell::computeEdgeVolumeAround( GaussPoint *gp, int iEdge )
 {
     auto lcF = this->giveNodeCoordinates();
-    std::vector<FloatArray> lc;
+    std::vector<FloatArray> lc = { FloatArray( 3 ), FloatArray( 3 ), FloatArray( 3 ), FloatArray( 3 ) };
     lc[0]       = lcF[0];
     lc[1]       = lcF[1];
     lc[2]       = lcF[2];
