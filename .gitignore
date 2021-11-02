@@ -1340,3 +1340,4 @@ src/tm/isoheatadvmat.C.bak
 /2019_new/src/tm/RUN_TESTS.vcxproj
 /2019_new/src/tm/RUN_TESTS.vcxproj.filters
 /2019_new/src/tm/tm.vcxproj.user
+2019_new/build_x64.cmd
