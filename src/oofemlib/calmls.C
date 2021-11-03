@@ -690,9 +690,9 @@ CylindricalALM :: initializeFrom(InputRecord &ir)
 
     nsmax = 30;
     IR_GIVE_OPTIONAL_FIELD(ir, nsmax, _IFT_CylindricalALM_maxiter);
-    if ( nsmax < 30 ) {
-        nsmax = 30;
-    }
+    //if ( nsmax < 30 ) {
+    //    nsmax = 30;
+    //}
 
     IR_GIVE_OPTIONAL_FIELD(ir, maxRestarts, _IFT_CylindricalALM_maxrestarts);
 
