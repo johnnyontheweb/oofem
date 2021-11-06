@@ -310,8 +310,8 @@ TimeStep *NonLinearStatic :: giveNextStep()
 
     if ( currentStep ) {
         istep = currentStep->giveNumber() + 1;
-	deltaTtmp = this->giveDeltaT(istep);
-	totalTime = currentStep->giveTargetTime() + deltaTtmp;
+	    deltaTtmp = this->giveDeltaT(istep);
+	    totalTime = currentStep->giveTargetTime() + deltaTtmp;
         counter = currentStep->giveSolutionStateCounter() + 1;
         mStepNum = currentStep->giveMetaStepNumber();
 	
