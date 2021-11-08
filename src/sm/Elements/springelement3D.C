@@ -94,20 +94,23 @@ SpringElement3D::giveInternalForcesVector( FloatArray &answer, TimeStep *tStep, 
 {
     FloatArray f = this->computeSpringInternalForce( tStep );
     answer.resize( 12 );
-    answer.at( 1 )  = -f.at( 1 );
-    answer.at( 2 )  = -f.at( 2 );
-    answer.at( 3 )  = -f.at( 3 );
-    answer.at( 4 )  = -f.at( 4 );
-    answer.at( 5 )  = -f.at( 5 );
-    answer.at( 6 )  = -f.at( 6 );
-    answer.at( 7 )  = f.at( 1 );
-    answer.at( 8 )  = f.at( 2 );
-    answer.at( 9 )  = f.at( 3 );
-    answer.at( 10 ) = f.at( 4 );
-    answer.at( 11 ) = f.at( 5 );
-    answer.at( 12 ) = f.at( 6 );
+    //answer.at( 1 )  = -f.at( 1 );
+    //answer.at( 2 )  = -f.at( 2 );
+    //answer.at( 3 )  = -f.at( 3 );
+    //answer.at( 4 )  = -f.at( 4 );
+    //answer.at( 5 )  = -f.at( 5 );
+    //answer.at( 6 )  = -f.at( 6 );
+    //answer.at( 7 )  = f.at( 1 );
+    //answer.at( 8 )  = f.at( 2 );
+    //answer.at( 9 )  = f.at( 3 );
+    //answer.at( 10 ) = f.at( 4 );
+    //answer.at( 11 ) = f.at( 5 );
+    //answer.at( 12 ) = f.at( 6 );
+    for ( int i = 1; i <= 6; i++ ) {
+        answer.at( i ) = -f.at( i );
+        answer.at( i+6 ) = f.at( i );
+    }
 }
-
 
 bool
 SpringElement3D::computeGtoLRotationMatrix( FloatMatrix &answer )
