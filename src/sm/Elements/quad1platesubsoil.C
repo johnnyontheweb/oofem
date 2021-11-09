@@ -314,6 +314,12 @@ Quad1PlateSubSoil ::computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &a
     answer.beNMatrixOf(N, 1);
 }
 
+void
+Quad1PlateSubSoil::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
+{
+    answer.resize( 4, 4 );
+    answer.zero();
+}
 
 void
 Quad1PlateSubSoil ::computeSurfaceNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords)

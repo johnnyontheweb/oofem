@@ -300,6 +300,13 @@ Tria1PlateSubSoil :: SPRNodalRecoveryMI_giveDofMansDeterminedByPatch(IntArray &a
     }
 }
 
+void 
+Tria1PlateSubSoil::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
+{
+    answer.resize( 3, 3 );
+    answer.zero();
+}
+
 void
 Tria1PlateSubSoil ::computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer)
 // Returns the [1x3] displacement interpolation matrix {N}

@@ -100,6 +100,7 @@ public:
     int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
     Interface *giveInterface(InterfaceType it) override;
     FloatMatrixF<3, 3> P3SSMI_getUnknownsGtoLRotationMatrix() const override;
+    void computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep ) override;
 
 protected:
     void computeGaussPoints() override;
