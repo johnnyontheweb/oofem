@@ -97,9 +97,9 @@ FloatMatrixF<3,3>
 WinklerMaterial :: give2dPlateSubSoilStiffMtrx(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const
 {
     FloatMatrixF<3,3> answer;
-    answer.at(1, 1) = c1.at(3);
+    answer.at(1, 1) = c1.at(1);
     answer.at(2, 2) = c1.at(2);
-    answer.at(3, 3) = c1.at(1);
+    answer.at(3, 3) = c1.at(3);
 
     if ( globalFromulation ) {
         auto ei = static_cast<Plate3dSubsoilMaterialInterface *>( gp->giveElement()->giveInterface( Plate3dSubsoilMaterialInterfaceType ) );

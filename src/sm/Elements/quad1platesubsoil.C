@@ -170,8 +170,8 @@ Quad1PlateSubSoil :: computeGtoLMatrix() {
         e1         = Angle::rotate( e1, e3, ang );
         e2         = Angle::rotate( e2, e3, ang );
     }
-
-    this->lcs = { e1, e2, e3 };
+    // 1st axis is local z
+    this->lcs = { e3, e2, e1 };
 }
 
 FloatMatrixF<3, 3>

@@ -220,11 +220,11 @@ Tria1PlateSubSoil ::computeGtoLmatrix( FloatMatrix &lc )
     }
     // rot. matrix
     lc.resize( 3, 3 );
-
+    // 1st axis is local z
     for ( int i = 1; i <= 3; i++ ) {
-        lc.at( 1, i ) = e1.at( i );
+        lc.at( 3, i ) = e1.at( i );
         lc.at( 2, i ) = e2.at( i );
-        lc.at( 3, i ) = e3.at( i );
+        lc.at( 1, i ) = e3.at( i );
     }
 }
 

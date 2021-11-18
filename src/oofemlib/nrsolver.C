@@ -723,11 +723,11 @@ NRSolver :: checkConvergence(FloatArray &RT, FloatArray &F, FloatArray &rhs,  Fl
         dg_totalLoadLevel = collectiveErr;
         parallel_context->accumulate(dg_totalDisp,      collectiveErr);
         dg_totalDisp      = collectiveErr;
-#ifdef DEBUG
+        //#ifdef DEBUG
         if ( engngModel->giveProblemScale() == macroScale ) {
             OOFEM_LOG_INFO("t=%g  dt=%g  iter=%-5d", tStep->giveIntrinsicTime(), tStep->giveTimeIncrement(), nite);
         }
-#endif
+        //#endif
         int maxNumPrintouts = 6;
         int numPrintouts = 0;
 
@@ -741,11 +741,11 @@ NRSolver :: checkConvergence(FloatArray &RT, FloatArray &F, FloatArray &rhs,  Fl
             }
 
             numPrintouts++;
-#ifdef DEBUG
+            //#ifdef DEBUG
             if ( engngModel->giveProblemScale() == macroScale && numPrintouts <= maxNumPrintouts ) {
                 OOFEM_LOG_INFO( "  %s:", __DofIDItemToString( ( DofIDItem ) dg ).c_str() );
             }
-#endif
+            //#endif
             if ( rtolf.at(1) > 0.0 ) {
                 //  compute a relative error norm
                 if ( dg_forceScale.find(dg) != dg_forceScale.end() ) {
@@ -759,11 +759,11 @@ NRSolver :: checkConvergence(FloatArray &RT, FloatArray &F, FloatArray &rhs,  Fl
                     zeroFNorm = true;
                     forceErr = sqrt( dg_forceErr.at(dg) );
                 }
-#ifdef DEBUG
+                //#ifdef DEBUG
                 if ( engngModel->giveProblemScale() == macroScale  && numPrintouts <= maxNumPrintouts ) {
                     OOFEM_LOG_INFO(zeroFNorm ? " *%.3e" : "  %.3e", forceErr);
                 }
-#endif
+                //#endif
                 if ( forceErr > rtolf.at(1) * NRSOLVER_MAX_REL_ERROR_BOUND ) {
                     errorOutOfRange = true;
                 }
@@ -792,11 +792,11 @@ NRSolver :: checkConvergence(FloatArray &RT, FloatArray &F, FloatArray &rhs,  Fl
                     //zeroDNorm = true;
                     dispErr = sqrt( dg_dispErr.at(dg) );
                 }
-#ifdef DEBUG
+                //#ifdef DEBUG
                 if ( engngModel->giveProblemScale() == macroScale  && numPrintouts <= maxNumPrintouts ) {
                     OOFEM_LOG_INFO(zeroDNorm ? " *%.3e" : "  %.3e", dispErr);
                 }
-#endif
+                //#endif
                 if ( dispErr  > rtold.at(1) * NRSOLVER_MAX_REL_ERROR_BOUND ) {
                     errorOutOfRange = true;
                 }
@@ -806,21 +806,21 @@ NRSolver :: checkConvergence(FloatArray &RT, FloatArray &F, FloatArray &rhs,  Fl
             }
         }
 
-#ifdef DEBUG
+        //#ifdef DEBUG
         if ( engngModel->giveProblemScale() == macroScale ) {
             OOFEM_LOG_INFO("\n");
         }
-#endif
+        //#endif
         //if ( zeroNorm ) OOFEM_WARNING("Had to resort to absolute error measure (marked by *)");
     } else { // No dof grouping
         double dXX, dXdX;
-#ifdef DEBUG
+        //#ifdef DEBUG
         if ( engngModel->giveProblemScale() == macroScale ) {
             OOFEM_LOG_INFO("NRSolver:     %-15d", nite);
         } else {
             OOFEM_LOG_INFO("  NRSolver:     %-15d", nite);
         }
-#endif
+        //#endif
 
         forceErr = parallel_context->localNorm(rhs);
         forceErr *= forceErr;
@@ -842,11 +842,11 @@ NRSolver :: checkConvergence(FloatArray &RT, FloatArray &F, FloatArray &rhs,  Fl
             if ( fabs(forceErr) > rtolf.at(1) ) {
                 answer = false;
             }
-#ifdef DEBUG
+            //#ifdef DEBUG
             if ( engngModel->giveProblemScale() == macroScale ) {
                 OOFEM_LOG_INFO(" %-15e", forceErr);
             }
-#endif
+            //#endif
             if ( this->constrainedNRFlag ) {
                 // store the errors from the current iteration for use in the next
                 forceErrVec.at(1) = forceErr;
@@ -867,17 +867,17 @@ NRSolver :: checkConvergence(FloatArray &RT, FloatArray &F, FloatArray &rhs,  Fl
             if ( fabs(dispErr)  > rtold.at(1) ) {
                 answer = false;
             }
-#ifdef DEBUG
+            //#ifdef DEBUG
             if ( engngModel->giveProblemScale() == macroScale ) {
                 OOFEM_LOG_INFO(" %-15e", dispErr);
             }
-#endif
+            //#endif
         }
-#ifdef DEBUG
+        //#ifdef DEBUG
         if ( engngModel->giveProblemScale() == macroScale ) {
             OOFEM_LOG_INFO("\n");
         }
-#endif
+        //#endif
     } // end default case (all dofs contributing)
 
     return answer;
