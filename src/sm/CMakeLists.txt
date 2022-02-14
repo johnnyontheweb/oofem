@@ -193,6 +193,7 @@ set (sm_emodel
     EngineeringModels/freewarping.C 
     EngineeringModels/structuralmaterialevaluator.C
     EngineeringModels/qclinearstatic.C
+    EngineeringModels/pdelta.C
     EngineeringModels/responsespectrum.C
     EngineeringModels/dummyenum.C
     )
