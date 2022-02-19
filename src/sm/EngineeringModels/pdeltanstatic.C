@@ -557,6 +557,7 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
 	//double oldNorm = totalDisplacement.computeSquaredNorm(); double newNorm = 0;
 	//bool escape = false; int maxIter = 0;
 
+    if ( 1 == 2 ) {
 	//do {
 	//	// PDELTA approx solution with iterations - maximum 10 iterations
 	//	if (newNorm != 0) oldNorm = newNorm;
@@ -605,19 +606,24 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
 //	} while (escape == false);
 
 	// END pdelta ----------------------------------------------------------
+    } else {
+        FloatArray feq( displacementVector.giveSize() );
+        this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ),
+                            VM_Incremental, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
+        incrementalLoadVector.subtract( feq );
+	    // SOLVER
+        if ( initialLoadVector.isNotEmpty() ) {
+          numMetStatus = nMethod->solve(*stiffnessMatrix, incrementalLoadVector, & initialLoadVector,
+                                          totalDisplacement, incrementOfDisplacement, internalForces,
+                                          internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
+        } else {
+          numMetStatus = nMethod->solve(*stiffnessMatrix, incrementalLoadVector, NULL,
+                                          totalDisplacement, incrementOfDisplacement, internalForces,
+                                          internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
+        }
+    }
 
-	//// SOLVER
- //   if ( initialLoadVector.isNotEmpty() ) {
- //     numMetStatus = nMethod->solve(*stiffnessMatrix, incrementalLoadVector, & initialLoadVector,
- //                                     totalDisplacement, incrementOfDisplacement, internalForces,
- //                                     internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
- //   } else {
- //     numMetStatus = nMethod->solve(*stiffnessMatrix, incrementalLoadVector, NULL,
- //                                     totalDisplacement, incrementOfDisplacement, internalForces,
- //                                     internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
- //   }
-
-	if (numMetStatus & NM_NoSuccess) {
+    if (numMetStatus & NM_NoSuccess) {
 		OOFEM_ERROR("Solver couldn't find equilibrium at step number %5d.%d in %d iterations\n", tStep->giveNumber(), tStep->giveVersion(), currentIterations);
 	}
     ///@todo Martin: ta bort!!!

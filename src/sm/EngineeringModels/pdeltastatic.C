@@ -262,11 +262,14 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 	bool escape = false; int maxIter = 0;
 	//initialStressMatrix.reset(classFactory.createSparseMtrx(sparseMtrxType)); // stresses are in the model now
 	//initialStressMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
-
+    FloatArray rhs = loadVector;
 	do {
 		// PDELTA approx solution with iterations - maximum 10 iterations
 		if (newNorm!=0) oldNorm = newNorm;
 		maxIter += 1;
+
+        if ( 2 == 1 ) {
+                
 		// terminate linear static computation (necessary, in order to compute stresses in elements).
 		this->updateAfterStatic(this->giveCurrentStep(), this->giveDomain(1)); // not needed for beam - conservatively left (shells?)
 #ifdef VERBOSE
@@ -310,6 +313,16 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 #endif
 		// displacementVector.zero(); // not needed
 		nMethod->solve(*Kiter, loadVector, displacementVector);
+        } else {
+        FloatArray feq( displacementVector.giveSize() );
+        this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ),
+            VM_Total, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
+        rhs.subtract( feq );
+#ifdef VERBOSE
+        OOFEM_LOG_INFO( "\nSolving iteration %d ...\n", maxIter );
+#endif
+        nMethod->solve( *stiffnessMatrix, rhs, displacementVector );
+        }
 
 		// check convergence on DISPLACEMENTS: ( u(i)^2 - u(i-1)^2 ) / u(i)^2
 		newNorm = displacementVector.computeSquaredNorm();

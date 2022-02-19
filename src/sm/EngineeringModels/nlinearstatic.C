@@ -640,23 +640,34 @@ NonLinearStatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *
 #endif
             this->assemble(* stiffnessMatrix, tStep, TangentAssembler(TangentStiffness),
                            EModelDefaultEquationNumbering(), d);
+
 	    if (secOrder) {
-		// update internal state - nodes ...
-		for (auto &dman : d->giveDofManagers()) {
-		    dman->updateYourself(tStep);
-		}
-		// ... and elements
-		for (auto &elem : d->giveElements()) {
-		    elem->updateInternalState(tStep);
-		    elem->updateYourself(tStep);
-		}
-#ifdef VERBOSE
-		OOFEM_LOG_INFO("Assembling initial stress matrix\n");
-#endif
-		initialStressMatrix->zero();
-		this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), d);
-		stiffnessMatrix->add(1, *initialStressMatrix); // in 1st step this would be zero
-	    }
+                if ( 1 == 2 ) {
+		            // update internal state - nodes ...
+		            for (auto &dman : d->giveDofManagers()) {
+		                dman->updateYourself(tStep);
+		            }
+		            // ... and elements
+		            for (auto &elem : d->giveElements()) {
+		                elem->updateInternalState(tStep);
+		                elem->updateYourself(tStep);
+		            }
+            #ifdef VERBOSE
+		            OOFEM_LOG_INFO("Assembling initial stress matrix\n");
+            #endif
+		            initialStressMatrix->zero();
+		            this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), d);
+		            stiffnessMatrix->add(1, *initialStressMatrix); // in 1st step this would be zero
+
+                //} else {
+                //    FloatArray feq( displacementVector.giveSize() );
+                //    this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ),
+                //        VM_Incremental, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
+                //    incrementalLoadVector.subtract( feq );
+                }
+
+	         }
+
         } else if ( ( stiffMode == nls_secantStiffness ) || ( stiffMode == nls_secantInitialStiffness && initFlag ) ) {
 #ifdef VERBOSE
             OOFEM_LOG_DEBUG("Assembling secant stiffness matrix\n");
@@ -695,6 +706,17 @@ NonLinearStatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *
         OOFEM_LOG_DEBUG("Updating external forces\n");
 #endif
         this->assembleIncrementalReferenceLoadVectors(incrementalLoadVector, incrementalLoadVectorOfPrescribed, this->refLoadInputMode, d, tStep);
+
+        if ( secOrder ) {
+#ifdef VERBOSE
+            OOFEM_LOG_INFO( "Assembling initial stress matrix\n" );
+#endif
+            FloatArray feq( displacementVector.giveSize() );
+            this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ),
+                VM_Incremental, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
+            incrementalLoadVector.subtract( feq );
+        }
+
         break;
 
     default:
