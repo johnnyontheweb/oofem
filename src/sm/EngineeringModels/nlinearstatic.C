@@ -487,10 +487,10 @@ NonLinearStatic :: proceedStep(int di, TimeStep *tStep)
 
         stiffnessMatrix->buildInternalStructure( this, di, EModelDefaultEquationNumbering() );
 
-	if (secOrder) { 
-	    initialStressMatrix = classFactory.createSparseMtrx(sparseMtrxType);
-	    initialStressMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
-	};
+	//if (secOrder) { 
+	//    initialStressMatrix = classFactory.createSparseMtrx(sparseMtrxType);
+	//    initialStressMatrix->buildInternalStructure(this, 1, EModelDefaultEquationNumbering());
+	//};
     }
 
 #if 0
@@ -562,7 +562,17 @@ NonLinearStatic :: proceedStep(int di, TimeStep *tStep)
         incrementOfDisplacement.zero();
     }
 
-    //totalDisplacement.printYourself();
+    // 2nd order effects
+    if ( secOrder ) {
+#ifdef VERBOSE
+    OOFEM_LOG_INFO( "Assembling initial stress matrix\n" );
+#endif
+    FloatArray feq( totalDisplacement.giveSize() );
+    this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ),
+        VM_Total, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
+    incrementalLoadVector.subtract( feq );
+    }
+
     if ( initialLoadVector.isNotEmpty() ) {
         numMetStatus = nMethod->solve(* stiffnessMatrix, incrementalLoadVector, & initialLoadVector,
                                       totalDisplacement, incrementOfDisplacement, internalForces,
@@ -706,16 +716,6 @@ NonLinearStatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *
         OOFEM_LOG_DEBUG("Updating external forces\n");
 #endif
         this->assembleIncrementalReferenceLoadVectors(incrementalLoadVector, incrementalLoadVectorOfPrescribed, this->refLoadInputMode, d, tStep);
-
-        if ( secOrder ) {
-#ifdef VERBOSE
-            OOFEM_LOG_INFO( "Assembling initial stress matrix\n" );
-#endif
-            FloatArray feq( displacementVector.giveSize() );
-            this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ),
-                VM_Incremental, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
-            incrementalLoadVector.subtract( feq );
-        }
 
         break;
 

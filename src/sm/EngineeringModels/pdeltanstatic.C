@@ -607,9 +607,9 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
 
 	// END pdelta ----------------------------------------------------------
     } else {
-        FloatArray feq( displacementVector.giveSize() );
+        FloatArray feq( totalDisplacement.giveSize() );
         this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ),
-                            VM_Incremental, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
+                            VM_Total, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
         incrementalLoadVector.subtract( feq );
 	    // SOLVER
         if ( initialLoadVector.isNotEmpty() ) {

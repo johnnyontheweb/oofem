@@ -512,7 +512,7 @@ NonLinearDynamic :: proceedStep(int di, TimeStep *tStep)
 #endif
             FloatArray feq( incrementOfDisplacement.giveSize() );
             this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ),
-                VM_Incremental, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
+                VM_Total, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
             forcesVector.subtract( feq );
         }
  
