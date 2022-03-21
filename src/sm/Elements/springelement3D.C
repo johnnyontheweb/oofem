@@ -196,13 +196,16 @@ SpringElement3D::computeSpringInternalForce( TimeStep *tStep )
     FloatArray u;
     this->computeVectorOf( VM_Total, tStep, u );
     FloatArray res;
-    res.resize( 6 );
-    res.at( 1 ) = this->springC1 * ( u.at( 7 ) - u.at( 1 ) );
-    res.at( 2 ) = this->springC2 * ( u.at( 8 ) - u.at( 2 ) );
-    res.at( 3 ) = this->springC3 * ( u.at( 9 ) - u.at( 3 ) );
-    res.at( 4 ) = this->springC4 * ( u.at( 10 ) - u.at( 4 ) );
-    res.at( 5 ) = this->springC5 * ( u.at( 11 ) - u.at( 5 ) );
-    res.at( 6 ) = this->springC6 * ( u.at( 12 ) - u.at( 6 ) );
+    res.resize( 6 ); res.zero();
+    //res.at( 1 ) = this->springC1 * ( u.at( 7 ) - u.at( 1 ) );
+    //res.at( 2 ) = this->springC2 * ( u.at( 8 ) - u.at( 2 ) );
+    //res.at( 3 ) = this->springC3 * ( u.at( 9 ) - u.at( 3 ) );
+    //res.at( 4 ) = this->springC4 * ( u.at( 10 ) - u.at( 4 ) );
+    //res.at( 5 ) = this->springC5 * ( u.at( 11 ) - u.at( 5 ) );
+    //res.at( 6 ) = this->springC6 * ( u.at( 12 ) - u.at( 6 ) );
+    FloatMatrix k;
+    this->computeStiffnessMatrix( k, TangentStiffness, tStep );
+    res.beProductOf( k, u ); res.negated();
     return res;
 }
 
