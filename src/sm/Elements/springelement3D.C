@@ -94,18 +94,6 @@ SpringElement3D::giveInternalForcesVector( FloatArray &answer, TimeStep *tStep, 
 {
     FloatArray f = this->computeSpringInternalForce( tStep );
     answer.resize( 12 );
-    //answer.at( 1 )  = -f.at( 1 );
-    //answer.at( 2 )  = -f.at( 2 );
-    //answer.at( 3 )  = -f.at( 3 );
-    //answer.at( 4 )  = -f.at( 4 );
-    //answer.at( 5 )  = -f.at( 5 );
-    //answer.at( 6 )  = -f.at( 6 );
-    //answer.at( 7 )  = f.at( 1 );
-    //answer.at( 8 )  = f.at( 2 );
-    //answer.at( 9 )  = f.at( 3 );
-    //answer.at( 10 ) = f.at( 4 );
-    //answer.at( 11 ) = f.at( 5 );
-    //answer.at( 12 ) = f.at( 6 );
     for ( int i = 1; i <= 6; i++ ) {
         answer.at( i ) = -f.at( i );
         answer.at( i+6 ) = f.at( i );
@@ -197,12 +185,6 @@ SpringElement3D::computeSpringInternalForce( TimeStep *tStep )
     this->computeVectorOf( VM_Total, tStep, u );
     FloatArray res;
     res.resize( 6 ); res.zero();
-    //res.at( 1 ) = this->springC1 * ( u.at( 7 ) - u.at( 1 ) );
-    //res.at( 2 ) = this->springC2 * ( u.at( 8 ) - u.at( 2 ) );
-    //res.at( 3 ) = this->springC3 * ( u.at( 9 ) - u.at( 3 ) );
-    //res.at( 4 ) = this->springC4 * ( u.at( 10 ) - u.at( 4 ) );
-    //res.at( 5 ) = this->springC5 * ( u.at( 11 ) - u.at( 5 ) );
-    //res.at( 6 ) = this->springC6 * ( u.at( 12 ) - u.at( 6 ) );
     FloatMatrix k;
     this->computeStiffnessMatrix( k, TangentStiffness, tStep );
     res.beProductOf( k, u ); res.negated();
@@ -247,6 +229,8 @@ SpringElement3D::initializeFrom( InputRecord &ir )
 
     this->d = 0;
     IR_GIVE_OPTIONAL_FIELD( ir, this->d, _IFT_SpringElement3D_actAsRigidLink );
+    // negate d
+    this->d = -this->d;
 }
 
 void SpringElement3D::postInitialize() { if ( this->d == 1 ) this->d = this->computeLength(); }
