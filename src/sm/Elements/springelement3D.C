@@ -78,11 +78,9 @@ SpringElement3D::computeStiffnessMatrix( FloatMatrix &answer, MatResponseMode rM
     answer.at( 12, 12 ) = this->springC6 + this->springC2 * ( d * d );
     answer.at( 6, 12 )  = answer.at( 12, 6 ) = -this->springC6;
 
-    // rigid link transport terms -------------------------------------------------------------------
-    answer.at( 6 + 6, 2 )     = -d * this->springC2;
-    answer.at( 2, 6 + 6 )     = -d * this->springC2;
-    answer.at( 2 + 6, 6 + 6 ) = d * this->springC2;
-    answer.at( 6 + 6, 2 + 6 ) = d * this->springC2;
+    // rigid link transport terms ------------------------------------------------------
+    answer.at( 6 + 6, 2 ) = answer.at( 2, 6 + 6 ) = -d * this->springC2;
+    answer.at( 2 + 6, 6 + 6 ) = answer.at( 6 + 6, 2 + 6 )  = d * this->springC2;
 
     answer.at( 5 + 6, 3 )  = answer.at( 3, 5 + 6 )  = d * this->springC3;
     answer.at( 11, 3 + 6 ) = answer.at( 3 + 6, 11 ) = -d * this->springC3;
@@ -92,12 +90,13 @@ SpringElement3D::computeStiffnessMatrix( FloatMatrix &answer, MatResponseMode rM
 void
 SpringElement3D::giveInternalForcesVector( FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord )
 {
-    FloatArray f = this->computeSpringInternalForce( tStep );
-    answer.resize( 12 );
-    for ( int i = 1; i <= 6; i++ ) {
-        answer.at( i ) = -f.at( i );
-        answer.at( i+6 ) = f.at( i );
-    }
+    answer = this->computeSpringInternalForce( tStep );
+    //FloatArray f = this->computeSpringInternalForce( tStep );
+    //answer.resize( 12 );
+    //for ( int i = 1; i <= 6; i++ ) {
+    //    answer.at( i ) = -f.at( i );
+    //    answer.at( i+6 ) = f.at( i );
+    //}
 }
 
 bool
@@ -184,11 +183,15 @@ SpringElement3D::computeSpringInternalForce( TimeStep *tStep )
     FloatArray u;
     this->computeVectorOf( VM_Total, tStep, u );
     FloatArray res;
-    res.resize( 6 ); res.zero();
     FloatMatrix k;
     this->computeStiffnessMatrix( k, TangentStiffness, tStep );
-    res.beProductOf( k, u ); res.negated();
+    res.beProductOf( k, u );
     return res;
+    //FloatArray ans; ans.resize( 6 );
+    //for ( int i = 1; i <= 6; i++ ) {
+    //    ans.at( i ) = res.at(i+6)-res.at(i);
+    //} 
+    //return ans;
 }
 
 void
@@ -229,8 +232,6 @@ SpringElement3D::initializeFrom( InputRecord &ir )
 
     this->d = 0;
     IR_GIVE_OPTIONAL_FIELD( ir, this->d, _IFT_SpringElement3D_actAsRigidLink );
-    // negate d
-    this->d = -this->d;
 }
 
 void SpringElement3D::postInitialize() { if ( this->d == 1 ) this->d = this->computeLength(); }
@@ -248,8 +249,12 @@ void SpringElement3D::printOutputAt( FILE *File, TimeStep *tStep )
         res.at( 4 ) = ( u.at( 10 ) - u.at( 4 ) );
         res.at( 5 ) = ( u.at( 11 ) - u.at( 5 ) );
         res.at( 6 ) = ( u.at( 12 ) - u.at( 6 ) );
-        fprintf( File, "SpringElement3D %d dir 3 %.4e %.4e %.4e refangle %.4e disp 6 %.4e %.4e %.4e %.4e %.4e %.4e macroelem %d : %.4e %.4e %.4e %.4e %.4e %.4e\n", this->giveLabel(), this->dir.at( 1 ), this->dir.at( 2 ), this->dir.at( 3 ), this->referenceAngle, res.at( 1 ), res.at( 2 ), res.at( 3 ), res.at( 4 ), res.at( 5 ), res.at( 6 ), this->macroElem, this->computeSpringInternalForce( tStep ) );
-    } else { fprintf( File, "SpringElement3D %d :%.4e %.4e %.4e %.4e %.4e %.4e\n", this->giveLabel(), this->computeSpringInternalForce( tStep ) ); }
+        fprintf( File, "SpringElement3D %d dir 3 %.4e %.4e %.4e refangle %.4e disp 6 %.4e %.4e %.4e %.4e %.4e %.4e macroelem %d : %.4e %.4e %.4e %.4e %.4e %.4e\n", this->giveLabel(), 
+            this->dir.at( 1 ), this->dir.at( 2 ), this->dir.at( 3 ), this->referenceAngle, res.at( 1 ), res.at( 2 ), res.at( 3 ), res.at( 4 ), res.at( 5 ), res.at( 6 ), this->macroElem, 
+            this->computeSpringInternalForce( tStep ) ); // print the first 6 items
+    } else { 
+        fprintf( File, "SpringElement3D %d :%.4e %.4e %.4e %.4e %.4e %.4e\n", this->giveLabel(), this->computeSpringInternalForce( tStep ) ); // print the first 6 items
+    }
 }
 
 double
