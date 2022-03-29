@@ -189,7 +189,6 @@ void AbaqusUserElement6d :: postInitialize()
 		//		this->mcrd = (std::max)(this->mcrd, j);
 		//	}
 		//}
-
 		//this->mcrd = (std::max)(this->mcrd, this->nCoords);
 
 		this->coords.resize(this->mcrd, this->numberOfDofMans);
@@ -292,21 +291,7 @@ AbaqusUserElement6d::computeGtoLRotationMatrix(FloatMatrix &answer)
 		}
 	}
 	
-	//answer.at(1, 1) = this->dir.at(1);
-	//answer.at(2, 2) = this->dir.at(2);
-	//answer.at(3, 3) = this->dir.at(3);
-	//answer.at(4, 4) = this->dir.at(1);
-	//answer.at(5, 5) = this->dir.at(2);
-	//answer.at(6, 6) = this->dir.at(3);
-
-	//answer.at(7, 7) = this->dir.at(1);
-	//answer.at(8, 8) = this->dir.at(2);
-	//answer.at(9, 9) = this->dir.at(3);
-	//answer.at(10, 10) = this->dir.at(1);
-	//answer.at(11, 11) = this->dir.at(2);
-	//answer.at(12, 12) = this->dir.at(3);
 	return true;
-	
 }
 
 void AbaqusUserElement6d :: computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep)
@@ -458,7 +443,8 @@ AbaqusUserElement6d::printOutputAt(FILE *File, TimeStep *tStep)
 	// ask for global element end forces vector
 	this->giveInternalForcesVector(Fl, tStep, 1);
 
-	fprintf(File, "AbaqusUserElement6d %d (%8d) macroelem %d type %d pos %.4e dir 3 %.4e %.4e %.4e : %.4e %.4e %.4e %.4e %.4e %.4e \n", this->giveLabel(), this->giveNumber(), this->macroElem, this->jtype, this->pos, this->dir.at(1), this->dir.at(2), this->dir.at(3), Fl.at(6 + 1), Fl.at(6 + 2), Fl.at(6 + 3), Fl.at(6 + 4), Fl.at(6 + 5), Fl.at(6 + 6));
+	fprintf(File, "AbaqusUserElement6d %d (%8d) macroelem %d type %d pos %.4e dir 3 %.4e %.4e %.4e : %.4e %.4e %.4e %.4e %.4e %.4e \n", this->giveLabel(), this->giveNumber(), this->macroElem, this->jtype, 
+					this->pos, this->dir.at(1), this->dir.at(2), this->dir.at(3), Fl.at(6 + 1), Fl.at(6 + 2), Fl.at(6 + 3), Fl.at(6 + 4), Fl.at(6 + 5), Fl.at(6 + 6));
 	
 	fprintf(File, "  local_displacements %d ", rl.giveSize());
 	for (auto &val : rl) {
@@ -474,7 +460,23 @@ AbaqusUserElement6d::printOutputAt(FILE *File, TimeStep *tStep)
 	fprintf(File, "\n  hinge_status %d ", 6);
 	for (int i = 1; i <= 6; i++)
 	{
-		fprintf(File, " %d", int(this->svars.at(6 + (this->numSvars - 8) / 6 * (i - 1))));
+            if ( this->jtype == 163 || this->jtype == 187 ) { // springs m
+                int outH = 0;
+                if ( i == 1 || i == 2 || i == 6 ) {
+                    if ( this->svars.at( 31 )==0 ) {
+                        if ( this->svars.at( 5 ) == 1 || this->svars.at( 5 ) == 10 ) {
+							outH = 0;
+                        } else {
+                            outH = 1;
+                        }
+					} else {
+                        outH = 2;
+					}
+                }
+                fprintf( File, " %d", outH );
+			} else {
+                fprintf( File, " %d", int( this->svars.at( 6 + ( this->numSvars - 8 ) / 6 * ( i - 1 ) ) ) );
+			}
 	}
 
 #ifdef DEBUG
