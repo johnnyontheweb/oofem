@@ -470,7 +470,15 @@ AbaqusUserElement6d::printOutputAt(FILE *File, TimeStep *tStep)
                             outH = 1;
                         }
 					} else {
-                        outH = 2;
+                        if ( i == 1 && this->svars(31) >= 100) {
+                            outH = 2;
+                        } else if ( i == 2 && this->svars( 31 ) < 100 && this->jtype == 163) {
+                            outH = 2;
+                        } else if ( i == 6 && this->svars( 31 ) < 100 && this->jtype == 187) {
+                            outH = 2;
+                        } else {
+							outH = 0;
+                        }
 					}
                 }
                 fprintf( File, " %d", outH );
