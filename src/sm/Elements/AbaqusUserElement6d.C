@@ -460,7 +460,7 @@ AbaqusUserElement6d::printOutputAt(FILE *File, TimeStep *tStep)
 	fprintf(File, "\n  hinge_status %d ", 6);
 	for (int i = 1; i <= 6; i++)
 	{
-            if ( this->jtype == 163 || this->jtype == 187 ) { // springs m
+            if ( this->jtype == 163 || this->jtype == 187 || this->jtype == 177 ) { // springs m
                 int outH = 0;
                 if ( i == 1 || i == 2 || i == 6 ) {
                     if ( this->svars.at( 31 )==0 ) {
