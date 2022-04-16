@@ -462,37 +462,37 @@ AbaqusUserElement6d::printOutputAt(FILE *File, TimeStep *tStep)
 	{
             if ( this->jtype == 163 || this->jtype == 187 || this->jtype == 177 ) { // springs m
                 int outH = 0;
-                if ( i == 1 || i == 2 || i == 6 ) {
-                    if ( this->svars.at( 31 )==0 ) {
-                        if ( this->svars.at( 5 ) == 1 || this->svars.at( 5 ) == 10 ) {
-							outH = 0;
-                        } else {
-                            if ( i == 1 ) {
-                                outH = 1;
-                            } else if ( i == 2 && this->jtype == 163 ) {
-                                outH = 1;
-                            } else if ( i == 6 && this->jtype == 187 ) {
-                                outH = 1;
-                            } else if ( i == 2 && this->jtype == 177 && this->prDof == 2 ) {
-                                outH = 1;
-                            } else if ( i == 3 && this->jtype == 177 && this->prDof == 3 ) {
-                                outH = 1;
-                            }
+                // if ( i == 1 || i == 2 || i == 6 ) {
+                if ( this->svars.at( 31 )==0 ) {
+                    if ( this->svars.at( 5 ) == 1 || this->svars.at( 5 ) == 10 ) {
+						outH = 0;
+                    } else {
+                        if ( i == 1 ) {
+                            outH = 1;
+                        } else if ( i == 2 && this->jtype == 163 ) {
+                            outH = 1;
+                        } else if ( i == 6 && this->jtype == 187 ) {
+                            outH = 1;
+                        } else if ( i == 2 && this->jtype == 177 && this->prDof == 2 ) {
+                            outH = 1;
+                        } else if ( i == 3 && this->jtype == 177 && this->prDof == 3 ) {
+                            outH = 1;
                         }
-					} else {
-                        if ( i == 1 && this->svars(31) >= 100) {
-                            outH = 2;
-                        } else if ( i == 2 && this->svars( 31 ) <= 100 && this->jtype == 163) {
-                            outH = 2;
-                        } else if ( i == 6 && this->svars( 31 ) <= 100 && this->jtype == 187) {
-                            outH = 2;
-                        } else if ( i == 2 && this->svars( 31 ) <= 100 && this->jtype == 177 && this->prDof == 2 ) {
-                            outH = 2;
-                        } else if ( i == 3 && this->svars( 31 ) <= 100 && this->jtype == 177 && this->prDof == 3 ) {
-                            outH = 2;
-                        }
-					}
-                }
+                    }
+				} else {
+                    if ( i == 1 ) {
+                        outH = 2;
+                    } else if ( i == 2 && this->jtype == 163) {
+                        outH = 2;
+                    } else if ( i == 6 && this->jtype == 187) {
+                        outH = 2;
+                    } else if ( i == 2 && this->jtype == 177 && this->prDof == 2 ) {
+                        outH = 2;
+                    } else if ( i == 3 && this->jtype == 177 && this->prDof == 3 ) {
+                        outH = 2;
+                    }
+				}
+                //}
                 fprintf( File, " %d", outH );
 			} else {
                 fprintf( File, " %d", int( this->svars.at( 6 + ( this->numSvars - 8 ) / 6 * ( i - 1 ) ) ) );
