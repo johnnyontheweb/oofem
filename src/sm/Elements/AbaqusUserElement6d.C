@@ -468,7 +468,7 @@ AbaqusUserElement6d::printOutputAt(FILE *File, TimeStep *tStep)
 						outH = 0;
                     } else {
                         if ( i == 1 ) {
-                            outH = 1;
+                            outH = 0; // elastic or failure
                         } else if ( i == 2 && this->jtype == 163 ) {
                             outH = 1;
                         } else if ( i == 6 && this->jtype == 187 ) {
@@ -480,7 +480,7 @@ AbaqusUserElement6d::printOutputAt(FILE *File, TimeStep *tStep)
                         }
                     }
 				} else {
-                    if ( i == 1 ) {
+                    if ( i == 1 && this->svars.at( 31 ) >= 100 ) {
                         outH = 2;
                     } else if ( i == 2 && this->jtype == 163) {
                         outH = 2;
