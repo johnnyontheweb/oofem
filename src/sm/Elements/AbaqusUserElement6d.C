@@ -473,19 +473,23 @@ AbaqusUserElement6d::printOutputAt(FILE *File, TimeStep *tStep)
                                 outH = 1;
                             } else if ( i == 6 && this->jtype == 187 ) {
                                 outH = 1;
-                            } else {
-                                outH = 0;
+                            } else if ( i == 2 && this->jtype == 177 && this->prDof == 2 ) {
+                                outH = 1;
+                            } else if ( i == 3 && this->jtype == 177 && this->prDof == 3 ) {
+                                outH = 1;
                             }
                         }
 					} else {
                         if ( i == 1 && this->svars(31) >= 100) {
                             outH = 2;
-                        } else if ( i == 2 && this->svars( 31 ) < 100 && this->jtype == 163) {
+                        } else if ( i == 2 && this->svars( 31 ) <= 100 && this->jtype == 163) {
                             outH = 2;
-                        } else if ( i == 6 && this->svars( 31 ) < 100 && this->jtype == 187) {
+                        } else if ( i == 6 && this->svars( 31 ) <= 100 && this->jtype == 187) {
                             outH = 2;
-                        } else {
-							outH = 0;
+                        } else if ( i == 2 && this->svars( 31 ) <= 100 && this->jtype == 177 && this->prDof == 2 ) {
+                            outH = 2;
+                        } else if ( i == 3 && this->svars( 31 ) <= 100 && this->jtype == 177 && this->prDof == 3 ) {
+                            outH = 2;
                         }
 					}
                 }
