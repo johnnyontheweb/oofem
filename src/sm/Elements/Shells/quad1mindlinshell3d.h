@@ -35,7 +35,7 @@
 #ifndef quad1mindlinshell3d_h
 #define quad1mindlinshell3d_h
 
-#include "sm/Elements/nlstructuralelement.h"
+#include "sm/Elements/structuralelement.h"
 #include "zznodalrecoverymodel.h"
 #include "sprnodalrecoverymodel.h"
 #include "nodalaveragingrecoverymodel.h"
@@ -68,7 +68,7 @@ class FEI2dQuadLin;
  *
  * @author Mikael Öhman
  */
-class Quad1MindlinShell3D : public NLStructuralElement,
+class Quad1MindlinShell3D : public StructuralElement,
 public ZZNodalRecoveryModelInterface,
 public SPRNodalRecoveryModelInterface, public NodalAveragingRecoveryModelInterface
 {

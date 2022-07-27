@@ -59,7 +59,7 @@ FEI2dTrLin CCTPlate :: interp_lin(1, 2);
 //FEI2dTrRot CCTPlate :: interp_rot(1, 2);
 
 CCTPlate :: CCTPlate(int n, Domain *aDomain) :
-    NLStructuralElement(n, aDomain),
+    StructuralElement(n, aDomain),
     LayeredCrossSectionInterface(), ZZNodalRecoveryModelInterface(this),
     NodalAveragingRecoveryModelInterface(), SPRNodalRecoveryModelInterface(), ZZErrorEstimatorInterface(this)
 {
@@ -310,17 +310,17 @@ CCTPlate :: computeArea ()
   double x1, x2, x3, y1, y2, y3, z1, z2, z3;
   this->giveNodeCoordinates(x1, x2, x3, y1, y2, y3, z1, z2, z3);
   
-  if (area > 0) return area;  // check if previously computed
-
+    if ( area > 0 ) {
+        return area;          // check if previously computed
+    }
   return (area = 0.5*(x2*y3+x1*y2+y1*x3-x2*y1-x3*y2-x1*y3)) ;
- 
 }
 
 void
 CCTPlate :: initializeFrom(InputRecord &ir)
 {
     numberOfGaussPoints = 4;
-    NLStructuralElement :: initializeFrom(ir);
+    StructuralElement::initializeFrom(ir);
 
     // optional record for 1st local axes
     la1.resize(3);
@@ -496,7 +496,7 @@ CCTPlate :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType ty
         answer.at(6) = help.at(3); // mxy
         return 1;
     } else {
-        return NLStructuralElement :: giveIPValue(answer, gp, type, tStep);
+        return StructuralElement::giveIPValue(answer, gp, type, tStep);
     }
 }
 
@@ -573,32 +573,32 @@ CCTPlate :: computeStrainVectorInLayer(FloatArray &answer, const FloatArray &mas
 
 // Edge load support
 /*
-void
-CCTPlate :: computeEgdeNMatrixAt(FloatMatrix &answer, int iedge, GaussPoint *gp)
-{
-    IntArray edgeNodes;
-    FloatArray n;
-    double b, c, n12;
-
-    this->interp_lin.edgeEvalN( n, iedge, gp->giveNaturalCoordinates(), FEIElementGeometryWrapper(this) );
-    this->interp_lin.computeLocalEdgeMapping(edgeNodes, iedge);
-
-    n12 = 0.5 * n.at(1) * n.at(2);
-    b = this->giveNode( edgeNodes.at(1) )->giveCoordinate(2) - this->giveNode( edgeNodes.at(2) )->giveCoordinate(2);
-    c = this->giveNode( edgeNodes.at(2) )->giveCoordinate(1) - this->giveNode( edgeNodes.at(1) )->giveCoordinate(1);
-
-
-    answer.resize(3, 6);
-    answer.at(1, 1) = n.at(1);
-    answer.at(1, 2) = n12 * b;
-    answer.at(1, 3) = n12 * c;
-    answer.at(1, 4)  = n.at(2);
-    answer.at(1, 5) = -n12 * b;
-    answer.at(1, 6) = -n12 * c;
-    //
-    answer.at(2, 2) = answer.at(3, 3) = n.at(1);
-    answer.at(2, 5) = answer.at(3, 6) = n.at(2);
-}
+ * void
+ * CCTPlate :: computeEgdeNMatrixAt(FloatMatrix &answer, int iedge, GaussPoint *gp)
+ * {
+ *  IntArray edgeNodes;
+ *  FloatArray n;
+ *  double b, c, n12;
+ *
+ *  this->interp_lin.edgeEvalN( n, iedge, gp->giveNaturalCoordinates(), FEIElementGeometryWrapper(this) );
+ *  this->interp_lin.computeLocalEdgeMapping(edgeNodes, iedge);
+ *
+ *  n12 = 0.5 * n.at(1) * n.at(2);
+ *  b = this->giveNode( edgeNodes.at(1) )->giveCoordinate(2) - this->giveNode( edgeNodes.at(2) )->giveCoordinate(2);
+ *  c = this->giveNode( edgeNodes.at(2) )->giveCoordinate(1) - this->giveNode( edgeNodes.at(1) )->giveCoordinate(1);
+ *
+ *
+ *  answer.resize(3, 6);
+ *  answer.at(1, 1) = n.at(1);
+ *  answer.at(1, 2) = n12 * b;
+ *  answer.at(1, 3) = n12 * c;
+ *  answer.at(1, 4)  = n.at(2);
+ *  answer.at(1, 5) = -n12 * b;
+ *  answer.at(1, 6) = -n12 * c;
+ *  //
+ *  answer.at(2, 2) = answer.at(3, 3) = n.at(1);
+ *  answer.at(2, 5) = answer.at(3, 6) = n.at(2);
+ * }
 */
 
 void

@@ -35,7 +35,7 @@
 #ifndef dkt_h
 #define dkt_h
 
-#include "sm/Elements/nlstructuralelement.h"
+#include "sm/Elements/structuralelement.h"
 #include "sm/CrossSections/layeredcrosssection.h"
 #include "sm/ErrorEstimators/zzerrorestimator.h"
 #include "mathfem.h"
@@ -65,7 +65,7 @@ class FEI2dTrLin;
  * Tasks:
  * - calculating its B,D,N matrices and dV.
  */
-class DKTPlate : public NLStructuralElement,
+class DKTPlate : public StructuralElement,
     public LayeredCrossSectionInterface, public ZZNodalRecoveryModelInterface,
     public NodalAveragingRecoveryModelInterface, public SPRNodalRecoveryModelInterface,
     public ZZErrorEstimatorInterface
@@ -92,7 +92,7 @@ public:
     MaterialMode giveMaterialMode() override { return _2dPlate; }
     int testElementExtension(ElementExtension ext) override { return ( ( ( ext == Element_EdgeLoadSupport ) || ( ext == Element_SurfaceLoadSupport ) ) ? 1 : 0 ); }
 
-    void computeEdgeNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray& lcoords) override;
+    void computeEdgeNMatrix(FloatMatrix &answer, int boundaryID, const FloatArray &lcoords) override;
 
     // overloaded to take into account possible element local cs (in derived cct3d)
     double computeArea() override;

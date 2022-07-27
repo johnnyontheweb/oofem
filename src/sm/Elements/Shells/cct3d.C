@@ -49,8 +49,7 @@ namespace oofem {
 REGISTER_Element(CCTPlate3d);
 
 CCTPlate3d :: CCTPlate3d(int n, Domain *aDomain) : CCTPlate(n, aDomain)
-{
-}
+{}
 
 
 void
@@ -91,7 +90,6 @@ CCTPlate3d :: giveNodeCoordinates(double &x1, double &x2, double &x3,
     z1 = nc1.at(3);
     z2 = nc2.at(3);
     z3 = nc3.at(3);
-
 }
 
 
@@ -319,7 +317,7 @@ CCTPlate3d :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
 	if (type == IST_ShellMomentTensor) { answer.negated(); }
         return 1;
     } else {
-        return NLStructuralElement :: giveIPValue(answer, gp, type, tStep);
+        return StructuralElement::giveIPValue(answer, gp, type, tStep);
     }
 }
 
@@ -468,25 +466,32 @@ CCTPlate3d :: printOutputAt(FILE *file, TimeStep *tStep)
 
     for ( int i = 0; i < (int)integrationRulesArray.size(); i++ ) {
         for ( GaussPoint *gp: *integrationRulesArray [ i ] ) {
-
             fprintf( file, "  GP %2d.%-2d :", i + 1, gp->giveNumber() );
 
             this->giveIPValue(v, gp, IST_ShellStrainTensor, tStep);
             fprintf(file, "  strains    ");
-            for ( auto &val : v ) fprintf(file, " %.4e", val);
+            for ( auto &val : v ) {
+                fprintf(file, " %.4e", val);
+            }
 
             this->giveIPValue(v, gp, IST_CurvatureTensor, tStep);
             fprintf(file, "\n              curvatures ");
-            for ( auto &val : v ) fprintf(file, " %.4e", val);
+            for ( auto &val : v ) {
+                fprintf(file, " %.4e", val);
+            }
 
             // Forces - Moments
             this->giveIPValue(v, gp, IST_ShellForceTensor, tStep);
             fprintf(file, "\n              stresses   ");
-            for ( auto &val : v ) fprintf(file, " %.4e", val);
+            for ( auto &val : v ) {
+                fprintf(file, " %.4e", val);
+            }
 
             this->giveIPValue(v, gp, IST_ShellMomentTensor, tStep);
             fprintf(file, "\n              moments    ");
-            for ( auto &val : v ) fprintf(file, " %.4e", val);
+            for ( auto &val : v ) {
+                fprintf(file, " %.4e", val);
+            }
 
             fprintf(file, "\n");
         }

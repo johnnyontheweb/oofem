@@ -52,7 +52,7 @@ REGISTER_Element(AbaqusUserElement);
 
 
 AbaqusUserElement :: AbaqusUserElement(int n, Domain *d) :
-    NLStructuralElement(n, d), uelobj(NULL), hasTangentFlag(false), uel(NULL)
+    StructuralElement(n, d), uelobj(NULL), hasTangentFlag(false), uel(NULL)
 {}
 
 AbaqusUserElement :: ~AbaqusUserElement()
@@ -136,7 +136,7 @@ void AbaqusUserElement :: initializeFrom(InputRecord &ir)
 
 void AbaqusUserElement :: postInitialize()
 {
-    NLStructuralElement :: postInitialize();
+    StructuralElement::postInitialize();
 
     this->ndofel = this->numberOfDofMans * dofs.giveSize(); // this->nCoords;
     this->mlvarx = this->ndofel;

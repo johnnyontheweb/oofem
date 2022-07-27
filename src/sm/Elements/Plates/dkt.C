@@ -58,7 +58,7 @@ REGISTER_Element(DKTPlate);
 FEI2dTrLin DKTPlate :: interp_lin(1, 2);
 
 DKTPlate :: DKTPlate(int n, Domain *aDomain) :
-    NLStructuralElement(n, aDomain),
+    StructuralElement(n, aDomain),
     LayeredCrossSectionInterface(), ZZNodalRecoveryModelInterface(this),
     NodalAveragingRecoveryModelInterface(), SPRNodalRecoveryModelInterface(), ZZErrorEstimatorInterface(this)
 {
@@ -370,7 +370,7 @@ DKTPlate :: giveNodeCoordinates(double &x1, double &x2, double &x3,
 void
 DKTPlate :: initializeFrom(InputRecord &ir)
 {
-    NLStructuralElement :: initializeFrom(ir);
+    StructuralElement::initializeFrom(ir);
 
     BMatrices.resize(this->numberOfGaussPoints);
 
@@ -543,7 +543,7 @@ DKTPlate :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType ty
         answer.at(6) = help.at(3); // mxy
         return 1;
     } else {
-        return NLStructuralElement :: giveIPValue(answer, gp, type, tStep);
+        return StructuralElement::giveIPValue(answer, gp, type, tStep);
     }
 }
 

@@ -293,6 +293,12 @@ Truss3d :: computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMod
 }
 
 void
+Truss3d::computeConstitutiveMatrix_dPdF_At(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)
+{
+    answer = this->giveStructuralCrossSection()->giveStiffnessMatrix_dPdF_1d(rMode, gp, tStep);
+}
+
+void
 Truss3d :: giveDofManDofIDMask(int inode, IntArray &answer) const
 {
     answer = {D_u, D_v, D_w};

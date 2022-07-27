@@ -105,6 +105,7 @@ public:
     MaterialMode giveMaterialMode() override { return _1dMat; }
     void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep) override;
     void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) override;
+    void computeConstitutiveMatrix_dPdF_At(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) override;
 
 protected:
     // edge load support
@@ -115,7 +116,6 @@ protected:
     void computeBHmatrixAt(GaussPoint *gp, FloatMatrix &answer) override;
     void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer) override;
     void computeGaussPoints() override;
-
 private:
 	void computeLocalForceLoadVector(FloatArray &answer, TimeStep *tStep, ValueModeType mode);
 

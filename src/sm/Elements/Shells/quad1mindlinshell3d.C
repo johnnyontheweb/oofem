@@ -60,7 +60,7 @@ IntArray Quad1MindlinShell3D :: shellOrdering = { 1, 2, 3, 4, 5, 7, 8, 9, 10, 11
 IntArray Quad1MindlinShell3D :: drillOrdering = { 6, 12, 18, 24};
 
 Quad1MindlinShell3D :: Quad1MindlinShell3D(int n, Domain *aDomain) :
-    NLStructuralElement(n, aDomain), ZZNodalRecoveryModelInterface(this),
+    StructuralElement(n, aDomain), ZZNodalRecoveryModelInterface(this),
     SPRNodalRecoveryModelInterface(),
     lnodes(4)
 {
@@ -115,7 +115,6 @@ Quad1MindlinShell3D :: computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad
 
     if ( gravity.giveSize() ) {
         for ( GaussPoint *gp: *integrationRulesArray [ 0 ] ) {
-
             this->interp.evalN( n, gp->giveNaturalCoordinates(), FEIVoidCellGeometry() );
             double dV = this->computeVolumeAround(gp) * this->giveCrossSection()->give(CS_Thickness, gp);
             double density = this->giveStructuralCrossSection()->give('d', gp);
@@ -565,7 +564,7 @@ Quad1MindlinShell3D :: computeStiffnessMatrix(FloatMatrix &answer, MatResponseMo
 void
 Quad1MindlinShell3D :: initializeFrom(InputRecord &ir)
 {
-    NLStructuralElement :: initializeFrom(ir);
+    StructuralElement::initializeFrom(ir);
     this->reducedIntegrationFlag = ir.hasField(_IFT_Quad1MindlinShell3D_ReducedIntegration);
 
     // optional record for 1st local axes
@@ -664,7 +663,7 @@ Quad1MindlinShell3D :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalS
 	if (type == IST_ShellMomentTensor || type == IST_CurvatureTensor) { answer.negated(); }
         return 1;
     } else {
-        return NLStructuralElement :: giveIPValue(answer, gp, type, tStep);
+        return StructuralElement::giveIPValue(answer, gp, type, tStep);
     }
 }
 
@@ -694,15 +693,15 @@ Quad1MindlinShell3D :: computeEdgeVolumeAround(GaussPoint *gp, int iEdge)
 }
 
 /*
-void
-Quad1MindlinShell3D :: computeEdgeIpGlobalCoords(FloatArray &answer, GaussPoint *gp, int iEdge)
-{
-    FloatArray local;
-    this->interp.edgeLocal2global( local, iEdge, gp->giveNaturalCoordinates(), FEIVertexListGeometryWrapper(lnodes)  );
-    local.resize(3);
-    local.at(3) = 0.;
-    answer.beProductOf(this->lcsMatrix, local);
-}
+ * void
+ * Quad1MindlinShell3D :: computeEdgeIpGlobalCoords(FloatArray &answer, GaussPoint *gp, int iEdge)
+ * {
+ *  FloatArray local;
+ *  this->interp.edgeLocal2global( local, iEdge, gp->giveNaturalCoordinates(), FEIVertexListGeometryWrapper(lnodes)  );
+ *  local.resize(3);
+ *  local.at(3) = 0.;
+ *  answer.beProductOf(this->lcsMatrix, local);
+ * }
 */
 
 int
