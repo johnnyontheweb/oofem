@@ -36,7 +36,7 @@
 #define AbaqusUserElement6d_h
 
 #include "structuralelement.h"
-#include "nlstructuralelement.h"
+#include "structuralelement.h"
 #include "floatarray.h"
 #include "floatmatrix.h"
 #include "timestep.h"
@@ -80,7 +80,7 @@ namespace oofem {
  *
  * @author Giovanni
  */
-class AbaqusUserElement6d : public NLStructuralElement
+class AbaqusUserElement6d : public StructuralElement
 {
 private:
     /// Dynamically loaded uel

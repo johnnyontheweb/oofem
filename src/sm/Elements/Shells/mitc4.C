@@ -1032,8 +1032,8 @@ MITC4Shell::giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType ty
         return 1;
     } else {
         return StructuralElement::giveIPValue(answer, gp, type, tStep);
+    }
 }
-
 
 bool
 MITC4Shell::computeLocalCoordinates(FloatArray &answer, const FloatArray &coords)

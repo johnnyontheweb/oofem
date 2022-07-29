@@ -56,7 +56,7 @@ namespace oofem {
 REGISTER_Element(AbaqusUserElement6d);
 
 AbaqusUserElement6d :: AbaqusUserElement6d(int n, Domain *d) :
-    NLStructuralElement(n, d), uelobj(NULL), hasTangentFlag(false), uel(NULL)
+    StructuralElement(n, d), uelobj(NULL), hasTangentFlag(false), uel(NULL)
 {}
 
 AbaqusUserElement6d :: ~AbaqusUserElement6d()
@@ -161,7 +161,7 @@ void AbaqusUserElement6d :: initializeFrom(InputRecord &ir)
 
 void AbaqusUserElement6d :: postInitialize()
 {
-    NLStructuralElement :: postInitialize();
+    StructuralElement :: postInitialize();
 
     this->ndofel = 12; // 6d spring
     this->mlvarx = this->ndofel;
