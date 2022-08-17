@@ -994,7 +994,7 @@ LayeredCrossSection::giveCharMaterialStiffnessMatrix_dPdF(FloatMatrix &answer,
 // only interface to material class, forcing returned matrix to be in reduced form.
 //
 {
-    MaterialMode mode = gp->giveMaterialMode();
+  //    MaterialMode mode = gp->giveMaterialMode();
     int ngps = gp->giveIntegrationRule()->giveNumberOfIntegrationPoints();
     int gpnum = gp->giveNumber();
     int gpsperlayer = ngps / this->numberOfLayers;
