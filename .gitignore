@@ -1475,3 +1475,4 @@ src/tm/isoheatadvmat.C.bak
 /comp64/src/tm/cmake_install.cmake
 /comp64/src/tm/tm.vcxproj
 /comp64/src/tm/tm.vcxproj.filters
+*.user
