@@ -917,7 +917,7 @@ NonLinearDynamic :: timesMtrx(FloatArray &vec, FloatArray &answer, CharType type
     int nelem = domain->giveNumberOfElements();
     //int neq = this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering());
     int jj, kk, n;
-    FloatMatrix charMtrx;
+    FloatMatrix charMtrx, R;
     IntArray loc;
     EModelDefaultEquationNumbering en;
 
@@ -931,33 +931,39 @@ NonLinearDynamic :: timesMtrx(FloatArray &vec, FloatArray &answer, CharType type
         if ( element->giveParallelMode() == Element_remote ) {
             continue;
         }
-
+        
         element->giveLocationArray(loc, en);
         element->giveCharacteristicMatrix(charMtrx, type, tStep);
 
         //
         // assemble it manually
         //
+        if ( charMtrx.isNotEmpty() ) {
+            ///@todo This rotation matrix is not flexible enough.. it can only work with full size matrices and doesn't allow for flexibility in the matrixassembler.
+            if ( element->giveRotationMatrix( R ) ) {
+                charMtrx.rotatedWith( R );
+            }
 #ifdef DEBUG
-        if ( loc.giveSize() != charMtrx.giveNumberOfRows() ) {
-            OOFEM_ERROR("dimension mismatch");
-        }
-
+            if ( loc.giveSize() != charMtrx.giveNumberOfRows() ) {
+                OOFEM_ERROR("dimension mismatch");
+            }
 #endif
 
-        n = loc.giveSize();
+            n = loc.giveSize();
 
-        for ( int j = 1; j <= n; j++ ) {
-            jj = loc.at(j);
-            if ( jj ) {
-                for ( int k = 1; k <= n; k++ ) {
-                    kk = loc.at(k);
-                    if ( kk ) {
-                        answer.at(jj) += charMtrx.at(j, k) * vec.at(kk);
+            for ( int j = 1; j <= n; j++ ) {
+                jj = loc.at(j);
+                if ( jj ) {
+                    for ( int k = 1; k <= n; k++ ) {
+                        kk = loc.at(k);
+                        if ( kk ) {
+                            answer.at(jj) += charMtrx.at(j, k) * vec.at(kk);
+                        }
                     }
                 }
             }
-        }
+        } // skip lumpedmass
+
     }
 
     this->updateSharedDofManagers(answer, EModelDefaultEquationNumbering(), MassExchangeTag);

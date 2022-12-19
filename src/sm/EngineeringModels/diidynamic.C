@@ -449,27 +449,26 @@ DIIDynamic :: timesMtrx(FloatArray &vec, FloatArray &answer, CharType type, Doma
           if ( element->giveRotationMatrix(R) ) {
             charMtrx.rotatedWith(R);
           }
-        }
 
 #ifdef DEBUG
-        if ( loc.giveSize() != charMtrx.giveNumberOfRows() ) {
-            OOFEM_ERROR("dimension mismatch");
-        }
-
+            if ( loc.giveSize() != charMtrx.giveNumberOfRows() ) {
+                OOFEM_ERROR("dimension mismatch");
+            }
 #endif
 
-        n = loc.giveSize();
-        for ( j = 1; j <= n; j++ ) {
-            jj = loc.at(j);
-            if ( jj ) {
-                for ( k = 1; k <= n; k++ ) {
-                    kk = loc.at(k);
-                    if ( kk ) {
-                        answer.at(jj) += charMtrx.at(j, k) * vec.at(kk);
+            n = loc.giveSize();
+            for ( j = 1; j <= n; j++ ) {
+                jj = loc.at(j);
+                if ( jj ) {
+                    for ( k = 1; k <= n; k++ ) {
+                        kk = loc.at(k);
+                        if ( kk ) {
+                            answer.at(jj) += charMtrx.at(j, k) * vec.at(kk);
+                        }
                     }
                 }
             }
-        }
+        } // skip lumped-mass elements
     }
 }
 
