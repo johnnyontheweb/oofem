@@ -118,6 +118,43 @@ double PiecewiseLinFunction :: evaluateVelocityAtTime(double time)
     return 0.;
 }
 
+double PiecewiseLinFunction ::evaluateAccelerationAtTime( double time )
+// Returns the value of the receiver at time 'time'. 'time' should be
+// one of the dates of the receiver (currently there is no interpola-
+// tion between two points).
+{
+    const double precision = PiecewiseLinFunction_PRECISION;
+    double xa, xb, ya, yb;
+
+    if ( this->dates.giveSize() == 0 ) {
+        OOFEM_ERROR( "Undefined dates and values" );
+    }
+    if ( this->acc.giveSize() == 0 ) {
+        return 0.; // previous behaviour
+    }
+
+    for ( int i = 1; i <= this->dates.giveSize(); i++ ) {
+        if ( fabs( this->dates.at( i ) - time ) < precision ) {
+            return this->acc.at( i );
+        } else if ( this->dates.at( i ) > time ) {
+            if ( i == 1 ) {
+                // OOFEM_WARNING("computational time %f is out of given time %f, using closest value", time, dates.at(i) );
+                return this->acc.at( i ); // return values, not time! - first value used
+            }
+
+            xa = this->dates.at( i - 1 );
+            xb = this->dates.at( i );
+            ya = this->acc.at( i - 1 );
+            yb = this->acc.at( i );
+
+            return ya + ( time - xa ) * ( yb - ya ) / ( xb - xa );
+        }
+    }
+    // last value used
+    // OOFEM_WARNING("computational time %f is out of given time, using closest value", time );
+    return this->acc.at( this->acc.giveSize() ); // final value returned
+}
+
 void
 PiecewiseLinFunction :: initializeFrom(InputRecord &ir)
 {
@@ -162,7 +199,8 @@ PiecewiseLinFunction :: initializeFrom(InputRecord &ir)
         IR_GIVE_OPTIONAL_FIELD(ir, numberOfPoints, "npoints");
         IR_GIVE_FIELD(ir, dates, _IFT_PiecewiseLinFunction_t);
         IR_GIVE_FIELD(ir, values, _IFT_PiecewiseLinFunction_ft);
-        IR_GIVE_OPTIONAL_FIELD(ir, this->parameterType, "paramtype");
+        IR_GIVE_OPTIONAL_FIELD( ir, this->parameterType, "paramtype" );
+        IR_GIVE_OPTIONAL_FIELD( ir, acc, "acc" );
     }
 }
 
@@ -173,7 +211,6 @@ void PiecewiseLinFunction :: giveInputRecord(DynamicInputRecord &input)
     input.setField(this->dates, _IFT_PiecewiseLinFunction_t);
     input.setField(this->values, _IFT_PiecewiseLinFunction_ft);
 }
-
 
 
 void

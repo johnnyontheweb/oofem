@@ -57,6 +57,7 @@ class OOFEM_EXPORT PiecewiseLinFunction : public Function
 protected:
     FloatArray dates;
     FloatArray values;
+    FloatArray acc;
 
 public:
     PiecewiseLinFunction(int i, Domain * d);
@@ -72,7 +73,7 @@ public:
 
     double evaluateAtTime(double t) override;
     double evaluateVelocityAtTime(double t) override;
-    double evaluateAccelerationAtTime(double t) override { return 0.; }
+    double evaluateAccelerationAtTime(double t) override; // { return 0.; }
 };
 } // end namespace oofem
 #endif // piecewiselinfunction_h
