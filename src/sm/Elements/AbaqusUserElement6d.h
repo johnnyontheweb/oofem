@@ -119,7 +119,7 @@ private:
     /// mlvarx
     int mlvarx = 1;
 
-    /// Inputs to element routines. Velocity and Acceleration currently ignored.
+    /// Inputs to element routines. Velocity and Acceleration now included.
     FloatArray U, V, A;
     FloatMatrix DU;
 
@@ -181,7 +181,7 @@ public:
     //virtual void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep);
     void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep) override;
     void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord = 0) override;
-    virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, FloatArray &U, FloatMatrix &DU, int useUpdatedGpRecord);
+    virtual void giveInternalForcesVector( FloatArray &answer, TimeStep *tStep, FloatArray &U, FloatMatrix &DU, FloatArray &V, FloatArray &A, int useUpdatedGpRecord );
     int computeNumberOfDofs() override { return 12; }
     void giveDofManDofIDMask(int inode, IntArray &answer) const override;
     void computeField(ValueModeType mode, TimeStep *tStep, const FloatArray &lcoords, FloatArray &answer) override

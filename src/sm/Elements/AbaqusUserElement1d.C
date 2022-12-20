@@ -238,7 +238,7 @@ void AbaqusUserElement1d :: computeStiffnessMatrix(FloatMatrix &answer, MatRespo
     if ( !hasTangent() ) {
         // use uel to calculate the tangent
         FloatArray forces;
-        giveInternalForcesVector(forces, tStep, U, DU, 0);
+        giveInternalForcesVector(forces, tStep, U, DU, V, A, 0);
     }
     // give tangent
     answer = giveTempTangent();
@@ -276,11 +276,11 @@ void AbaqusUserElement1d :: giveInternalForcesVector(FloatArray &answer, TimeSte
     DU.zero();
     DU.setColumn(tempIntVect, 1);
     //this->computeVectorOf(VM_Total, tStep, DU);
-    this->giveInternalForcesVector(answer, tStep, U, DU, useUpdatedGpRecord);
+    this->giveInternalForcesVector(answer, tStep, U, DU, V, A, useUpdatedGpRecord);
 }
 
 void AbaqusUserElement1d :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, 
-                                            FloatArray &U, FloatMatrix &DU, int useUpdatedGpRecord)
+                                            FloatArray &U, FloatMatrix &DU, FloatArray &V, FloatArray &A, int useUpdatedGpRecord )
 {
 	answer.clear();
     if ( useUpdatedGpRecord ) {
