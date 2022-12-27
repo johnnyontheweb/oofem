@@ -52,7 +52,7 @@
 #define _IFT_PdeltaNstatic_loadBalancingFlag "loadbalancingflag"
 #define _IFT_PdeltaNstatic_forceloadBalancingFlag "forceloadbalancingflag"
 #define _IFT_PdeltaNstatic_updateElasticStiffnessFlag "updateelasticstiffnessflag"
-#define _IFT_PdeltaNstatic_secondOrder "secorder"
+//#define _IFT_PdeltaNstatic_secondOrder "secorder"
 //#define _IFT_PDeltaStatic_rtolv "rtolv"
 //@}
 
@@ -121,7 +121,7 @@ protected:
     /// Intrinsic time increment.
     double deltaT;
 	// second order contribution for elements
-	bool secOrder;
+	//bool secOrder;
 
    /**
      * The following parameter allows to specify how the reference load vector
