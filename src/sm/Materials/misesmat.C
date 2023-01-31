@@ -729,12 +729,14 @@ double
 MisesMat::give(int aProperty, GaussPoint *gp, TimeStep *tStep) const
 {
     if ( aProperty == 's' ) {
-        ///FIXME: const cast workaround, until all methods have been properly marked const properly:
+        /// FIXME: const cast workaround, until all methods have been properly marked const properly:
 
-        return sig0.eval({ { "te", giveTemperature(gp, tStep) }, { "t", tStep->giveIntrinsicTime() } }, this->giveDomain(), gp, giveTemperature(gp, tStep) );
+        return sig0.eval( { { "te", giveTemperature( gp, tStep ) }, { "t", tStep->giveIntrinsicTime() } }, this->giveDomain(), gp, giveTemperature( gp, tStep ) );
+    } else if ( aProperty == 'G' ) {
+        return linearElasticMaterial.giveShearModulus();
     }
 
-    return Material::give(aProperty, gp);
+    return Material::give( aProperty, gp );
 }
 
 double MisesMat::giveTemperature(GaussPoint *gp, TimeStep *tStep) const
