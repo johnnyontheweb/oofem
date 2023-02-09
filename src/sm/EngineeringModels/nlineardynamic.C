@@ -934,12 +934,6 @@ NonLinearDynamic :: timesMtrx(FloatArray &vec, FloatArray &answer, CharType type
         
         element->giveLocationArray(loc, en);
         element->giveCharacteristicMatrix(charMtrx, type, tStep);
-        
-        if ( charMtrx.isNotEmpty() ) {
-            ///@todo This rotation matrix is not flexible enough.. it can only work with full size matrices and doesn't allow for flexibility in the matrixassembler.
-            if ( element->giveRotationMatrix(R) ) {
-                charMtrx.rotatedWith(R);
-            }
 
         //
         // assemble it manually
@@ -953,7 +947,6 @@ NonLinearDynamic :: timesMtrx(FloatArray &vec, FloatArray &answer, CharType type
             if ( loc.giveSize() != charMtrx.giveNumberOfRows() ) {
                 OOFEM_ERROR("dimension mismatch");
             }
-
 #endif
 
             n = loc.giveSize();
