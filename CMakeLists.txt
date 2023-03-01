@@ -138,6 +138,7 @@ option (USE_PYTHON_EXTENSION "Enable Python extension for exposing C++ code to p
 option (USE_HDF5 "HDF5 support" OFF)
 # memory stream
 option (USE_MEMSTR "Enable memory stream support" ON)
+option (USE_MPM "Enable experimental multiphysics module" OFF)
 
 if (USE_PARALLEL)
     add_definitions (-D__PARALLEL_MODE)
@@ -221,6 +222,14 @@ if (USE_OPENMP)
         list (APPEND MODULE_LIST "openmp")
     endif ()
 endif ()
+
+if (USE_MPM)
+    include_directories ("${oofem_SOURCE_DIR}/src/mpm")
+    add_definitions (-D__MPM_MODULE)
+    list (APPEND LIBS $<TARGET_OBJECTS:mpm>)
+    list (APPEND MODULE_LIST "mpm")
+endif ()
+
 
 if (USE_OOFEG)
     add_definitions (-D__OOFEG)
@@ -664,6 +673,9 @@ endif ()
 if (USE_FM)
     add_subdirectory ("${oofem_SOURCE_DIR}/src/fm")
 endif ()
+if (USE_MPM)
+    add_subdirectory ("${oofem_SOURCE_DIR}/src/mpm")
+endif ()
 set (oofempy)
 if (USE_BOOSTPYTHON_BINDINGS)
     set (oofempy ${oofem_SOURCE_DIR}/bindings/Deprecated/python/oofemlib.cpp)
@@ -711,6 +723,12 @@ if (USE_SHARED_LIB)
             set_target_properties (dss PROPERTIES COMPILE_FLAGS ${LIBOOFEM_EXPORT_CFLAGS})
         endif ()
     endif()
+    if (USE_MPM)
+        set_target_properties (mpm PROPERTIES COMPILE_DEFINITIONS "liboofem_EXPORTS")
+        if (NOT "${LIBOOFEM_EXPORT_CFLAGS}" STREQUAL "")
+            set_target_properties (mpm PROPERTIES COMPILE_FLAGS ${LIBOOFEM_EXPORT_CFLAGS})
+        endif ()
+endif()
 
     generate_export_header (liboofem
         BASE_NAME OOFEM
