@@ -150,6 +150,7 @@ set (core_ltf
 set (core_cs
     crosssection.C
     emptycs.C
+    dummycrosssection.C
     )
 
 set (core_td
