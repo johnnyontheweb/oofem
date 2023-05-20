@@ -319,6 +319,9 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
         tempCol->times( m );
         eigVec.setColumn( *tempCol, i );
         periods.at( i ) = 2 * M_PI / sqrt( eigVal.at( i ) );
+        //if ( isnan( periods.at( i ) ) ) {
+        //    printf( "stop" );
+        //}
     }
     // eigVec has been normalized
 
@@ -326,6 +329,9 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
         for ( int j = 1; j <= numberOfRequiredEigenValues; j++ ) {
             double beta     = periods.at( i ) / periods.at( j );
             rhos.at( i, j ) = 8 * pow( this->csi, 2.0 ) * pow( beta, 1.5 ) / ( 1.0 + beta ) / ( pow( 1 - beta, 2.0 ) + 4 * pow( this->csi, 2.0 ) * beta );
+            //if(isnan( rhos.at( i, j ))) {
+            //    printf( "stop" );
+            //}
         }
 
     IntArray masterDofIDs, nodalArray, ids;
@@ -648,7 +654,7 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
     // start creating loaded models
     //
 #ifdef VERBOSE
-    OOFEM_LOG_INFO( "Starting creation of loaded models ...\n" );
+    OOFEM_LOG_INFO( "Starting analysis for each mode ...\n" );
 #endif
 
 
@@ -673,7 +679,7 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
     dominantMode = std::distance( dirFactors.begin(), std::max_element( dirFactors.begin(), dirFactors.end() ) ) + 1;
 
     for ( int dN = 1; dN <= numberOfRequiredEigenValues; ++dN ) {
-        OOFEM_LOG_INFO( "Creation of loaded model %d...\n", dN );
+        OOFEM_LOG_INFO( "Analyzing mode %d...\n", dN );
 
         double sAcc = calcSpectrumOrdinate( periods.at( dN ) );
 
