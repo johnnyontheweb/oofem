@@ -1,160 +1,3 @@
-set (sm_element
-    Elements/structuralelementevaluator.C
-    Elements/igaelements.C
-    Elements/structuralelement.C
-    Elements/nlstructuralelement.C
-    Elements/structural2delement.C
-    Elements/structural3delement.C
-    Elements/3D/space3delementevaluator.C
-    Elements/3D/lspace.C 
-    Elements/3D/lspacebb.C
-    Elements/3D/qspace.C 
-    Elements/3D/q27space.C
-    Elements/3D/ltrspace.C 
-    Elements/3D/ltrspaceboundary.C
-    Elements/3D/ltrspaceboundarytruss.C
-    Elements/3D/ltrspaceboundarymembrane.C
-    Elements/3D/ltrspaceboundarybeam.C
-    Elements/3D/ltrspaceboundaryplate.C
-    Elements/3D/ltrspaceboundaryvoigt.C
-    Elements/3D/qtrspace.C 
-    Elements/3D/lwedge.C 
-    Elements/3D/qwedge.C 
-    Elements/3D/macrolspace.C
-    Elements/Bars/truss1d.C 
-    Elements/Bars/truss2d.C 
-    Elements/Bars/truss3d.C
-    Elements/Bars/truss3dnl.C
-    Elements/Bars/truss3dnl2.C
-    Elements/Bars/qtruss1d.C 
-    Elements/Beams/libeam2d.C 
-    Elements/Beams/libeam2dnl.C
-    Elements/Beams/libeam3d.C 
-    Elements/Beams/libeam3dnl.C 
-    Elements/Beams/libeam3dnl2.C 
-    Elements/Beams/libeam3d2.C
-    Elements/Beams/beambaseelement.C
-    Elements/Beams/beam2d.C 
-    Elements/Beams/beam3d.C
-    Elements/Beams/libeam3dboundary.C
-    Elements/Beams/libeam3dboundarytruss.C
-    Elements/Beams/libeam3dboundarymembrane.C
-    Elements/Beams/libeam3dboundarybeam.C
-    Elements/Beams/libeam3dboundaryplate.C
-    Elements/Beams/libeam3dboundaryvoigt.C
-    Elements/Plates/cct.C
-    Elements/Plates/dkt.C 
-    Elements/Plates/qdkt.C
-    Elements/Plates/quad1mindlin.C
-    Elements/Plates/dkt3d.C
-    Elements/Shells/rershell.C 
-    Elements/Shells/tr_shell01.C 
-    Elements/Shells/tr_shell02.C 
-    Elements/Shells/tr_shell03.C
-    Elements/Shells/tr_shell11.C
-    Elements/Shells/cct3d.C
-    Elements/Shells/quad1mindlinshell3d.C
-    Elements/Shells/shell7base.C
-    Elements/Shells/tr2shell7.C
-    Elements/Shells/shell7basexfem.C
-    Elements/Shells/tr2shell7xfem.C
-    Elements/Shells/mitc4.C
-    Elements/Axisymmetry/q4axisymm.C
-    Elements/Axisymmetry/axisymm3d.C 
-    Elements/Axisymmetry/l4axisymm.C
-    Elements/PlaneStrain/quad1planestrain.C 
-    Elements/PlaneStrain/qplanestrain.C 
-    Elements/PlaneStrain/qtrplanestrain.C 
-    Elements/PlaneStrain/trplanestrain.C 
-    Elements/PlaneStress/planestresselementevaluator.C
-    Elements/PlaneStress/trplanrot.C
-    Elements/PlaneStress/trplanstrss.C 
-    Elements/PlaneStress/qplanstrss.C 
-    Elements/PlaneStress/q9planstrss.C 
-    Elements/PlaneStress/qtrplstr.C 
-    Elements/PlaneStress/planstrss.C
-    Elements/PlaneStress/planstrssxfem.C
-    Elements/PlaneStress/trplanstrssxfem.C
-    Elements/PlaneStress/qtrplanstrssxfem.C
-    Elements/PlaneStress/trplanrot3d.C
-    Elements/PlaneStress/trplanestressrotallman.C
-    Elements/PlaneStress/basicelement.C
-    Elements/PlaneStress/trplanestressrotallman3d.C
-    Elements/PlaneStress/linquad3d_planestress.C
-    Elements/PlaneStress/qtrplstrslip.C
-    Elements/PlaneStress/qplanstrssslip.C
-    Elements/AbaqusUserElement.C
-    Elements/AbaqusUserElement1d.C
-    Elements/AbaqusUserElement6d.C
-    Elements/htselement.C
-    Elements/lumpedmasselement.C
-    Elements/springelement.C
-    Elements/springelement3D.C
-    Elements/LatticeElements/latticestructuralelement.C
-    Elements/LatticeElements/lattice2d.C
-    Elements/LatticeElements/lattice2dboundary.C
-    Elements/LatticeElements/lattice3d.C
-    Elements/LatticeElements/lattice3dboundary.C
-    Elements/LatticeElements/lattice3dboundarytruss.C
-    Elements/LatticeElements/latticelink3d.C
-    Elements/LatticeElements/latticelink3dboundary.C
-    Elements/LatticeElements/latticebeam3d.C
-    Elements/LatticeElements/latticebeam3dboundary.C
-    Elements/tet21ghostsolid.C
-    Elements/quad1platesubsoil.C 
-    Elements/quad2platesubsoil.C
-    Elements/tria1platesubsoil.C
-    Elements/tria2platesubsoil.C
-    Elements/linedistributedspring.C
-    Elements/trwarp.C
-    Elements/PlaneStress/basicelement.C
-    Elements/nodalspringelement.C
-    #Gradient damage elements
-    Elements/GradientDamage/graddamageelement.C 
-    Elements/GradientDamage/Bars/truss1dgraddamage.C
-    Elements/GradientDamage/Bars/qtruss1dgraddamage.C
-    Elements/GradientDamage/PlaneStrain/quad1planestraingraddamage.C 
-    Elements/GradientDamage/PlaneStrain/qplanestraingraddamage.C
-    Elements/GradientDamage/PlaneStrain/qtrplanestraingraddamage.C
-    Elements/GradientDamage/PlaneStress/trplstrgraddamage.C 
-    Elements/GradientDamage/PlaneStress/qtrplstrgraddamage.C
-    Elements/GradientDamage/PlaneStress/planestressgraddamage.C
-    Elements/GradientDamage/PlaneStress/qplanestressgraddamage.C
-    Elements/GradientDamage/3D/qspacegraddamage.C
-    Elements/GradientDamage/3D/qtrspacegraddamage.C
-    Elements/GradientDamage/3D/qspacegraddamage.C
-    Elements/GradientDamage/3D/qwedgegraddamage.C
-    #Mixed pressure elements
-    Elements/MixedPressure/basemixedpressureelement.C
-    Elements/MixedPressure/PlaneStrain/qtrplanestrainp1.C
-    Elements/MixedPressure/PlaneStrain/quad1planestrainp1.C
-
-    Elements/structural2delement.C
-    Elements/structural3delement.C
-    #Elements/phasefieldelement.C
-    #qplanstrssphf.C
-    )
-
-set (sm_interface_elements
-    Elements/Interfaces/cohsur3d.C
-    Elements/Interfaces/structuralinterfaceelement.C
-    Elements/Interfaces/intelpoint.C
-    Elements/Interfaces/intelline1.C
-    Elements/Interfaces/intelline1intpen.C
-    Elements/Interfaces/intelline2.C
-    Elements/Interfaces/intelline2intpen.C
-    Elements/Interfaces/intelsurftr1.C
-    Elements/Interfaces/intelsurfquad1.C
-    Elements/Interfaces/bondlink3d.C
-    Elements/Interfaces/bondlink3dboundary.C
-        #    Elements/bondlink3dboundarybeam.C	
-#   	 Elements/bondlink3dboundaryplate.C		
-    Elements/Interfaces/Deprecated/interfaceelement1d.C
-    Elements/Interfaces/Deprecated/interfaceelem2dlin.C
-    Elements/Interfaces/Deprecated/interfaceelem2dquad.C
-    Elements/Interfaces/Deprecated/interfaceelem3dtrlin.C
-)
-
 set (sm_boundary_conditions
     Deprecated/prescribedgenstrainshell7.C
         prescribeddispsliphomogenization.C
@@ -185,6 +28,7 @@ set (sm_emodel
     EngineeringModels/nlineardynamic.C
     EngineeringModels/eigenvaluedynamic.C
     EngineeringModels/linearstability.C
+	EngineeringModels/varlinearstability.C
     EngineeringModels/adaptlinearstatic.C
     EngineeringModels/adaptnlinearstatic.C
     EngineeringModels/deidynamic.C
@@ -419,8 +263,6 @@ set (sm_quasicontinuum
     )
 
 set (sm
-    ${sm_element}
-    ${sm_interface_elements}
     ${sm_crosssection}
     ${sm_loads}
     ${sm_emodel}
