@@ -242,7 +242,7 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
     field->update(VM_Total, tStep, displacementVector, EModelDefaultEquationNumbering());
     // terminate linear static computation (necessary, in order to compute stresses in elements).
     // Recompute for updated state:
-    this->assembleVector( loadVector, tStep, InternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(1) );
+    //this->assembleVector( loadVector, tStep, InternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(1) );
     this->terminateLinStatic( tStep );
 
     // Normal forces already known, proceed with linear stability
@@ -263,7 +263,7 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
     //initialStressMatrix->times(-1.0);
 
     // subtract constant loads to update the stiffness matrix
-    stiffnessMatrix->add(-1.0, *initialStressMatrix);
+    stiffnessMatrix->add(1.0, *initialStressMatrix);
 
     // create the actual initial stiffness matrix using only time = 1
     TimeStep tStep1(*tStep);
@@ -271,7 +271,8 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
     tStep1.setTime(1.0);
     TimeStep* tStep1Ptr = &tStep1;
 
-    loadVector.zero();
+    //loadVector.zero();
+    loadVector.negated(); // revert previous negation, keep constant loading
     // Internal forces first, negated;
     field->update(VM_Total, tStep1Ptr, displacementVector, EModelDefaultEquationNumbering());
     this->assembleVector(loadVector, tStep1Ptr, InternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(1));
@@ -287,7 +288,7 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
     field->update(VM_Total, tStep1Ptr, displacementVector, EModelDefaultEquationNumbering());
     // terminate linear static computation (necessary, in order to compute stresses in elements).
     // Recompute for updated state:
-    this->assembleVector(loadVector, tStep1Ptr, InternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(1));
+    //this->assembleVector(loadVector, tStep1Ptr, InternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(1));
     this->terminateLinStatic(tStep1Ptr);
 
     initialStressMatrix->zero();
