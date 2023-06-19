@@ -46,7 +46,6 @@
 #define _IFT_Load_components "components"
 #define _IFT_Load_dofexcludemask "dofexcludemask"
 #define _IFT_Load_reference "reference"
-#define _IFT_Load_phase "phase"
 //@}
 
 namespace oofem {
@@ -83,16 +82,16 @@ public:
 
 
     /**
-     * Type determining the type of volume load.
-     */
+    * Type determining the type of volume load.
+    */
     enum VolumeType {
-        SelfWeight,
-        General,
+	SelfWeight,
+	General,
     };
 
     /**
-     * Restore default for volume type.
-     */
+    * Restore default for volume type.
+    */
     virtual VolumeType giveVolumeType() { return SelfWeight; }
 
 protected:
@@ -111,20 +110,17 @@ protected:
     IntArray dofExcludeMask;
 
 public:
-    // Marks the BC as a reference load.
+    // Marks the BC as a reference load. 
     bool reference;
-
-    // Flag to determine the phase, the load belongs to. Or if a load is constant or variable for linear buckling
-    int phase;
 
     /**
      * Constructor. Creates boundary condition with given number, belonging to given domain.
      * @param n Boundary condition number
      * @param d Domain to which new object will belongs.
      */
-    Load( int n, Domain *d );
+    Load(int n, Domain * d);
     /// Destructor.
-    virtual ~Load() {}
+    virtual ~Load() { }
 
     /**
      * Computes boundary condition value - its components values at given time.
@@ -134,7 +130,7 @@ public:
      * @param tStep Time step, for which components are computed.
      * @param mode Determines response mode.
      */
-    virtual void computeComponentArrayAt( FloatArray &answer, TimeStep *tStep, ValueModeType mode );
+    virtual void computeComponentArrayAt(FloatArray &answer, TimeStep *tStep, ValueModeType mode);
     /**
      * Computes components values of load at given point - global coordinates (coordinates given).
      * @param answer Component values at given point and time.
@@ -142,7 +138,7 @@ public:
      * @param coords Global (or local) problem coordinates, which are used to evaluate components values.
      * @param mode Determines response mode.
      */
-    virtual void computeValueAt( FloatArray &answer, TimeStep *tStep, const FloatArray &coords, ValueModeType mode ) = 0;
+    virtual void computeValueAt(FloatArray &answer, TimeStep *tStep, const FloatArray &coords, ValueModeType mode) = 0;
     /**
      * Computes components values for specified dof ids. If a dof id is not defined for the load, zero value is inserted.
      * Typically boundary conditions would specify the full, or a subset of the dofids.
@@ -152,16 +148,16 @@ public:
      * @param dofids List of DOF IDs to evaluate for.
      * @param mode Determines response mode.
      */
-    virtual void computeValues( FloatArray &answer, TimeStep *tStep, const FloatArray &coords, const IntArray &dofids, ValueModeType mode );
+    virtual void computeValues(FloatArray &answer, TimeStep *tStep, const FloatArray &coords, const IntArray &dofids, ValueModeType mode);
     /**
      * Returns the value of dofExcludeMask corresponding to given index.
      * See the description of dofExcludeMask attribute for more details.
      * @param index Index to check at.
      * @return Nonzero if excluded, zero otherwise.
      */
-    int isDofExcluded( int index );
+    int isDofExcluded(int index);
 
-    void scale( double s ) override;
+    void scale(double s) override;
 
     /**
      * Returns receiver's coordinate system.
@@ -182,21 +178,21 @@ public:
      * @return property value
      */
     virtual double giveProperty(int aProperty, TimeStep *tStep) {
-        OOFEM_ERROR( "Not supported for this boundary condition." );
+        OOFEM_ERROR("Not supported for this boundary condition.");
         return 0;
     }
 
-    void initializeFrom( InputRecord &ir ) override;
-    void giveInputRecord( DynamicInputRecord &input ) override;
+    void initializeFrom(InputRecord &ir) override;
+    void giveInputRecord(DynamicInputRecord &input) override;
 
     /**
      * @return Pointer to receiver component array, where component values of boundary condition are stored.
      */
     const FloatArray &giveComponentArray() const;
-    void setComponentArray( FloatArray &arry ) { componentArray = std::move( arry ); }
+    void setComponentArray(FloatArray &arry) { componentArray = std::move(arry); }
 
-    void saveContext( DataStream &stream, ContextMode mode ) override;
-    void restoreContext( DataStream &stream, ContextMode mode ) override;
+    void saveContext(DataStream &stream, ContextMode mode) override;
+    void restoreContext(DataStream &stream, ContextMode mode) override;
 };
 } // end namespace oofem
 #endif // load_h

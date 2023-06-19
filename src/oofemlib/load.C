@@ -117,9 +117,6 @@ Load :: initializeFrom(InputRecord &ir)
         }
     }
 
-    phase = 0;
-    IR_GIVE_OPTIONAL_FIELD(ir, phase, _IFT_Load_phase);
-
     this->reference = ir.hasField(_IFT_Load_reference);
 }
 
