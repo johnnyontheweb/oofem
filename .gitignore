@@ -1540,3 +1540,17 @@ src/tm/isoheatadvmat.C.bak
 /comp32/src/tm/cmake_install.cmake
 /comp32/src/tm/tm.vcxproj
 /comp32/src/tm/tm.vcxproj.filters
+/comp32/src/sm/Elements/INSTALL.vcxproj
+/comp32/src/sm/Elements/INSTALL.vcxproj.filters
+/comp32/src/sm/Elements/PACKAGE.vcxproj
+/comp32/src/sm/Elements/PACKAGE.vcxproj.filters
+/comp32/src/sm/Elements/cmake_install.cmake
+/comp32/src/sm/Elements/sm_elements.vcxproj
+/comp32/src/sm/Elements/sm_elements.vcxproj.filters
+/comp64/src/sm/Elements/INSTALL.vcxproj
+/comp64/src/sm/Elements/INSTALL.vcxproj.filters
+/comp64/src/sm/Elements/PACKAGE.vcxproj
+/comp64/src/sm/Elements/PACKAGE.vcxproj.filters
+/comp64/src/sm/Elements/cmake_install.cmake
+/comp64/src/sm/Elements/sm_elements.vcxproj
+/comp64/src/sm/Elements/sm_elements.vcxproj.filters
