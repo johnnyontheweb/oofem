@@ -1554,3 +1554,17 @@ src/tm/isoheatadvmat.C.bak
 /comp64/src/sm/Elements/cmake_install.cmake
 /comp64/src/sm/Elements/sm_elements.vcxproj
 /comp64/src/sm/Elements/sm_elements.vcxproj.filters
+/2019_cloud/src/sm/Elements/INSTALL.vcxproj
+/2019_cloud/src/sm/Elements/INSTALL.vcxproj.filters
+/2019_cloud/src/sm/Elements/PACKAGE.vcxproj
+/2019_cloud/src/sm/Elements/PACKAGE.vcxproj.filters
+/2019_cloud/src/sm/Elements/cmake_install.cmake
+/2019_cloud/src/sm/Elements/sm_elements.vcxproj
+/2019_cloud/src/sm/Elements/sm_elements.vcxproj.filters
+/2019_new/src/sm/Elements/INSTALL.vcxproj
+/2019_new/src/sm/Elements/INSTALL.vcxproj.filters
+/2019_new/src/sm/Elements/PACKAGE.vcxproj
+/2019_new/src/sm/Elements/PACKAGE.vcxproj.filters
+/2019_new/src/sm/Elements/cmake_install.cmake
+/2019_new/src/sm/Elements/sm_elements.vcxproj
+/2019_new/src/sm/Elements/sm_elements.vcxproj.filters
