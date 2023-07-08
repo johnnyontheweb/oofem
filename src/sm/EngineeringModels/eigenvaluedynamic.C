@@ -537,7 +537,7 @@ void EigenValueDynamic :: solveYourself()
     // mass participation ratios
     for ( int i = 1; i <= numberOfRequiredEigenValues; i++ ) {
         for ( int j = 1; j <= 6; j++ ) {
-            if ( totMass.at( j ) != 0.0 ) { massPart.at( i, j ) = pow( partFact.at( i, j ), 2 ) / totMass.at( j ); }
+            if ( totMass.at( j ) > 0.0 ) { massPart.at( i, j ) = pow( partFact.at( i, j ), 2 ) / totMass.at( j ); }
             //else
             //{
             //	massPart.at(i, j) = 0.0;
