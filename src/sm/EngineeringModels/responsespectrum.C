@@ -286,11 +286,22 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
 #endif
 
     nMethod->solve( *stiffnessMatrix, *massMatrix, eigVal, eigVec, rtolv, numberOfRequiredEigenValues );
+        
+    // cut off, but output at least one
+    int nValid = 1;
+    for ( int i = 1; i < eigVal.giveSize(); ++i ) {
+        if ( eigVal( i ) > 1e10 && i > 0 ) {
+            nValid = i;
+            break;
+        }
+    }
+    numberOfRequiredEigenValues = nValid; // better having a dedicated field
+    eigVal.resize( numberOfRequiredEigenValues );
+    eigVec.resizeWithData( eigVec.giveNumberOfRows(), numberOfRequiredEigenValues );
 
     FloatMatrix *unitDisp = new FloatMatrix();
     FloatArray *tempCol   = new FloatArray();
     FloatArray *tempCol2  = new FloatArray();
-
 
     Domain *domain = this->giveDomain( 1 );
     IntArray dofIDArry, loc;
@@ -642,7 +653,9 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
     // mass participation ratios
     for ( int i = 1; i <= numberOfRequiredEigenValues; i++ ) {
         for ( int j = 1; j <= 6; j++ ) {
-            if ( totMass.at( j ) > 0.0 ) { massPart.at( i, j ) = pow( partFact.at( i, j ), 2 ) / totMass.at( j ); }
+            if ( totMass.at( j ) > 1e-10 ) {
+                massPart.at( i, j ) = pow( partFact.at( i, j ), 2 ) / totMass.at( j );
+            }
             //else
             //{
             //	massPart.at(i, j) = 0.0;
