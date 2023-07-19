@@ -294,6 +294,7 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
             nValid = i;
             break;
         }
+        nValid = i+1;
     }
     numberOfRequiredEigenValues = nValid; // better having a dedicated field
     eigVal.resize( numberOfRequiredEigenValues );

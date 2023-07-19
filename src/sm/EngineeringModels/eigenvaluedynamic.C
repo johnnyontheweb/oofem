@@ -202,6 +202,7 @@ void EigenValueDynamic :: solveYourself()
     int nValid = 1;
     for (int i = 1; i < eigVal.giveSize(); ++i) {
         if (eigVal(i) > 1e10 && i > 0) { nValid = i; break; }
+        nValid = i+1;
     }
     numberOfRequiredEigenValues = nValid; // better having a dedicated field
     eigVal.resize(numberOfRequiredEigenValues);
