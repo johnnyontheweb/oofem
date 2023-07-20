@@ -840,8 +840,8 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
 
                         rhs.at( 1 ) = dI.at( 2 ) - qi.at( 2 ) / wy;
                         rhs.at( 2 ) = dE.at( 2 ) - qf.at( 2 ) / wy;
-                        rhs.at( 3 ) = dI.at( 6 ) + ( qf.at( 2 ) - qi.at( 2 ) ) / ( wy * l );
-                        rhs.at( 4 ) = dE.at( 6 ) + ( qf.at( 2 ) - qi.at( 2 ) ) / ( wy * l );
+                        rhs.at( 3 ) = dI.at( 6 ) - ( qf.at( 2 ) - qi.at( 2 ) ) / ( wy * l );
+                        rhs.at( 4 ) = dE.at( 6 ) - ( qf.at( 2 ) - qi.at( 2 ) ) / ( wy * l );
 
                         //odeMtrx.computeReciprocalCondition('1');
                         odeMtrx.solveForRhs( rhs, abcd );
@@ -1056,10 +1056,10 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                         // disps.at(2) = exp(lamxY)*(ay*cos(lamxY) + by*sin(lamxY)) + (cy*cos(lamxY) + dy*sin(lamxY)) / exp(lamxY) + bl.at(2) / wy;
                         disps.at( 2 ) = exp( lamxY ) * ( ay * cos( lamxY ) + by * sin( lamxY ) ) + ( cy * cos( lamxY ) + dy * sin( lamxY ) ) / exp( lamxY ) + ( qi.at( 2 ) + ( qf.at( 2 ) - qi.at( 2 ) ) * pos / l ) / wy;
                         // rotation
-                        disps.at( 6 ) = exp( lamxY ) * ( lambdaY * ( ay + by ) * cos( lamxY ) + lambdaY * ( by - ay ) * sin( lamxY ) ) - ( lambdaY * ( cy - dy ) * cos( lamxY ) + lambdaY * ( cy + dy ) * sin( lamxY ) ) / ( exp( lamxY ) );
+                        disps.at( 6 ) = exp( lamxY ) * ( lambdaY * ( ay + by ) * cos( lamxY ) + lambdaY * ( by - ay ) * sin( lamxY ) ) - ( lambdaY * ( cy - dy ) * cos( lamxY ) + lambdaY * ( cy + dy ) * sin( lamxY ) ) / ( exp( lamxY ) ) + ( qf.at( 2 ) - qi.at( 2 ) ) / l / wy;
                         // adjust the diagrams
                         BeamForces[elem->giveNumber()].at( pos ).at( 6 ) = 2 * lambdaY * lambdaY * EJzz * ( exp( lamxY ) * ( by * cos( lamxY ) - ay * sin( lamxY ) ) + ( -dy * cos( lamxY ) + cy * sin( lamxY ) ) / exp( lamxY ) );
-                        BeamForces[elem->giveNumber()].at( pos ).at( 2 ) = -2 * lambdaY * lambdaY * lambdaY * EJzz * ( -exp( lamxY ) * ( ( ay - by ) * cos( lamxY ) + ( by + ay ) * sin( lamxY ) ) + ( ( cy + dy ) * cos( lamxY ) + ( -cy + dy ) * sin( lamxY ) ) / ( exp( lamxY ) ) );
+                        BeamForces[elem->giveNumber()].at( pos ).at( 2 ) = 2 * lambdaY * lambdaY * lambdaY * EJzz * ( -exp( lamxY ) * ( ( ay - by ) * cos( lamxY ) + ( by + ay ) * sin( lamxY ) ) + ( ( cy + dy ) * cos( lamxY ) + ( -cy + dy ) * sin( lamxY ) ) / ( exp( lamxY ) ) );
                     } else {
                         if ( deltaY > 0 ) {
                             // displacement
@@ -1106,10 +1106,10 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                         // displacement
                         disps.at( 3 ) = exp( lamxZ ) * ( az * cos( lamxZ ) + bz * sin( lamxZ ) ) + ( cz * cos( lamxZ ) + dz * sin( lamxZ ) ) / exp( lamxZ ) + ( qi.at( 3 ) + ( qf.at( 3 ) - qi.at( 3 ) ) * pos / l ) / wz;
                         // rotation
-                        disps.at( 5 ) = -( exp( lamxZ ) * ( lambdaZ * ( az + bz ) * cos( lamxZ ) + lambdaZ * ( bz - az ) * sin( lamxZ ) ) - ( lambdaZ * ( cz - dz ) * cos( lamxZ ) + lambdaZ * ( cz + dz ) * sin( lamxZ ) ) / ( exp( lamxZ ) ) );
+                        disps.at( 5 ) = -( exp( lamxZ ) * ( lambdaZ * ( az + bz ) * cos( lamxZ ) + lambdaZ * ( bz - az ) * sin( lamxZ ) ) - ( lambdaZ * ( cz - dz ) * cos( lamxZ ) + lambdaZ * ( cz + dz ) * sin( lamxZ ) ) / ( exp( lamxZ ) ) ) - ( qf.at( 3 ) - qi.at( 3 ) ) / l / wy;
                         // adjust the diagrams
                         BeamForces[elem->giveNumber()].at( pos ).at( 5 ) = -2 * lambdaZ * lambdaZ * EJyy * ( exp( lamxZ ) * ( bz * cos( lamxZ ) - az * sin( lamxZ ) ) + ( -dz * cos( lamxZ ) + cz * sin( lamxZ ) ) / exp( lamxZ ) );
-                        BeamForces[elem->giveNumber()].at( pos ).at( 3 ) = -2 * lambdaZ * lambdaZ * lambdaZ * EJyy * ( -exp( lamxZ ) * ( ( az - bz ) * cos( lamxZ ) + ( bz + az ) * sin( lamxZ ) ) + ( ( cz + dz ) * cos( lamxZ ) + ( -cz + dz ) * sin( lamxZ ) ) / ( exp( lamxZ ) ) );
+                        BeamForces[elem->giveNumber()].at( pos ).at( 3 ) = 2 * lambdaZ * lambdaZ * lambdaZ * EJyy * ( -exp( lamxZ ) * ( ( az - bz ) * cos( lamxZ ) + ( bz + az ) * sin( lamxZ ) ) + ( ( cz + dz ) * cos( lamxZ ) + ( -cz + dz ) * sin( lamxZ ) ) / ( exp( lamxZ ) ) );
                     } else {
                         if ( deltaZ > 0 ) {
                             // displacement
