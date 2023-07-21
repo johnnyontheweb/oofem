@@ -996,8 +996,8 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
 
                             az = ( qf.at( 3 ) - qi.at( 3 ) ) / 120 / EJyy / l;
                             bz = qi.at( 3 ) / 24 / EJyy;
-                            cz = ( 240 * EJyy * ( vy_0 - vy_l ) + l * ( 120 * EJyy * ( phiy_0 + phiy_l ) - l_3 * ( 3 * qf.at( 3 ) + 7 * qi.at( 3 ) ) ) ) / ( 120 * EJyy * l_3 );
-                            dz = -( 360 * EJyy * ( vy_0 - vy_l ) + l * ( 120 * EJyy * ( 2 * phiy_0 + phiy_l ) - l_3 * ( 2 * qf.at( 3 ) + 3 * qi.at( 3 ) ) ) ) / ( 120 * EJyy * l_2 );
+                            cz = ( 240 * EJyy * ( vz_0 - vz_l ) + l * ( 120 * EJyy * ( phiy_0 + phiy_l ) - l_3 * ( 3 * qf.at( 3 ) + 7 * qi.at( 3 ) ) ) ) / ( 120 * EJyy * l_3 );
+                            dz = -( 360 * EJyy * ( vz_0 - vz_l ) + l * ( 120 * EJyy * ( 2 * phiy_0 + phiy_l ) - l_3 * ( 2 * qf.at( 3 ) + 3 * qi.at( 3 ) ) ) ) / ( 120 * EJyy * l_2 );
                             ez = phiy_0;
                             fz = vz_0;
                         } else { // timoshenko formulation for transversal displacements
