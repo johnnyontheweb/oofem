@@ -57,6 +57,8 @@ void
 SpringElement3D::computeStiffnessMatrix( FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep )
 {
     /* spring stiffness matrix in local coordinate system (along orientation axis) */
+    double dr = d / 2;
+
     answer.resize( 12, 12 );
     answer.at( 1, 1 ) = answer.at( 7, 7 ) = this->springC1;
     answer.at( 1, 7 ) = answer.at( 7, 1 ) = -this->springC1;
@@ -70,24 +72,24 @@ SpringElement3D::computeStiffnessMatrix( FloatMatrix &answer, MatResponseMode rM
     answer.at( 4, 4 )  = answer.at( 10, 10 ) = this->springC4;
     answer.at( 4, 10 ) = answer.at( 10, 4 )  = -this->springC4;
 
-    answer.at( 5, 5 )  = answer.at( 11, 11 ) = this->springC5 + this->springC3 * ( d * d );
-    answer.at( 5, 11 ) = answer.at( 11, 5 ) = this->springC3 * ( d * d ) - this->springC5;
+    answer.at( 5, 5 )  = answer.at( 11, 11 ) = this->springC5 + this->springC3 * ( dr * dr );
+    answer.at( 5, 11 ) = answer.at( 11, 5 ) = this->springC3 * ( dr * dr ) - this->springC5;
 
-    answer.at( 6, 6 )   = answer.at( 12, 12 ) = this->springC6 + this->springC2 * ( d * d );
-    answer.at( 6, 12 ) = answer.at( 12, 6 ) = this->springC2 * ( d * d ) - this->springC6;
+    answer.at( 6, 6 )   = answer.at( 12, 12 ) = this->springC6 + this->springC2 * ( dr * dr );
+    answer.at( 6, 12 ) = answer.at( 12, 6 ) = this->springC2 * ( dr * dr ) - this->springC6;
 
     // rigid link transport terms ------------------------------------------------------
-    answer.at( 12, 2 ) = answer.at( 2, 12 ) = -d * this->springC2;
-    answer.at( 8, 12 ) = answer.at( 12, 8 )  = d * this->springC2;
+    answer.at( 12, 2 ) = answer.at( 2, 12 ) = -dr * this->springC2;
+    answer.at( 8, 12 ) = answer.at( 12, 8 ) = dr * this->springC2;
 
-    answer.at( 11, 3 ) = answer.at( 3, 11 )  = d * this->springC3;
-    answer.at( 11, 9 ) = answer.at( 9, 11 ) = -d * this->springC3;
+    answer.at( 11, 3 ) = answer.at( 3, 11 ) = dr * this->springC3;
+    answer.at( 11, 9 ) = answer.at( 9, 11 ) = -dr * this->springC3;
 
-    answer.at( 2, 6 ) = answer.at( 6, 2 ) = -d * this->springC2;
-    answer.at( 8, 6 ) = answer.at( 6, 8 ) = d * this->springC2;
+    answer.at( 2, 6 ) = answer.at( 6, 2 ) = -dr * this->springC2;
+    answer.at( 8, 6 ) = answer.at( 6, 8 ) = dr * this->springC2;
 
-    answer.at( 3, 5 ) = answer.at( 5, 3 ) = d * this->springC3;
-    answer.at( 5, 9 ) = answer.at( 9, 5 ) = -d * this->springC3;
+    answer.at( 3, 5 ) = answer.at( 5, 3 ) = dr * this->springC3;
+    answer.at( 5, 9 ) = answer.at( 9, 5 ) = -dr * this->springC3;
 }
 
 
