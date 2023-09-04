@@ -623,7 +623,8 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
                     int myDof = dofIdArray->findFirstIndexOf( dType );
                     if ( myDof == 0 ) continue;
 
-                    int eqN = locationArray.at( myDof );
+                    int eqN = 0;
+                    if ( myDof <= locationArray.giveSize() ) eqN = locationArray.at( myDof );
 
                     // save unit displacement and coordinate
                     if ( eqN ) {
