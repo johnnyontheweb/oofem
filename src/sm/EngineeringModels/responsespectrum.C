@@ -300,9 +300,9 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
     eigVal.resize( numberOfRequiredEigenValues );
     eigVec.resizeWithData( eigVec.giveNumberOfRows(), numberOfRequiredEigenValues );
 
-    FloatMatrix *unitDisp = new FloatMatrix();
-    FloatArray *tempCol   = new FloatArray();
-    FloatArray *tempCol2  = new FloatArray();
+    FloatMatrix unitDisp;
+    FloatArray tempCol;
+    FloatArray tempCol2;
 
     Domain *domain = this->giveDomain( 1 );
     IntArray dofIDArry, loc;
@@ -314,9 +314,11 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
     centroid.resize( 3 );
     partFact.resize( numberOfRequiredEigenValues, 6 );
     massPart.resize( numberOfRequiredEigenValues, 6 );
-    unitDisp->resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ), 6 );
-    tempCol->resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ) );
-    tempCol2->resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ) );
+    // matrix of unit displacements for the 6 dofs
+    unitDisp.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ), 6 );
+    // auxillary vectors for mass normalization
+    tempCol.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ) );
+    tempCol2.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ) );
     periods.resize( numberOfRequiredEigenValues );
     combReactions.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultPrescribedEquationNumbering() ) );;
     combDisps.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ) );
@@ -324,12 +326,12 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
 
     // mass normalization
     for ( int i = 1; i <= numberOfRequiredEigenValues; i++ ) {
-        tempCol->beColumnOf( eigVec, i );
-        massMatrix->times( *tempCol, *tempCol2 );
-        double m = tempCol->dotProduct( *tempCol2 );
+        tempCol.beColumnOf( eigVec, i );
+        massMatrix->times( tempCol, tempCol2 );
+        double m = tempCol.dotProduct( tempCol2 );
         if ( m != 0.0 ) m = 1 / sqrt( m );
-        tempCol->times( m );
-        eigVec.setColumn( *tempCol, i );
+        tempCol.times( m );
+        eigVec.setColumn( tempCol, i );
         periods.at( i ) = 2 * M_PI / sqrt( eigVal.at( i ) );
         //if ( isnan( periods.at( i ) ) ) {
         //    printf( "stop" );
@@ -348,8 +350,8 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
 
     IntArray masterDofIDs, nodalArray, ids;
     IntArray locationArray;
-    IntArray *dofIdArray = new IntArray();
-    dofIdArray->clear();
+    IntArray dofIdArray;
+    dofIdArray.clear();
 
     FloatMatrix tempMat, tempMat2;
     FloatArray tempCoord, coordArray;
@@ -378,7 +380,7 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
                 if ( ( dType >= D_u ) && ( dType <= D_w ) && eqN ) {
                     // save unit displacement and coordinate
 
-                    unitDisp->at( eqN, dType ) = 1.0;
+                    unitDisp.at( eqN, dType ) = 1.0;
                     tempMat2.at( eqN, dType )  = node->giveCoordinate( dType );
                 }
             }
@@ -398,13 +400,14 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
 
             locationArray.clear();
             tempCoord.clear();
+            dofIdArray.clear();
 
             element->giveInternalDofManDofIDMask( i, ids );
             intDofMan->giveLocationArray( ids, nodalArray, EModelDefaultEquationNumbering() );
             locationArray.followedBy( nodalArray );
 
             intDofMan->giveMasterDofIDArray( ids, masterDofIDs );
-            dofIdArray->followedBy( masterDofIDs );
+            dofIdArray.followedBy( masterDofIDs );
 
             coordArray.resize( masterDofIDs.giveSize() );
             int c = 1;
@@ -425,13 +428,13 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
             if ( partialDofCount ) {
                 // search for our dofs in there
                 for ( int myDofIndex = 1; myDofIndex <= partialDofCount; myDofIndex++ ) {
-                    int dType = dofIdArray->at( myDofIndex );
+                    int dType = dofIdArray.at( myDofIndex );
                     int eqN   = locationArray.at( myDofIndex );
 
                     if ( ( dType >= D_u ) && ( dType <= D_w ) && eqN ) {
                         // save unit displacement and coordinate
 
-                        unitDisp->at( eqN, dType ) = 1.0;
+                        unitDisp.at( eqN, dType ) = 1.0;
                         tempMat2.at( eqN, dType )  = tempCoord.at( myDofIndex );
                     }
                 }
@@ -441,18 +444,18 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
     // end of creation of translational unit displacement vectors
 
     // if no mass defined in a direction, then centroid in that direction is undefined
-    int contr[3];
+    int coordFilter[3];
 
     for ( int i = 1; i <= 3; i++ ) {
-        tempCol->beColumnOf( *unitDisp, i );
-        massMatrix->times( *tempCol, *tempCol2 ); // now tempCol2 has only the masses pertaining the i-th direction
-        tempMat.setColumn( *tempCol2, i );
-        totMass.at( i ) = tempCol->dotProduct( *tempCol2 ); // total mass for direction i-th direction
-        tempCol->beColumnOf( tempMat2, i ); // fetch coordinates in i-th direction
+        tempCol.beColumnOf( unitDisp, i );
+        massMatrix->times( tempCol, tempCol2 ); // now tempCol2 has only the masses pertaining the i-th direction
+        tempMat.setColumn( tempCol2, i );
+        totMass.at( i ) = tempCol.dotProduct( tempCol2 ); // total mass for direction i-th direction
+        tempCol.beColumnOf( tempMat2, i ); // fetch coordinates in i-th direction
         if ( totMass.at( i ) != 0.0 ) {
-            centroid.at( i ) = tempCol->dotProduct( *tempCol2 ) / totMass.at( i ); // dot multiply to get first moment, then divide by total mass in i-th direction to get i-th coordinate of the centroid
-            contr[i - 1]     = 1;
-        } else { contr[i - 1] = 0; }
+            centroid.at( i ) = tempCol.dotProduct( tempCol2 ) / totMass.at( i ); // dot multiply to get first moment, then divide by total mass in i-th direction to get i-th coordinate of the centroid
+            coordFilter[i - 1]     = 1;
+        } else { coordFilter[i - 1] = 0; }
     }
 
     // we have the centroid. we can now calculate rotational components. first from nodes.
@@ -491,7 +494,7 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
                 if ( ( dType >= D_u ) && ( dType <= D_w ) && eqN ) {
                     // save unit displacement and coordinate
 
-                    vk.at( dType ) = contr[dType - 1] * ( node->giveCoordinate( dType ) - centroid.at( dType ) );
+                    vk.at( dType ) = coordFilter[dType - 1] * ( node->giveCoordinate( dType ) - centroid.at( dType ) );
                     eq.at( dType ) = eqN;
                 }
             }
@@ -499,18 +502,18 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
 
         // set mixed contribution due to rotation about centroid
         if ( eq.at( 1 ) ) {
-            unitDisp->at( eq.at( 1 ), 5 ) = vk.at( 3 );
-            unitDisp->at( eq.at( 1 ), 6 ) = -vk.at( 2 );
+            unitDisp.at( eq.at( 1 ), R_v ) = vk.at( 3 );
+            unitDisp.at( eq.at( 1 ), R_w ) = -vk.at( 2 );
         }
 
         if ( eq.at( 2 ) ) {
-            unitDisp->at( eq.at( 2 ), 4 ) = -vk.at( 3 );
-            unitDisp->at( eq.at( 2 ), 6 ) = vk.at( 1 );
+            unitDisp.at( eq.at( 2 ), R_u ) = -vk.at( 3 );
+            unitDisp.at( eq.at( 2 ), R_w ) = vk.at( 1 );
         }
 
         if ( eq.at( 3 ) ) {
-            unitDisp->at( eq.at( 3 ), 4 ) = vk.at( 2 );
-            unitDisp->at( eq.at( 3 ), 5 ) = -vk.at( 1 );
+            unitDisp.at( eq.at( 3 ), R_u ) = vk.at( 2 );
+            unitDisp.at( eq.at( 3 ), R_v ) = -vk.at( 1 );
         }
 
         // set pure rotational contribution
@@ -543,7 +546,7 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
                 if ( ( dType >= R_u ) && ( dType <= R_w ) && eqN ) {
                     // save unit displacement and coordinate
 
-                    unitDisp->at( eqN, dType ) = 1.0;
+                    unitDisp.at( eqN, dType ) = 1.0;
                     tempMat2.at( eqN, dType )  = node->giveCoordinate( dType );
                 }
             }
@@ -554,95 +557,136 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
     for ( int ielem = 1; ielem <= nelem; ielem++ ) {
         Element *element = domain->giveElement( ielem );
 
+        if (!element->giveNumberOfInternalDofManagers()) {
+            continue;
+        }
+
+        coordArray.clear();
+        dofIdArray.clear();
+        locationArray.clear();
         // the following may be simplified
         //	retrieve internal dof managers and location array
         for ( int i = 1; i <= element->giveNumberOfInternalDofManagers(); i++ ) {
             DofManager *intDofMan = element->giveInternalDofManager( i );
-
             if ( !intDofMan ) continue; // you may never know...
-
-            locationArray.clear();
-            tempCoord.clear();
 
             element->giveInternalDofManDofIDMask( i, ids );
             intDofMan->giveLocationArray( ids, nodalArray, EModelDefaultEquationNumbering() );
             locationArray.followedBy( nodalArray );
 
             intDofMan->giveMasterDofIDArray( ids, masterDofIDs );
-            dofIdArray->followedBy( masterDofIDs );
+            dofIdArray.followedBy( masterDofIDs );
 
-            coordArray.resize( masterDofIDs.giveSize() );
+            tempCoord.resize( masterDofIDs.giveSize() );
             int c = 1;
+            // TODO: fix retrieval of coordinates for rotations about the centroid
             for ( int dof : masterDofIDs ) {
                 if ( intDofMan->giveCoordinates().giveSize() ) {
-                    coordArray.at( c ) = intDofMan->giveCoordinate( dof );
+                    tempCoord.at( c ) = intDofMan->giveCoordinate( dof );
                 } else {
                     // get the number. ghostNode FEMComponent number is changed on purpose.
                     int tempN = intDofMan->giveNumber();
                     //element->giveDofManager(tempN)->requiresTransformation()
-                    coordArray.at( c ) = element->giveDofManager( tempN )->giveCoordinate( dof );
+                    tempCoord.at( c ) = element->giveDofManager( tempN )->giveCoordinate( dof );
                 }
                 c++; // Increment the counter in any case. The position index must match the index in masterDofIDs. We'll sort the dofs needed hereafter
             }
-            tempCoord.append( coordArray );
+            coordArray.append(tempCoord);
 
             // TODO should element CS be considered even with internal dof managers
-            if ( locationArray.giveSize() ) {
+            if (nodalArray.giveSize() ) {
                 FloatArray vk( 3 );
                 IntArray eq( 3 );
                 for ( int dType = D_u; dType <= D_w; dType++ ) {
-                    int myDof = dofIdArray->findFirstIndexOf( (DofIDItem)dType );
+                    int myDof = masterDofIDs.findFirstIndexOf( (DofIDItem)dType );
                     if ( myDof == 0 ) {
                         vk.at( dType ) = 0.0;
                         eq.at( dType ) = 0;
                         continue;
                     }
-                    vk.at( dType ) = contr[dType - 1] * ( tempCoord.at( myDof ) - centroid.at( dType ) );
-                    eq.at( dType ) = locationArray.at( myDof );
+                    vk.at( dType ) = coordFilter[dType - 1] * (coordArray.at( myDof ) - centroid.at( dType ) );
+                    eq.at( dType ) = nodalArray.at( myDof );
                 }
 
                 // set mixed contribution due to rotation about centroid
                 if ( eq.at( 1 ) ) {
-                    unitDisp->at( eq.at( 1 ), 5 ) = vk.at( 3 );
-                    unitDisp->at( eq.at( 1 ), 6 ) = -vk.at( 2 );
+                    unitDisp.at( eq.at( 1 ), R_v ) = vk.at( 3 );
+                    unitDisp.at( eq.at( 1 ), R_w ) = -vk.at( 2 );
                 }
 
                 if ( eq.at( 2 ) ) {
-                    unitDisp->at( eq.at( 2 ), 4 ) = -vk.at( 3 );
-                    unitDisp->at( eq.at( 2 ), 6 ) = vk.at( 1 );
+                    unitDisp.at( eq.at( 2 ), R_u ) = -vk.at( 3 );
+                    unitDisp.at( eq.at( 2 ), R_w ) = vk.at( 1 );
                 }
 
                 if ( eq.at( 3 ) ) {
-                    unitDisp->at( eq.at( 3 ), 4 ) = vk.at( 2 );
-                    unitDisp->at( eq.at( 3 ), 5 ) = -vk.at( 1 );
+                    unitDisp.at( eq.at( 3 ), R_u ) = vk.at( 2 );
+                    unitDisp.at( eq.at( 3 ), R_v ) = -vk.at( 1 );
                 }
-
 
                 // search for our dofs in there
-                for ( int dType = R_u; dType <= R_w; dType++ ) {
-                    int myDof = dofIdArray->findFirstIndexOf( dType );
-                    if ( myDof == 0 ) continue;
+                //for ( int dType = R_u; dType <= R_w; dType++ ) {
+                //    int myDof = dofIdArray.findFirstIndexOf( dType );
+                //    if ( myDof == 0 ) continue;
 
-                    int eqN = 0;
-                    if ( myDof <= locationArray.giveSize() ) eqN = locationArray.at( myDof );
+                //    int eqN = 0;
+                //    if (myDof <= locationArray.giveSize()) { eqN = locationArray.at(myDof); }
 
-                    // save unit displacement and coordinate
-                    if ( eqN ) {
-                        unitDisp->at( eqN, dType ) = 1.0;
-                        tempMat2.at( eqN, dType )  = tempCoord.at( myDof );
-                    }
-                }
+                //    // save unit displacement and coordinate
+                //    if ( eqN ) {
+                //        unitDisp.at( eqN, dType ) = 1.0;
+                //        tempMat2.at( eqN, dType )  = tempCoord.at( myDof );
+                //    }
+                //}
             }
         } // end of search among internal dof managers
+
+        // use the lcs transform to work out which ghost dofs are affected by global displacement
+        FloatMatrix GtoL;
+        element->computeGtoLRotationMatrix(GtoL);
+        FloatMatrix lcs;
+        element->giveLocalCoordinateSystem(lcs);
+
+        static const DofIDItem dofids[] = {
+            D_u, D_v, D_w, R_u, R_v, R_w
+        };
+
+        const int nBaseDofs = element->giveNumberOfDofManagers() * 6;
+        for (int idof = 0; idof < 6; ++idof) {
+            const auto dType = dofids[idof];
+
+            FloatArray localVector(nBaseDofs);
+            FloatArray globalVector;
+            FloatArray dirVector;
+            dirVector.beColumnOf(lcs, idof % 3 + 1);
+            // get unit vectors in local dofs
+            for (int inode = 0; inode < element->giveNumberOfDofManagers(); ++inode) {
+                localVector.addSubVector(dirVector, (idof / 3) * 3 + inode * 6 + 1);
+            }
+            // work it back to global dofs
+            globalVector.beTProductOf(GtoL, localVector);
+
+            // apply the components to the condensed dofs on the global matrix
+            // TODO fix the other dofs + mixed contributions
+            if (dType >= R_u) {
+                for (int i = 1; i <= locationArray.giveSize(); ++i) {
+                    const auto eqN = locationArray.at(i);
+                    const auto val = globalVector(i + nBaseDofs - 1);
+                    const auto coord = coordArray.at(i);
+                    unitDisp.at(eqN, dType) = val;
+                    tempMat2.at(eqN, dType) = coord;
+                }
+            }
+        }
     }
     // end of creation of translational unit displacement vectors
 
     for ( int i = 4; i <= 6; i++ ) {
-        tempCol->beColumnOf( *unitDisp, i );
-        massMatrix->times( *tempCol, *tempCol2 ); // now tempCol2 has only the masses pertaining the i-th direction
-        tempMat.setColumn( *tempCol2, i );
-        totMass.at( i ) = tempCol->dotProduct( *tempCol2 ); // total mass for direction i-th direction
-        tempCol->beColumnOf( tempMat2, i ); // fetch coordinates in i-th direction
+        tempCol.beColumnOf( unitDisp, i );
+        massMatrix->times( tempCol, tempCol2 ); // now tempCol2 has only the masses pertaining the i-th direction
+        tempMat.setColumn( tempCol2, i );
+        totMass.at( i ) = tempCol.dotProduct( tempCol2 ); // total mass for direction i-th direction
+        tempCol.beColumnOf( tempMat2, i ); // fetch coordinates in i-th direction
     }
 
     //
@@ -702,10 +746,10 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
 
         for ( int nDir = 1; nDir <= 3; nDir++ ) {
             if ( dir.at( nDir ) != 0 ) {
-                tempCol->beColumnOf( eigVec, dN );
-                massMatrix->times( *tempCol, *tempCol2 );
-                *tempCol2 *= ( sAcc * partFact.at( dN, nDir ) * dir.at( nDir ) ); // scaled forces
-                loadVector.add( *tempCol2 );
+                tempCol.beColumnOf( eigVec, dN );
+                massMatrix->times( tempCol, tempCol2 );
+                tempCol2 *= ( sAcc * partFact.at( dN, nDir ) * dir.at( nDir ) ); // scaled forces
+                loadVector.add( tempCol2 );
             }
         }
 
@@ -799,12 +843,6 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
     //
     stiffnessMatrix.reset( NULL );
     massMatrix.reset( NULL );
-
-    // dispose the rest of the stuff
-    delete unitDisp;
-    delete tempCol;
-    delete tempCol2;
-    delete dofIdArray;
 }
 
 void ResponseSpectrum::SRSS()
