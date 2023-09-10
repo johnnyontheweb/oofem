@@ -1487,7 +1487,7 @@ void EngngModel :: assembleVectorFromElements(FloatArray &answer, TimeStep *tSte
                 if ( charVec.isNotEmpty() ) {
                     //element->giveInterpolation()->boundaryEdgeGiveNodes(bNodes, boundary);
                     bNodes = element->giveBoundaryEdgeNodes(boundary);
-                    if ( element->computeDofTransformationMatrix(R, bNodes, false) ) {
+                    if ( element->computeDofTransformationMatrix(R, bNodes, true) ) {
                         charVec.rotatedWith(R, 't');
                     }
                     assembleFlag = true;
@@ -1499,7 +1499,7 @@ void EngngModel :: assembleVectorFromElements(FloatArray &answer, TimeStep *tSte
                 if ( charVec.isNotEmpty() ) {
                     //element->giveInterpolation()->boundaryGiveNodes(bNodes, boundary);
                     bNodes = element->giveBoundarySurfaceNodes(boundary);
-                    if ( element->computeDofTransformationMatrix(R, bNodes, false) ) {
+                    if ( element->computeDofTransformationMatrix(R, bNodes, true) ) {
                         charVec.rotatedWith(R, 't');
                     }
                     assembleFlag = true;
