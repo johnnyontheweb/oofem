@@ -423,7 +423,6 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
 
         // the following may be simplified.
         // retrieve internal dof managers and location array
-        int dofCounter = 1;
         for ( int i = 1; i <= element->giveNumberOfInternalDofManagers(); ++i ) {
             DofManager *intDofMan = element->giveInternalDofManager( i );
             if ( !intDofMan ) continue; // you may never know...
@@ -433,7 +432,6 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
             eqArray.followedBy( nodalEqArray );
             intDofMan->giveMasterDofIDArray( ids, masterDofIDs );
 
-            IntArray tempDofManArray(masterDofIDs.giveSize());
             int tempN = intDofMan->giveNumber();
             const auto& coords = element->giveDofManager(tempN)->giveCoordinates();
             for (auto eqN : nodalEqArray) {
@@ -492,7 +490,6 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
     for ( std::unique_ptr<DofManager> &node : domain->giveDofManagers() ) {
         if ( !node->giveNumberOfDofs() ) continue;
 
-        const FloatArray& nodeCoords = node->giveCoordinates();
         FloatArray vk( 3 );
         IntArray eq( 3 );
 
@@ -587,9 +584,9 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
                 // now we're only interested about the effect of rotation on translational dofs
                 if (myDof > D_w) { continue; }
                 const int eqN = nodalEqArray.at(iDof);
-                FloatArray dofVector(3);
-                lcs.copySubVectorRow(dofVector, myDof, 1);
-                componentMatrix.setColumn(dofVector, 3);
+                for (int j = 1; j <= 3; ++j) {
+                    componentMatrix.at( j, 3 ) = lcs.at( myDof, j );
+                }
                 // project the displacement component due to rotation onto the local direction of the dof
                 for (int rotDof = R_u; rotDof <= R_w; ++rotDof) {
                     FloatArray rotationVector(3);
@@ -604,6 +601,9 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
         const int nBaseDofs = element->giveNumberOfDofManagers() * 6;
         for (int iDof = 0; iDof < 6; ++iDof) {
             const auto dType = dofids[iDof];
+            if ( dType < R_u || dType > R_w ) {
+                continue;
+            }
 
             FloatArray localVector(nBaseDofs);
             FloatArray globalVector;
@@ -617,12 +617,10 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
             globalVector.beTProductOf(GtoL, localVector);
 
             // apply the components to the condensed dofs on the global matrix
-            if ( dType >= R_u && dType <= R_w ) {
-                for (int i = 1; i <= eqArray.giveSize(); ++i) {
-                    const auto eqN = eqArray.at(i);
-                    const auto val = globalVector(i + nBaseDofs - 1);
-                    unitDisp.at(eqN, dType) = val;
-                }
+            for (int i = 1; i <= eqArray.giveSize(); ++i) {
+                const auto eqN = eqArray.at(i);
+                const auto val = globalVector(i + nBaseDofs - 1);
+                unitDisp.at(eqN, dType) = val;
             }
         }
     }
