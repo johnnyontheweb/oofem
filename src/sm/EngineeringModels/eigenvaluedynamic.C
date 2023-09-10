@@ -211,9 +211,9 @@ void EigenValueDynamic :: solveYourself()
     this->field->updateAll(eigVec, EModelDefaultEquationNumbering());
 
     // custom code for output
-    FloatMatrix *unitDisp = new FloatMatrix();
-    FloatArray *tempCol   = new FloatArray();
-    FloatArray *tempCol2  = new FloatArray();
+    FloatMatrix unitDisp;
+    FloatArray tempCol;
+    FloatArray tempCol2;
 
     Domain *domain = this->giveDomain( 1 );
     IntArray dofIDArry, loc;
@@ -225,317 +225,307 @@ void EigenValueDynamic :: solveYourself()
     centroid.resize( 3 );
     partFact.resize( numberOfRequiredEigenValues, 6 );
     massPart.resize( numberOfRequiredEigenValues, 6 );
-    unitDisp->resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ), 6 );
-    tempCol->resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ) );
-    tempCol2->resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ) );
+    // matrix of unit displacements for the 6 dofs
+    unitDisp.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 6);
+    // auxillary vectors for mass normalization
+    tempCol.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
+    tempCol2.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()));
 
     // mass normalization
-    for ( int i = 1; i <= numberOfRequiredEigenValues; i++ ) {
-        tempCol->beColumnOf( eigVec, i );
-        massMatrix->times( *tempCol, *tempCol2 );
-        double m = tempCol->dotProduct( *tempCol2 );
-        if ( m != 0.0 ) m = 1 / sqrt( m );
-        tempCol->times( m );
-        eigVec.setColumn( *tempCol, i );
+    for (int i = 1; i <= numberOfRequiredEigenValues; ++i) {
+        tempCol.beColumnOf(eigVec, i);
+        massMatrix->times(tempCol, tempCol2);
+        double m = tempCol.dotProduct(tempCol2);
+        if (m != 0.0) m = 1 / sqrt(m);
+        tempCol.times(m);
+        eigVec.setColumn(tempCol, i);
     }
     // eigVec has been normalized
 
-    IntArray masterDofIDs, nodalArray, ids;
-    IntArray locationArray;
-    IntArray *dofIdArray = new IntArray();
-    dofIdArray->clear();
+    IntArray masterDofIDs, nodalEqArray, ids;
+    IntArray eqArray;
+    IntArray dofManArray;
 
     FloatMatrix tempMat, tempMat2;
-    FloatArray tempCoord, coordArray;
-    tempMat.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ), 6 );
-    tempMat2.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ), 6 );
+    tempMat.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 6);
+    tempMat2.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), 6);
 
+    static const DofIDItem dofids[] = {
+        D_u, D_v, D_w, R_u, R_v, R_w
+    };
+
+    bool warn = false;
     //
     // create unit displacement vectors
     //
-    // first from nodes themselves
-    for ( std::unique_ptr<DofManager> &node : domain->giveDofManagers() ) {
-        //node->giveLocationArray(dofIDArry, loc, EModelDefaultEquationNumbering());
-        if ( !node->giveNumberOfDofs() ) continue;
+    // first from nodes themselves, and get the coordinates to compute the center of mass
+    for (std::unique_ptr<DofManager>& node : domain->giveDofManagers()) {
+        // no support yet for LCS
+        if (strcmp(node->giveClassName(), "Node") == 0) {
+            Node* actualNode = static_cast<Node*>(node.get());
+            if (actualNode->hasLocalCS()) {
+                if (!warn) {
+                    OOFEM_WARNING("Nodes with LCS are unsupported, use at own risk.");
+                    warn = true;
+                }
+                continue;
+            }
+        }
+        if (!node->giveNumberOfDofs()) continue;
 
         IntArray mstrDofs, locArr;
-        node->givePrimaryDofs( mstrDofs );
-        node->giveLocationArray( mstrDofs, locArr, EModelDefaultEquationNumbering() );
+        node->givePrimaryDofs(mstrDofs);
+        node->giveLocationArray(mstrDofs, locArr, EModelDefaultEquationNumbering());
 
-        int partialDofCount = locArr.giveSize();
-        if ( partialDofCount ) {
-            // search for our dofs in there
-            for ( int myDofIndex = 1; myDofIndex <= partialDofCount; myDofIndex++ ) {
-                int dType = mstrDofs.at( myDofIndex );
-                int eqN   = locArr.at( myDofIndex );
+        // search for our dofs in there
+        for (int myDofIndex = 1; myDofIndex <= locArr.giveSize(); ++myDofIndex) {
+            int dType = mstrDofs.at(myDofIndex);
+            int eqN = locArr.at(myDofIndex);
 
-                if ( ( dType >= D_u ) && ( dType <= D_w ) && eqN ) {
-                    // save unit displacement and coordinate
-
-                    unitDisp->at( eqN, dType ) = 1.0;
-                    tempMat2.at( eqN, dType )  = node->giveCoordinate( dType );
-                }
+            if ((dType >= D_u) && (dType <= D_w) && eqN) {
+                // save unit displacement and coordinate
+                unitDisp.at(eqN, dType) = 1.0;
+                tempMat2.at(eqN, dType) = node->giveCoordinate(dType);
             }
         }
     } // end of search among nodes
 
+    warn = false;
     // then from internaldof managers
-    for ( int ielem = 1; ielem <= nelem; ielem++ ) {
-        Element *element = domain->giveElement( ielem );
+    for (int ielem = 1; ielem <= nelem; ++ielem) {
+        Element* element = domain->giveElement(ielem);
+        if (element->giveNumberOfInternalDofManagers() == 0) {
+            continue;
+        }
+
+        // we only support end releases on 3d beams for the moment. other internal dof managers should be skipped.
+        if (strcmp(element->giveClassName(), "Beam3d") != 0) {
+            if (!warn) {
+                OOFEM_WARNING("Only internal dof managers of Beam3d elements are supported. Skipping.");
+                warn = true;
+            }
+            continue;
+        }
+
+        // use the lcs transform to work out which ghost dofs are affected by global displacement
+        FloatMatrix GtoL;
+        element->computeGtoLRotationMatrix(GtoL);
+        FloatMatrix lcs;
+        element->giveLocalCoordinateSystem(lcs);
+
+        eqArray.clear();
 
         // the following may be simplified.
         // retrieve internal dof managers and location array
-        for ( int i = 1; i <= element->giveNumberOfInternalDofManagers(); i++ ) {
-            DofManager *intDofMan = element->giveInternalDofManager( i );
+        for (int i = 1; i <= element->giveNumberOfInternalDofManagers(); ++i) {
+            DofManager* intDofMan = element->giveInternalDofManager(i);
+            if (!intDofMan) continue; // you may never know...
 
-            if ( !intDofMan ) continue; // you may never know...
+            element->giveInternalDofManDofIDMask(i, ids);
+            intDofMan->giveLocationArray(ids, nodalEqArray, EModelDefaultEquationNumbering());
+            eqArray.followedBy(nodalEqArray);
+            intDofMan->giveMasterDofIDArray(ids, masterDofIDs);
 
-            locationArray.clear();
-            tempCoord.clear();
-
-            element->giveInternalDofManDofIDMask( i, ids );
-            intDofMan->giveLocationArray( ids, nodalArray, EModelDefaultEquationNumbering() );
-            locationArray.followedBy( nodalArray );
-
-            intDofMan->giveMasterDofIDArray( ids, masterDofIDs );
-            dofIdArray->followedBy( masterDofIDs );
-
-            coordArray.resize( masterDofIDs.giveSize() );
-            int c = 1;
-            for ( int dof : masterDofIDs ) {
-                if ( intDofMan->giveCoordinates().giveSize() ) {
-                    coordArray.at( c ) = intDofMan->giveCoordinate( dof );
-                } else {
-                    // get the number. ghostNode FEMComponent number is changed on purpose.
-                    int tempN = intDofMan->giveNumber();
-                    //element->giveDofManager(tempN)->requiresTransformation()
-                    coordArray.at( c ) = element->giveDofManager( tempN )->giveCoordinate( dof );
+            int tempN = intDofMan->giveNumber();
+            const auto& coords = element->giveDofManager(tempN)->giveCoordinates();
+            for (auto eqN : nodalEqArray) {
+                if (eqN == 0) {
+                    continue;
                 }
-                c++; // Increment the counter in any case. The position index must match the index in masterDofIDs. We'll sort the dofs needed hereafter
-            }
-            tempCoord.append( coordArray );
-
-            int partialDofCount = locationArray.giveSize();
-            if ( partialDofCount ) {
-                // search for our dofs in there
-                for ( int myDofIndex = 1; myDofIndex <= partialDofCount; myDofIndex++ ) {
-                    int dType = dofIdArray->at( myDofIndex );
-                    int eqN   = locationArray.at( myDofIndex );
-
-                    if ( ( dType >= D_u ) && ( dType <= D_w ) && eqN ) {
-                        // save unit displacement and coordinate
-
-                        unitDisp->at( eqN, dType ) = 1.0;
-                        tempMat2.at( eqN, dType )  = tempCoord.at( myDofIndex );
-                    }
-                }
+                tempMat2.addSubVectorRow(coords, eqN, 1);
             }
         }
+
+        const int nBaseDofs = element->giveNumberOfDofManagers() * 6;
+        for (int iDof = 0; iDof < 3; ++iDof) {
+            const auto dType = dofids[iDof];
+            FloatArray localVector(nBaseDofs);
+            FloatArray globalVector;
+            FloatArray dirVector;
+            dirVector.beColumnOf(lcs, iDof % 3 + 1);
+            // get unit vectors in local dofs
+            for (int inode = 0; inode < element->giveNumberOfDofManagers(); ++inode) {
+                localVector.addSubVector(dirVector, (iDof / 3) * 3 + inode * 6 + 1);
+            }
+            // work it back to global dofs
+            globalVector.beTProductOf(GtoL, localVector);
+
+            // apply the components to the condensed dofs on the global matrix
+            for (int i = 1; i <= eqArray.giveSize(); ++i) {
+                const auto eqN = eqArray.at(i);
+                const auto val = globalVector(i + nBaseDofs - 1);
+                unitDisp.at(eqN, dType) = val;
+            }
+        }
+
+
     } // end of search among internal dof managers
     // end of creation of translational unit displacement vectors
 
     // if no mass defined in a direction, then centroid in that direction is undefined
-    int contr[3];
+    int coordFilter[3];
 
-    for ( int i = 1; i <= 3; i++ ) {
-        tempCol->beColumnOf( *unitDisp, i );
-        massMatrix->times( *tempCol, *tempCol2 ); // now tempCol2 has only the masses pertaining the i-th direction
-        tempMat.setColumn( *tempCol2, i );
-        totMass.at( i ) = tempCol->dotProduct( *tempCol2 ); // total mass for direction i-th direction
-        tempCol->beColumnOf( tempMat2, i ); // fetch coordinates in i-th direction
-        if ( totMass.at( i ) != 0.0 ) {
-            centroid.at( i ) = tempCol->dotProduct( *tempCol2 ) / totMass.at( i ); // dot multiply to get first moment, then divide by total mass in i-th direction to get i-th coordinate of the centroid
-            contr[i - 1]     = 1;
-        } else { contr[i - 1] = 0; }
+    for (int i = 1; i <= 3; ++i) {
+        tempCol.beColumnOf(unitDisp, i);
+        massMatrix->times(tempCol, tempCol2); // now tempCol2 has only the masses pertaining the i-th direction
+        tempMat.setColumn(tempCol2, i);
+        totMass.at(i) = tempCol.dotProduct(tempCol2); // total mass for direction i-th direction
+        tempCol.beColumnOf(tempMat2, i); // fetch coordinates in i-th direction
+        if (totMass.at(i) != 0.0) {
+            centroid.at(i) = tempCol.dotProduct(tempCol2) / totMass.at(i); // dot multiply to get first moment, then divide by total mass in i-th direction to get i-th coordinate of the centroid
+            coordFilter[i - 1] = 1;
+        }
+        else {
+            coordFilter[i - 1] = 0;
+            OOFEM_WARNING("No mass in direction %d, results may be affected", i);
+        }
     }
 
     // we have the centroid. we can now calculate rotational components. first from nodes.
-    for ( std::unique_ptr<DofManager> &node : domain->giveDofManagers() ) {
-        //node->giveLocationArray(dofIDArry, loc, EModelDefaultEquationNumbering());
-        if ( !node->giveNumberOfDofs() ) continue;
+    for (std::unique_ptr<DofManager>& node : domain->giveDofManagers()) {
+        if (!node->giveNumberOfDofs()) continue;
 
-        const FloatArray &nodeCoords = node->giveCoordinates();
-        FloatArray vk( 3 );
-        IntArray eq( 3 );
+        FloatArray vk(3);
+        IntArray eq(3);
 
         // TODO consider own UCS if present
-        //for (int dType = D_u; dType <= D_w; dType++)
-        //{
-        //	auto myDof = node->findDofWithDofId((DofIDItem)dType);
-        //	if (myDof == node->end()){
-        //		vk.at(dType) = 0.0;
-        //		eq.at(dType) = 0;
-        //		continue;
-        //	}
-        //	vk.at(dType) = node->giveCoordinate(dType) - centroid.at(dType);
-        //	eq.at(dType) = EModelDefaultEquationNumbering().giveDofEquationNumber(*myDof);
-        //}
 
         IntArray mstrDofs, locArr;
-        node->givePrimaryDofs( mstrDofs );
-        node->giveLocationArray( mstrDofs, locArr, EModelDefaultEquationNumbering() );
+        node->givePrimaryDofs(mstrDofs);
+        node->giveLocationArray(mstrDofs, locArr, EModelDefaultEquationNumbering());
 
         int partialDofCount = locArr.giveSize();
-        if ( partialDofCount ) {
+        if (partialDofCount) {
             // search for our dofs in there
-            for ( int myDofIndex = 1; myDofIndex <= partialDofCount; myDofIndex++ ) {
-                int dType = mstrDofs.at( myDofIndex );
-                int eqN   = locArr.at( myDofIndex );
+            for (int myDofIndex = 1; myDofIndex <= partialDofCount; myDofIndex++) {
+                int dType = mstrDofs.at(myDofIndex);
+                int eqN = locArr.at(myDofIndex);
 
-                if ( ( dType >= D_u ) && ( dType <= D_w ) && eqN ) {
+                if ((dType >= D_u) && (dType <= D_w) && eqN) {
                     // save unit displacement and coordinate
-
-                    vk.at( dType ) = contr[dType - 1] * ( node->giveCoordinate( dType ) - centroid.at( dType ) );
-                    eq.at( dType ) = eqN;
+                    vk.at(dType) = coordFilter[dType - 1] * (node->giveCoordinate(dType) - centroid.at(dType));
+                    eq.at(dType) = eqN;
                 }
             }
         }
 
         // set mixed contribution due to rotation about centroid
-        if ( eq.at( 1 ) ) {
-            unitDisp->at( eq.at( 1 ), 5 ) = vk.at( 3 );
-            unitDisp->at( eq.at( 1 ), 6 ) = -vk.at( 2 );
+        if (eq.at(1)) {
+            unitDisp.at(eq.at(1), R_v) = vk.at(3);
+            unitDisp.at(eq.at(1), R_w) = -vk.at(2);
         }
 
-        if ( eq.at( 2 ) ) {
-            unitDisp->at( eq.at( 2 ), 4 ) = -vk.at( 3 );
-            unitDisp->at( eq.at( 2 ), 6 ) = vk.at( 1 );
+        if (eq.at(2)) {
+            unitDisp.at(eq.at(2), R_u) = -vk.at(3);
+            unitDisp.at(eq.at(2), R_w) = vk.at(1);
         }
 
-        if ( eq.at( 3 ) ) {
-            unitDisp->at( eq.at( 3 ), 4 ) = vk.at( 2 );
-            unitDisp->at( eq.at( 3 ), 5 ) = -vk.at( 1 );
+        if (eq.at(3)) {
+            unitDisp.at(eq.at(3), R_u) = vk.at(2);
+            unitDisp.at(eq.at(3), R_v) = -vk.at(1);
         }
 
-        // set pure rotational contribution
-        //for (int dType = R_u; dType <= R_w; dType++)
-        //{
-        //	auto myDof = node->findDofWithDofId((DofIDItem)dType);
-        //	if (myDof == node->end()) {
-        //		//OOFEM_ERROR("incompatible dof (%d) requested", dType);
-        //		continue;
-        //	}
-
-        //	int eqN = EModelDefaultEquationNumbering().giveDofEquationNumber(*myDof);
-
-        //	// save unit displacement and coordinate
-        //	// TODO consider own UCS if present
-        //	if (eqN)
-        //	{
-        //		unitDisp->at(eqN, dType) = 1.0;
-        //		tempMat2.at(eqN, dType) = node->giveCoordinate(dType);
-        //	}
-
-        //}
-
-        if ( partialDofCount ) {
+        if (partialDofCount) {
             // search for our dofs in there
-            for ( int myDofIndex = 1; myDofIndex <= partialDofCount; myDofIndex++ ) {
-                int dType = mstrDofs.at( myDofIndex );
-                int eqN   = locArr.at( myDofIndex );
+            for (int myDofIndex = 1; myDofIndex <= partialDofCount; myDofIndex++) {
+                int dType = mstrDofs.at(myDofIndex);
+                int eqN = locArr.at(myDofIndex);
 
-                if ( ( dType >= R_u ) && ( dType <= R_w ) && eqN ) {
+                if ((dType >= R_u) && (dType <= R_w) && eqN) {
                     // save unit displacement and coordinate
-
-                    unitDisp->at( eqN, dType ) = 1.0;
-                    tempMat2.at( eqN, dType )  = node->giveCoordinate( dType );
+                    unitDisp.at(eqN, dType) = 1.0;
                 }
             }
         }
     } // end of search among nodes
 
     // then from internaldof managers
-    for ( int ielem = 1; ielem <= nelem; ielem++ ) {
-        Element *element = domain->giveElement( ielem );
+    for (int ielem = 1; ielem <= nelem; ++ielem) {
+        Element* element = domain->giveElement(ielem);
+        if (!element->giveNumberOfInternalDofManagers()) {
+            continue;
+        }
 
-        // the following may be simplified
+        // we only support end releases on 3d beams for the moment. other internal dof managers should be skipped.
+        if (strcmp(element->giveClassName(), "Beam3d") != 0) {
+            continue;
+        }
+
+        eqArray.clear();
+
+        // use the lcs transform to work out which ghost dofs are affected by global displacement
+        FloatMatrix GtoL;
+        element->computeGtoLRotationMatrix(GtoL);
+        FloatMatrix lcs;
+        element->giveLocalCoordinateSystem(lcs);
+
+        FloatMatrix componentMatrix(3, 3);
         //	retrieve internal dof managers and location array
-        for ( int i = 1; i <= element->giveNumberOfInternalDofManagers(); i++ ) {
-            DofManager *intDofMan = element->giveInternalDofManager( i );
+        for (int i = 1; i <= element->giveNumberOfInternalDofManagers(); ++i) {
+            DofManager* intDofMan = element->giveInternalDofManager(i);
+            if (!intDofMan) continue; // you may never know...
 
-            if ( !intDofMan ) continue; // you may never know...
+            element->giveInternalDofManDofIDMask(i, ids);
+            intDofMan->giveLocationArray(ids, nodalEqArray, EModelDefaultEquationNumbering());
+            eqArray.followedBy(nodalEqArray);
+            intDofMan->giveMasterDofIDArray(ids, masterDofIDs);
 
-            locationArray.clear();
-            tempCoord.clear();
+            int tempN = intDofMan->giveNumber();
+            const auto& coords = element->giveDofManager(tempN)->giveCoordinates();
+            componentMatrix.setColumn(coords - centroid, 2);
 
-            element->giveInternalDofManDofIDMask( i, ids );
-            intDofMan->giveLocationArray( ids, nodalArray, EModelDefaultEquationNumbering() );
-            locationArray.followedBy( nodalArray );
-
-            intDofMan->giveMasterDofIDArray( ids, masterDofIDs );
-            dofIdArray->followedBy( masterDofIDs );
-
-            coordArray.resize( masterDofIDs.giveSize() );
-            int c = 1;
-            for ( int dof : masterDofIDs ) {
-                if ( intDofMan->giveCoordinates().giveSize() ) {
-                    coordArray.at( c ) = intDofMan->giveCoordinate( dof );
-                } else {
-                    // get the number. ghostNode FEMComponent number is changed on purpose.
-                    int tempN = intDofMan->giveNumber();
-                    //element->giveDofManager(tempN)->requiresTransformation()
-                    coordArray.at( c ) = element->giveDofManager( tempN )->giveCoordinate( dof );
+            for (int iDof = 1; iDof <= masterDofIDs.giveSize(); ++iDof) {
+                const int myDof = masterDofIDs.at(iDof);
+                // now we're only interested about the effect of rotation on translational dofs
+                if (myDof > D_w) { continue; }
+                const int eqN = nodalEqArray.at(iDof);
+                for (int j = 1; j <= 3; ++j) {
+                    componentMatrix.at(j, 3) = lcs.at(myDof, j);
                 }
-                c++; // Increment the counter in any case. The position index must match the index in masterDofIDs. We'll sort the dofs needed hereafter
-            }
-            tempCoord.append( coordArray );
-
-            // TODO should element CS be considered even with internal dof managers
-            if ( locationArray.giveSize() ) {
-                FloatArray vk( 3 );
-                IntArray eq( 3 );
-                for ( int dType = D_u; dType <= D_w; dType++ ) {
-                    int myDof = dofIdArray->findFirstIndexOf( (DofIDItem)dType );
-                    if ( myDof == 0 ) {
-                        vk.at( dType ) = 0.0;
-                        eq.at( dType ) = 0;
-                        continue;
-                    }
-                    vk.at( dType ) = contr[dType - 1] * ( tempCoord.at( myDof ) - centroid.at( dType ) );
-                    eq.at( dType ) = locationArray.at( myDof );
-                }
-
-                // set mixed contribution due to rotation about centroid
-                if ( eq.at( 1 ) ) {
-                    unitDisp->at( eq.at( 1 ), 5 ) = vk.at( 3 );
-                    unitDisp->at( eq.at( 1 ), 6 ) = -vk.at( 2 );
-                }
-
-                if ( eq.at( 2 ) ) {
-                    unitDisp->at( eq.at( 2 ), 4 ) = -vk.at( 3 );
-                    unitDisp->at( eq.at( 2 ), 6 ) = vk.at( 1 );
-                }
-
-                if ( eq.at( 3 ) ) {
-                    unitDisp->at( eq.at( 3 ), 4 ) = vk.at( 2 );
-                    unitDisp->at( eq.at( 3 ), 5 ) = -vk.at( 1 );
-                }
-
-
-                // search for our dofs in there
-                for ( int dType = R_u; dType <= R_w; dType++ ) {
-                    int myDof = dofIdArray->findFirstIndexOf( dType );
-                    if ( myDof == 0 ) continue;
-
-                    int eqN = locationArray.at( myDof );
-
-                    // save unit displacement and coordinate
-                    if ( eqN ) {
-                        unitDisp->at( eqN, dType ) = 1.0;
-                        tempMat2.at( eqN, dType )  = tempCoord.at( myDof );
-                    }
+                // project the displacement component due to rotation onto the local direction of the dof
+                for (int rotDof = R_u; rotDof <= R_w; ++rotDof) {
+                    FloatArray rotationVector(3);
+                    rotationVector.at(rotDof - 3) = 1.0;
+                    componentMatrix.setColumn(rotationVector, 1);
+                    const double displacement = componentMatrix.giveDeterminant(); // triple product: rotation ^ (node-centroid) . dofVector
+                    unitDisp.at(eqN, rotDof) = displacement;
                 }
             }
         } // end of search among internal dof managers
+
+        const int nBaseDofs = element->giveNumberOfDofManagers() * 6;
+        for (int iDof = 0; iDof < 6; ++iDof) {
+            const auto dType = dofids[iDof];
+            if (dType < R_u || dType > R_w) {
+                continue;
+            }
+
+            FloatArray localVector(nBaseDofs);
+            FloatArray globalVector;
+            FloatArray dirVector;
+            dirVector.beColumnOf(lcs, iDof % 3 + 1);
+            // get unit vectors in local dofs
+            for (int inode = 0; inode < element->giveNumberOfDofManagers(); ++inode) {
+                localVector.addSubVector(dirVector, (iDof / 3) * 3 + inode * 6 + 1);
+            }
+            // work it back to global dofs
+            globalVector.beTProductOf(GtoL, localVector);
+
+            // apply the components to the condensed dofs on the global matrix
+            for (int i = 1; i <= eqArray.giveSize(); ++i) {
+                const auto eqN = eqArray.at(i);
+                const auto val = globalVector(i + nBaseDofs - 1);
+                unitDisp.at(eqN, dType) = val;
+            }
+        }
     }
     // end of creation of translational unit displacement vectors
 
-    for ( int i = 4; i <= 6; i++ ) {
-        tempCol->beColumnOf( *unitDisp, i );
-        massMatrix->times( *tempCol, *tempCol2 ); // now tempCol2 has only the masses pertaining the i-th direction
-        tempMat.setColumn( *tempCol2, i );
-        totMass.at( i ) = tempCol->dotProduct( *tempCol2 ); // total mass for direction i-th direction
-        tempCol->beColumnOf( tempMat2, i ); // fetch coordinates in i-th direction
+    for (int i = 4; i <= 6; ++i) {
+        tempCol.beColumnOf(unitDisp, i);
+        massMatrix->times(tempCol, tempCol2); // now tempCol2 has only the masses pertaining the i-th direction
+        tempMat.setColumn(tempCol2, i);
+        totMass.at(i) = tempCol.dotProduct(tempCol2); // total mass for direction i-th direction
     }
 
     //
@@ -561,12 +551,6 @@ void EigenValueDynamic :: solveYourself()
     //
     stiffnessMatrix.reset( NULL );
     massMatrix.reset( NULL );
-
-    // dispose the rest of the stuff
-    delete unitDisp;
-    delete tempCol;
-    delete tempCol2;
-    delete dofIdArray;
 
     this->terminate( tStep );
 
