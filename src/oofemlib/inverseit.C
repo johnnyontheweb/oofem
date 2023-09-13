@@ -65,6 +65,17 @@ InverseIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &eigv, FloatM
     auto solver = GiveClassFactory().createSparseLinSolver(ST_Direct, domain, engngModel);
 
     int nn = a.giveNumberOfColumns();
+
+    if (nroot <= 0) {
+        OOFEM_ERROR("Invalid number of eigenvalues, %d", nroot);
+    }
+
+    // limit to n eigenvalues
+    if (nroot > nn) {
+        nroot = nn;
+        OOFEM_WARNING("The number of requested eigenvalues exceeds the problem size. The number is reduced down to %d", nroot);
+    }
+
     int nc = min(2 * nroot, nroot + 8);
     nc = min(nc, nn);
 

@@ -74,8 +74,13 @@ SubspaceIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Floa
 
     GJacobi mtd(domain, engngModel);
     outStream = domain->giveEngngModel()->giveOutputStream();
-    int nc = min(2 * nroot, nroot + 8);
     int nn = a.giveNumberOfColumns();
+    // limit to n eigenvalues
+    if (nroot > nn) {
+        nroot = nn;
+        OOFEM_WARNING("The number of requested eigenvalues exceeds the problem size. The number is reduced down to %d", nroot);
+    }
+    int nc = min(2 * nroot, nroot + 8);
     if ( nc > nn ) {
         nc = nn;
     }
