@@ -391,8 +391,7 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
 
         const auto &coords = node->giveCoordinates();
         IntArray activeDofs( 3 );
-        if ( strcmp( node->giveClassName(), "Node" ) == 0 ) {
-            // Plain Nodes have master and simpleslave dofs
+        if ( strcmp( node->giveClassName(), "Node" ) == 0 || strcmp( node->giveClassName(), "RigidArmNode" ) == 0 ) {
             for ( int iDof = 0; iDof < 3; ++iDof ) {
                 DofIDItem dType = dofids[iDof];
                 auto pos        = node->findDofWithDofId( dType );
@@ -407,46 +406,14 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
                     //    unitDisp.at( eqN, dType ) = 1.0;
                     //}
                 } else {
-                    // find the master dofmanager, get the equations from it.
-                    SimpleSlaveDof *sdof = dynamic_cast<SimpleSlaveDof *>( *pos );
-                    if ( sdof ) {
-                        IntArray masterDofMans;
-                        sdof->giveMasterDofManArray( masterDofMans );
+                    // find the master dofmanager from the slave, get the equations from it.
+                    // Plain Nodes have master and simpleslave dofs, rigid arm nodes have master and slave dofs
+                    IntArray masterDofMans;
+                    ( *pos )->giveMasterDofManArray( masterDofMans );
 
-                        auto *masterMan = domain->giveDofManager( masterDofMans.at( 1 ) ); // there's only 1
-                        auto masterDof  = masterMan->findDofWithDofId( dType );
-                        eqN             = ( *masterDof )->giveEquationNumber( defNumbering );
-                    }
-                }
-
-                activeDofs.at( dType ) = eqN > 0;
-            }
-        } else if ( strcmp( node->giveClassName(), "RigidArmNode" ) == 0 ) {
-            // Rigid arms have master and slave dofs
-            for ( int iDof = 0; iDof < 3; ++iDof ) {
-                DofIDItem dType = dofids[iDof];
-                auto pos        = node->findDofWithDofId( dType );
-                if ( pos == node->end() ) {
-                    continue;
-                }
-
-                int eqN = 0;
-                if ( ( *pos )->isPrimaryDof() ) {
-                    eqN = ( *pos )->giveEquationNumber( defNumbering );
-                    //if ( eqN ) {
-                    //    unitDisp.at( eqN, dType ) = 1.0;
-                    //}
-                } else {
-                    // find the master dofmanager, get the equations from it.
-                    SlaveDof *sdof = dynamic_cast<SlaveDof *>( *pos );
-                    if ( sdof ) {
-                        IntArray masterDofMans;
-                        sdof->giveMasterDofManArray( masterDofMans );
-
-                        auto *masterMan = domain->giveDofManager( masterDofMans.at( 1 ) ); // they're all the same
-                        auto masterDof  = masterMan->findDofWithDofId( dType );
-                        eqN             = ( *masterDof )->giveEquationNumber( defNumbering );
-                    }
+                    auto *masterMan = domain->giveDofManager( masterDofMans.at( 1 ) ); // there's only 1
+                    auto masterDof  = masterMan->findDofWithDofId( dType );
+                    eqN             = ( *masterDof )->giveEquationNumber( defNumbering );
                 }
 
                 activeDofs.at( dType ) = eqN > 0;
@@ -527,15 +494,9 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
     // first from nodes themselves, and get the coordinates to compute the center of mass
     for ( std::unique_ptr<DofManager> &node : domain->giveDofManagers() ) {
         // no support yet for LCS
-        if ( strcmp( node->giveClassName(), "Node" ) == 0 ) {
-            Node *actualNode = static_cast<Node *>( node.get() );
-            if ( actualNode->hasLocalCS() ) {
-                if ( !warn ) {
-                    OOFEM_WARNING( "Nodes with LCS are unsupported, use at own risk." );
-                    warn = true;
-                }
-                continue;
-            }
+        Node* actualNode = dynamic_cast<Node*>(node.get());
+        if ( actualNode && actualNode->hasLocalCS() ) {
+            continue;
         }
         if ( !node->giveNumberOfDofs() ) continue;
 

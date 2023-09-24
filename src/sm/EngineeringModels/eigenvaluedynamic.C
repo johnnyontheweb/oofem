@@ -45,10 +45,14 @@
 #include "classfactory.h"
 #include "dofmanager.h"
 #include "dof.h"
+#include "simpleslavedof.h"
+#include "slavedof.h"
 #include "domain.h"
 #include "element.h"
 #include "node.h"
+#include "rigidarmnode.h"
 #include "unknownnumberingscheme.h"
+#include "sm/Elements/lumpedmasselement.h"
 #include <math.h>
 
 #ifdef __OOFEG
@@ -254,22 +258,143 @@ void EigenValueDynamic :: solveYourself()
         D_u, D_v, D_w, R_u, R_v, R_w
     };
 
+    const EModelDefaultEquationNumbering defNumbering;
+    const int nDofMans = domain->giveNumberOfDofManagers();
     bool warn = false;
+    FloatMatrix nodeCoords(3, nDofMans);
+    std::vector<IntArray> nodeActive(nDofMans);
+
+    FloatArray geomCenter(3);
+    IntArray geomWeight(3);
+    IntArray coordFilter(3); // if no mass or free dof is defined in a direction, then centroid in that direction is undefined
+    // cache dofs and node coordinates, unit displacements for translational dofs
+    for (std::unique_ptr<DofManager>& node : domain->giveDofManagers()) {
+        // no support yet for LCS
+        Node* actualNode = dynamic_cast<Node*>(node.get());
+        if (actualNode && actualNode->hasLocalCS()) {
+            if (!warn) {
+                OOFEM_WARNING("Nodes with LCS are unsupported, use at own risk.");
+                warn = true;
+            }
+            continue;
+        }
+        if (!node->giveNumberOfDofs()) {
+            continue;
+        }
+
+        const int num = node->giveNumber();
+
+        const auto& coords = node->giveCoordinates();
+        IntArray activeDofs(3);
+        if (strcmp(node->giveClassName(), "Node") == 0 || strcmp(node->giveClassName(), "RigidArmNode") == 0) {
+            for (int iDof = 0; iDof < 3; ++iDof) {
+                DofIDItem dType = dofids[iDof];
+                auto pos = node->findDofWithDofId(dType);
+                if (pos == node->end()) {
+                    continue;
+                }
+
+                int eqN = 0;
+                if ((*pos)->isPrimaryDof()) {
+                    eqN = (*pos)->giveEquationNumber(defNumbering);
+                    //if ( eqN ) {
+                    //    unitDisp.at( eqN, dType ) = 1.0;
+                    //}
+                }
+                else {
+                    // find the master dofmanager from the slave, get the equations from it.
+                    // Plain Nodes have master and simpleslave dofs, rigid arm nodes have master and slave dofs
+                    IntArray masterDofMans;
+                    (*pos)->giveMasterDofManArray(masterDofMans);
+
+                    auto* masterMan = domain->giveDofManager(masterDofMans.at(1)); // there's only 1
+                    auto masterDof = masterMan->findDofWithDofId(dType);
+                    eqN = (*masterDof)->giveEquationNumber(defNumbering);
+                }
+
+                activeDofs.at(dType) = eqN > 0;
+            }
+        }
+        nodeActive[num - 1] = activeDofs;
+
+        // save coordinate and increment the weight
+        nodeCoords.setColumn(coords, num);
+        for (int iDof = 1; iDof <= 3; ++iDof) {
+            if (activeDofs.at(iDof)) {
+                geomCenter.at(iDof) += coords.at(iDof);
+                geomWeight.at(iDof) += activeDofs.at(iDof);
+            }
+        }
+    }
+
+    warn = false;
+    LumpedMassVectorAssembler lma;
+    FloatMatrix R;
+    FloatArray massPos(3); // stores the product between mass and position
+    // then from internaldof managers
+    for (int ielem = 1; ielem <= nelem; ++ielem) {
+        Element* element = domain->giveElement(ielem);
+
+        // we only support masses from lumpedmasselements.
+        if (strcmp(element->giveClassName(), "LumpedMassElement") != 0) {
+            if (!warn) {
+                OOFEM_WARNING("Only masses from LumpedMassElements are suppported.");
+                warn = true;
+            }
+            continue;
+        }
+
+        LumpedMassElement* massElement = dynamic_cast<LumpedMassElement*>(element);
+        FloatArray m;
+        const int dofMan = massElement->giveDofManArray().at(1);
+        const IntArray loc;
+        lma.vectorFromElement(m, *massElement, tStep, VM_Unknown);
+
+        IntArray dofMask;
+        massElement->giveElementDofIDMask(dofMask);
+
+        for (auto iDof : dofMask) {
+            if (iDof >= D_u && iDof <= D_w) {
+                const int idx = dofMask.findFirstIndexOf(iDof);
+                if (idx && nodeActive[dofMan - 1].at(iDof)) {
+                    massPos.at(iDof) += nodeCoords.at(iDof, dofMan) * m.at(idx);
+                    totMass.at(iDof) += m.at(idx);
+                }
+            }
+        }
+    }
+
+    // center of geometry
+    for (int i = 1; i <= 3; ++i) {
+        if (geomWeight.at(i)) {
+            geomCenter.at(i) /= geomWeight.at(i);
+            coordFilter.at(i) |= 1;
+        }
+        else {
+            OOFEM_WARNING("No free dof in direction %d, results may be affected", i);
+        }
+    }
+    // center of mass
+    for (int i = 1; i <= 3; ++i) {
+        if (totMass.at(i) > 0) {
+            centroid.at(i) = massPos.at(i) / totMass.at(i);
+            coordFilter.at(i) |= 1;
+        }
+        else {
+            OOFEM_WARNING("No mass in direction %d, results may be affected", i);
+            centroid.at(i) = geomCenter.at(i);
+        }
+    }
+
     //
     // create unit displacement vectors
     //
     // first from nodes themselves, and get the coordinates to compute the center of mass
     for (std::unique_ptr<DofManager>& node : domain->giveDofManagers()) {
         // no support yet for LCS
-        if (strcmp(node->giveClassName(), "Node") == 0) {
-            Node* actualNode = static_cast<Node*>(node.get());
-            if (actualNode->hasLocalCS()) {
-                if (!warn) {
-                    OOFEM_WARNING("Nodes with LCS are unsupported, use at own risk.");
-                    warn = true;
-                }
-                continue;
-            }
+        Node* actualNode = dynamic_cast<Node*>(node.get());
+        if (actualNode && actualNode->hasLocalCS()) {
+            continue;
         }
         if (!node->giveNumberOfDofs()) continue;
 
@@ -285,7 +410,7 @@ void EigenValueDynamic :: solveYourself()
             if ((dType >= D_u) && (dType <= D_w) && eqN) {
                 // save unit displacement and coordinate
                 unitDisp.at(eqN, dType) = 1.0;
-                tempMat2.at(eqN, dType) = node->giveCoordinate(dType);
+                //tempMat2.at(eqN, dType) = node->giveCoordinate(dType);
             }
         }
     } // end of search among nodes
@@ -328,12 +453,12 @@ void EigenValueDynamic :: solveYourself()
 
             int tempN = intDofMan->giveNumber();
             const auto& coords = element->giveDofManager(tempN)->giveCoordinates();
-            for (auto eqN : nodalEqArray) {
-                if (eqN == 0) {
-                    continue;
-                }
-                tempMat2.addSubVectorRow(coords, eqN, 1);
-            }
+            //for (auto eqN : nodalEqArray) {
+            //    if (eqN == 0) {
+            //        continue;
+            //    }
+            //    tempMat2.addSubVectorRow(coords, eqN, 1);
+            //}
         }
 
         const int nBaseDofs = element->giveNumberOfDofManagers() * 6;
@@ -360,25 +485,13 @@ void EigenValueDynamic :: solveYourself()
 
 
     } // end of search among internal dof managers
-    // end of creation of translational unit displacement vectors
-
-    // if no mass defined in a direction, then centroid in that direction is undefined
-    int coordFilter[3];
+    // end of translational unit vectors among internal dof managers
 
     for (int i = 1; i <= 3; ++i) {
         tempCol.beColumnOf(unitDisp, i);
         massMatrix->times(tempCol, tempCol2); // now tempCol2 has only the masses pertaining the i-th direction
         tempMat.setColumn(tempCol2, i);
-        totMass.at(i) = tempCol.dotProduct(tempCol2); // total mass for direction i-th direction
-        tempCol.beColumnOf(tempMat2, i); // fetch coordinates in i-th direction
-        if (totMass.at(i) != 0.0) {
-            centroid.at(i) = tempCol.dotProduct(tempCol2) / totMass.at(i); // dot multiply to get first moment, then divide by total mass in i-th direction to get i-th coordinate of the centroid
-            coordFilter[i - 1] = 1;
-        }
-        else {
-            coordFilter[i - 1] = 0;
-            OOFEM_WARNING("No mass in direction %d, results may be affected", i);
-        }
+        totMass.at(i) = tempCol.dotProduct(tempCol2);
     }
 
     // we have the centroid. we can now calculate rotational components. first from nodes.
@@ -403,8 +516,8 @@ void EigenValueDynamic :: solveYourself()
 
                 if ((dType >= D_u) && (dType <= D_w) && eqN) {
                     // save unit displacement and coordinate
-                    vk.at(dType) = coordFilter[dType - 1] * (node->giveCoordinate(dType) - centroid.at(dType));
-                    eq.at(dType) = eqN;
+                    vk.at( dType ) = coordFilter( dType ) * ( node->giveCoordinate( dType ) - centroid.at( dType ) );
+                    eq.at( dType ) = eqN;
                 }
             }
         }
