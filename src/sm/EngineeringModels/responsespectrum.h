@@ -45,6 +45,8 @@
 #include "integrationpointstatus.h"
 #include "integrationrule.h"
 #include "gausspoint.h"
+#include "eigenvectorprimaryfield.h"
+
 
 ///@name Input fields for ResponseSpectrum
 //@{
@@ -61,8 +63,8 @@
 namespace oofem {
 
 enum RSpecComboType {
-	RSC_CQC,
-	RSC_SRSS
+    RSC_CQC,
+    RSC_SRSS
 };
 
 /**
@@ -75,8 +77,9 @@ enum RSpecComboType {
 class ResponseSpectrum : public EngngModel
 {
 private:
-    std :: unique_ptr< SparseMtrx > stiffnessMatrix;
-    std :: unique_ptr< SparseMtrx > massMatrix;
+    std ::unique_ptr<EigenVectorPrimaryField> field;
+    std ::unique_ptr<SparseMtrx> stiffnessMatrix;
+    std ::unique_ptr<SparseMtrx> massMatrix;
     SparseMtrxType sparseMtrxType;
     FloatMatrix eigVec;
     FloatArray eigVal;
@@ -93,7 +96,7 @@ private:
     /// Relative tolerance.
     double rtolv;
     /// Numerical method used to solve the problem.
-    std :: unique_ptr< SparseGeneralEigenValueSystemNM > nMethod;
+    std ::unique_ptr<SparseGeneralEigenValueSystemNM> nMethod;
     GenEigvalSolverType solverType;
     /// Numerical method used to solve the static problem.
     LinSystSolverType linStype = ST_Direct;
@@ -108,54 +111,54 @@ private:
     FloatArray combReactions;
     FloatArray combDisps;
     IntArray dofManMap, dofidMap, eqnMap;
-    std::list< std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> > elemResponseList;
-    std::list< std::map<int, std::map<std::string, FloatArray>> > beamResponseList;
-    std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray>>>> combElemResponse;
-    std::map<int, std::map<std::string, FloatArray>> combBeamResponse;
+    std::list<std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray> > > > > elemResponseList;
+    std::list<std::map<int, std::map<std::string, FloatArray> > > beamResponseList;
+    std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray> > > > combElemResponse;
+    std::map<int, std::map<std::string, FloatArray> > combBeamResponse;
 
 
 public:
-    ResponseSpectrum(int i, EngngModel * _master = NULL) : EngngModel(i, _master)
+    ResponseSpectrum( int i, EngngModel *_master = nullptr ) :
+        EngngModel( i, _master )
     {
         numberOfSteps = 1;
-        ndomains = 1;
+        ndomains      = 1;
     }
-    virtual ~ResponseSpectrum() { }
+    virtual ~ResponseSpectrum() {}
 
-    virtual void solveYourselfAt(TimeStep *tStep);
-    virtual void terminate(TimeStep *tStep);
-    virtual void updateYourself(TimeStep *tStep);
+    void solveYourself() override;
+    void terminate( TimeStep *tStep ) override;
+    void updateYourself( TimeStep *tStep ) override;
 
-    virtual double giveUnknownComponent(ValueModeType type, TimeStep *tStep, Domain *d, Dof *dof);
-    void initializeFrom(InputRecord& ir) override;
-    void saveContext(DataStream &stream, ContextMode mode);
-    void restoreContext(DataStream &stream, ContextMode mode);
-    virtual TimeStep *giveNextStep();
-    virtual NumericalMethod *giveNumericalMethod(MetaStep *mStep);
-    virtual void setActiveVector(int i) { activeVector = i; }
-    virtual int resolveCorrespondingEigenStepNumber(void *obj);
+    double giveUnknownComponent( ValueModeType type, TimeStep *tStep, Domain *d, Dof *dof );
+    void initializeFrom( InputRecord &ir ) override;
+    void saveContext( DataStream &stream, ContextMode mode ) override;
+    void restoreContext( DataStream &stream, ContextMode mode ) override;
+    TimeStep *giveNextStep() override;
+    NumericalMethod *giveNumericalMethod( MetaStep *mStep ) override;
+    void setActiveVector( int i ) override { activeVector = i; }
 
-    virtual double giveEigenValue(int eigNum) { return eigVal.at(eigNum); }
+    double giveEigenValue( int eigNum ) override { return eigVal.at( eigNum ); }
 
-    virtual void postInitialize();
+    void postInitialize() override;
 
-    virtual void getGPOutputAt(GaussPoint *gp, TimeStep *tStep, std::map<std::string, FloatArray> *&ips);
-    virtual void getIntRuleOutputAt(IntegrationRule *iRule, TimeStep *tStep, std::map<int, std::map<std::string, FloatArray>> *&ir);
-    virtual void getIntPointStatusOutputAt(IntegrationPointStatus *iStatus, TimeStep *tStep, MaterialMode materialMode, std::map<std::string, FloatArray> *&ir);
-    virtual double calcSpectrumOrdinate(double period);
-    virtual void computeExternalLoadReactionContribution(FloatArray &reactions, TimeStep *tStep, int di);
-    virtual void buildReactionTable(IntArray &restrDofMans, IntArray &restrDofs,
-        IntArray &eqn, TimeStep *tStep, int di);
-    virtual void computeReaction(FloatArray &answer, TimeStep *tStep, int di);
-    virtual void updateInternalState(TimeStep *tStep);
-    virtual void SRSS();
-    virtual void CQC();
-    virtual void giveRhos(FloatMatrix &rhos);
-    virtual void giveDominantMode(int &mode);
-    virtual RSpecComboType giveComboType();
+    void getGPOutputAt( GaussPoint *gp, TimeStep *tStep, std::map<std::string, FloatArray> *&ips );
+    void getIntRuleOutputAt( IntegrationRule *iRule, TimeStep *tStep, std::map<int, std::map<std::string, FloatArray> > *&ir );
+    void getIntPointStatusOutputAt( IntegrationPointStatus *iStatus, TimeStep *tStep, MaterialMode materialMode, std::map<std::string, FloatArray> *&ir );
+    double calcSpectrumOrdinate( double period );
+    void computeExternalLoadReactionContribution( FloatArray &reactions, TimeStep *tStep, int di );
+    void buildReactionTable( IntArray &restrDofMans, IntArray &restrDofs,
+        IntArray &eqn, TimeStep *tStep, int di );
+    void computeReaction( FloatArray &answer, TimeStep *tStep, int di );
+    void updateInternalState( TimeStep *tStep );
+    void SRSS();
+    void CQC();
+    void giveRhos( FloatMatrix &rhos );
+    void giveDominantMode( int &mode );
+    RSpecComboType giveComboType();
 
     // identification
-    virtual const char *giveClassName() const { return "ResponseSpectrum"; }
+    const char *giveClassName() const override { return "ResponseSpectrum"; }
 };
 } // end namespace oofem
 #endif // responsespectrum_h

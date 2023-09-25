@@ -96,6 +96,7 @@ ResponseSpectrum::initializeFrom( InputRecord &ir )
     //EngngModel::instanciateFrom (ir);
 
     IR_GIVE_FIELD( ir, numberOfRequiredEigenValues, _IFT_ResponseSpectrum_nroot );
+    this->field = std::make_unique<EigenVectorPrimaryField>( this, 1, FT_Displacements, numberOfRequiredEigenValues );
 
     // numberOfSteps set artificially to numberOfRequiredEigenValues
     // in order to allow
@@ -241,53 +242,26 @@ void calcRoot( map<int, map<int, map<int, map<string, FloatArray>>>> &answer );
 void addMultiply( map<int, map<string, FloatArray>> &answer, map<int, map<string, FloatArray>> &src, map<int, map<string, FloatArray>> &src2, double fact = 1.0 );
 void calcRoot( map<int, map<string, FloatArray>> &answer );
 
-void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
+void ResponseSpectrum::solveYourself()
 {
-    //
-    // creates system of governing eq's and solves them at given time step
-    //
-    // first assemble problem at current time step
+    this->timer.startTimer( EngngModelTimer ::EMTT_AnalysisTimer );
 
-#ifdef VERBOSE
+    TimeStep *tStep = this->giveNextStep();
+    this->updateAttributes( this->giveCurrentMetaStep() );
+
     OOFEM_LOG_INFO( "Assembling stiffness and mass matrices\n" );
-#endif
 
-    if ( tStep->giveNumber() == 1 ) {
-        //
-        // first step  assemble stiffness Matrix
-        //
+    stiffnessMatrix = classFactory.createSparseMtrx( sparseMtrxType );
+    stiffnessMatrix->buildInternalStructure( this, 1, EModelDefaultEquationNumbering() );
 
-        stiffnessMatrix = classFactory.createSparseMtrx( sparseMtrxType );
-        stiffnessMatrix->buildInternalStructure( this, 1, EModelDefaultEquationNumbering() );
+    massMatrix = classFactory.createSparseMtrx( sparseMtrxType );
+    massMatrix->buildInternalStructure( this, 1, EModelDefaultEquationNumbering() );
 
-        massMatrix = classFactory.createSparseMtrx( sparseMtrxType );
-        massMatrix->buildInternalStructure( this, 1, EModelDefaultEquationNumbering() );
+    this->assemble( *stiffnessMatrix, tStep, TangentAssembler( TangentStiffness ), EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
+    this->assemble( *massMatrix, tStep, MassMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
 
-        this->assemble( *stiffnessMatrix, tStep, TangentAssembler( TangentStiffness ),
-            EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
-        this->assemble( *massMatrix, tStep, MassMatrixAssembler(),
-            EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
-        //
-        // create resulting objects eigVec and eigVal
-        //
-        eigVec.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ), numberOfRequiredEigenValues );
-        eigVec.zero();
-        eigVal.resize( numberOfRequiredEigenValues );
-        eigVal.zero();
-    }
-
-    //
-    // set-up numerical model
-    //
     this->giveNumericalMethod( this->giveMetaStep( tStep->giveMetaStepNumber() ) );
-
-    //
-    // call numerical model to solve arised problem
-    //
-#ifdef VERBOSE
     OOFEM_LOG_INFO( "Solving ...\n" );
-#endif
-
     nMethod->solve( *stiffnessMatrix, *massMatrix, eigVal, eigVec, rtolv, numberOfRequiredEigenValues );
         
     // cut off, but output at least one
@@ -303,6 +277,8 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
     eigVal.resize( numberOfRequiredEigenValues );
     eigVec.resizeWithData( eigVec.giveNumberOfRows(), numberOfRequiredEigenValues );
 
+    this->field->updateAll( eigVec, EModelDefaultEquationNumbering() );
+
     FloatMatrix unitDisp;
     FloatArray tempCol;
     FloatArray tempCol2;
@@ -313,7 +289,7 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
     int nelem = domain->giveNumberOfElements();
 
     // matrix and array initialization
-    totMass.resize( 6 ); // 3 are the translational dofs - enough for the moment
+    totMass.resize( 6 ); // 3 translational masses + 3 rotational inertias
     centroid.resize( 3 );
     partFact.resize( numberOfRequiredEigenValues, 6 );
     massPart.resize( numberOfRequiredEigenValues, 6 );
@@ -895,6 +871,11 @@ void ResponseSpectrum::solveYourselfAt( TimeStep *tStep )
     //
     stiffnessMatrix.reset( NULL );
     massMatrix.reset( NULL );
+
+    this->terminate( tStep );
+
+    double steptime = this->giveSolutionStepTime();
+    OOFEM_LOG_INFO( "EngngModel info: user time consumed by solution: %.2fs\n", steptime );
 }
 
 void ResponseSpectrum::SRSS()
@@ -1503,23 +1484,6 @@ void ResponseSpectrum::restoreContext( DataStream &stream, ContextMode mode)
     if ( activeVector > numberOfRequiredEigenValues ) { activeVector = numberOfRequiredEigenValues; }
 
     this->restoreFlag = 1;
-}
-
-
-int ResponseSpectrum::resolveCorrespondingEigenStepNumber( void *obj )
-{
-    //
-    // returns corresponding eigen step number
-    //
-    if ( obj == NULL ) { return 1; }
-
-    int *istep = (int *)obj;
-
-    if ( *istep > numberOfRequiredEigenValues ) { return numberOfRequiredEigenValues; }
-
-    if ( *istep <= 0 ) { return 1; }
-
-    return *istep;
 }
 
 } // end namespace oofem
