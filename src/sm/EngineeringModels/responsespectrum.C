@@ -67,33 +67,51 @@
 
 
 #ifdef __OOFEG
- #include "oofeggraphiccontext.h"
+#include "oofeggraphiccontext.h"
 #endif
 
 #ifdef MEMSTR
-    #include <io.h>
-    #include <fcntl.h>
+#include <io.h>
+#include <fcntl.h>
 #endif
 
 using namespace std;
 
 namespace oofem {
+
+/* this class is meant to give the plain numbering size for the matrix*/
+class DummyNumbering : public UnknownNumberingScheme
+{
+protected:
+    int neqs = 0;
+
+public:
+    DummyNumbering( int n ) :
+        UnknownNumberingScheme(), neqs( n ){};
+
+    bool isDefault() const override { return false; }
+    int giveRequiredNumberOfDomainEquation() const override { return neqs; }
+    int giveDofEquationNumber( Dof *dof ) const override { OOFEM_ERROR( "Not implemented." ); }
+};
+
+
 REGISTER_EngngModel( ResponseSpectrum );
 
 NumericalMethod *ResponseSpectrum::giveNumericalMethod( MetaStep *mStep )
 {
     if ( !nMethod ) {
         nMethod = classFactory.createGeneralizedEigenValueSolver( solverType, this->giveDomain( 1 ), this );
-        if ( !nMethod ) { OOFEM_ERROR( "solver creation failed" ); }
+        if ( !nMethod ) {
+            OOFEM_ERROR( "solver creation failed" );
+        }
     }
 
     return nMethod.get();
 }
 
-void
-ResponseSpectrum::initializeFrom( InputRecord &ir )
+void ResponseSpectrum::initializeFrom( InputRecord &ir )
 {
-    //EngngModel::instanciateFrom (ir);
+    // EngngModel::instanciateFrom (ir);
 
     IR_GIVE_FIELD( ir, numberOfRequiredEigenValues, _IFT_ResponseSpectrum_nroot );
     this->field = std::make_unique<EigenVectorPrimaryField>( this, 1, FT_Displacements, numberOfRequiredEigenValues );
@@ -105,15 +123,19 @@ ResponseSpectrum::initializeFrom( InputRecord &ir )
     numberOfSteps = 1;
 
     IR_GIVE_FIELD( ir, rtolv, _IFT_ResponseSpectrum_rtolv );
-    if ( rtolv < 1.e-12 ) { rtolv = 1.e-12; }
+    if ( rtolv < 1.e-12 ) {
+        rtolv = 1.e-12;
+    }
 
-    if ( rtolv > 0.01 ) { rtolv = 0.01; }
+    if ( rtolv > 0.01 ) {
+        rtolv = 0.01;
+    }
 
     int val = 1;
     IR_GIVE_OPTIONAL_FIELD( ir, val, _IFT_ResponseSpectrum_stype );
     solverType = (GenEigvalSolverType)val;
 
-    val = 0; //Default Skyline
+    val = 0; // Default Skyline
     IR_GIVE_OPTIONAL_FIELD( ir, val, _IFT_EngngModel_smtype );
     sparseMtrxType = (SparseMtrxType)val;
 
@@ -126,8 +148,10 @@ ResponseSpectrum::initializeFrom( InputRecord &ir )
     func = (int)val; // we'll check in postInitialize whether this id exists or not
 
     IR_GIVE_FIELD( ir, dir, _IFT_ResponseSpectrum_dir );
-    //dir = (int)val;
-    if ( ! ( dir.giveSize() ) ) { OOFEM_ERROR( "No direction vector set." ); }
+    // dir = (int)val;
+    if ( !( dir.giveSize() ) ) {
+        OOFEM_ERROR( "No direction vector set." );
+    }
     if ( dir.giveSize() > 3 ) {
         OOFEM_WARNING( "more than 3 vector components set. Trimming direction vector" );
         dir.resizeWithValues( 3 );
@@ -145,30 +169,33 @@ ResponseSpectrum::initializeFrom( InputRecord &ir )
     IR_GIVE_OPTIONAL_FIELD( ir, damp, _IFT_ResponseSpectrum_damp );
     csi = damp;
 
-    suppressOutput = ir.hasField(_IFT_EngngModel_suppressOutput);
+    suppressOutput = ir.hasField( _IFT_EngngModel_suppressOutput );
 
-    if (suppressOutput) {
-        //printf("Suppressing output.\n");
-    }
-    else {
+    if ( suppressOutput ) {
+        // printf("Suppressing output.\n");
+    } else {
 
 #ifdef MEMSTR
         outputStream = nullptr;
-        FILE* source = classFactory.giveMemoryStream("out");
-        int sourceFD = _open_osfhandle((intptr_t)source, _O_APPEND);
-        if (sourceFD != -1) { outputStream = _fdopen(sourceFD, "a"); }
-        if (!(outputStream)) {
+        FILE *source = classFactory.giveMemoryStream( "out" );
+        int sourceFD = _open_osfhandle( (intptr_t)source, _O_APPEND );
+        if ( sourceFD != -1 ) {
+            outputStream = _fdopen( sourceFD, "a" );
+        }
+        if ( !( outputStream ) ) {
             // if not, write to file
 #endif
-            if ((outputStream = fopen(this->dataOutputFileName.c_str(), "w")) == NULL) { OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str()); }
+            if ( ( outputStream = fopen( this->dataOutputFileName.c_str(), "w" ) ) == NULL ) {
+                OOFEM_ERROR( "Can't open output file %s", this->dataOutputFileName.c_str() );
+            }
 #ifdef MEMSTR
             usestream = false;
         }
 #endif
 
-        fprintf(outputStream, "%s", PRG_HEADER);
-        fprintf(outputStream, "\nStarting analysis on: %s\n", ctime(&this->startTime));
-        fprintf(outputStream, "%s\n", simulationDescription.c_str());
+        fprintf( outputStream, "%s", PRG_HEADER );
+        fprintf( outputStream, "\nStarting analysis on: %s\n", ctime( &this->startTime ) );
+        fprintf( outputStream, "%s\n", simulationDescription.c_str() );
     }
 }
 
@@ -191,7 +218,9 @@ double ResponseSpectrum::giveUnknownComponent( ValueModeType mode, TimeStep *tSt
 {
     int eq = dof->__giveEquationNumber();
 #ifdef DEBUG
-    if ( eq == 0 ) { OOFEM_ERROR( "invalid equation number" ); }
+    if ( eq == 0 ) {
+        OOFEM_ERROR( "invalid equation number" );
+    }
 #endif
 
     switch ( mode ) {
@@ -199,7 +228,9 @@ double ResponseSpectrum::giveUnknownComponent( ValueModeType mode, TimeStep *tSt
     case VM_Incremental:
         if ( tStep->giveIntrinsicTime() == 0.0 ) {
             return combDisps.at( eq ); // , (int)tStep->giveTargetTime());
-        } else { return dummyDisps.at( eq ); }
+        } else {
+            return dummyDisps.at( eq );
+        }
     case VM_Velocity:
         return 0.;
     case VM_Acceleration:
@@ -237,10 +268,10 @@ double ResponseSpectrum::calcSpectrumOrdinate( double period )
 }
 
 // forward declaration
-void addMultiply( map<int, map<int, map<int, map<string, FloatArray>>>> &answer, map<int, map<int, map<int, map<string, FloatArray>>>> &src, map<int, map<int, map<int, map<string, FloatArray>>>> &src2, double fact = 1.0 );
-void calcRoot( map<int, map<int, map<int, map<string, FloatArray>>>> &answer );
-void addMultiply( map<int, map<string, FloatArray>> &answer, map<int, map<string, FloatArray>> &src, map<int, map<string, FloatArray>> &src2, double fact = 1.0 );
-void calcRoot( map<int, map<string, FloatArray>> &answer );
+void addMultiply( map<int, map<int, map<int, map<string, FloatArray> > > > &answer, map<int, map<int, map<int, map<string, FloatArray> > > > &src, map<int, map<int, map<int, map<string, FloatArray> > > > &src2, double fact = 1.0 );
+void calcRoot( map<int, map<int, map<int, map<string, FloatArray> > > > &answer );
+void addMultiply( map<int, map<string, FloatArray> > &answer, map<int, map<string, FloatArray> > &src, map<int, map<string, FloatArray> > &src2, double fact = 1.0 );
+void calcRoot( map<int, map<string, FloatArray> > &answer );
 
 void ResponseSpectrum::solveYourself()
 {
@@ -263,7 +294,7 @@ void ResponseSpectrum::solveYourself()
     this->giveNumericalMethod( this->giveMetaStep( tStep->giveMetaStepNumber() ) );
     OOFEM_LOG_INFO( "Solving ...\n" );
     nMethod->solve( *stiffnessMatrix, *massMatrix, eigVal, eigVec, rtolv, numberOfRequiredEigenValues );
-        
+
     // cut off, but output at least one
     int nValid = 1;
     for ( int i = 1; i < eigVal.giveSize(); ++i ) {
@@ -271,7 +302,7 @@ void ResponseSpectrum::solveYourself()
             nValid = i;
             break;
         }
-        nValid = i+1;
+        nValid = i + 1;
     }
     numberOfRequiredEigenValues = nValid; // better having a dedicated field
     eigVal.resize( numberOfRequiredEigenValues );
@@ -299,7 +330,8 @@ void ResponseSpectrum::solveYourself()
     tempCol.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ) );
     tempCol2.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ) );
     periods.resize( numberOfRequiredEigenValues );
-    combReactions.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultPrescribedEquationNumbering() ) );;
+    combReactions.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultPrescribedEquationNumbering() ) );
+    ;
     combDisps.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ) );
     rhos.resize( numberOfRequiredEigenValues, numberOfRequiredEigenValues );
 
@@ -312,9 +344,9 @@ void ResponseSpectrum::solveYourself()
         tempCol.times( m );
         eigVec.setColumn( tempCol, i );
         periods.at( i ) = 2 * M_PI / sqrt( eigVal.at( i ) );
-        //if ( isnan( periods.at( i ) ) ) {
-        //    printf( "stop" );
-        //}
+        // if ( isnan( periods.at( i ) ) ) {
+        //     printf( "stop" );
+        // }
     }
     // eigVec has been normalized
 
@@ -322,9 +354,9 @@ void ResponseSpectrum::solveYourself()
         for ( int j = 1; j <= numberOfRequiredEigenValues; ++j ) {
             double beta     = periods.at( i ) / periods.at( j );
             rhos.at( i, j ) = 8 * pow( this->csi, 2.0 ) * pow( beta, 1.5 ) / ( 1.0 + beta ) / ( pow( 1 - beta, 2.0 ) + 4 * pow( this->csi, 2.0 ) * beta );
-            //if(isnan( rhos.at( i, j ))) {
-            //    printf( "stop" );
-            //}
+            // if(isnan( rhos.at( i, j ))) {
+            //     printf( "stop" );
+            // }
         }
 
     IntArray masterDofIDs, nodalEqArray, ids;
@@ -342,8 +374,8 @@ void ResponseSpectrum::solveYourself()
     bool warn = false;
     const EModelDefaultEquationNumbering defNumbering;
     const int nDofMans = domain->giveNumberOfDofManagers();
-    FloatMatrix nodeCoords(3, nDofMans);
-    std::vector<IntArray> nodeActive(nDofMans);
+    FloatMatrix nodeCoords( 3, nDofMans );
+    std::vector<IntArray> nodeActive( nDofMans );
 
     FloatArray geomCenter( 3 );
     IntArray geomWeight( 3 );
@@ -378,9 +410,9 @@ void ResponseSpectrum::solveYourself()
                 int eqN = 0;
                 if ( ( *pos )->isPrimaryDof() ) {
                     eqN = ( *pos )->giveEquationNumber( defNumbering );
-                    //if ( eqN ) {
-                    //    unitDisp.at( eqN, dType ) = 1.0;
-                    //}
+                    // if ( eqN ) {
+                    //     unitDisp.at( eqN, dType ) = 1.0;
+                    // }
                 } else {
                     // find the master dofmanager from the slave, get the equations from it.
                     // Plain Nodes have master and simpleslave dofs, rigid arm nodes have master and slave dofs
@@ -434,7 +466,7 @@ void ResponseSpectrum::solveYourself()
         massElement->giveElementDofIDMask( dofMask );
 
         for ( auto iDof : dofMask ) {
-            if (iDof >= D_u && iDof <= D_w) {
+            if ( iDof >= D_u && iDof <= D_w ) {
                 const int idx = dofMask.findFirstIndexOf( iDof );
                 if ( idx && nodeActive[dofMan - 1].at( iDof ) ) {
                     massPos.at( iDof ) += nodeCoords.at( iDof, dofMan ) * m.at( idx );
@@ -464,13 +496,78 @@ void ResponseSpectrum::solveYourself()
         }
     }
 
+    // create plain numbering system
+    std::vector<IntArray> dofMansEqns( nDofMans );
+    std::map<int, IntArray> intDofMansEqns;
+    int totalDofs = this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() );
+
+    for ( std::unique_ptr<DofManager> &node : domain->giveDofManagers() ) {
+        // no support yet for LCS
+        Node *actualNode = dynamic_cast<Node *>( node.get() );
+        if ( actualNode && actualNode->hasLocalCS() ) {
+            continue;
+        }
+
+        IntArray eqns( 6 );
+        if ( strcmp( node->giveClassName(), "Node" ) == 0 || strcmp( node->giveClassName(), "RigidArmNode" ) == 0 ) {
+            for ( int iDof = 0; iDof < 6; ++iDof ) {
+                DofIDItem dType = dofids[iDof];
+                auto pos        = node->findDofWithDofId( dType );
+                if ( pos == node->end() ) {
+                    continue;
+                }
+
+                int eqN = 0;
+                if ( ( *pos )->isPrimaryDof() ) {
+                    eqN              = ( *pos )->giveEquationNumber( defNumbering );
+                    eqns.at( dType ) = eqN;
+                } else {
+                    // add a dummy equation number for the slave dof
+                    eqns.at( dType ) = ++totalDofs;
+                }
+            }
+        }
+        dofMansEqns[actualNode->giveNumber() - 1] = std::move( eqns );
+    }
+    for ( int ielem = 1; ielem <= nelem; ++ielem ) {
+        Element *element = domain->giveElement( ielem );
+        if ( element->giveNumberOfInternalDofManagers() == 0 ) {
+            continue;
+        }
+
+        // we only support end releases on 3d beams for the moment. other internal dof managers should be skipped.
+        if ( strcmp( element->giveClassName(), "Beam3d" ) != 0 ) {
+            if ( !warn ) {
+                OOFEM_WARNING( "Only internal dof managers of Beam3d elements are supported. Skipping." );
+                warn = true;
+            }
+            continue;
+        }
+
+        eqArray.clear();
+        // retrieve internal dof managers and location array
+        for ( int i = 1; i <= element->giveNumberOfInternalDofManagers(); ++i ) {
+            DofManager *intDofMan = element->giveInternalDofManager( i );
+            if ( !intDofMan ) continue; // you may never know...
+
+            element->giveInternalDofManDofIDMask( i, ids );
+            intDofMan->giveLocationArray( ids, nodalEqArray, EModelDefaultEquationNumbering() );
+            eqArray.followedBy( nodalEqArray );
+            intDofMan->giveMasterDofIDArray( ids, masterDofIDs );
+        }
+        intDofMansEqns[element->giveNumber()] = std::move( eqArray );
+    }
+
+    std::unique_ptr<SparseMtrx> plainMassMatrix = classFactory.createSparseMtrx( sparseMtrxType );
+    plainMassMatrix->buildInternalStructure( this, 1, DummyNumbering( totalDofs ) );
+
     //
     // create unit displacement vectors
     //
     // first from nodes themselves, and get the coordinates to compute the center of mass
     for ( std::unique_ptr<DofManager> &node : domain->giveDofManagers() ) {
         // no support yet for LCS
-        Node* actualNode = dynamic_cast<Node*>(node.get());
+        Node *actualNode = dynamic_cast<Node *>( node.get() );
         if ( actualNode && actualNode->hasLocalCS() ) {
             continue;
         }
@@ -488,7 +585,7 @@ void ResponseSpectrum::solveYourself()
             if ( ( dType >= D_u ) && ( dType <= D_w ) && eqN ) {
                 // save unit displacement and coordinate
                 unitDisp.at( eqN, dType ) = 1.0;
-                //tempMat2.at( eqN, dType ) = node->giveCoordinate( dType );
+                // tempMat2.at( eqN, dType ) = node->giveCoordinate( dType );
             }
         }
     } // end of search among nodes
@@ -498,14 +595,14 @@ void ResponseSpectrum::solveYourself()
     // now from internal dof managers
     for ( int ielem = 1; ielem <= nelem; ++ielem ) {
         Element *element = domain->giveElement( ielem );
-        if (element->giveNumberOfInternalDofManagers() == 0) {
+        if ( element->giveNumberOfInternalDofManagers() == 0 ) {
             continue;
         }
 
         // we only support end releases on 3d beams for the moment. other internal dof managers should be skipped.
-        if (strcmp(element->giveClassName(), "Beam3d") != 0) {
-            if (!warn) {
-                OOFEM_WARNING("Only internal dof managers of Beam3d elements are supported. Skipping.");
+        if ( strcmp( element->giveClassName(), "Beam3d" ) != 0 ) {
+            if ( !warn ) {
+                OOFEM_WARNING( "Only internal dof managers of Beam3d elements are supported. Skipping." );
                 warn = true;
             }
             continue;
@@ -513,9 +610,9 @@ void ResponseSpectrum::solveYourself()
 
         // use the lcs transform to work out which ghost dofs are affected by global displacement
         FloatMatrix GtoL;
-        element->computeGtoLRotationMatrix(GtoL);
+        element->computeGtoLRotationMatrix( GtoL );
         FloatMatrix lcs;
-        element->giveLocalCoordinateSystem(lcs);
+        element->giveLocalCoordinateSystem( lcs );
 
         eqArray.clear();
 
@@ -530,14 +627,14 @@ void ResponseSpectrum::solveYourself()
             eqArray.followedBy( nodalEqArray );
             intDofMan->giveMasterDofIDArray( ids, masterDofIDs );
 
-            int tempN = intDofMan->giveNumber();
-            const auto& coords = element->giveDofManager(tempN)->giveCoordinates();
-            //for (auto eqN : nodalEqArray) {
-            //    if (eqN == 0) {
-            //        continue;
-            //    }
-            //    tempMat2.addSubVectorRow(coords, eqN, 1);
-            //}
+            int tempN          = intDofMan->giveNumber();
+            const auto &coords = element->giveDofManager( tempN )->giveCoordinates();
+            // for (auto eqN : nodalEqArray) {
+            //     if (eqN == 0) {
+            //         continue;
+            //     }
+            //     tempMat2.addSubVectorRow(coords, eqN, 1);
+            // }
         }
 
         const int nBaseDofs = element->giveNumberOfDofManagers() * 6;
@@ -557,7 +654,7 @@ void ResponseSpectrum::solveYourself()
             // apply the components to the condensed dofs on the global matrix
             for ( int i = 1; i <= eqArray.giveSize(); ++i ) {
                 const auto eqN            = eqArray.at( i );
-                const auto val = globalVector( i + nBaseDofs - 1 );
+                const auto val            = globalVector( i + nBaseDofs - 1 );
                 unitDisp.at( eqN, dType ) = val;
             }
         }
@@ -567,7 +664,7 @@ void ResponseSpectrum::solveYourself()
         tempCol.beColumnOf( unitDisp, i );
         massMatrix->times( tempCol, tempCol2 ); // now tempCol2 has only the masses pertaining the i-th direction
         tempMat.setColumn( tempCol2, i );
-        totMass.at(i) = tempCol.dotProduct(tempCol2);
+        totMass.at( i ) = tempCol.dotProduct( tempCol2 );
     }
 
     // we have the centroid. we can now calculate rotational components. first from nodes.
@@ -631,12 +728,12 @@ void ResponseSpectrum::solveYourself()
     // then from internaldof managers
     for ( int ielem = 1; ielem <= nelem; ++ielem ) {
         Element *element = domain->giveElement( ielem );
-        if (!element->giveNumberOfInternalDofManagers()) {
+        if ( !element->giveNumberOfInternalDofManagers() ) {
             continue;
         }
 
         // we only support end releases on 3d beams for the moment. other internal dof managers should be skipped.
-        if (strcmp(element->giveClassName(), "Beam3d") != 0) {
+        if ( strcmp( element->giveClassName(), "Beam3d" ) != 0 ) {
             continue;
         }
 
@@ -644,9 +741,9 @@ void ResponseSpectrum::solveYourself()
 
         // use the lcs transform to work out which ghost dofs are affected by global displacement
         FloatMatrix GtoL;
-        element->computeGtoLRotationMatrix(GtoL);
+        element->computeGtoLRotationMatrix( GtoL );
         FloatMatrix lcs;
-        element->giveLocalCoordinateSystem(lcs);
+        element->giveLocalCoordinateSystem( lcs );
 
         FloatMatrix componentMatrix( 3, 3 );
         //	retrieve internal dof managers and location array
@@ -659,52 +756,54 @@ void ResponseSpectrum::solveYourself()
             eqArray.followedBy( nodalEqArray );
             intDofMan->giveMasterDofIDArray( ids, masterDofIDs );
 
-            int tempN = intDofMan->giveNumber();
-            const auto& coords = element->giveDofManager(tempN)->giveCoordinates();
-            componentMatrix.setColumn(coords - centroid, 2);
+            int tempN          = intDofMan->giveNumber();
+            const auto &coords = element->giveDofManager( tempN )->giveCoordinates();
+            componentMatrix.setColumn( coords - centroid, 2 );
 
-            for (int iDof = 1; iDof <= masterDofIDs.giveSize(); ++iDof) {
-                const int myDof = masterDofIDs.at(iDof);
+            for ( int iDof = 1; iDof <= masterDofIDs.giveSize(); ++iDof ) {
+                const int myDof = masterDofIDs.at( iDof );
                 // now we're only interested about the effect of rotation on translational dofs
-                if (myDof > D_w) { continue; }
-                const int eqN = nodalEqArray.at(iDof);
-                for (int j = 1; j <= 3; ++j) {
+                if ( myDof > D_w ) {
+                    continue;
+                }
+                const int eqN = nodalEqArray.at( iDof );
+                for ( int j = 1; j <= 3; ++j ) {
                     componentMatrix.at( j, 3 ) = lcs.at( myDof, j );
                 }
                 // project the displacement component due to rotation onto the local direction of the dof
-                for (int rotDof = R_u; rotDof <= R_w; ++rotDof) {
-                    FloatArray rotationVector(3);
-                    rotationVector.at(rotDof - 3) = 1.0;
-                    componentMatrix.setColumn(rotationVector, 1);
-                    const double displacement = componentMatrix.giveDeterminant(); // triple product: rotation ^ (node-centroid) . dofVector
-                    unitDisp.at(eqN, rotDof) = displacement;
+                for ( int rotDof = R_u; rotDof <= R_w; ++rotDof ) {
+                    FloatArray rotationVector( 3 );
+                    rotationVector.at( rotDof - 3 ) = 1.0;
+                    componentMatrix.setColumn( rotationVector, 1 );
+                    const double displacement  = componentMatrix.giveDeterminant(); // triple product: rotation ^ (node-centroid) . dofVector
+                    unitDisp.at( eqN, rotDof ) = displacement;
                 }
             }
         } // end of search among internal dof managers
 
         const int nBaseDofs = element->giveNumberOfDofManagers() * 6;
-        for (int iDof = 0; iDof < 6; ++iDof) {
+        for ( int iDof = 0; iDof < 6; ++iDof ) {
             const auto dType = dofids[iDof];
             if ( dType < R_u || dType > R_w ) {
                 continue;
             }
 
-            FloatArray localVector(nBaseDofs);
+            FloatArray localVector( nBaseDofs );
             FloatArray globalVector;
             FloatArray dirVector;
-            dirVector.beColumnOf(lcs, iDof % 3 + 1);
+            dirVector.beColumnOf( lcs, iDof % 3 + 1 );
             // get unit vectors in local dofs
-            for (int inode = 0; inode < element->giveNumberOfDofManagers(); ++inode) {
-                localVector.addSubVector(dirVector, (iDof / 3) * 3 + inode * 6 + 1);
+            for ( int inode = 0; inode < element->giveNumberOfDofManagers(); ++inode ) {
+                localVector.addSubVector( dirVector, ( iDof / 3 ) * 3 + inode * 6 + 1 );
             }
             // work it back to global dofs
-            globalVector.beTProductOf(GtoL, localVector);
+            globalVector.beTProductOf( GtoL, localVector );
 
             // apply the components to the condensed dofs on the global matrix
-            for (int i = 1; i <= eqArray.giveSize(); ++i) {
-                const auto eqN = eqArray.at(i);
-                const auto val = globalVector(i + nBaseDofs - 1);
-                unitDisp.at(eqN, dType) = val;
+            for ( int i = 1; i <= eqArray.giveSize(); ++i ) {
+                const auto eqN            = eqArray.at( i );
+                const auto val            = globalVector( i + nBaseDofs - 1 );
+                unitDisp.at( eqN, dType ) = val;
             }
         }
     }
@@ -716,6 +815,9 @@ void ResponseSpectrum::solveYourself()
         tempMat.setColumn( tempCol2, i );
         totMass.at( i ) = tempCol.dotProduct( tempCol2 ); // total mass for i-th direction
     }
+
+    std::unique_ptr<EigenVectorPrimaryField> unitDispField = std::make_unique<EigenVectorPrimaryField>( this, 1, FT_Displacements, 6 ); // 6 dofs
+    unitDispField->updateAll( unitDisp, defNumbering );
 
     //
     // calculate participation factors and mass participation
@@ -730,10 +832,10 @@ void ResponseSpectrum::solveYourself()
             if ( totMass.at( j ) > 1e-10 ) {
                 massPart.at( i, j ) = pow( partFact.at( i, j ), 2 ) / totMass.at( j );
             }
-            //else
+            // else
             //{
             //	massPart.at(i, j) = 0.0;
-            //}
+            // }
         }
     }
 
@@ -749,8 +851,16 @@ void ResponseSpectrum::solveYourself()
     std::unique_ptr<SparseLinearSystemNM> nLinMethod; // = NULL;
 
     if ( !nLinMethod ) {
-        if ( isParallel() ) { if ( ( solverType == ST_Petsc ) || ( solverType == ST_Feti ) ) { nLinMethod = classFactory.createSparseLinSolver( ST_Direct, this->giveDomain( 1 ), this ); } } else { nLinMethod = classFactory.createSparseLinSolver( linStype, this->giveDomain( 1 ), this ); }
-        if ( !nLinMethod ) { OOFEM_ERROR( "linear solver creation failed for lstype %d", solverType ); }
+        if ( isParallel() ) {
+            if ( ( solverType == ST_Petsc ) || ( solverType == ST_Feti ) ) {
+                nLinMethod = classFactory.createSparseLinSolver( ST_Direct, this->giveDomain( 1 ), this );
+            }
+        } else {
+            nLinMethod = classFactory.createSparseLinSolver( linStype, this->giveDomain( 1 ), this );
+        }
+        if ( !nLinMethod ) {
+            OOFEM_ERROR( "linear solver creation failed for lstype %d", solverType );
+        }
     }
 
     // determine dominat mode in requested direction
@@ -772,6 +882,8 @@ void ResponseSpectrum::solveYourself()
 
         loadVector.clear();
 
+        // TODO: recreate the load vector from the unitdisp field
+        // iterate on dofmans, create load given displacement field
         for ( int nDir = 1; nDir <= 3; ++nDir ) {
             if ( dir.at( nDir ) != 0 ) {
                 tempCol.beColumnOf( eigVec, dN );
@@ -783,9 +895,11 @@ void ResponseSpectrum::solveYourself()
 
         // solve linear system
         NM_Status s = nLinMethod->solve( *stiffnessMatrix, loadVector, dummyDisps ); // solve linear system
-        if ( !( s & NM_Success ) ) { OOFEM_ERROR( "No success in solving system." ); }
+        if ( !( s & NM_Success ) ) {
+            OOFEM_ERROR( "No success in solving system." );
+        }
 
-        //update elements to we can get internal state!!!
+        // update elements to we can get internal state!!!
         this->updateInternalState( tStep );
         EngngModel::updateYourself( tStep );
 
@@ -798,22 +912,24 @@ void ResponseSpectrum::solveYourself()
         reactionsList.push_back( reactions );
         dispList.push_back( dummyDisps );
 
-        map<int, map<int, map<int, map<string, FloatArray>>>> elemResponse;
-        map<int, map<string, FloatArray>> beamResponse;
+        map<int, map<int, map<int, map<string, FloatArray> > > > elemResponse;
+        map<int, map<string, FloatArray> > beamResponse;
 
         for ( auto &elem : domain->giveElements() ) {
             // test for remote element in parallel mode
-            if ( elem->giveParallelMode() == Element_remote ) { continue; }
+            if ( elem->giveParallelMode() == Element_remote ) {
+                continue;
+            }
 
-            //for (int i = 1; i <= elem->giveNumberOfInternalDofManagers(); ++i) {
+            // for (int i = 1; i <= elem->giveNumberOfInternalDofManagers(); ++i) {
             //	DofManager *dman = elem->giveInternalDofManager(i);
             //	dman->printOutputAt(outputStream, tStep);
-            //}
+            // }
 
-            map<int, map<int, map<string, FloatArray>>> *eir = new map<int, map<int, map<string, FloatArray>>>;
+            map<int, map<int, map<string, FloatArray> > > *eir = new map<int, map<int, map<string, FloatArray> > >;
 
             for ( int i = 0; i < elem->giveNumberOfIntegrationRules(); ++i ) {
-                map<int, map<string, FloatArray>> *ir = NULL;
+                map<int, map<string, FloatArray> > *ir = NULL;
                 this->getIntRuleOutputAt( elem->giveIntegrationRule( i ), tStep, ir );
                 if ( ir ) eir->operator[]( i ) = *ir;
             }
@@ -832,27 +948,27 @@ void ResponseSpectrum::solveYourself()
 
                 b->operator[]( "enddisp" ) = rl;
 
-                SElem = static_cast<StructuralElement *>(elem.get());
+                SElem = static_cast<StructuralElement *>( elem.get() );
                 SElem->giveInternalForcesVector( Fl, tStep );
 
-                //FloatArray loadEndForces;
+                // FloatArray loadEndForces;
 
                 //// add exact end forces due to nonnodal loading
-                //SElem->computeForceLoadVector(loadEndForces, tStep, VM_Total);
-                //if (loadEndForces.giveSize()) {
+                // SElem->computeForceLoadVector(loadEndForces, tStep, VM_Total);
+                // if (loadEndForces.giveSize()) {
                 //	Fl.subtract(loadEndForces);
-                //}
+                // }
 
                 b->operator[]( "endforces" ) = Fl;
 
-                //#ifdef DEBUG
+                // #ifdef DEBUG
                 //					if (SElem->giveNumber() == 7) {
                 //							FloatArray tempnd;
                 //							DofManager *dofMan = SElem->giveDofManager(2);
                 //							dofMan->giveCompleteUnknownVector(tempnd, VM_Total, tStep);
                 //							OOFEM_WARNING("Stop %e",tempnd.at(1));
                 //							}
-                //#endif
+                // #endif
                 beamResponse[elem->giveNumber()] = *b;
             }
         }
@@ -864,7 +980,11 @@ void ResponseSpectrum::solveYourself()
         exportModuleManager.doOutput( tStep );
     }
 
-    if ( modalCombo == RSpecComboType::RSC_SRSS ) { this->SRSS(); } else { this->CQC(); }
+    if ( modalCombo == RSpecComboType::RSC_SRSS ) {
+        this->SRSS();
+    } else {
+        this->CQC();
+    }
 
     //
     // zero matrix
@@ -880,26 +1000,36 @@ void ResponseSpectrum::solveYourself()
 
 void ResponseSpectrum::SRSS()
 {
-    list<map<int, map<int, map<int, map<string, FloatArray>>>>>::iterator elem_it = elemResponseList.begin();
-    list<map<int, map<string, FloatArray>>>::iterator beam_it                     = beamResponseList.begin();
-    for ( ; elem_it != elemResponseList.end(); ++elem_it ) { addMultiply( combElemResponse, *elem_it, *elem_it ); }
+    list<map<int, map<int, map<int, map<string, FloatArray> > > > >::iterator elem_it = elemResponseList.begin();
+    list<map<int, map<string, FloatArray> > >::iterator beam_it                       = beamResponseList.begin();
+    for ( ; elem_it != elemResponseList.end(); ++elem_it ) {
+        addMultiply( combElemResponse, *elem_it, *elem_it );
+    }
 
-    for ( ; beam_it != beamResponseList.end(); ++beam_it ) { addMultiply( combBeamResponse, *beam_it, *beam_it ); }
+    for ( ; beam_it != beamResponseList.end(); ++beam_it ) {
+        addMultiply( combBeamResponse, *beam_it, *beam_it );
+    }
 
     list<FloatArray>::iterator reac_it = reactionsList.begin();
     list<FloatArray>::iterator disp_it = dispList.begin();
 
     for ( ; reac_it != reactionsList.end(); ++reac_it ) {
         FloatArray &reactions = *reac_it;
-        for ( int z = 1; z <= reactions.giveSize(); ++z ) { combReactions.at( z ) += pow( reactions.at( z ), 2 ); }
+        for ( int z = 1; z <= reactions.giveSize(); ++z ) {
+            combReactions.at( z ) += pow( reactions.at( z ), 2 );
+        }
     }
 
     for ( ; disp_it != dispList.end(); ++disp_it ) {
         FloatArray &disps = *disp_it;
-        for ( int z = 1; z <= disps.giveSize(); ++z ) { combDisps.at( z ) += pow( disps.at( z ), 2 ); }
+        for ( int z = 1; z <= disps.giveSize(); ++z ) {
+            combDisps.at( z ) += pow( disps.at( z ), 2 );
+        }
     }
 
-    for ( int z = 1; z <= combReactions.giveSize(); ++z ) { combReactions.at( z ) = sqrt( combReactions.at( z ) ); }
+    for ( int z = 1; z <= combReactions.giveSize(); ++z ) {
+        combReactions.at( z ) = sqrt( combReactions.at( z ) );
+    }
 
     disp_it           = std::next( dispList.begin(), dominantMode - 1 );
     FloatArray &disps = *disp_it; // dominant mode
@@ -916,18 +1046,22 @@ void ResponseSpectrum::SRSS()
 
 void ResponseSpectrum::CQC()
 {
-    list<map<int, map<int, map<int, map<string, FloatArray>>>>>::iterator elem_it = elemResponseList.begin();
+    list<map<int, map<int, map<int, map<string, FloatArray> > > > >::iterator elem_it = elemResponseList.begin();
 
     for ( int i = 1; elem_it != elemResponseList.end(); ++elem_it, ++i ) {
-        list<map<int, map<int, map<int, map<string, FloatArray>>>>>::iterator elem_it2 = elemResponseList.begin();
-        for ( int j = 1; elem_it2 != elemResponseList.end(); ++elem_it2, ++j ) { addMultiply( combElemResponse, *elem_it, *elem_it2, rhos.at( i, j ) ); }
+        list<map<int, map<int, map<int, map<string, FloatArray> > > > >::iterator elem_it2 = elemResponseList.begin();
+        for ( int j = 1; elem_it2 != elemResponseList.end(); ++elem_it2, ++j ) {
+            addMultiply( combElemResponse, *elem_it, *elem_it2, rhos.at( i, j ) );
+        }
     }
     calcRoot( combElemResponse );
 
-    list<map<int, map<string, FloatArray>>>::iterator beam_it = beamResponseList.begin();
+    list<map<int, map<string, FloatArray> > >::iterator beam_it = beamResponseList.begin();
     for ( int i = 1; beam_it != beamResponseList.end(); ++beam_it, ++i ) {
-        list<map<int, map<string, FloatArray>>>::iterator beam_it2 = beamResponseList.begin();
-        for ( int j = 1; beam_it2 != beamResponseList.end(); ++beam_it2, ++j ) { addMultiply( combBeamResponse, *beam_it, *beam_it2, rhos.at( i, j ) ); }
+        list<map<int, map<string, FloatArray> > >::iterator beam_it2 = beamResponseList.begin();
+        for ( int j = 1; beam_it2 != beamResponseList.end(); ++beam_it2, ++j ) {
+            addMultiply( combBeamResponse, *beam_it, *beam_it2, rhos.at( i, j ) );
+        }
     }
     calcRoot( combBeamResponse );
 
@@ -937,10 +1071,14 @@ void ResponseSpectrum::CQC()
         list<FloatArray>::iterator reac_it2 = reactionsList.begin();
         for ( int j = 1; reac_it2 != reactionsList.end(); ++reac_it2, ++j ) {
             FloatArray &reactions2 = *reac_it2;
-            for ( int z = 1; z <= reactions.giveSize(); ++z ) { combReactions.at( z ) += fabs( reactions.at( z ) * reactions2.at( z ) * rhos.at( i, j ) ); }
+            for ( int z = 1; z <= reactions.giveSize(); ++z ) {
+                combReactions.at( z ) += fabs( reactions.at( z ) * reactions2.at( z ) * rhos.at( i, j ) );
+            }
         }
     }
-    for ( int z = 1; z <= combReactions.giveSize(); ++z ) { combReactions.at( z ) = sqrt( combReactions.at( z ) ); }
+    for ( int z = 1; z <= combReactions.giveSize(); ++z ) {
+        combReactions.at( z ) = sqrt( combReactions.at( z ) );
+    }
 
     list<FloatArray>::iterator disp_it = dispList.begin();
     for ( int i = 1; disp_it != dispList.end(); ++disp_it, ++i ) {
@@ -948,7 +1086,9 @@ void ResponseSpectrum::CQC()
         list<FloatArray>::iterator disp_it2 = dispList.begin();
         for ( int j = 1; disp_it2 != dispList.end(); ++disp_it2, ++j ) {
             FloatArray &disps2 = *disp_it2;
-            for ( int z = 1; z <= disps.giveSize(); ++z ) { combDisps.at( z ) += fabs( disps.at( z ) * disps2.at( z ) * rhos.at( i, j ) ); }
+            for ( int z = 1; z <= disps.giveSize(); ++z ) {
+                combDisps.at( z ) += fabs( disps.at( z ) * disps2.at( z ) * rhos.at( i, j ) );
+            }
         }
     }
 
@@ -964,19 +1104,21 @@ void ResponseSpectrum::CQC()
 
 void ResponseSpectrum::getGPOutputAt( GaussPoint *gp, TimeStep *tStep, std::map<std::string, FloatArray> *&ips )
 {
-    //int iruleNumber = 0;
+    // int iruleNumber = 0;
 
-    //if (gp->irule) {
+    // if (gp->irule) {
     //	iruleNumber = irule->giveNumber();
-    //}
+    // }
 
-    //fprintf(File, "  GP %2d.%-2d :", iruleNumber, number);
+    // fprintf(File, "  GP %2d.%-2d :", iruleNumber, number);
 
     // invoke printOutputAt method for all managed statuses
     IntegrationPointStatus *status = gp->giveMaterialStatus();
-    if ( status ) { this->getIntPointStatusOutputAt( status, tStep, gp->giveMaterialMode(), ips ); }
+    if ( status ) {
+        this->getIntPointStatusOutputAt( status, tStep, gp->giveMaterialMode(), ips );
+    }
 
-    //if (gp->gaussPoints.size() != 0) { // layered material
+    // if (gp->gaussPoints.size() != 0) { // layered material
     //	fprintf(File, "Layers report \n{\n");
     //	for (GaussPoint *gp : gaussPoints) {
     //		gp->printOutputAt(File, tStep);
@@ -992,56 +1134,54 @@ void ResponseSpectrum::giveDominantMode( int &mode ) { mode = dominantMode; }
 
 RSpecComboType ResponseSpectrum::giveComboType() { return modalCombo; }
 
-void
-ResponseSpectrum::getIntRuleOutputAt( IntegrationRule *iRule, TimeStep *tStep, map<int, map<string, FloatArray>> *&ir )
+void ResponseSpectrum::getIntRuleOutputAt( IntegrationRule *iRule, TimeStep *tStep, map<int, map<string, FloatArray> > *&ir )
 {
     map<string, FloatArray> *igp = NULL;
-    ir                           = new map<int, map<string, FloatArray>>;
+    ir                           = new map<int, map<string, FloatArray> >;
     for ( GaussPoint *gp : *iRule ) {
         this->getGPOutputAt( gp, tStep, igp );
         if ( igp ) ir->operator[]( gp->giveNumber() ) = *igp;
     }
 }
 
-void
-ResponseSpectrum::getIntPointStatusOutputAt( IntegrationPointStatus *iStatus, TimeStep *tStep, MaterialMode materialMode, map<string, FloatArray> *&ir )
+void ResponseSpectrum::getIntPointStatusOutputAt( IntegrationPointStatus *iStatus, TimeStep *tStep, MaterialMode materialMode, map<string, FloatArray> *&ir )
 {
     ir                              = NULL;
-    StructuralMaterialStatus *strMS = dynamic_cast<StructuralMaterialStatus *>(iStatus);
+    StructuralMaterialStatus *strMS = dynamic_cast<StructuralMaterialStatus *>( iStatus );
     if ( strMS ) {
         FloatArray helpVec;
         ir = new map<string, FloatArray>;
 
         StructuralMaterial::giveFullSymVectorForm( helpVec, strMS->giveStrainVector(), materialMode );
-        //for (auto &var : helpVec) {
+        // for (auto &var : helpVec) {
         //	fprintf(File, " %.4e", var);
-        //}
+        // }
         ir->operator[]( "strains" ) = helpVec;
 
-        //fprintf(File, "\n              stresses");
+        // fprintf(File, "\n              stresses");
         StructuralMaterial::giveFullSymVectorForm( helpVec, strMS->giveStressVector(), materialMode );
         ir->operator[]( "stresses" ) = helpVec;
 
-        //for (auto &var : helpVec) {
+        // for (auto &var : helpVec) {
         //	fprintf(File, " %.4e", var);
-        //}
-        //fprintf(File, "\n");
+        // }
+        // fprintf(File, "\n");
     }
 }
 
-void populateElResults( map<int, map<int, map<int, map<string, FloatArray>>>> &answer, map<int, map<int, map<int, map<string, FloatArray>>>> &src )
+void populateElResults( map<int, map<int, map<int, map<string, FloatArray> > > > &answer, map<int, map<int, map<int, map<string, FloatArray> > > > &src )
 {
-    map<int, map<int, map<int, map<string, FloatArray>>>>::iterator srcElem_it = src.begin();
+    map<int, map<int, map<int, map<string, FloatArray> > > >::iterator srcElem_it = src.begin();
     for ( ; srcElem_it != src.end(); ++srcElem_it ) {
-        map<int, map<int, map<string, FloatArray>>> *destElIntRuleMap = new map<int, map<int, map<string, FloatArray>>>;
-        map<int, map<int, map<string, FloatArray>>> &srcElIntRuleMap  = srcElem_it->second;
+        map<int, map<int, map<string, FloatArray> > > *destElIntRuleMap = new map<int, map<int, map<string, FloatArray> > >;
+        map<int, map<int, map<string, FloatArray> > > &srcElIntRuleMap  = srcElem_it->second;
 
-        map<int, map<int, map<string, FloatArray>>>::iterator srcElIntRuleMap_it = srcElIntRuleMap.begin();
+        map<int, map<int, map<string, FloatArray> > >::iterator srcElIntRuleMap_it = srcElIntRuleMap.begin();
         for ( ; srcElIntRuleMap_it != srcElIntRuleMap.end(); ++srcElIntRuleMap_it ) {
-            map<int, map<string, FloatArray>> *destGPMap = new map<int, map<string, FloatArray>>;
-            map<int, map<string, FloatArray>> &srcGPMap  = srcElIntRuleMap_it->second;
+            map<int, map<string, FloatArray> > *destGPMap = new map<int, map<string, FloatArray> >;
+            map<int, map<string, FloatArray> > &srcGPMap  = srcElIntRuleMap_it->second;
 
-            map<int, map<string, FloatArray>>::iterator srcGPMap_it = srcGPMap.begin();
+            map<int, map<string, FloatArray> >::iterator srcGPMap_it = srcGPMap.begin();
             for ( ; srcGPMap_it != srcGPMap.end(); ++srcGPMap_it ) {
                 map<string, FloatArray> *destRespMap = new map<string, FloatArray>;
                 map<string, FloatArray> &srcRespMap  = srcGPMap_it->second;
@@ -1064,29 +1204,31 @@ void populateElResults( map<int, map<int, map<int, map<string, FloatArray>>>> &a
     }
 }
 
-void addMultiply( map<int, map<int, map<int, map<string, FloatArray>>>> &answer, map<int, map<int, map<int, map<string, FloatArray>>>> &src, map<int, map<int, map<int, map<string, FloatArray>>>> &src2, double fact )
+void addMultiply( map<int, map<int, map<int, map<string, FloatArray> > > > &answer, map<int, map<int, map<int, map<string, FloatArray> > > > &src, map<int, map<int, map<int, map<string, FloatArray> > > > &src2, double fact )
 {
-    if ( answer.size() == 0 ) { populateElResults( answer, src ); }
+    if ( answer.size() == 0 ) {
+        populateElResults( answer, src );
+    }
 
-    map<int, map<int, map<int, map<string, FloatArray>>>>::iterator destElem_it = answer.begin();
-    map<int, map<int, map<int, map<string, FloatArray>>>>::iterator srcElem_it  = src.begin();
-    map<int, map<int, map<int, map<string, FloatArray>>>>::iterator srcElem_it2 = src2.begin();
+    map<int, map<int, map<int, map<string, FloatArray> > > >::iterator destElem_it = answer.begin();
+    map<int, map<int, map<int, map<string, FloatArray> > > >::iterator srcElem_it  = src.begin();
+    map<int, map<int, map<int, map<string, FloatArray> > > >::iterator srcElem_it2 = src2.begin();
     for ( ; destElem_it != answer.end(); ++destElem_it, ++srcElem_it, ++srcElem_it2 ) {
-        map<int, map<int, map<string, FloatArray>>> &destElIntRuleMap = destElem_it->second;
-        map<int, map<int, map<string, FloatArray>>> &srcElIntRuleMap  = srcElem_it->second;
-        map<int, map<int, map<string, FloatArray>>> &srcElIntRuleMap2 = srcElem_it2->second;
+        map<int, map<int, map<string, FloatArray> > > &destElIntRuleMap = destElem_it->second;
+        map<int, map<int, map<string, FloatArray> > > &srcElIntRuleMap  = srcElem_it->second;
+        map<int, map<int, map<string, FloatArray> > > &srcElIntRuleMap2 = srcElem_it2->second;
 
-        map<int, map<int, map<string, FloatArray>>>::iterator destElIntRuleMap_it = destElIntRuleMap.begin();
-        map<int, map<int, map<string, FloatArray>>>::iterator srcElIntRuleMap_it  = srcElIntRuleMap.begin();
-        map<int, map<int, map<string, FloatArray>>>::iterator srcElIntRuleMap_it2 = srcElIntRuleMap2.begin();
+        map<int, map<int, map<string, FloatArray> > >::iterator destElIntRuleMap_it = destElIntRuleMap.begin();
+        map<int, map<int, map<string, FloatArray> > >::iterator srcElIntRuleMap_it  = srcElIntRuleMap.begin();
+        map<int, map<int, map<string, FloatArray> > >::iterator srcElIntRuleMap_it2 = srcElIntRuleMap2.begin();
         for ( ; destElIntRuleMap_it != destElIntRuleMap.end(); ++destElIntRuleMap_it, ++srcElIntRuleMap_it, ++srcElIntRuleMap_it2 ) {
-            map<int, map<string, FloatArray>> &destGPMap = destElIntRuleMap_it->second;
-            map<int, map<string, FloatArray>> &srcGPMap  = srcElIntRuleMap_it->second;
-            map<int, map<string, FloatArray>> &srcGPMap2 = srcElIntRuleMap_it2->second;
+            map<int, map<string, FloatArray> > &destGPMap = destElIntRuleMap_it->second;
+            map<int, map<string, FloatArray> > &srcGPMap  = srcElIntRuleMap_it->second;
+            map<int, map<string, FloatArray> > &srcGPMap2 = srcElIntRuleMap_it2->second;
 
-            map<int, map<string, FloatArray>>::iterator destGPMap_it = destGPMap.begin();
-            map<int, map<string, FloatArray>>::iterator srcGPMap_it  = srcGPMap.begin();
-            map<int, map<string, FloatArray>>::iterator srcGPMap_it2 = srcGPMap2.begin();
+            map<int, map<string, FloatArray> >::iterator destGPMap_it = destGPMap.begin();
+            map<int, map<string, FloatArray> >::iterator srcGPMap_it  = srcGPMap.begin();
+            map<int, map<string, FloatArray> >::iterator srcGPMap_it2 = srcGPMap2.begin();
             for ( ; destGPMap_it != destGPMap.end(); ++destGPMap_it, ++srcGPMap_it, ++srcGPMap_it2 ) {
                 map<string, FloatArray> &destRespMap = destGPMap_it->second;
                 map<string, FloatArray> &srcRespMap  = srcGPMap_it->second;
@@ -1110,17 +1252,17 @@ void addMultiply( map<int, map<int, map<int, map<string, FloatArray>>>> &answer,
     }
 }
 
-void calcRoot( map<int, map<int, map<int, map<string, FloatArray>>>> &answer )
+void calcRoot( map<int, map<int, map<int, map<string, FloatArray> > > > &answer )
 {
-    map<int, map<int, map<int, map<string, FloatArray>>>>::iterator destElem_it = answer.begin();
+    map<int, map<int, map<int, map<string, FloatArray> > > >::iterator destElem_it = answer.begin();
     for ( ; destElem_it != answer.end(); ++destElem_it ) {
-        map<int, map<int, map<string, FloatArray>>> &destElIntRuleMap = destElem_it->second;
+        map<int, map<int, map<string, FloatArray> > > &destElIntRuleMap = destElem_it->second;
 
-        map<int, map<int, map<string, FloatArray>>>::iterator destElIntRuleMap_it = destElIntRuleMap.begin();
+        map<int, map<int, map<string, FloatArray> > >::iterator destElIntRuleMap_it = destElIntRuleMap.begin();
         for ( ; destElIntRuleMap_it != destElIntRuleMap.end(); ++destElIntRuleMap_it ) {
-            map<int, map<string, FloatArray>> &destGPMap = destElIntRuleMap_it->second;
+            map<int, map<string, FloatArray> > &destGPMap = destElIntRuleMap_it->second;
 
-            map<int, map<string, FloatArray>>::iterator destGPMap_it = destGPMap.begin();
+            map<int, map<string, FloatArray> >::iterator destGPMap_it = destGPMap.begin();
             for ( ; destGPMap_it != destGPMap.end(); ++destGPMap_it ) {
                 map<string, FloatArray> &destRespMap = destGPMap_it->second;
 
@@ -1138,9 +1280,9 @@ void calcRoot( map<int, map<int, map<int, map<string, FloatArray>>>> &answer )
     }
 }
 
-void populateElResults( map<int, map<string, FloatArray>> &answer, map<int, map<string, FloatArray>> &src )
+void populateElResults( map<int, map<string, FloatArray> > &answer, map<int, map<string, FloatArray> > &src )
 {
-    map<int, map<string, FloatArray>>::iterator srcElem_it = src.begin();
+    map<int, map<string, FloatArray> >::iterator srcElem_it = src.begin();
     for ( ; srcElem_it != src.end(); ++srcElem_it ) {
         map<string, FloatArray> *destBRespMap = new map<string, FloatArray>;
         map<string, FloatArray> &srcBRespMap  = srcElem_it->second;
@@ -1157,13 +1299,15 @@ void populateElResults( map<int, map<string, FloatArray>> &answer, map<int, map<
     }
 }
 
-void addMultiply( map<int, map<string, FloatArray>> &answer, map<int, map<string, FloatArray>> &src, map<int, map<string, FloatArray>> &src2, double fact )
+void addMultiply( map<int, map<string, FloatArray> > &answer, map<int, map<string, FloatArray> > &src, map<int, map<string, FloatArray> > &src2, double fact )
 {
-    if ( answer.size() == 0 ) { populateElResults( answer, src ); }
+    if ( answer.size() == 0 ) {
+        populateElResults( answer, src );
+    }
 
-    map<int, map<string, FloatArray>>::iterator destElem_it = answer.begin();
-    map<int, map<string, FloatArray>>::iterator srcElem_it  = src.begin();
-    map<int, map<string, FloatArray>>::iterator srcElem_it2 = src2.begin();
+    map<int, map<string, FloatArray> >::iterator destElem_it = answer.begin();
+    map<int, map<string, FloatArray> >::iterator srcElem_it  = src.begin();
+    map<int, map<string, FloatArray> >::iterator srcElem_it2 = src2.begin();
     for ( ; destElem_it != answer.end(); ++destElem_it, ++srcElem_it, ++srcElem_it2 ) {
         map<string, FloatArray> &destRespMap = destElem_it->second;
         map<string, FloatArray> &srcRespMap  = srcElem_it->second;
@@ -1185,9 +1329,9 @@ void addMultiply( map<int, map<string, FloatArray>> &answer, map<int, map<string
     }
 }
 
-void calcRoot( map<int, map<string, FloatArray>> &answer )
+void calcRoot( map<int, map<string, FloatArray> > &answer )
 {
-    map<int, map<string, FloatArray>>::iterator destElem_it = answer.begin();
+    map<int, map<string, FloatArray> >::iterator destElem_it = answer.begin();
     for ( ; destElem_it != answer.end(); ++destElem_it ) {
         map<string, FloatArray> &destRespMap = destElem_it->second;
 
@@ -1203,8 +1347,7 @@ void calcRoot( map<int, map<string, FloatArray>> &answer )
     }
 }
 
-void
-ResponseSpectrum::computeExternalLoadReactionContribution( FloatArray &reactions, TimeStep *tStep, int di )
+void ResponseSpectrum::computeExternalLoadReactionContribution( FloatArray &reactions, TimeStep *tStep, int di )
 {
     reactions.resize( this->giveNumberOfDomainEquations( di, EModelDefaultPrescribedEquationNumbering() ) );
     reactions.zero();
@@ -1217,9 +1360,9 @@ void ResponseSpectrum::buildReactionTable( IntArray &restrDofMans, IntArray &res
     IntArray &eqn, TimeStep *tStep, int di )
 {
     // determine number of restrained dofs
-    Domain *domain    = this->giveDomain( di );
-    int numRestrDofs  = this->giveNumberOfDomainEquations( di, EModelDefaultPrescribedEquationNumbering() );
-    int ndofMan       = domain->giveNumberOfDofManagers();
+    Domain *domain   = this->giveDomain( di );
+    int numRestrDofs = this->giveNumberOfDomainEquations( di, EModelDefaultPrescribedEquationNumbering() );
+    int ndofMan      = domain->giveNumberOfDofManagers();
     int rindex, count = 0;
 
     // initialize corresponding dofManagers and dofs for each restrained dof
@@ -1251,8 +1394,7 @@ void ResponseSpectrum::buildReactionTable( IntArray &restrDofMans, IntArray &res
     eqn.resizeWithValues( count );
 }
 
-void
-ResponseSpectrum::computeReaction( FloatArray &answer, TimeStep *tStep, int di )
+void ResponseSpectrum::computeReaction( FloatArray &answer, TimeStep *tStep, int di )
 {
     FloatArray contribution;
 
@@ -1264,8 +1406,8 @@ ResponseSpectrum::computeReaction( FloatArray &answer, TimeStep *tStep, int di )
         EModelDefaultPrescribedEquationNumbering(), this->giveDomain( di ) );
     // Subtract external loading
     ///@todo All engineering models should be using this (for consistency)
-    //this->assembleVector( answer, tStep, ExternalForceAssembler(), VM_Total,
-    //                    EModelDefaultPrescribedEquationNumbering(), this->giveDomain(di) );
+    // this->assembleVector( answer, tStep, ExternalForceAssembler(), VM_Total,
+    //                     EModelDefaultPrescribedEquationNumbering(), this->giveDomain(di) );
     ///@todo This method is overloaded in some functions, it needs to be generalized.
     this->computeExternalLoadReactionContribution( contribution, tStep, di );
     answer.subtract( contribution );
@@ -1273,26 +1415,33 @@ ResponseSpectrum::computeReaction( FloatArray &answer, TimeStep *tStep, int di )
 }
 
 
-void
-ResponseSpectrum::updateInternalState( TimeStep *tStep )
+void ResponseSpectrum::updateInternalState( TimeStep *tStep )
 {
     for ( auto &domain : domainList ) {
-        if ( requiresUnknownsDictionaryUpdate() ) { for ( auto &dman : domain->giveDofManagers() ) { this->updateDofUnknownsDictionary( dman.get(), tStep ); } }
+        if ( requiresUnknownsDictionaryUpdate() ) {
+            for ( auto &dman : domain->giveDofManagers() ) {
+                this->updateDofUnknownsDictionary( dman.get(), tStep );
+            }
+        }
 
         for ( auto &bc : domain->giveBcs() ) {
             ActiveBoundaryCondition *abc;
 
-            if ( ( abc = dynamic_cast<ActiveBoundaryCondition *>(bc.get()) ) ) {
+            if ( ( abc = dynamic_cast<ActiveBoundaryCondition *>( bc.get() ) ) ) {
                 int ndman = abc->giveNumberOfInternalDofManagers();
-                for ( int j = 1; j <= ndman; ++j ) { this->updateDofUnknownsDictionary( abc->giveInternalDofManager( j ), tStep ); }
+                for ( int j = 1; j <= ndman; ++j ) {
+                    this->updateDofUnknownsDictionary( abc->giveInternalDofManager( j ), tStep );
+                }
             }
         }
 
         if ( true ) {
-            //internalVarUpdateStamp != tStep->giveSolutionStateCounter()
-            for ( auto &elem : domain->giveElements() ) { elem->updateInternalState( tStep ); }
+            // internalVarUpdateStamp != tStep->giveSolutionStateCounter()
+            for ( auto &elem : domain->giveElements() ) {
+                elem->updateInternalState( tStep );
+            }
 
-            //internalVarUpdateStamp = tStep->giveSolutionStateCounter();
+            // internalVarUpdateStamp = tStep->giveSolutionStateCounter();
         }
     }
 }
@@ -1300,8 +1449,8 @@ ResponseSpectrum::updateInternalState( TimeStep *tStep )
 
 void ResponseSpectrum::updateYourself( TimeStep *tStep )
 {
-    //this->updateInternalState(tStep);
-    //EngngModel::updateYourself(tStep);
+    // this->updateInternalState(tStep);
+    // EngngModel::updateYourself(tStep);
 }
 
 
@@ -1317,29 +1466,39 @@ void ResponseSpectrum::terminate( TimeStep *tStep )
 
     for ( int i = 1; i <= numberOfRequiredEigenValues; ++i ) {
         fprintf( outputStream, "%15.8e ", eigVal.at( i ) );
-        if ( ( i % 5 ) == 0 ) { fprintf( outputStream, "\n" ); }
+        if ( ( i % 5 ) == 0 ) {
+            fprintf( outputStream, "\n" );
+        }
     }
 
 
     fprintf( outputStream, "\n\n\nCentroid Coordinates are:\n-----------------\n\tX\t|\tY\t|\tZ\n" );
-    for ( int i = 1; i <= centroid.giveSize(); ++i ) { fprintf( outputStream, "%10.3e ", centroid.at( i ) ); }
+    for ( int i = 1; i <= centroid.giveSize(); ++i ) {
+        fprintf( outputStream, "%10.3e ", centroid.at( i ) );
+    }
 
     fprintf( outputStream, "\n" );
 
     fprintf( outputStream, "\n\nParticipation Factors are:\n-----------------\n\tDx\t|\tDy\t|\tDz\t|\tRx\t|\tRy\t|\tRz\n" );
     for ( int i = 1; i <= partFact.giveNumberOfRows(); ++i ) {
-        for ( int j = 1; j <= partFact.giveNumberOfColumns(); ++j ) { fprintf( outputStream, "%10.3e ", partFact.at( i, j ) ); }
+        for ( int j = 1; j <= partFact.giveNumberOfColumns(); ++j ) {
+            fprintf( outputStream, "%10.3e ", partFact.at( i, j ) );
+        }
         fprintf( outputStream, "\n" );
     }
 
     fprintf( outputStream, "\n\nTotal Masses are:\n-----------------\n\tDx\t|\tDy\t|\tDz\t|\tRx\t|\tRy\t|\tRz\n" );
-    for ( int i = 1; i <= totMass.giveSize(); ++i ) { fprintf( outputStream, "%10.3e ", totMass.at( i ) ); }
+    for ( int i = 1; i <= totMass.giveSize(); ++i ) {
+        fprintf( outputStream, "%10.3e ", totMass.at( i ) );
+    }
 
     fprintf( outputStream, "\n" );
 
     fprintf( outputStream, "\n\nMass Ratios are:\n-----------------\n\tDx\t|\tDy\t|\tDz\t|\tRx\t|\tRy\t|\tRz\n" );
     for ( int i = 1; i <= massPart.giveNumberOfRows(); ++i ) {
-        for ( int j = 1; j <= massPart.giveNumberOfColumns(); ++j ) { fprintf( outputStream, "%10.3e ", massPart.at( i, j ) ); }
+        for ( int j = 1; j <= massPart.giveNumberOfColumns(); ++j ) {
+            fprintf( outputStream, "%10.3e ", massPart.at( i, j ) );
+        }
         fprintf( outputStream, "\n" );
     }
 
@@ -1353,15 +1512,17 @@ void ResponseSpectrum::terminate( TimeStep *tStep )
     for ( auto &dman : domain->giveDofManagers() ) {
         dman->updateYourself( tStep );
         fprintf( outputStream, "%-8s%8d (%8d):\n", dman->giveClassName(), dman->giveLabel(), dman->giveNumber() );
-        for ( Dof *dof : *dman ) { this->printDofOutputAt( outputStream, dof, tStep ); }
+        for ( Dof *dof : *dman ) {
+            this->printDofOutputAt( outputStream, dof, tStep );
+        }
     }
 
-    //for ( int i = 1; i <=  numberOfRequiredEigenValues; ++i ) {
-    //    fprintf(outputStream, "\nOutput for eigen value no.  %.3e \n", ( double ) i);
-    //    fprintf( outputStream,
-    //            "Printing eigen vector no. %d, corresponding eigen value is %15.8e\n\n",
-    //            i, eigVal.at(i) );
-    //    tStep->setTime( ( double ) i ); // we use time as intrinsic eigen value index
+    // for ( int i = 1; i <=  numberOfRequiredEigenValues; ++i ) {
+    //     fprintf(outputStream, "\nOutput for eigen value no.  %.3e \n", ( double ) i);
+    //     fprintf( outputStream,
+    //             "Printing eigen vector no. %d, corresponding eigen value is %15.8e\n\n",
+    //             i, eigVal.at(i) );
+    //     tStep->setTime( ( double ) i ); // we use time as intrinsic eigen value index
 
     //    if ( this->requiresUnknownsDictionaryUpdate() ) {
     //        for ( auto &dman : domain->giveDofManagers() ) {
@@ -1436,19 +1597,19 @@ void ResponseSpectrum::terminate( TimeStep *tStep )
         }
     }
 
-    //for ( int i = 1; i <=  numberOfRequiredEigenValues; ++i ) {
-    //    // export using export manager
-    //    tStep->setTime( ( double ) i ); // we use time as intrinsic eigen value index
-    //    tStep->setNumber(i);
+    // for ( int i = 1; i <=  numberOfRequiredEigenValues; ++i ) {
+    //     // export using export manager
+    //     tStep->setTime( ( double ) i ); // we use time as intrinsic eigen value index
+    //     tStep->setNumber(i);
     exportModuleManager.doOutput( tStep ); // forcing bem with intrinsicTime=0 to compute the square root for SRSS and print results
     //}
-    fprintf(outputStream, "strTerm\n");
+    fprintf( outputStream, "strTerm\n" );
     fflush( this->giveOutputStream() );
     this->saveStepContext( tStep, CM_State | CM_Definition );
 }
 
 
-void ResponseSpectrum::saveContext( DataStream &stream, ContextMode mode)
+void ResponseSpectrum::saveContext( DataStream &stream, ContextMode mode )
 //
 // saves state variable - displacement vector
 //
@@ -1458,13 +1619,17 @@ void ResponseSpectrum::saveContext( DataStream &stream, ContextMode mode)
 
     EngngModel::saveContext( stream, mode );
 
-    if ( ( iores = eigVal.storeYourself( stream ) ) != CIO_OK ) { THROW_CIOERR( iores ); }
+    if ( ( iores = eigVal.storeYourself( stream ) ) != CIO_OK ) {
+        THROW_CIOERR( iores );
+    }
 
-    if ( ( eigVec.storeYourself( stream ) ) != CIO_OK ) { THROW_CIOERR( iores ); }
+    if ( ( eigVec.storeYourself( stream ) ) != CIO_OK ) {
+        THROW_CIOERR( iores );
+    }
 }
 
 
-void ResponseSpectrum::restoreContext( DataStream &stream, ContextMode mode)
+void ResponseSpectrum::restoreContext( DataStream &stream, ContextMode mode )
 //
 // restore state variable - displacement vector
 //
@@ -1476,12 +1641,18 @@ void ResponseSpectrum::restoreContext( DataStream &stream, ContextMode mode)
 
         EngngModel::restoreContext( stream, mode );
 
-        if ( ( iores = eigVal.restoreYourself( stream ) ) != CIO_OK ) { THROW_CIOERR( iores ); }
+        if ( ( iores = eigVal.restoreYourself( stream ) ) != CIO_OK ) {
+            THROW_CIOERR( iores );
+        }
 
-        if ( ( iores = eigVec.restoreYourself( stream ) ) != CIO_OK ) { THROW_CIOERR( iores ); }
+        if ( ( iores = eigVec.restoreYourself( stream ) ) != CIO_OK ) {
+            THROW_CIOERR( iores );
+        }
     }
 
-    if ( activeVector > numberOfRequiredEigenValues ) { activeVector = numberOfRequiredEigenValues; }
+    if ( activeVector > numberOfRequiredEigenValues ) {
+        activeVector = numberOfRequiredEigenValues;
+    }
 
     this->restoreFlag = 1;
 }
