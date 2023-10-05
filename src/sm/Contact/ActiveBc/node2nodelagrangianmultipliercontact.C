@@ -233,8 +233,8 @@ Node2NodeLagrangianMultiplierContact :: computeGap(double &answer, Node *masterN
         normal.times(1.0 / norm);
     }
 
-    slaveNode->giveUnknownVector(uS, { D_u, D_v }, VM_Total, tStep, true);
-    masterNode->giveUnknownVector(uM, { D_u, D_v }, VM_Total, tStep, true);
+    slaveNode->giveUnknownVector(uS, { D_u, D_v, D_w }, VM_Total, tStep, true);
+    masterNode->giveUnknownVector( uM, { D_u, D_v, D_w }, VM_Total, tStep, true );
     xs.add(uS);
     xm.add(uM);
     FloatArray dx = xs - xm;
