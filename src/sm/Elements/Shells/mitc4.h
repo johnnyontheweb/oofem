@@ -143,7 +143,8 @@ protected:
     void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int = 1, int = ALL_STRAINS) override;
     void computeNmatrixAt(const FloatArray &iLocCoord, FloatMatrix &answer) override;
     void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) override;
-    void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep) override;
+    void computeThermalStrainVector( FloatArray &answer, GaussPoint *gp, TimeStep *tStep );
+    void computeStressVector( FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep ) override;
     void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep) override;
 
 

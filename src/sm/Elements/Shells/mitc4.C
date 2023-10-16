@@ -862,8 +862,41 @@ MITC4Shell::computeGtoLRotationMatrix(FloatMatrix &answer)
 }
 
 
+void 
+MITC4Shell::computeThermalStrainVector( FloatArray &answer, GaussPoint *gp, TimeStep *tStep )
+{
+    // StructuralElement ::computeStrainVector( answer, gp, tStep );
+
+    /**Note: (by bp): This assumes that the behaviour is elastic
+     * there exist a number of nonlinear integral material models for beams/plates/shells
+     * defined directly in terms of integral forces and moments and corresponding
+     * deformations and curvatures. This would require to implement support at material model level.
+     * Mikael: See earlier response to comment
+     */
+    auto cs            = static_cast<SimpleCrossSection *>( this->giveCrossSection() );
+    if ( cs ) {
+        auto mat = static_cast<StructuralMaterial *>( cs->giveMaterial( gp ) );
+        FloatArray et;
+        cs->giveTemperatureVector( et, gp, tStep ); // FIXME use return channel, maybe fixed size/std::pair?
+        if ( et.giveSize() > 0 ) {
+            double thick = cs->give( CS_Thickness, gp );
+            auto e0      = mat->giveThermalDilatationVector( gp, tStep );
+            answer.at( 1 ) -= e0.at( 1 ) * ( et.at( 1 ) - mat->giveReferenceTemperature() );
+            answer.at( 2 ) -= e0.at( 2 ) * ( et.at( 1 ) - mat->giveReferenceTemperature() );
+            if ( et.giveSize() > 1 ) {
+                answer.at( 4 ) -= e0.at( 1 ) * et.at( 2 ) / thick; // kappa_x
+                answer.at( 5 ) -= e0.at( 2 ) * et.at( 2 ) / thick; // kappa_y
+            }
+        }
+    }
+}
+
 void
-MITC4Shell::computeStressVector( FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep ) { answer = this->giveStructuralCrossSection()->giveRealStress_3dDegeneratedShell( strain, gp, tStep ); }
+MITC4Shell::computeStressVector( FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep ) {
+    FloatArray strainTot = strain;
+    this->computeThermalStrainVector( strainTot, gp, tStep );
+    answer = this->giveStructuralCrossSection()->giveRealStress_3dDegeneratedShell( strainTot, gp, tStep );
+}
 
 
 FloatMatrix
@@ -874,12 +907,14 @@ MITC4Shell::giveCharacteristicTensor(CharTensor type, GaussPoint *gp, TimeStep *
     if ( type == GlobalForceTensor ) {
         FloatArray localStress, localStrain;
         this->computeStrainVector( localStrain, gp, tStep );
+        this->computeThermalStrainVector( localStrain, gp, tStep );
         this->computeStressVector( localStress, localStrain, gp, tStep );
         auto stress = mat->transformStressVectorTo( GtoLRotationMatrix, localStress, false );
         return from_voigt_stress( stress );
     } else if ( type == GlobalStrainTensor ) {
         FloatArray localStrain;
         this->computeStrainVector( localStrain, gp, tStep );
+        this->computeThermalStrainVector( localStrain, gp, tStep );
         auto strain = mat->transformStrainVectorTo( GtoLRotationMatrix, localStrain, false );
         return from_voigt_strain( strain );
     } else { throw std::runtime_error( "unsupported tensor mode" ); }
