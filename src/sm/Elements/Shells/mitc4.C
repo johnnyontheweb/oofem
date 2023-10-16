@@ -879,13 +879,15 @@ MITC4Shell::computeThermalStrainVector( FloatArray &answer, GaussPoint *gp, Time
         FloatArray et;
         cs->giveTemperatureVector( et, gp, tStep ); // FIXME use return channel, maybe fixed size/std::pair?
         if ( et.giveSize() > 0 ) {
+            double refTemp = mat->giveReferenceTemperature();
             double thick = cs->give( CS_Thickness, gp );
             auto e0      = mat->giveThermalDilatationVector( gp, tStep );
-            answer.at( 1 ) -= e0.at( 1 ) * ( et.at( 1 ) - mat->giveReferenceTemperature() );
-            answer.at( 2 ) -= e0.at( 2 ) * ( et.at( 1 ) - mat->giveReferenceTemperature() );
+            answer.at( 1 ) -= e0.at( 1 ) * ( et.at( 1 ) - refTemp );
+            answer.at( 2 ) -= e0.at( 2 ) * ( et.at( 1 ) - refTemp );
             if ( et.giveSize() > 1 ) {
-                answer.at( 4 ) -= e0.at( 1 ) * et.at( 2 ) / thick; // kappa_x
-                answer.at( 5 ) -= e0.at( 2 ) * et.at( 2 ) / thick; // kappa_y
+                double z = gp->giveNaturalCoordinates().at( 3 ); // gp along thickness
+                answer.at( 1 ) -= e0.at( 1 ) * (et.at( 2 )-refTemp)  * z; // kappa_x   / (thick/2)
+                answer.at( 2 ) -= e0.at( 2 ) * (et.at( 2 )-refTemp)  * z; // kappa_y
             }
         }
     }
@@ -989,6 +991,7 @@ MITC4Shell::giveMidplaneIPValue(int gpXY, InternalStateType type, TimeStep *tSte
 
             FloatArray localStress, localStrain;
             this->computeStrainVector( localStrain, gp, tStep );
+            this->computeThermalStrainVector( localStrain, gp, tStep );
             this->computeStressVector( localStress, localStrain, gp, tStep );
             mLocal += w * FloatArrayF< 6 >(localStress);
         }
