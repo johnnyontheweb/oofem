@@ -65,7 +65,7 @@ class TimeStep;
  * Elements must take care, on which boundary the load acts on (side number, ...).
  *
  * @note{This class is not restricted to structural problems. For example, in thermal analysis,
- * a boundary load load would be a  heat source.}
+ * a boundary load load would be a heat source.}
  */
 class OOFEM_EXPORT LinearEdgeLoad : public EdgeLoad
 {
