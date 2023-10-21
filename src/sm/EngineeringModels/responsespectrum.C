@@ -63,6 +63,7 @@
 #include "dynamicinputrecord.h"
 #include "inputrecord.h"
 #include "sm/Elements/structuralelement.h"
+#include "nodalload.h"
 #include <math.h>
 
 
@@ -502,7 +503,7 @@ void ResponseSpectrum::solveYourself()
 
     // create plain numbering system
     std::vector<IntArray> dofMansEqns( nDofMans );
-    std::map<int, IntArray> intDofMansEqns;
+    std::map<int, IntArray> intDofMansEqns; // equation numbers with default numbering for internal dofs
     int totalDofs = this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() );
 
     for ( std::unique_ptr<DofManager> &node : domain->giveDofManagers() ) {
@@ -567,9 +568,6 @@ void ResponseSpectrum::solveYourself()
     plainMassMatrix->buildInternalStructure( this, 1, dummyNumbering);
 
     // todo: clean up all duplication wtf
-    LumpedMassVectorAssembler lma;
-    FloatMatrix R;
-    FloatArray massPos(3); // stores the product between mass and position
     // then from internaldof managers
     for (int ielem = 1; ielem <= nelem; ++ielem) {
         Element* element = domain->giveElement(ielem);
@@ -920,23 +918,38 @@ void ResponseSpectrum::solveYourself()
     // mode with highes participation factor in requested direction
     dominantMode = std::distance( dirFactors.begin(), std::max_element( dirFactors.begin(), dirFactors.end() ) ) + 1;
 
+    IntArray DofArray{1,2,3,4,5,6};
+
     for ( int dN = 1; dN <= numberOfRequiredEigenValues; ++dN ) {
         OOFEM_LOG_INFO( "Analyzing mode %d...\n", dN );
 
         double sAcc = calcSpectrumOrdinate( periods.at( dN ) );
 
         loadVector.clear();
+        FloatArray pf { partFact.at(dN, 1), partFact.at(dN, 2),partFact.at(dN, 3) };
+        const double scaleFactor = sAcc * dir.dotProduct(pf);
 
         // TODO: recreate the load vector from the unitdisp field
         // iterate on dofmans, create load given displacement field
-        for ( int nDir = 1; nDir <= 3; ++nDir ) {
-            if ( dir.at( nDir ) != 0 ) {
-                tempCol.beColumnOf( eigVec, dN );
-                massMatrix->times( tempCol, tempCol2 );
-                tempCol2 *= ( sAcc * partFact.at( dN, nDir ) * dir.at( nDir ) ); // scaled forces
-                loadVector.add( tempCol2 );
+        tStep->setTime( (double)dN ); // we use time as intrinsic eigen value index
+        tStep->setNumber( dN );
+        for ( std::unique_ptr<DofManager> &node : domain->giveDofManagers() ) {
+            FloatArray charVec;
+            charVec.reserve( 6 );
+            for ( auto dof : *node ) {
+                const double val              = dof->giveUnknown( VM_Total, tStep );
+                charVec.at( dof->giveDofType() ) = val;
             }
+
+            FloatMatrix R;
+            if (node->computeM2LTransformation(R, DofArray)) {
+                charVec.rotatedWith(R, 't');
+            }
+
+            node->giveLocationArray(DofArray, loc, defNumbering);
+            loadVector.assemble(charVec, loc);
         }
+        loadVector *= scaleFactor; // scaled forces
 
         // solve linear system
         NM_Status s = nLinMethod->solve( *stiffnessMatrix, loadVector, dummyDisps ); // solve linear system
