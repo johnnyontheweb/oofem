@@ -459,7 +459,6 @@ void ResponseSpectrum::solveYourself()
         LumpedMassElement *massElement = dynamic_cast<LumpedMassElement *>( element );
         FloatArray m;
         const int dofMan = massElement->giveDofManArray().at( 1 );
-        const IntArray loc;
         lma.vectorFromElement( m, *massElement, tStep, VM_Unknown );
 
         IntArray dofMask;
@@ -560,6 +559,46 @@ void ResponseSpectrum::solveYourself()
 
     std::unique_ptr<SparseMtrx> plainMassMatrix = classFactory.createSparseMtrx( sparseMtrxType );
     plainMassMatrix->buildInternalStructure( this, 1, DummyNumbering( totalDofs ) );
+
+    // todo: clean up all duplication wtf
+    LumpedMassVectorAssembler lma;
+    FloatMatrix R;
+    FloatArray massPos(3); // stores the product between mass and position
+    // then from internaldof managers
+    for (int ielem = 1; ielem <= nelem; ++ielem) {
+        Element* element = domain->giveElement(ielem);
+
+        // we only support masses from lumpedmasselements.
+        if (strcmp(element->giveClassName(), "LumpedMassElement") != 0) {
+            if (!warn) {
+                OOFEM_WARNING("Only masses from LumpedMassElements are suppported.");
+                warn = true;
+            }
+            continue;
+        }
+
+        LumpedMassElement* massElement = dynamic_cast<LumpedMassElement*>(element);
+        FloatArray m;
+        const int dofMan = massElement->giveDofManagerNumber(1);
+        lma.vectorFromElement(m, *massElement, tStep, VM_Unknown);
+
+        IntArray dofMask;
+        massElement->giveElementDofIDMask(dofMask);
+        FloatMatrix mat, R;
+        mat.beDiagonal(m);
+
+        if (mat.isNotEmpty()) {
+            const IntArray loc = dofMansEqns[dofMan];
+            ///@todo This rotation matrix is not flexible enough.. it can only work with full size matrices and doesn't allow for flexibility in the matrixassembler.
+            if (element->giveRotationMatrix(R)) {
+                mat.rotatedWith(R);
+            }
+
+            if (plainMassMatrix->assemble(loc, mat) == 0) {
+                OOFEM_ERROR("sparse matrix assemble error");
+            }
+        }
+    }
 
     //
     // create unit displacement vectors
