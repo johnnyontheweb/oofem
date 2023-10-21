@@ -84,14 +84,19 @@ class DummyNumbering : public UnknownNumberingScheme
 {
 protected:
     int neqs = 0;
+    vector<IntArray> dofs;
 
 public:
-    DummyNumbering( int n ) :
-        UnknownNumberingScheme(), neqs( n ){};
+    DummyNumbering( int n, vector<IntArray> dofs ) :
+        UnknownNumberingScheme(), neqs( n ), dofs(dofs){};
 
     bool isDefault() const override { return false; }
     int giveRequiredNumberOfDomainEquation() const override { return neqs; }
-    int giveDofEquationNumber( Dof *dof ) const override { OOFEM_ERROR( "Not implemented." ); }
+    int giveDofEquationNumber( Dof *dof ) const override { 
+        int num = dof->giveDofManager()->giveNumber() - 1;  // make it zero based for std container
+        const auto dType = dof->giveDofType();
+        return dofs.at( num ).at( dType );
+    }
 };
 
 
@@ -558,7 +563,8 @@ void ResponseSpectrum::solveYourself()
     }
 
     std::unique_ptr<SparseMtrx> plainMassMatrix = classFactory.createSparseMtrx( sparseMtrxType );
-    plainMassMatrix->buildInternalStructure( this, 1, DummyNumbering( totalDofs ) );
+    DummyNumbering dummyNumbering(totalDofs, dofMansEqns);
+    plainMassMatrix->buildInternalStructure( this, 1, dummyNumbering);
 
     // todo: clean up all duplication wtf
     LumpedMassVectorAssembler lma;
