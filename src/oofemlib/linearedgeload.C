@@ -51,7 +51,7 @@ LinearEdgeLoad :: initializeFrom(InputRecord &ir)
     IR_GIVE_OPTIONAL_FIELD(ir, startLocal, _IFT_LinearEdgeLoad_startlocal);
     IR_GIVE_OPTIONAL_FIELD(ir, endLocal, _IFT_LinearEdgeLoad_endlocal);
     if (startLocal>endLocal) {
-        throw ValueInputException(ir, "sc/ec", "incorrect local coordinates: start > end!");
+        throw ValueInputException(ir, "sl/el", "incorrect local coordinates: start > end!");
     }
 
     int fType = 0;
@@ -108,23 +108,22 @@ LinearEdgeLoad :: computeNArray(FloatArray &answer, const FloatArray &coords) co
                 OOFEM_WARNING("point out of receiver, skipped", 1);
                 answer.resize(2);
                 answer.zero();
-		return;
+		    return;
             }
         }
     } else {
-	// for linear loads in local edge coords
-	if (fabs(startLocal - endLocal)>0){
-	    answer.resize(2); answer.zero();
-	    if (coords.at(1) < (2*startLocal-1) || coords.at(1) > (2*endLocal-1)) {
-		return;
+	    // for linear loads in local edge coords
+	    if (fabs(startLocal - endLocal)>0){
+	        answer.resize(2); answer.zero();
+	        if (coords.at(1) < (2*startLocal-1) || coords.at(1) > (2*endLocal-1)) {
+		        return;
+	        } else { // gp is inside the load
+		        // convert lcs of the element into load isopar. lcs
+		        ksi = (fabs(coords.at(1) - (2 * startLocal - 1)) - (endLocal - startLocal)) / (endLocal - startLocal);
+	        }
+	    } else {
+	        ksi = coords.at(1);
 	    }
-	    else { // gp is inside the load
-		// convert lcs of the element into load isopar. lcs
-		ksi = (fabs(coords.at(1) - (2 * startLocal - 1)) - (endLocal - startLocal)) / (endLocal - startLocal);
-	    }
-	} else {
-	    ksi = coords.at(1);
-	}
     }
 
     answer.resize(2);
