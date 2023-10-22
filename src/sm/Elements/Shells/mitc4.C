@@ -882,12 +882,12 @@ MITC4Shell::computeThermalStrainVector( FloatArray &answer, GaussPoint *gp, Time
             double refTemp = mat->giveReferenceTemperature();
             //double thick = cs->give( CS_Thickness, gp );
             auto e0      = mat->giveThermalDilatationVector( gp, tStep );
-            answer.at( 1 ) -= e0.at( 1 ) * ( et.at( 1 ) - refTemp )/2;
-            answer.at( 2 ) -= e0.at( 2 ) * ( et.at( 1 ) - refTemp )/2;
+            answer.at( 1 ) -= e0.at( 1 ) * ( et.at( 1 ) - refTemp ) / nPointsZ;
+            answer.at( 2 ) -= e0.at( 2 ) * ( et.at( 1 ) - refTemp ) / nPointsZ;
             if ( et.giveSize() > 1 ) {
                 double z = gp->giveNaturalCoordinates().at( 3 ); // gp along thickness
-                answer.at( 1 ) -= e0.at( 1 ) * (et.at( 2 )-refTemp)  * z/2; // kappa_x
-                answer.at( 2 ) -= e0.at( 2 ) * (et.at( 2 )-refTemp)  * z/2; // kappa_y
+                answer.at( 1 ) -= e0.at( 1 ) * ( et.at( 2 ) - refTemp ) * z / nPointsZ; // kappa_x
+                answer.at( 2 ) -= e0.at( 2 ) * ( et.at( 2 ) - refTemp ) * z / nPointsZ; // kappa_y
             }
         }
     }

@@ -516,7 +516,7 @@ void EigenValueDynamic :: solveYourself()
 
                 if ((dType >= D_u) && (dType <= D_w) && eqN) {
                     // save unit displacement and coordinate
-                    vk.at( dType ) = coordFilter( dType ) * ( node->giveCoordinate( dType ) - centroid.at( dType ) );
+                    vk.at( dType ) = coordFilter.at( dType ) * ( node->giveCoordinate( dType ) - centroid.at( dType ) );
                     eq.at( dType ) = eqN;
                 }
             }
