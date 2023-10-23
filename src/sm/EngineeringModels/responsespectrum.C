@@ -454,7 +454,8 @@ void ResponseSpectrum::solveYourself()
         Element *element = domain->giveElement( ielem );
 
         // we only support masses from lumpedmasselements.
-        if ( strcmp( element->giveClassName(), "LumpedMassElement" ) != 0 ) {
+        double density = element->giveMaterial()->give( 'd', element->giveIntegrationRulesArray()[0]->getIntegrationPoint( 0 ) );
+        if ( density !=0 && strcmp( element->giveClassName(), "LumpedMassElement" ) != 0 ) {
             if ( !warn ) {
                 OOFEM_WARNING( "Only masses from LumpedMassElements are suppported." );
                 warn = true;
@@ -496,7 +497,7 @@ void ResponseSpectrum::solveYourself()
             centroid.at( i ) = massPos.at( i ) / totMass.at( i );
             coordFilter.at( i ) |= 1;
         } else {
-            OOFEM_WARNING( "No mass in direction %d, results may be affected", i );
+            // OOFEM_WARNING( "No mass in direction %d, results may be affected", i ); // no warning for this
             centroid.at( i ) = geomCenter.at( i );
         }
     }
@@ -573,7 +574,8 @@ void ResponseSpectrum::solveYourself()
         Element* element = domain->giveElement(ielem);
 
         // we only support masses from lumpedmasselements.
-        if (strcmp(element->giveClassName(), "LumpedMassElement") != 0) {
+        double density = element->giveMaterial()->give( 'd', element->giveIntegrationRulesArray()[0]->getIntegrationPoint( 0 ) );
+        if ( density != 0 && strcmp( element->giveClassName(), "LumpedMassElement" ) != 0 ) {
             if (!warn) {
                 OOFEM_WARNING("Only masses from LumpedMassElements are suppported.");
                 warn = true;
