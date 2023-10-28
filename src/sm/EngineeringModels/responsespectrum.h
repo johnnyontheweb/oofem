@@ -130,7 +130,8 @@ public:
     void terminate( TimeStep *tStep ) override;
     void updateYourself( TimeStep *tStep ) override;
 
-    double giveUnknownComponent( ValueModeType type, TimeStep *tStep, Domain *d, Dof *dof );
+    int giveUnknownDictHashIndx( ValueModeType mode, TimeStep *tStep ) override;
+    double giveUnknownComponent( ValueModeType type, TimeStep *tStep, Domain *d, Dof *dof ) override;
     void initializeFrom( InputRecord &ir ) override;
     void saveContext( DataStream &stream, ContextMode mode ) override;
     void restoreContext( DataStream &stream, ContextMode mode ) override;
