@@ -413,7 +413,6 @@ void ResponseSpectrum::solveYourself()
                 activeDofs.at( dType ) = eqN > 0;
             }
         }
-        nodeActive[num - 1] = activeDofs;
 
         // save coordinate and increment the weight
         nodeCoords.setColumn( coords, num );
@@ -423,6 +422,7 @@ void ResponseSpectrum::solveYourself()
                 geomWeight.at( iDof ) += activeDofs.at( iDof );
             }
         }
+        nodeActive[num - 1] = std::move(activeDofs);
     }
 
     // create plain numbering system
@@ -430,6 +430,7 @@ void ResponseSpectrum::solveYourself()
     std::map<int, IntArray> intDofMansEqns; // equation numbers with default numbering for internal dofs
     int totalDofs = this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering());
 
+    // fill the arrays with dof numbers, equations etc
     for (std::unique_ptr<DofManager>& node : domain->giveDofManagers()) {
         // no support yet for LCS
         Node* actualNode = dynamic_cast<Node*>(node.get());
@@ -459,6 +460,7 @@ void ResponseSpectrum::solveYourself()
         }
         dofMansEqns[actualNode->giveNumber() - 1] = std::move(eqns);
     }
+    // do it for internal dofs as well
     for (int ielem = 1; ielem <= nelem; ++ielem) {
         Element* element = domain->giveElement(ielem);
         if (element->giveNumberOfInternalDofManagers() == 0) {
@@ -491,7 +493,7 @@ void ResponseSpectrum::solveYourself()
     warn = false;
     FloatMatrix R;
     FloatArray massPos( 3 ); // stores the product between mass and position
-    // then from internaldof managers
+    // get mass contribution to the center of mass from elements
     for ( int ielem = 1; ielem <= nelem; ++ielem ) {
         Element *element = domain->giveElement( ielem );
 
@@ -508,7 +510,7 @@ void ResponseSpectrum::solveYourself()
         if ( !massElement ) {
             continue;
         }
-        const int dofMan = massElement->giveDofManArray().at( 1 ) - 1; // 0 based
+        const int dofMan = massElement->giveDofManArray().at( 1 ); // 1- based
         IntArray dofMask;
         massElement->giveElementDofIDMask( dofMask );
         FloatMatrix mat;
@@ -518,9 +520,10 @@ void ResponseSpectrum::solveYourself()
             for ( auto iDof : dofMask ) {
                 if ( iDof >= D_u && iDof <= D_w ) {
                     const int idx = dofMask.findFirstIndexOf( iDof );
-                    if ( idx && nodeActive[dofMan].at( iDof ) ) {
-                        massPos.at( iDof ) += nodeCoords.at( iDof, dofMan ) * mat.at( idx, idx );
-                        totMass.at( iDof ) += mat.at( idx, idx );
+                    if ( idx && nodeActive[dofMan - 1].at( iDof ) ) {
+                        const double m = mat.at(idx, idx);
+                        massPos.at( iDof ) += nodeCoords.at( iDof, dofMan ) * m;
+                        totMass.at( iDof ) += m;
                     }
                 }
             }
@@ -552,7 +555,7 @@ void ResponseSpectrum::solveYourself()
     plainMassMatrix->buildInternalStructure( this, 1, dummyNumbering );
 
     // todo: clean up all duplication wtf
-    // then from internaldof managers
+    // create mass matrix with plain numbering
     for ( int ielem = 1; ielem <= nelem; ++ielem ) {
         Element *element = domain->giveElement( ielem );
 
@@ -845,8 +848,8 @@ void ResponseSpectrum::solveYourself()
         totMass.at( i ) = tempCol.dotProduct( tempCol2 ); // total mass for i-th direction
     }
 
-    std::unique_ptr<EigenVectorPrimaryField> unitDispField = std::make_unique<EigenVectorPrimaryField>( this, 1, FT_Displacements, 6 ); // 6 dofs
-    unitDispField->updateAll( unitDisp, defNumbering );
+    //std::unique_ptr<EigenVectorPrimaryField> unitDispField = std::make_unique<EigenVectorPrimaryField>( this, 1, FT_Displacements, 6 ); // 6 dofs
+    //unitDispField->updateAll( unitDisp, defNumbering );
 
     //
     // calculate participation factors and mass participation
@@ -904,44 +907,23 @@ void ResponseSpectrum::solveYourself()
     // mode with highes participation factor in requested direction
     dominantMode = std::distance( dirFactors.begin(), std::max_element( dirFactors.begin(), dirFactors.end() ) ) + 1;
 
-    IntArray DofArray{ 1, 2, 3, 4, 5, 6 };
-
     for ( int dN = 1; dN <= numberOfRequiredEigenValues; ++dN ) {
         OOFEM_LOG_INFO( "Analyzing mode %d...\n", dN );
 
-        double sAcc = calcSpectrumOrdinate( periods.at( dN ) );
-
-        loadVector.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ) );
-        FloatArray pf{ partFact.at( dN, 1 ), partFact.at( dN, 2 ), partFact.at( dN, 3 ) };
-        const double scaleFactor = sAcc * dir.dotProduct( pf );
-
-        // TODO: recreate the load vector from the unitdisp field
-        // iterate on dofmans, create load given displacement field
         tStep->setTime( (double)dN ); // we use time as intrinsic eigen value index
         tStep->setNumber( dN );
-        for ( std::unique_ptr<DofManager> &node : domain->giveDofManagers() ) {
-            FloatArray charVec;
-            charVec.resize( 6 );
-            for ( auto dof : *node ) {
-                const double val = dof->giveUnknown(VM_Total, tStep);
-                charVec.at( dof->giveDofID() ) = val;
-            }
 
-            FloatMatrix R;
-            if ( node->computeM2LTransformation( R, DofArray ) ) {
-                charVec.rotatedWith( R, 't' );
-            }
+        // direct calculation of the displacement field from the eigenvector itself and
+        // the eigenproblem definition (K - w2 M)u = 0.
+        // if sAcc * pf * M u is the applied force
+        // the resulting displacement field is (sAcc * pf / w2) u
+        double sAcc = calcSpectrumOrdinate( periods.at( dN ) );
+        FloatArray pf{ partFact.at( dN, 1 ), partFact.at( dN, 2 ), partFact.at( dN, 3 ) };
+        const double scaleFactor = sAcc * dir.dotProduct( pf ) / eigVal.at( dN );
+        eigVec.copyColumn( dummyDisps, dN );
+        dummyDisps *= scaleFactor;
 
-            node->giveLocationArray( DofArray, loc, defNumbering );
-            loadVector.assemble( charVec, loc );
-        }
-        loadVector *= scaleFactor; // scaled forces
-
-        // solve linear system
-        NM_Status s = nLinMethod->solve( *stiffnessMatrix, loadVector, dummyDisps ); // solve linear system
-        if ( !( s & NM_Success ) ) {
-            OOFEM_ERROR( "No success in solving system." );
-        }
+        // let the internal state update fetch from this displacement field
         field->update( ValueModeType::VM_Total, tStep, dummyDisps, EModelDefaultEquationNumbering() );
 
         // update elements to we can get internal state!!!
