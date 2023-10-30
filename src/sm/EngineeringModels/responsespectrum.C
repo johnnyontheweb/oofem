@@ -500,7 +500,7 @@ void ResponseSpectrum::solveYourself()
         // we only support masses from lumpedmasselements.
         if ( strcmp( element->giveClassName(), "LumpedMassElement" ) != 0 ) { // && element->giveMaterial()->give( 'd', element->giveIntegrationRulesArray()[0]->getIntegrationPoint( 0 ) ) != 0
             if ( !warn ) {
-                OOFEM_WARNING( "Only masses from LumpedMassElements are suppported." );
+                OOFEM_WARNING( "Only masses from LumpedMassElements are supported." );
                 warn = true;
             }
             continue;
@@ -562,7 +562,7 @@ void ResponseSpectrum::solveYourself()
         // we only support masses from lumpedmasselements.
         if ( strcmp( element->giveClassName(), "LumpedMassElement" ) != 0 ) { // && element->giveMaterial()->give( 'd', element->giveIntegrationRulesArray()[0]->getIntegrationPoint( 0 ) ) != 0
             if ( !warn ) {
-                OOFEM_WARNING( "Only masses from LumpedMassElements are suppported." );
+                OOFEM_WARNING( "Only masses from LumpedMassElements are supported." );
                 warn = true;
             }
             continue;
@@ -1018,6 +1018,13 @@ void ResponseSpectrum::solveYourself()
     //
     stiffnessMatrix.reset( NULL );
     massMatrix.reset( NULL );
+
+    // force the dof dictionary to point to the combined displacements
+    field->updateAll( FloatMatrix(combDisps), EModelDefaultEquationNumbering() );
+    tStep->setTime( 0.0 );
+    tStep->setNumber( 1 );
+    this->updateInternalState( tStep );
+    EngngModel::updateYourself( tStep );
 
     this->terminate( tStep );
 
