@@ -498,7 +498,7 @@ void ResponseSpectrum::solveYourself()
         Element *element = domain->giveElement( ielem );
 
         // we only support masses from lumpedmasselements.
-        if ( strcmp( element->giveClassName(), "LumpedMassElement" ) != 0 && element->giveMaterial()->give( 'd', element->giveIntegrationRulesArray()[0]->getIntegrationPoint( 0 ) ) != 0 ) {
+        if ( strcmp( element->giveClassName(), "LumpedMassElement" ) != 0 ) { // && element->giveMaterial()->give( 'd', element->giveIntegrationRulesArray()[0]->getIntegrationPoint( 0 ) ) != 0
             if ( !warn ) {
                 OOFEM_WARNING( "Only masses from LumpedMassElements are suppported." );
                 warn = true;
@@ -560,7 +560,7 @@ void ResponseSpectrum::solveYourself()
         Element *element = domain->giveElement( ielem );
 
         // we only support masses from lumpedmasselements.
-        if ( strcmp( element->giveClassName(), "LumpedMassElement" ) != 0 && element->giveMaterial()->give( 'd', element->giveIntegrationRulesArray()[0]->getIntegrationPoint( 0 ) ) != 0 ) {
+        if ( strcmp( element->giveClassName(), "LumpedMassElement" ) != 0 ) { // && element->giveMaterial()->give( 'd', element->giveIntegrationRulesArray()[0]->getIntegrationPoint( 0 ) ) != 0
             if ( !warn ) {
                 OOFEM_WARNING( "Only masses from LumpedMassElements are suppported." );
                 warn = true;
