@@ -295,8 +295,6 @@ void ResponseSpectrum::solveYourself()
     eigVal.resize( numberOfRequiredEigenValues );
     eigVec.resizeWithData( eigVec.giveNumberOfRows(), numberOfRequiredEigenValues );
 
-    this->field->updateAll( eigVec, EModelDefaultEquationNumbering() );
-
     FloatMatrix unitDisp;
     FloatArray tempCol;
     FloatArray tempCol2;
@@ -334,7 +332,9 @@ void ResponseSpectrum::solveYourself()
         //     printf( "stop" );
         // }
     }
-    // eigVec has been normalized
+    // eigVec has been normalized, now can be set into dofs' dictionaries
+    this->field->updateAll(eigVec, EModelDefaultEquationNumbering());
+
 
     for ( int i = 1; i <= numberOfRequiredEigenValues; ++i )
         for ( int j = 1; j <= numberOfRequiredEigenValues; ++j ) {
@@ -351,7 +351,6 @@ void ResponseSpectrum::solveYourself()
 
     FloatMatrix tempMat, tempMat2;
     tempMat.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ), 6 );
-    tempMat2.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ), 6 );
 
     static const DofIDItem dofids[] = {
         D_u, D_v, D_w, R_u, R_v, R_w
@@ -498,13 +497,13 @@ void ResponseSpectrum::solveYourself()
         Element *element = domain->giveElement( ielem );
 
         // we only support masses from lumpedmasselements.
-        if ( strcmp( element->giveClassName(), "LumpedMassElement" ) != 0 ) { // && element->giveMaterial()->give( 'd', element->giveIntegrationRulesArray()[0]->getIntegrationPoint( 0 ) ) != 0
-            if ( !warn ) {
-                OOFEM_WARNING( "Only masses from LumpedMassElements are supported." );
-                warn = true;
-            }
-            continue;
-        }
+        //if ( strcmp( element->giveClassName(), "LumpedMassElement" ) != 0 ) { // && element->giveMaterial()->give( 'd', element->giveIntegrationRulesArray()[0]->getIntegrationPoint( 0 ) ) != 0
+        //    //if ( !warn ) {
+        //    //    OOFEM_WARNING( "Only masses from LumpedMassElements are supported." );
+        //    //    warn = true;
+        //    //}
+        //    continue;
+        //}
 
         LumpedMassElement *massElement = dynamic_cast<LumpedMassElement *>( element );
         if ( !massElement ) {
@@ -553,6 +552,91 @@ void ResponseSpectrum::solveYourself()
     std::unique_ptr<SparseMtrx> plainMassMatrix = classFactory.createSparseMtrx( sparseMtrxType );
     DummyNumbering dummyNumbering( totalDofs, dofMansEqns );
     plainMassMatrix->buildInternalStructure( this, 1, dummyNumbering );
+    tempMat2.resize(totalDofs, 6);
+
+    FloatMatrix plainUnitDisps(totalDofs, 6);
+    FloatMatrix plainEigVecs(totalDofs, 6);
+
+    IntArray dofArray{ 1, 2, 3, 4, 5, 6 };
+
+    // unit displacement vectors for plain numbering
+        // assemble into the plain numbering eigenvectors
+    for (int dN = 1; dN <= numberOfRequiredEigenValues; ++dN) {
+        tStep->setTime((double)dN); // we use time as intrinsic eigen value index
+        tStep->setNumber(dN);
+
+        //this->updateInternalState( tStep );
+        //EngngModel::updateYourself(tStep);
+
+        for (std::unique_ptr<DofManager>& node : domain->giveDofManagers()) {
+            // no support yet for LCS
+            Node* actualNode = dynamic_cast<Node*>(node.get());
+            if (actualNode && actualNode->hasLocalCS()) {
+                if (!warn) {
+                    OOFEM_WARNING("Nodes with LCS are unsupported, use at own risk.");
+                    warn = true;
+                }
+                continue;
+            }
+            if (!node->giveNumberOfDofs()) {
+                continue;
+            }
+
+            const int num = node->giveNumber(); // 1-based
+            const auto& loc = dofMansEqns[num - 1];
+
+            FloatArray charVec(6);
+            for (auto dof : *node) {
+                const double val = dof->giveUnknown(VM_Total, tStep);
+                charVec.at(dof->giveDofID()) = val;
+            }
+            plainEigVecs.assemble(charVec, loc, { dN });
+        }
+    }
+    for (std::unique_ptr<DofManager>& node : domain->giveDofManagers()) {
+        // no support yet for LCS
+        Node* actualNode = dynamic_cast<Node*>(node.get());
+        if (actualNode && actualNode->hasLocalCS()) {
+            if (!warn) {
+                OOFEM_WARNING("Nodes with LCS are unsupported, use at own risk.");
+                warn = true;
+            }
+            continue;
+        }
+        if (!node->giveNumberOfDofs()) {
+            continue;
+        }
+
+        const int num = node->giveNumber(); // 1-based
+        const auto& coords = node->giveCoordinates();
+        const FloatArray diff = coords - centroid;
+        const auto& loc = dofMansEqns[num - 1];
+        // assemble into the plain numbering unit displacement vectors
+        FloatMatrix dofTransf(6, 6);
+        for (int iDof = 1; iDof <= 6; ++iDof) {
+            dofTransf.at(iDof, iDof) = 1.0;
+
+            switch (iDof)
+            {
+            case 4:
+                dofTransf.at( 2, 4 ) = -diff.at( 3 );
+                dofTransf.at( 3, 4 ) = diff.at( 2 );
+                break;
+            case 5:
+                dofTransf.at( 1, 5 ) = diff.at( 3 );
+                dofTransf.at( 3, 5 ) = -diff.at( 1 );
+                break;
+            case 6:
+                dofTransf.at( 1, 6 ) = -diff.at( 2 );
+                dofTransf.at( 2, 6 ) = diff.at( 1 );
+                break;
+            default:
+                break;
+            } 
+        }
+        plainUnitDisps.assemble(dofTransf, loc, dofArray);
+    }
+
 
     // todo: clean up all duplication wtf
     // create mass matrix with plain numbering
@@ -560,20 +644,19 @@ void ResponseSpectrum::solveYourself()
         Element *element = domain->giveElement( ielem );
 
         // we only support masses from lumpedmasselements.
-        if ( strcmp( element->giveClassName(), "LumpedMassElement" ) != 0 ) { // && element->giveMaterial()->give( 'd', element->giveIntegrationRulesArray()[0]->getIntegrationPoint( 0 ) ) != 0
-            if ( !warn ) {
-                OOFEM_WARNING( "Only masses from LumpedMassElements are supported." );
-                warn = true;
-            }
-            continue;
-        }
+        //if ( strcmp( element->giveClassName(), "LumpedMassElement" ) != 0 ) { // && element->giveMaterial()->give( 'd', element->giveIntegrationRulesArray()[0]->getIntegrationPoint( 0 ) ) != 0
+        //    //if ( !warn ) {
+        //    //    OOFEM_WARNING( "Only masses from LumpedMassElements are supported." );
+        //    //    warn = true;
+        //    //}
+        //    continue;
+        //}
 
         LumpedMassElement *massElement = dynamic_cast<LumpedMassElement *>( element );
         if ( !massElement ) {
             continue;
         }
         const int dofMan = massElement->giveDofManagerNumber( 1 ) - 1; // 0-based
-
         IntArray dofMask;
         massElement->giveElementDofIDMask( dofMask );
         FloatMatrix mat, R;
@@ -592,6 +675,9 @@ void ResponseSpectrum::solveYourself()
             }
         }
     }
+
+    plainMassMatrix->assembleBegin();
+    plainMassMatrix->assembleEnd();
 
     //
     // create unit displacement vectors
@@ -697,7 +783,17 @@ void ResponseSpectrum::solveYourself()
         massMatrix->times( tempCol, tempCol2 ); // now tempCol2 has only the masses pertaining the i-th direction
         tempMat.setColumn( tempCol2, i );
         totMass.at( i ) = tempCol.dotProduct( tempCol2 );
+
+
+        tempCol.beColumnOf( plainUnitDisps, i );
+        plainMassMatrix->times( tempCol, tempCol2 ); // now tempCol2 has only the masses pertaining the i-th direction
+        tempMat2.setColumn( tempCol2, i );
+        totMass.at( i ) = tempCol.dotProduct( tempCol2 );
     }
+
+    //FloatArray finalMass;
+    //plainMassMatrix->times(plainEigVecs, finalMass);
+    //finalMass.beProductTOf(plainEigVecs, finalMass);
 
     // we have the centroid. we can now calculate rotational components. first from nodes.
     for ( std::unique_ptr<DofManager> &node : domain->giveDofManagers() ) {
@@ -846,17 +942,19 @@ void ResponseSpectrum::solveYourself()
         massMatrix->times( tempCol, tempCol2 ); // now tempCol2 has only the masses pertaining the i-th direction
         tempMat.setColumn( tempCol2, i );
         totMass.at( i ) = tempCol.dotProduct( tempCol2 ); // total mass for i-th direction
-    }
 
-    //std::unique_ptr<EigenVectorPrimaryField> unitDispField = std::make_unique<EigenVectorPrimaryField>( this, 1, FT_Displacements, 6 ); // 6 dofs
-    //unitDispField->updateAll( unitDisp, defNumbering );
+        tempCol.beColumnOf( plainUnitDisps, i );
+        plainMassMatrix->times( tempCol, tempCol2 ); // now tempCol2 has only the masses pertaining the i-th direction
+        tempMat2.setColumn( tempCol2, i );
+        totMass.at( i ) = tempCol.dotProduct( tempCol2 );
+    }
 
     //
     // calculate participation factors and mass participation
     //
 
     // participation factors
-    partFact.beTProductOf( eigVec, tempMat );
+    partFact.beTProductOf( plainEigVecs, tempMat2 );
 
     // mass participation ratios
     for ( int i = 1; i <= numberOfRequiredEigenValues; ++i ) {
