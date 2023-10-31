@@ -541,7 +541,7 @@ void ResponseSpectrum::solveYourself()
     }
 
     FloatMatrix plainUnitDisps( totalDofs, 6 ); // vector for unit displacements expressed in plain numbering
-    FloatMatrix plainEigVecs( totalDofs, 6 ); // vector for eigen vectors expressed in plain numbering
+    FloatMatrix plainEigVecs( totalDofs, numberOfRequiredEigenValues ); // vector for eigen vectors expressed in plain numbering
 
     IntArray dofArray{ 1, 2, 3, 4, 5, 6 };
 
