@@ -421,13 +421,15 @@ void ResponseSpectrum::solveYourself()
         Element *element = domain->giveElement( ielem );
 
         // we only support masses from lumpedmasselements.
-        //if ( strcmp( element->giveClassName(), "LumpedMassElement" ) != 0 ) { // && element->giveMaterial()->give( 'd', element->giveIntegrationRulesArray()[0]->getIntegrationPoint( 0 ) ) != 0
-        //    //if ( !warn ) {
-        //    //    OOFEM_WARNING( "Only masses from LumpedMassElements are supported." );
-        //    //    warn = true;
-        //    //}
-        //    continue;
-        //}
+        if ( strcmp( element->giveClassName(), "LumpedMassElement" ) != 0 ) {
+            if ( element->giveMaterialNumber() && element->giveIntegrationRulesArray().size() && element->giveMaterial()->give( 'd', element->giveIntegrationRulesArray()[0]->getIntegrationPoint( 0 ) ) != 0 ) {
+                if ( !warn ) {
+                    OOFEM_WARNING( "Only masses from LumpedMassElements are supported." );
+                    warn = true;
+                }
+            }
+            continue;
+        }
 
         LumpedMassElement *massElement = dynamic_cast<LumpedMassElement *>( element );
         if ( !massElement ) {
