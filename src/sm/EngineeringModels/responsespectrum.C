@@ -1303,7 +1303,7 @@ void ResponseSpectrum::terminate( TimeStep *tStep )
     }
 
 
-    fprintf( outputStream, "\n\n\Center of Mass:\n-----------------\n\tX\t|\tY\t|\tZ\n" );
+    fprintf( outputStream, "\n\nCenter of Mass:\n-----------------\n\tX\t|\tY\t|\tZ\n" );
     for ( int i = 1; i <= centroid.giveSize(); ++i ) {
         fprintf( outputStream, "%15.8e ", centroid.at( i ) );
     }

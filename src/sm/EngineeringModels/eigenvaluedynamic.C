@@ -670,9 +670,9 @@ void EigenValueDynamic ::printOutputAt( FILE *file, TimeStep *tStep )
     }
 
 
-    fprintf( outputStream, "\n\n\nCentroid Coordinates are:\n-----------------\n\tX\t|\tY\t|\tZ\n" );
+    fprintf( outputStream, "\n\n\nCenter of Mass:\n-----------------\n\tX\t|\tY\t|\tZ\n" );
     for ( int i = 1; i <= centroid.giveSize(); ++i ) {
-        fprintf( outputStream, "%10.3e ", centroid.at( i ) );
+        fprintf( outputStream, "%15.8e ", centroid.at( i ) );
     }
 
     fprintf( outputStream, "\n" );
@@ -680,14 +680,14 @@ void EigenValueDynamic ::printOutputAt( FILE *file, TimeStep *tStep )
     fprintf( outputStream, "\n\nParticipation Factors are:\n-----------------\n\tDx\t|\tDy\t|\tDz\t|\tRx\t|\tRy\t|\tRz\n" );
     for ( int i = 1; i <= partFact.giveNumberOfRows(); ++i ) {
         for ( int j = 1; j <= partFact.giveNumberOfColumns(); ++j ) {
-            fprintf( outputStream, "%10.3e ", partFact.at( i, j ) );
+            fprintf( outputStream, "%15.8e ", partFact.at( i, j ) );
         }
         fprintf( outputStream, "\n" );
     }
 
     fprintf( outputStream, "\n\nTotal Masses are:\n-----------------\n\tDx\t|\tDy\t|\tDz\t|\tRx\t|\tRy\t|\tRz\n" );
     for ( int i = 1; i <= totMass.giveSize(); ++i ) {
-        fprintf( outputStream, "%10.3e ", totMass.at( i ) );
+        fprintf( outputStream, "%15.8e ", totMass.at( i ) );
     }
 
     fprintf( outputStream, "\n" );
@@ -695,7 +695,7 @@ void EigenValueDynamic ::printOutputAt( FILE *file, TimeStep *tStep )
     fprintf( outputStream, "\n\nMass Ratios are:\n-----------------\n\tDx\t|\tDy\t|\tDz\t|\tRx\t|\tRy\t|\tRz\n" );
     for ( int i = 1; i <= massPart.giveNumberOfRows(); ++i ) {
         for ( int j = 1; j <= massPart.giveNumberOfColumns(); ++j ) {
-            fprintf( outputStream, "%10.3e ", massPart.at( i, j ) );
+            fprintf( outputStream, "%15.8e ", massPart.at( i, j ) );
         }
         fprintf( outputStream, "\n" );
     }
