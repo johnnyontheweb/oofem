@@ -85,17 +85,17 @@ class DummyNumbering : public UnknownNumberingScheme
 {
 protected:
     int neqs = 0;
-    vector<IntArray> dofs;
+    map<int, IntArray> dofs;
 
 public:
-    DummyNumbering( int n, vector<IntArray> dofs ) :
+    DummyNumbering( int n, map<int, IntArray> dofs ) :
         UnknownNumberingScheme(), neqs( n ), dofs( dofs ){};
 
     bool isDefault() const override { return false; }
     int giveRequiredNumberOfDomainEquation() const override { return neqs; }
     int giveDofEquationNumber( Dof *dof ) const override
     {
-        int num          = dof->giveDofManager()->giveNumber() - 1; // make it zero based for std container
+        int num          = dof->giveDofManager()->giveNumber();
         const auto dType = dof->giveDofType();
         return dofs.at( num ).at( dType );
     }
@@ -219,14 +219,14 @@ void ResponseSpectrum::postInitialize()
 }
 
 
-int ResponseSpectrum::giveUnknownDictHashIndx(ValueModeType mode, TimeStep* tStep)
+int ResponseSpectrum::giveUnknownDictHashIndx( ValueModeType mode, TimeStep *tStep )
 {
     return tStep->giveNumber() % this->numberOfRequiredEigenValues;
 }
 
-double ResponseSpectrum::giveUnknownComponent(ValueModeType mode, TimeStep* tStep, Domain* d, Dof* dof)
+double ResponseSpectrum::giveUnknownComponent( ValueModeType mode, TimeStep *tStep, Domain *d, Dof *dof )
 {
-    return field->giveUnknownValue(dof, mode, tStep);
+    return field->giveUnknownValue( dof, mode, tStep );
 }
 
 
@@ -269,14 +269,17 @@ void ResponseSpectrum::solveYourself()
 
     OOFEM_LOG_INFO( "Assembling stiffness and mass matrices\n" );
 
+    const EModelDefaultEquationNumbering defNumbering;
+
     stiffnessMatrix = classFactory.createSparseMtrx( sparseMtrxType );
-    stiffnessMatrix->buildInternalStructure( this, 1, EModelDefaultEquationNumbering() );
+    stiffnessMatrix->buildInternalStructure( this, 1, defNumbering );
 
     massMatrix = classFactory.createSparseMtrx( sparseMtrxType );
-    massMatrix->buildInternalStructure( this, 1, EModelDefaultEquationNumbering() );
+    massMatrix->buildInternalStructure( this, 1, defNumbering );
 
-    this->assemble( *stiffnessMatrix, tStep, TangentAssembler( TangentStiffness ), EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
-    this->assemble( *massMatrix, tStep, MassMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
+    this->assemble( *stiffnessMatrix, tStep, TangentAssembler( TangentStiffness ), defNumbering, this->giveDomain( 1 ) );
+    this->assemble( *massMatrix, tStep, MassMatrixAssembler(), defNumbering, this->giveDomain( 1 ) );
+    double val = massMatrix->at( 9, 9 );
 
     this->giveNumericalMethod( this->giveMetaStep( tStep->giveMetaStepNumber() ) );
     OOFEM_LOG_INFO( "Solving ...\n" );
@@ -295,28 +298,23 @@ void ResponseSpectrum::solveYourself()
     eigVal.resize( numberOfRequiredEigenValues );
     eigVec.resizeWithData( eigVec.giveNumberOfRows(), numberOfRequiredEigenValues );
 
-    FloatMatrix unitDisp;
-    FloatArray tempCol;
-    FloatArray tempCol2;
-
-    Domain *domain = this->giveDomain( 1 );
-    IntArray dofIDArry, loc;
-    dofIDArry = domain->giveDefaultNodeDofIDArry();
-    int nelem = domain->giveNumberOfElements();
+    Domain *domain  = this->giveDomain( 1 );
+    const int nelem = domain->giveNumberOfElements();
 
     // matrix and array initialization
     totMass.resize( 6 ); // 3 translational masses + 3 rotational inertias
     centroid.resize( 3 );
     partFact.resize( numberOfRequiredEigenValues, 6 );
     massPart.resize( numberOfRequiredEigenValues, 6 );
+    massPart.zero();
     // matrix of unit displacements for the 6 dofs
-    unitDisp.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ), 6 );
+    FloatMatrix unitDisp( this->giveNumberOfDomainEquations( 1, defNumbering ), 6 );
     // auxillary vectors for mass normalization
-    tempCol.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ) );
-    tempCol2.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ) );
+    FloatArray tempCol( this->giveNumberOfDomainEquations( 1, defNumbering ) );
+    FloatArray tempCol2( this->giveNumberOfDomainEquations( 1, defNumbering ) );
     periods.resize( numberOfRequiredEigenValues );
     combReactions.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultPrescribedEquationNumbering() ) );
-    combDisps.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ) );
+    combDisps.resize( this->giveNumberOfDomainEquations( 1, defNumbering ) );
     rhos.resize( numberOfRequiredEigenValues, numberOfRequiredEigenValues );
 
     // mass normalization
@@ -333,10 +331,10 @@ void ResponseSpectrum::solveYourself()
         // }
     }
     // eigVec has been normalized, now can be set into dofs' dictionaries
-    this->field->updateAll(eigVec, EModelDefaultEquationNumbering());
+    this->field->updateAll( eigVec, defNumbering );
 
-
-    for ( int i = 1; i <= numberOfRequiredEigenValues; ++i )
+    // pre compute the combination coefficients for CQC
+    for ( int i = 1; i <= numberOfRequiredEigenValues; ++i ) {
         for ( int j = 1; j <= numberOfRequiredEigenValues; ++j ) {
             double beta     = periods.at( i ) / periods.at( j );
             rhos.at( i, j ) = 8 * pow( this->csi, 2.0 ) * pow( beta, 1.5 ) / ( 1.0 + beta ) / ( pow( 1 - beta, 2.0 ) + 4 * pow( this->csi, 2.0 ) * beta );
@@ -344,23 +342,20 @@ void ResponseSpectrum::solveYourself()
             //     printf( "stop" );
             // }
         }
+    }
 
+    // Temporary variables used in loops
     IntArray masterDofIDs, nodalEqArray, ids;
-    IntArray eqArray;
-    IntArray dofManArray;
 
-    FloatMatrix tempMat, tempMat2;
-    tempMat.resize( this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ), 6 );
-
-    static const DofIDItem dofids[] = {
+    static const DofIDItem dofIDs[] = {
         D_u, D_v, D_w, R_u, R_v, R_w
     };
 
-    bool warn = false;
-    const EModelDefaultEquationNumbering defNumbering;
+    bool warn          = false;
     const int nDofMans = domain->giveNumberOfDofManagers();
-    FloatMatrix nodeCoords( 3, nDofMans );
-    std::vector<IntArray> nodeActive( nDofMans );
+
+    FloatMatrix nodeCoords( 3, nDofMans ); // cache the coordinates
+    std::map<int, IntArray> nodeActive; // cache which dofs are active
 
     FloatArray geomCenter( 3 );
     IntArray geomWeight( 3 );
@@ -380,13 +375,10 @@ void ResponseSpectrum::solveYourself()
             continue;
         }
 
-        const int num = node->giveNumber();
-
-        const auto &coords = node->giveCoordinates();
         IntArray activeDofs( 3 );
         if ( strcmp( node->giveClassName(), "Node" ) == 0 || strcmp( node->giveClassName(), "RigidArmNode" ) == 0 ) {
             for ( int iDof = 0; iDof < 3; ++iDof ) {
-                DofIDItem dType = dofids[iDof];
+                DofIDItem dType = dofIDs[iDof];
                 auto pos        = node->findDofWithDofId( dType );
                 if ( pos == node->end() ) {
                     continue;
@@ -395,9 +387,6 @@ void ResponseSpectrum::solveYourself()
                 int eqN = 0;
                 if ( ( *pos )->isPrimaryDof() ) {
                     eqN = ( *pos )->giveEquationNumber( defNumbering );
-                    // if ( eqN ) {
-                    //     unitDisp.at( eqN, dType ) = 1.0;
-                    // }
                 } else {
                     // find the master dofmanager from the slave, get the equations from it.
                     // Plain Nodes have master and simpleslave dofs, rigid arm nodes have master and slave dofs
@@ -414,6 +403,8 @@ void ResponseSpectrum::solveYourself()
         }
 
         // save coordinate and increment the weight
+        const int num      = node->giveNumber();
+        const auto &coords = node->giveCoordinates();
         nodeCoords.setColumn( coords, num );
         for ( int iDof = 1; iDof <= 3; ++iDof ) {
             if ( activeDofs.at( iDof ) ) {
@@ -421,76 +412,9 @@ void ResponseSpectrum::solveYourself()
                 geomWeight.at( iDof ) += activeDofs.at( iDof );
             }
         }
-        nodeActive[num - 1] = std::move(activeDofs);
+        nodeActive[num] = std::move( activeDofs );
     }
 
-    // create plain numbering system
-    std::vector<IntArray> dofMansEqns(nDofMans);
-    std::map<int, IntArray> intDofMansEqns; // equation numbers with default numbering for internal dofs
-    int totalDofs = this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering());
-
-    // fill the arrays with dof numbers, equations etc
-    for (std::unique_ptr<DofManager>& node : domain->giveDofManagers()) {
-        // no support yet for LCS
-        Node* actualNode = dynamic_cast<Node*>(node.get());
-        if (actualNode && actualNode->hasLocalCS()) {
-            continue;
-        }
-
-        IntArray eqns(6);
-        if (strcmp(node->giveClassName(), "Node") == 0 || strcmp(node->giveClassName(), "RigidArmNode") == 0) {
-            for (int iDof = 0; iDof < 6; ++iDof) {
-                DofIDItem dType = dofids[iDof];
-                auto pos = node->findDofWithDofId(dType);
-                if (pos == node->end()) {
-                    continue;
-                }
-
-                int eqN = 0;
-                if ((*pos)->isPrimaryDof()) {
-                    eqN = (*pos)->giveEquationNumber(defNumbering);
-                    eqns.at(dType) = eqN;
-                }
-                else {
-                    // add a dummy equation number for the slave dof
-                    eqns.at(dType) = ++totalDofs;
-                }
-            }
-        }
-        dofMansEqns[actualNode->giveNumber() - 1] = std::move(eqns);
-    }
-    // do it for internal dofs as well
-    for (int ielem = 1; ielem <= nelem; ++ielem) {
-        Element* element = domain->giveElement(ielem);
-        if (element->giveNumberOfInternalDofManagers() == 0) {
-            continue;
-        }
-
-        // we only support end releases on 3d beams for the moment. other internal dof managers should be skipped.
-        if (strcmp(element->giveClassName(), "Beam3d") != 0) {
-            if (!warn) {
-                OOFEM_WARNING("Only internal dof managers of Beam3d elements are supported. Skipping.");
-                warn = true;
-            }
-            continue;
-        }
-
-        eqArray.clear();
-        // retrieve internal dof managers and location array
-        for (int i = 1; i <= element->giveNumberOfInternalDofManagers(); ++i) {
-            DofManager* intDofMan = element->giveInternalDofManager(i);
-            if (!intDofMan) continue; // you may never know...
-
-            element->giveInternalDofManDofIDMask(i, ids);
-            intDofMan->giveLocationArray(ids, nodalEqArray, EModelDefaultEquationNumbering());
-            eqArray.followedBy(nodalEqArray);
-            intDofMan->giveMasterDofIDArray(ids, masterDofIDs);
-        }
-        intDofMansEqns[element->giveNumber()] = std::move(eqArray);
-    }
-
-    warn = false;
-    FloatMatrix R;
     FloatArray massPos( 3 ); // stores the product between mass and position
     // get mass contribution to the center of mass from elements
     for ( int ielem = 1; ielem <= nelem; ++ielem ) {
@@ -509,7 +433,7 @@ void ResponseSpectrum::solveYourself()
         if ( !massElement ) {
             continue;
         }
-        const int dofMan = massElement->giveDofManArray().at( 1 ); // 1- based
+        const int dofMan = massElement->giveDofManArray().at( 1 );
         IntArray dofMask;
         massElement->giveElementDofIDMask( dofMask );
         FloatMatrix mat;
@@ -519,8 +443,8 @@ void ResponseSpectrum::solveYourself()
             for ( auto iDof : dofMask ) {
                 if ( iDof >= D_u && iDof <= D_w ) {
                     const int idx = dofMask.findFirstIndexOf( iDof );
-                    if ( idx && nodeActive[dofMan - 1].at( iDof ) ) {
-                        const double m = mat.at(idx, idx);
+                    if ( idx && nodeActive[dofMan].at( iDof ) ) {
+                        const double m = mat.at( idx, idx );
                         massPos.at( iDof ) += nodeCoords.at( iDof, dofMan ) * m;
                         totMass.at( iDof ) += m;
                     }
@@ -549,75 +473,116 @@ void ResponseSpectrum::solveYourself()
         }
     }
 
-    std::unique_ptr<SparseMtrx> plainMassMatrix = classFactory.createSparseMtrx( sparseMtrxType );
-    DummyNumbering dummyNumbering( totalDofs, dofMansEqns );
-    plainMassMatrix->buildInternalStructure( this, 1, dummyNumbering );
-    tempMat2.resize(totalDofs, 6);
+    // create plain numbering system
+    std::map<int, IntArray> dofMansEqns; // association between dofmanagers and plain numbering. BC dofs have equation set to 0.
+    std::map<int, IntArray> intDofMansEqns; // equation numbers with default numbering for internal dofs
+    int totalDofs = this->giveNumberOfDomainEquations( 1, defNumbering ); // initialize the counting from the default numbering
 
-    FloatMatrix plainUnitDisps(totalDofs, 6);
-    FloatMatrix plainEigVecs(totalDofs, 6);
-
-    IntArray dofArray{ 1, 2, 3, 4, 5, 6 };
-
-    // unit displacement vectors for plain numbering
-        // assemble into the plain numbering eigenvectors
-    for (int dN = 1; dN <= numberOfRequiredEigenValues; ++dN) {
-        tStep->setTime((double)dN); // we use time as intrinsic eigen value index
-        tStep->setNumber(dN);
-
-        //this->updateInternalState( tStep );
-        //EngngModel::updateYourself(tStep);
-
-        for (std::unique_ptr<DofManager>& node : domain->giveDofManagers()) {
-            // no support yet for LCS
-            Node* actualNode = dynamic_cast<Node*>(node.get());
-            if (actualNode && actualNode->hasLocalCS()) {
-                if (!warn) {
-                    OOFEM_WARNING("Nodes with LCS are unsupported, use at own risk.");
-                    warn = true;
-                }
-                continue;
-            }
-            if (!node->giveNumberOfDofs()) {
-                continue;
-            }
-
-            const int num = node->giveNumber(); // 1-based
-            const auto& loc = dofMansEqns[num - 1];
-
-            FloatArray charVec(6);
-            for (auto dof : *node) {
-                const double val = dof->giveUnknown(VM_Total, tStep);
-                charVec.at(dof->giveDofID()) = val;
-            }
-            plainEigVecs.assemble(charVec, loc, { dN });
-        }
-    }
-    for (std::unique_ptr<DofManager>& node : domain->giveDofManagers()) {
+    // fill the arrays with dof numbers, equations etc
+    // also internal dofs are parsed, so the equation numbers will match for both numbering systems
+    // for dofs defined in both. the plain numbering will have additional dofs (the slave ones) but
+    // their numbering is the continuation
+    for ( std::unique_ptr<DofManager> &node : domain->giveDofManagers() ) {
         // no support yet for LCS
-        Node* actualNode = dynamic_cast<Node*>(node.get());
-        if (actualNode && actualNode->hasLocalCS()) {
-            if (!warn) {
-                OOFEM_WARNING("Nodes with LCS are unsupported, use at own risk.");
+        Node *actualNode = dynamic_cast<Node *>( node.get() );
+        if ( actualNode && actualNode->hasLocalCS() ) {
+            continue;
+        }
+
+        IntArray eqns( 6 );
+        if ( strcmp( node->giveClassName(), "Node" ) == 0 || strcmp( node->giveClassName(), "RigidArmNode" ) == 0 ) {
+            for ( int iDof = 0; iDof < 6; ++iDof ) {
+                DofIDItem dType = dofIDs[iDof];
+                auto pos        = node->findDofWithDofId( dType );
+                if ( pos == node->end() ) {
+                    continue;
+                }
+
+                if ( ( *pos )->isPrimaryDof() ) {
+                    // use the default numbering for the master dof
+                    eqns.at( dType ) = ( *pos )->giveEquationNumber( defNumbering );
+                } else {
+                    // add a dummy equation number for the slave dof
+                    eqns.at( dType ) = ++totalDofs;
+                }
+            }
+        }
+        dofMansEqns[actualNode->giveNumber()] = std::move( eqns );
+    }
+    // do it for internal dofs as well
+    warn = false;
+    for ( int ielem = 1; ielem <= nelem; ++ielem ) {
+        Element *element = domain->giveElement( ielem );
+        if ( element->giveNumberOfInternalDofManagers() == 0 ) {
+            continue;
+        }
+
+        // we only support end releases on 3d beams for the moment. other internal dof managers should be skipped.
+        if ( strcmp( element->giveClassName(), "Beam3d" ) != 0 ) {
+            if ( !warn ) {
+                OOFEM_WARNING( "Only internal dof managers of Beam3d elements are supported. Skipping." );
                 warn = true;
             }
             continue;
         }
-        if (!node->giveNumberOfDofs()) {
+
+        IntArray eqArray;
+        // retrieve internal dof managers and location array
+        for ( int i = 1; i <= element->giveNumberOfInternalDofManagers(); ++i ) {
+            DofManager *intDofMan = element->giveInternalDofManager( i );
+            if ( !intDofMan ) continue; // you may never know...
+
+            element->giveInternalDofManDofIDMask( i, ids );
+            intDofMan->giveLocationArray( ids, nodalEqArray, defNumbering );
+            eqArray.followedBy( nodalEqArray );
+            intDofMan->giveMasterDofIDArray( ids, masterDofIDs );
+        }
+        intDofMansEqns[element->giveNumber()] = std::move( eqArray );
+    }
+
+    FloatMatrix plainUnitDisps( totalDofs, 6 ); // vector for unit displacements expressed in plain numbering
+    FloatMatrix plainEigVecs( totalDofs, 6 ); // vector for eigen vectors expressed in plain numbering
+
+    IntArray dofArray{ 1, 2, 3, 4, 5, 6 };
+
+    warn = false;
+    // assemble into the plain numbering eigenvectors
+    // and plain numbering unit displacement vectors
+    for ( std::unique_ptr<DofManager> &node : domain->giveDofManagers() ) {
+        // no support yet for LCS
+        Node *actualNode = dynamic_cast<Node *>( node.get() );
+        if ( actualNode && actualNode->hasLocalCS() ) {
+            if ( !warn ) {
+                OOFEM_WARNING( "Nodes with LCS are unsupported, use at own risk." );
+                warn = true;
+            }
+            continue;
+        }
+        if ( !node->giveNumberOfDofs() ) {
             continue;
         }
 
-        const int num = node->giveNumber(); // 1-based
-        const auto& coords = node->giveCoordinates();
-        const FloatArray diff = coords - centroid;
-        const auto& loc = dofMansEqns[num - 1];
-        // assemble into the plain numbering unit displacement vectors
-        FloatMatrix dofTransf(6, 6);
-        for (int iDof = 1; iDof <= 6; ++iDof) {
-            dofTransf.at(iDof, iDof) = 1.0;
+        const int num   = node->giveNumber();
+        const auto &loc = dofMansEqns[num];
+        for ( int dN = 1; dN <= numberOfRequiredEigenValues; ++dN ) {
+            this->setActiveVector( dN ); // we use time as intrinsic eigen value index
 
-            switch (iDof)
-            {
+            FloatArray charVec( 6 );
+            for ( auto dof : *node ) {
+                // fetch the unknown from the eigen field. see giveUnknownComponent
+                charVec.at( dof->giveDofID() ) = dof->giveUnknown( VM_Total, tStep );
+            }
+            plainEigVecs.assemble( charVec, loc, { dN } );
+        }
+
+        const FloatArray diff = node->giveCoordinates() - centroid;
+
+        FloatMatrix dofTransf( 6, 6 );
+        for ( int iDof = 1; iDof <= 6; ++iDof ) {
+            dofTransf.at( iDof, iDof ) = 1.0;
+
+            // translational components due to rotation about the center of mass of the model
+            switch ( iDof ) {
             case 4:
                 dofTransf.at( 2, 4 ) = -diff.at( 3 );
                 dofTransf.at( 3, 4 ) = diff.at( 2 );
@@ -632,34 +597,28 @@ void ResponseSpectrum::solveYourself()
                 break;
             default:
                 break;
-            } 
+            }
         }
-        plainUnitDisps.assemble(dofTransf, loc, dofArray);
+        plainUnitDisps.assemble( dofTransf, loc, dofArray );
     }
 
+    // mass matrix for plain numbering
+    std::unique_ptr<SparseMtrx> plainMassMatrix = classFactory.createSparseMtrx( sparseMtrxType );
+    DummyNumbering dummyNumbering( totalDofs, dofMansEqns );
+    plainMassMatrix->buildInternalStructure( this, 1, dummyNumbering );
 
-    // todo: clean up all duplication wtf
     // create mass matrix with plain numbering
     for ( int ielem = 1; ielem <= nelem; ++ielem ) {
         Element *element = domain->giveElement( ielem );
-
-        // we only support masses from lumpedmasselements.
-        //if ( strcmp( element->giveClassName(), "LumpedMassElement" ) != 0 ) { // && element->giveMaterial()->give( 'd', element->giveIntegrationRulesArray()[0]->getIntegrationPoint( 0 ) ) != 0
-        //    //if ( !warn ) {
-        //    //    OOFEM_WARNING( "Only masses from LumpedMassElements are supported." );
-        //    //    warn = true;
-        //    //}
-        //    continue;
-        //}
 
         LumpedMassElement *massElement = dynamic_cast<LumpedMassElement *>( element );
         if ( !massElement ) {
             continue;
         }
-        const int dofMan = massElement->giveDofManagerNumber( 1 ) - 1; // 0-based
+        const int dofMan = massElement->giveDofManagerNumber( 1 );
         IntArray dofMask;
         massElement->giveElementDofIDMask( dofMask );
-        FloatMatrix mat, R;
+        FloatMatrix mat;
         massElement->computeLumpedMassMatrix( mat, tStep );
 
         if ( mat.isNotEmpty() ) {
@@ -676,276 +635,16 @@ void ResponseSpectrum::solveYourself()
         }
     }
 
+    // force the creation of the entries from the triplets
     plainMassMatrix->assembleBegin();
     plainMassMatrix->assembleEnd();
 
-    //
-    // create unit displacement vectors
-    //
-    // first from nodes themselves, and get the coordinates to compute the center of mass
-    for ( std::unique_ptr<DofManager> &node : domain->giveDofManagers() ) {
-        // no support yet for LCS
-        Node *actualNode = dynamic_cast<Node *>( node.get() );
-        if ( actualNode && actualNode->hasLocalCS() ) {
-            continue;
-        }
-        if ( !node->giveNumberOfDofs() ) continue;
+    FloatMatrix tempMat( totalDofs, 6 ); // matrix for temporary results
 
-        IntArray mstrDofs, locArr;
-        node->givePrimaryDofs( mstrDofs );
-        node->giveLocationArray( mstrDofs, locArr, EModelDefaultEquationNumbering() );
-
-        // search for our dofs in there
-        for ( int myDofIndex = 1; myDofIndex <= locArr.giveSize(); ++myDofIndex ) {
-            int dType = mstrDofs.at( myDofIndex );
-            int eqN   = locArr.at( myDofIndex );
-
-            if ( ( dType >= D_u ) && ( dType <= D_w ) && eqN ) {
-                // save unit displacement and coordinate
-                unitDisp.at( eqN, dType ) = 1.0;
-                // tempMat2.at( eqN, dType ) = node->giveCoordinate( dType );
-            }
-        }
-    } // end of search among nodes
-
-    warn = false;
-    // unit displacement vectors from nodes were created before for translational dofs
-    // now from internal dof managers
-    for ( int ielem = 1; ielem <= nelem; ++ielem ) {
-        Element *element = domain->giveElement( ielem );
-        if ( element->giveNumberOfInternalDofManagers() == 0 ) {
-            continue;
-        }
-
-        // we only support end releases on 3d beams for the moment. other internal dof managers should be skipped.
-        if ( strcmp( element->giveClassName(), "Beam3d" ) != 0 ) {
-            if ( !warn ) {
-                OOFEM_WARNING( "Only internal dof managers of Beam3d elements are supported. Skipping." );
-                warn = true;
-            }
-            continue;
-        }
-
-        // use the lcs transform to work out which ghost dofs are affected by global displacement
-        FloatMatrix GtoL;
-        element->computeGtoLRotationMatrix( GtoL );
-        FloatMatrix lcs;
-        element->giveLocalCoordinateSystem( lcs );
-
-        eqArray.clear();
-
-        // the following may be simplified.
-        // retrieve internal dof managers and location array
-        for ( int i = 1; i <= element->giveNumberOfInternalDofManagers(); ++i ) {
-            DofManager *intDofMan = element->giveInternalDofManager( i );
-            if ( !intDofMan ) continue; // you may never know...
-
-            element->giveInternalDofManDofIDMask( i, ids );
-            intDofMan->giveLocationArray( ids, nodalEqArray, EModelDefaultEquationNumbering() );
-            eqArray.followedBy( nodalEqArray );
-            intDofMan->giveMasterDofIDArray( ids, masterDofIDs );
-
-            int tempN          = intDofMan->giveNumber();
-            const auto &coords = element->giveDofManager( tempN )->giveCoordinates();
-            // for (auto eqN : nodalEqArray) {
-            //     if (eqN == 0) {
-            //         continue;
-            //     }
-            //     tempMat2.addSubVectorRow(coords, eqN, 1);
-            // }
-        }
-
-        const int nBaseDofs = element->giveNumberOfDofManagers() * 6;
-        for ( int iDof = 0; iDof < 3; ++iDof ) {
-            const auto dType = dofids[iDof];
-            FloatArray localVector( nBaseDofs );
-            FloatArray globalVector;
-            FloatArray dirVector;
-            dirVector.beColumnOf( lcs, iDof % 3 + 1 );
-            // get unit vectors in local dofs
-            for ( int inode = 0; inode < element->giveNumberOfDofManagers(); ++inode ) {
-                localVector.addSubVector( dirVector, ( iDof / 3 ) * 3 + inode * 6 + 1 );
-            }
-            // work it back to global dofs
-            globalVector.beTProductOf( GtoL, localVector );
-
-            // apply the components to the condensed dofs on the global matrix
-            for ( int i = 1; i <= eqArray.giveSize(); ++i ) {
-                const auto eqN            = eqArray.at( i );
-                const auto val            = globalVector( i + nBaseDofs - 1 );
-                unitDisp.at( eqN, dType ) = val;
-            }
-        }
-    } // end of translational unit vectors among internal dof managers
-
-    for ( int i = 1; i <= 3; ++i ) {
-        tempCol.beColumnOf( unitDisp, i );
-        massMatrix->times( tempCol, tempCol2 ); // now tempCol2 has only the masses pertaining the i-th direction
-        tempMat.setColumn( tempCol2, i );
-        totMass.at( i ) = tempCol.dotProduct( tempCol2 );
-
-
+    for ( int i = 1; i <= 6; ++i ) {
         tempCol.beColumnOf( plainUnitDisps, i );
         plainMassMatrix->times( tempCol, tempCol2 ); // now tempCol2 has only the masses pertaining the i-th direction
-        tempMat2.setColumn( tempCol2, i );
-        totMass.at( i ) = tempCol.dotProduct( tempCol2 );
-    }
-
-    //FloatArray finalMass;
-    //plainMassMatrix->times(plainEigVecs, finalMass);
-    //finalMass.beProductTOf(plainEigVecs, finalMass);
-
-    // we have the centroid. we can now calculate rotational components. first from nodes.
-    for ( std::unique_ptr<DofManager> &node : domain->giveDofManagers() ) {
-        if ( !node->giveNumberOfDofs() ) continue;
-
-        FloatArray vk( 3 );
-        IntArray eq( 3 );
-
-        // TODO consider own UCS if present
-
-        IntArray mstrDofs, locArr;
-        node->givePrimaryDofs( mstrDofs );
-        node->giveLocationArray( mstrDofs, locArr, EModelDefaultEquationNumbering() );
-
-        int partialDofCount = locArr.giveSize();
-        if ( partialDofCount ) {
-            // search for our dofs in there
-            for ( int myDofIndex = 1; myDofIndex <= partialDofCount; myDofIndex++ ) {
-                int dType = mstrDofs.at( myDofIndex );
-                int eqN   = locArr.at( myDofIndex );
-
-                if ( ( dType >= D_u ) && ( dType <= D_w ) && eqN ) {
-                    // save unit displacement and coordinate
-                    vk.at( dType ) = coordFilter.at( dType ) * ( node->giveCoordinate( dType ) - centroid.at( dType ) );
-                    eq.at( dType ) = eqN;
-                }
-            }
-        }
-
-        // set mixed contribution due to rotation about centroid
-        if ( eq.at( 1 ) ) {
-            unitDisp.at( eq.at( 1 ), R_v ) = vk.at( 3 );
-            unitDisp.at( eq.at( 1 ), R_w ) = -vk.at( 2 );
-        }
-
-        if ( eq.at( 2 ) ) {
-            unitDisp.at( eq.at( 2 ), R_u ) = -vk.at( 3 );
-            unitDisp.at( eq.at( 2 ), R_w ) = vk.at( 1 );
-        }
-
-        if ( eq.at( 3 ) ) {
-            unitDisp.at( eq.at( 3 ), R_u ) = vk.at( 2 );
-            unitDisp.at( eq.at( 3 ), R_v ) = -vk.at( 1 );
-        }
-
-        if ( partialDofCount ) {
-            // search for our dofs in there
-            for ( int myDofIndex = 1; myDofIndex <= partialDofCount; myDofIndex++ ) {
-                int dType = mstrDofs.at( myDofIndex );
-                int eqN   = locArr.at( myDofIndex );
-
-                if ( ( dType >= R_u ) && ( dType <= R_w ) && eqN ) {
-                    // save unit displacement and coordinate
-                    unitDisp.at( eqN, dType ) = 1.0;
-                }
-            }
-        }
-    } // end of search among nodes
-
-    // then from internaldof managers
-    for ( int ielem = 1; ielem <= nelem; ++ielem ) {
-        Element *element = domain->giveElement( ielem );
-        if ( !element->giveNumberOfInternalDofManagers() ) {
-            continue;
-        }
-
-        // we only support end releases on 3d beams for the moment. other internal dof managers should be skipped.
-        if ( strcmp( element->giveClassName(), "Beam3d" ) != 0 ) {
-            continue;
-        }
-
-        eqArray.clear();
-
-        // use the lcs transform to work out which ghost dofs are affected by global displacement
-        FloatMatrix GtoL;
-        element->computeGtoLRotationMatrix( GtoL );
-        FloatMatrix lcs;
-        element->giveLocalCoordinateSystem( lcs );
-
-        FloatMatrix componentMatrix( 3, 3 );
-        //	retrieve internal dof managers and location array
-        for ( int i = 1; i <= element->giveNumberOfInternalDofManagers(); ++i ) {
-            DofManager *intDofMan = element->giveInternalDofManager( i );
-            if ( !intDofMan ) continue; // you may never know...
-
-            element->giveInternalDofManDofIDMask( i, ids );
-            intDofMan->giveLocationArray( ids, nodalEqArray, EModelDefaultEquationNumbering() );
-            eqArray.followedBy( nodalEqArray );
-            intDofMan->giveMasterDofIDArray( ids, masterDofIDs );
-
-            int tempN          = intDofMan->giveNumber();
-            const auto &coords = element->giveDofManager( tempN )->giveCoordinates();
-            componentMatrix.setColumn( coords - centroid, 2 );
-
-            for ( int iDof = 1; iDof <= masterDofIDs.giveSize(); ++iDof ) {
-                const int myDof = masterDofIDs.at( iDof );
-                // now we're only interested about the effect of rotation on translational dofs
-                if ( myDof > D_w ) {
-                    continue;
-                }
-                const int eqN = nodalEqArray.at( iDof );
-                for ( int j = 1; j <= 3; ++j ) {
-                    componentMatrix.at( j, 3 ) = lcs.at( myDof, j );
-                }
-                // project the displacement component due to rotation onto the local direction of the dof
-                for ( int rotDof = R_u; rotDof <= R_w; ++rotDof ) {
-                    FloatArray rotationVector( 3 );
-                    rotationVector.at( rotDof - 3 ) = 1.0;
-                    componentMatrix.setColumn( rotationVector, 1 );
-                    const double displacement  = componentMatrix.giveDeterminant(); // triple product: rotation ^ (node-centroid) . dofVector
-                    unitDisp.at( eqN, rotDof ) = displacement;
-                }
-            }
-        } // end of search among internal dof managers
-
-        const int nBaseDofs = element->giveNumberOfDofManagers() * 6;
-        for ( int iDof = 0; iDof < 6; ++iDof ) {
-            const auto dType = dofids[iDof];
-            if ( dType < R_u || dType > R_w ) {
-                continue;
-            }
-
-            FloatArray localVector( nBaseDofs );
-            FloatArray globalVector;
-            FloatArray dirVector;
-            dirVector.beColumnOf( lcs, iDof % 3 + 1 );
-            // get unit vectors in local dofs
-            for ( int inode = 0; inode < element->giveNumberOfDofManagers(); ++inode ) {
-                localVector.addSubVector( dirVector, ( iDof / 3 ) * 3 + inode * 6 + 1 );
-            }
-            // work it back to global dofs
-            globalVector.beTProductOf( GtoL, localVector );
-
-            // apply the components to the condensed dofs on the global matrix
-            for ( int i = 1; i <= eqArray.giveSize(); ++i ) {
-                const auto eqN            = eqArray.at( i );
-                const auto val            = globalVector( i + nBaseDofs - 1 );
-                unitDisp.at( eqN, dType ) = val;
-            }
-        }
-    }
-    // end of creation of translational unit displacement vectors
-
-    for ( int i = 4; i <= 6; ++i ) {
-        tempCol.beColumnOf( unitDisp, i );
-        massMatrix->times( tempCol, tempCol2 ); // now tempCol2 has only the masses pertaining the i-th direction
         tempMat.setColumn( tempCol2, i );
-        totMass.at( i ) = tempCol.dotProduct( tempCol2 ); // total mass for i-th direction
-
-        tempCol.beColumnOf( plainUnitDisps, i );
-        plainMassMatrix->times( tempCol, tempCol2 ); // now tempCol2 has only the masses pertaining the i-th direction
-        tempMat2.setColumn( tempCol2, i );
         totMass.at( i ) = tempCol.dotProduct( tempCol2 );
     }
 
@@ -953,8 +652,28 @@ void ResponseSpectrum::solveYourself()
     // calculate participation factors and mass participation
     //
 
+    // Mass renormalization
+    // In presence of rigid arms in the model, the mass matrix will contain inertias wrt the master nodes as this is how dof transformation works.
+    // If master nodes aren't placed barycentrically among the related nodes, it means the inertias will be higher than with barycentric placement.
+    // Our calculation of the centroid is instead based on the actual geometric placement of lumped masses, being this less misleading and easier to do.
+    // This in turn will compromise the computation of participation factors and masses when unit rotation vectors are determined about our centroid
+    // while eigenvector refer to the master node inertias.
+    // Eigenvectors are therefore renormalized on the mass matrix done with the plain numbering, to adjust the results of the coming calculations.
+    // The recommendation is however to place master nodes in the barycenter of the nodes they constrain, as this is only a hack.
+    // If the model has barycentric master nodes, then this renormalization has no effect.
+    for ( int i = 1; i <= numberOfRequiredEigenValues; ++i ) {
+        tempCol.beColumnOf( plainEigVecs, i );
+        plainMassMatrix->times( tempCol, tempCol2 );
+        double m = tempCol.dotProduct( tempCol2 );
+        if ( m != 0.0 ) {
+            m = 1 / sqrt( m );
+        }
+        tempCol.times( m );
+        plainEigVecs.setColumn( tempCol, i );
+    }
+
     // participation factors
-    partFact.beTProductOf( plainEigVecs, tempMat2 );
+    partFact.beTProductOf( plainEigVecs, tempMat );
 
     // mass participation ratios
     for ( int i = 1; i <= numberOfRequiredEigenValues; ++i ) {
@@ -962,36 +681,15 @@ void ResponseSpectrum::solveYourself()
             if ( totMass.at( j ) > 1e-10 ) {
                 massPart.at( i, j ) = pow( partFact.at( i, j ), 2 ) / totMass.at( j );
             }
-            // else
-            //{
-            //	massPart.at(i, j) = 0.0;
-            // }
         }
     }
 
     //
-    // start creating loaded models
+    // start analyzing displacements, reactions, etc for each mode
     //
 #ifdef VERBOSE
     OOFEM_LOG_INFO( "Starting analysis for each mode ...\n" );
 #endif
-
-
-    // create linear solver
-    std::unique_ptr<SparseLinearSystemNM> nLinMethod; // = NULL;
-
-    if ( !nLinMethod ) {
-        if ( isParallel() ) {
-            if ( ( solverType == ST_Petsc ) || ( solverType == ST_Feti ) ) {
-                nLinMethod = classFactory.createSparseLinSolver( ST_Direct, this->giveDomain( 1 ), this );
-            }
-        } else {
-            nLinMethod = classFactory.createSparseLinSolver( linStype, this->giveDomain( 1 ), this );
-        }
-        if ( !nLinMethod ) {
-            OOFEM_ERROR( "linear solver creation failed for lstype %d", solverType );
-        }
-    }
 
     // determine dominat mode in requested direction
     FloatArray dirVect( dir );
@@ -1008,9 +706,6 @@ void ResponseSpectrum::solveYourself()
     for ( int dN = 1; dN <= numberOfRequiredEigenValues; ++dN ) {
         OOFEM_LOG_INFO( "Analyzing mode %d...\n", dN );
 
-        tStep->setTime( (double)dN ); // we use time as intrinsic eigen value index
-        tStep->setNumber( dN );
-
         // direct calculation of the displacement field from the eigenvector itself and
         // the eigenproblem definition (K - w2 M)u = 0.
         // if sAcc * pf * M u is the applied force
@@ -1018,22 +713,24 @@ void ResponseSpectrum::solveYourself()
         double sAcc = calcSpectrumOrdinate( periods.at( dN ) );
         FloatArray pf{ partFact.at( dN, 1 ), partFact.at( dN, 2 ), partFact.at( dN, 3 ) };
         const double scaleFactor = sAcc * dir.dotProduct( pf ) / eigVal.at( dN );
+        FloatArray dummyDisps;
         eigVec.copyColumn( dummyDisps, dN );
         dummyDisps *= scaleFactor;
 
-        // let the internal state update fetch from this displacement field
-        field->update( ValueModeType::VM_Total, tStep, dummyDisps, EModelDefaultEquationNumbering() );
+        this->setActiveVector( dN ); // we use time as intrinsic eigen value index
+        // let the internal state update directly fetch from this scaled displacement field
+        field->update( ValueModeType::VM_Total, tStep, dummyDisps, defNumbering );
 
         // update elements to we can get internal state!!!
         this->updateInternalState( tStep );
         EngngModel::updateYourself( tStep );
 
+        // compute reaction forces
         FloatArray reactions;
         this->buildReactionTable( dofManMap, dofidMap, eqnMap, tStep, 1 );
-
-        // compute reaction forces
         this->computeReaction( reactions, tStep, 1 );
 
+        // store the vectors for the current mode
         reactionsList.push_back( reactions );
         dispList.push_back( dummyDisps );
 
@@ -1118,9 +815,9 @@ void ResponseSpectrum::solveYourself()
     massMatrix.reset( NULL );
 
     // force the dof dictionary to point to the combined displacements
-    field->updateAll( FloatMatrix(combDisps), EModelDefaultEquationNumbering() );
-    tStep->setTime( 0.0 );
-    tStep->setNumber( 1 );
+    field->updateAll( FloatMatrix( combDisps ), defNumbering );
+    this->setActiveVector( 1 );
+
     this->updateInternalState( tStep );
     EngngModel::updateYourself( tStep );
 
@@ -1301,7 +998,7 @@ void ResponseSpectrum::getIntPointStatusOutputAt( IntegrationPointStatus *iStatu
     }
 }
 
-void populateElResults( map<int, map<int, map<int, map<string, FloatArray> > > > &answer, map<int, map<int, map<int, map<string, FloatArray> > > > &src )
+void populateElemResults( map<int, map<int, map<int, map<string, FloatArray> > > > &answer, map<int, map<int, map<int, map<string, FloatArray> > > > &src )
 {
     map<int, map<int, map<int, map<string, FloatArray> > > >::iterator srcElem_it = src.begin();
     for ( ; srcElem_it != src.end(); ++srcElem_it ) {
@@ -1339,7 +1036,7 @@ void populateElResults( map<int, map<int, map<int, map<string, FloatArray> > > >
 void addMultiply( map<int, map<int, map<int, map<string, FloatArray> > > > &answer, map<int, map<int, map<int, map<string, FloatArray> > > > &src, map<int, map<int, map<int, map<string, FloatArray> > > > &src2, double fact )
 {
     if ( answer.size() == 0 ) {
-        populateElResults( answer, src );
+        populateElemResults( answer, src );
     }
 
     map<int, map<int, map<int, map<string, FloatArray> > > >::iterator destElem_it = answer.begin();
@@ -1412,7 +1109,7 @@ void calcRoot( map<int, map<int, map<int, map<string, FloatArray> > > > &answer 
     }
 }
 
-void populateElResults( map<int, map<string, FloatArray> > &answer, map<int, map<string, FloatArray> > &src )
+void populateElemResults( map<int, map<string, FloatArray> > &answer, map<int, map<string, FloatArray> > &src )
 {
     map<int, map<string, FloatArray> >::iterator srcElem_it = src.begin();
     for ( ; srcElem_it != src.end(); ++srcElem_it ) {
@@ -1434,7 +1131,7 @@ void populateElResults( map<int, map<string, FloatArray> > &answer, map<int, map
 void addMultiply( map<int, map<string, FloatArray> > &answer, map<int, map<string, FloatArray> > &src, map<int, map<string, FloatArray> > &src2, double fact )
 {
     if ( answer.size() == 0 ) {
-        populateElResults( answer, src );
+        populateElemResults( answer, src );
     }
 
     map<int, map<string, FloatArray> >::iterator destElem_it = answer.begin();
@@ -1731,8 +1428,7 @@ void ResponseSpectrum::terminate( TimeStep *tStep )
 
     // for ( int i = 1; i <=  numberOfRequiredEigenValues; ++i ) {
     //     // export using export manager
-    //     tStep->setTime( ( double ) i ); // we use time as intrinsic eigen value index
-    //     tStep->setNumber(i);
+    //     this->setActiveVector( i ); // we use time as intrinsic eigen value index
     exportModuleManager.doOutput( tStep ); // forcing bem with intrinsicTime=0 to compute the square root for SRSS and print results
     //}
     fprintf( outputStream, "strTerm\n" );
@@ -1755,6 +1451,8 @@ void ResponseSpectrum::saveContext( DataStream &stream, ContextMode mode )
         THROW_CIOERR( iores );
     }
 
+    this->field->saveContext( stream );
+
     if ( ( eigVec.storeYourself( stream ) ) != CIO_OK ) {
         THROW_CIOERR( iores );
     }
@@ -1762,9 +1460,6 @@ void ResponseSpectrum::saveContext( DataStream &stream, ContextMode mode )
 
 
 void ResponseSpectrum::restoreContext( DataStream &stream, ContextMode mode )
-//
-// restore state variable - displacement vector
-//
 {
     contextIOResultType iores;
 
@@ -1777,16 +1472,26 @@ void ResponseSpectrum::restoreContext( DataStream &stream, ContextMode mode )
             THROW_CIOERR( iores );
         }
 
+        this->field->restoreContext( stream );
+
         if ( ( iores = eigVec.restoreYourself( stream ) ) != CIO_OK ) {
             THROW_CIOERR( iores );
         }
     }
 
+    this->restoreFlag = 1;
+}
+
+
+void ResponseSpectrum ::setActiveVector( int i )
+{
+    this->activeVector = i;
     if ( activeVector > numberOfRequiredEigenValues ) {
         activeVector = numberOfRequiredEigenValues;
     }
 
-    this->restoreFlag = 1;
+    this->giveCurrentStep()->setNumber( activeVector );
+    this->giveCurrentStep()->setTime( (double)activeVector );
 }
 
 } // end namespace oofem

@@ -104,8 +104,8 @@ private:
     double csi;
     int func;
     FloatArray dir;
+    // internal variables
     FloatArray loadVector;
-    FloatArray dummyDisps;
     std::list<FloatArray> reactionsList;
     std::list<FloatArray> dispList;
     FloatArray combReactions;
@@ -137,7 +137,7 @@ public:
     void restoreContext( DataStream &stream, ContextMode mode ) override;
     TimeStep *giveNextStep() override;
     NumericalMethod *giveNumericalMethod( MetaStep *mStep ) override;
-    void setActiveVector( int i ) override { activeVector = i; }
+    void setActiveVector( int i ) override;
 
     double giveEigenValue( int eigNum ) override { return eigVal.at( eigNum ); }
 
