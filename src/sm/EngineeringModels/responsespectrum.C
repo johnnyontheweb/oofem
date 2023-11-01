@@ -279,7 +279,7 @@ void ResponseSpectrum::solveYourself()
 
     this->assemble( *stiffnessMatrix, tStep, TangentAssembler( TangentStiffness ), defNumbering, this->giveDomain( 1 ) );
     this->assemble( *massMatrix, tStep, MassMatrixAssembler(), defNumbering, this->giveDomain( 1 ) );
-    double val = massMatrix->at( 9, 9 );
+    // double val = massMatrix->at( 9, 9 );
 
     this->giveNumericalMethod( this->giveMetaStep( tStep->giveMetaStepNumber() ) );
     OOFEM_LOG_INFO( "Solving ...\n" );
