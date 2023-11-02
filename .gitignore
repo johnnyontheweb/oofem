@@ -1568,3 +1568,6 @@ src/tm/isoheatadvmat.C.bak
 /2019_new/src/sm/Elements/cmake_install.cmake
 /2019_new/src/sm/Elements/sm_elements.vcxproj
 /2019_new/src/sm/Elements/sm_elements.vcxproj.filters
+comp64/version.vcxproj.filters
+comp64/oofem_version.h
+comp64/version.vcxproj
