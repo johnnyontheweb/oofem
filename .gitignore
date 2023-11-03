@@ -1571,3 +1571,7 @@ src/tm/isoheatadvmat.C.bak
 comp64/version.vcxproj.filters
 comp64/oofem_version.h
 comp64/version.vcxproj
+2019_cloud/version.vcxproj
+2019_cloud/version.vcxproj.filters
+2019_new/version.vcxproj
+2019_new/version.vcxproj.filters
