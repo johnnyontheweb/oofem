@@ -1575,3 +1575,6 @@ comp64/version.vcxproj
 2019_cloud/version.vcxproj.filters
 2019_new/version.vcxproj
 2019_new/version.vcxproj.filters
+comp32/oofem_version.h
+comp32/version.vcxproj
+comp32/version.vcxproj.filters
