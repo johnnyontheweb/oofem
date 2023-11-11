@@ -59,6 +59,8 @@
 
 using namespace std;
 
+const bool forceEB = true;
+
 namespace oofem {
 REGISTER_ExportModule( BeamExportModule )
 
@@ -752,7 +754,7 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                         FloatArray rhs( 4 );
                         FloatArray abcd( 4 );
 
-                        if ( psi_y == 0.0 ) { // Euler Bernoulli formulation
+                        if ( psi_y == 0.0 || forceEB ) { // Euler Bernoulli formulation
                             lambdaY = sqrt( sqrt( wy / 4 / EJzz ) );
 
                             odeMtrx.at( 1, 1 ) = 1;
@@ -855,7 +857,7 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                         cy = abcd.at( 3 );
                         dy = abcd.at( 4 );
                     } else {
-                        if ( psi_y == 0.0 ) { // Euler Bernoulli formulation
+                        if ( psi_y == 0.0 || forceEB ) { // Euler Bernoulli formulation
                             //ay = bl.at(2) / 24 / EJzz;
                             //dy = phiz_0;
                             //fy = vy_0;
@@ -889,7 +891,7 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                         FloatArray rhs( 4 );
                         FloatArray abcd( 4 );
 
-                        if ( psi_z == 0.0 ) { // Euler Bernoulli formulation
+                        if ( psi_z == 0.0 || forceEB ) { // Euler Bernoulli formulation
                             lambdaZ = sqrt( sqrt( wz / 4 / EJyy ) );
 
                             odeMtrx.at( 1, 1 ) = 1;
@@ -987,7 +989,7 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                         cz = abcd.at( 3 );
                         dz = abcd.at( 4 );
                     } else {
-                        if ( psi_z == 0.0 ) { // Euler Bernoulli formulation
+                        if ( psi_z == 0.0 || forceEB ) { // Euler Bernoulli formulation
                             //az = bl.at(3) / 24 / EJyy;
                             //dz = phiy_0;
                             //fz = vz_0;
@@ -1051,7 +1053,7 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                 lamxZ2 = lambdaZ2 * pos;
 
                 if ( hasWinklerY ) {
-                    if ( psi_y == 0.0 ) {
+                    if ( psi_y == 0.0 || forceEB ) {
                         // displacement
                         // disps.at(2) = exp(lamxY)*(ay*cos(lamxY) + by*sin(lamxY)) + (cy*cos(lamxY) + dy*sin(lamxY)) / exp(lamxY) + bl.at(2) / wy;
                         disps.at( 2 ) = exp( lamxY ) * ( ay * cos( lamxY ) + by * sin( lamxY ) ) + ( cy * cos( lamxY ) + dy * sin( lamxY ) ) / exp( lamxY ) + ( qi.at( 2 ) + ( qf.at( 2 ) - qi.at( 2 ) ) * pos / l ) / wy;
@@ -1094,7 +1096,7 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                     wink.at( 2 ) = -disps.at( 2 ) * wy;
                 } else {
                     // displacement
-                    if ( psi_y == 0.0 ) {
+                    if ( psi_y == 0.0 || forceEB ) {
                         disps.at( 2 ) = ay * pos_5 + by * pos_4 + cy * pos_3 + dy * pos_2 + ey * pos + fy;
                     } else {
                         disps.at( 2 ) = ay * pos_5 + by * pos_4 + ( cy - 20 * ay * psi_y ) * pos_3 + ( dy - 12 * by * psi_y ) * pos_2 + ( ey - 6 * cy * psi_y ) * pos + fy;
@@ -1105,7 +1107,7 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                 }
 
                 if ( hasWinklerZ ) {
-                    if ( psi_z == 0.0 ) {
+                    if ( psi_z == 0.0 || forceEB ) {
                         // displacement
                         disps.at( 3 ) = exp( lamxZ ) * ( az * cos( lamxZ ) + bz * sin( lamxZ ) ) + ( cz * cos( lamxZ ) + dz * sin( lamxZ ) ) / exp( lamxZ ) + ( qi.at( 3 ) + ( qf.at( 3 ) - qi.at( 3 ) ) * pos / l ) / wz;
                         // rotation
@@ -1147,7 +1149,7 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                     wink.at( 3 ) = -disps.at( 3 ) * wz;
                 } else {
                     // displacement
-                    if ( psi_z == 0 ) {
+                    if ( psi_z == 0 || forceEB ) {
                         disps.at( 3 ) = az * pos_5 + bz * pos_4 + cz * pos_3 + dz * pos_2 + ez * pos + fz;
                     } else {
                         disps.at( 3 ) = az * pos_5 + bz * pos_4 + ( cz - 20 * az * psi_z ) * pos_3 + ( dz - 12 * bz * psi_z ) * pos_2 + ( ez - 6 * cz * psi_z ) * pos + fz;
