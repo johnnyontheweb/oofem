@@ -59,7 +59,7 @@
 
 using namespace std;
 
-const bool forceEB = true;
+const bool forceEB = true; // Winkler only
 
 namespace oofem {
 REGISTER_ExportModule( BeamExportModule )
@@ -857,7 +857,7 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                         cy = abcd.at( 3 );
                         dy = abcd.at( 4 );
                     } else {
-                        if ( psi_y == 0.0 || forceEB ) { // Euler Bernoulli formulation
+                        if ( psi_y == 0.0 ) { // Euler Bernoulli formulation
                             //ay = bl.at(2) / 24 / EJzz;
                             //dy = phiz_0;
                             //fy = vy_0;
@@ -989,7 +989,7 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                         cz = abcd.at( 3 );
                         dz = abcd.at( 4 );
                     } else {
-                        if ( psi_z == 0.0 || forceEB ) { // Euler Bernoulli formulation
+                        if ( psi_z == 0.0 ) { // Euler Bernoulli formulation
                             //az = bl.at(3) / 24 / EJyy;
                             //dz = phiy_0;
                             //fz = vz_0;
@@ -1096,7 +1096,7 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                     wink.at( 2 ) = -disps.at( 2 ) * wy;
                 } else {
                     // displacement
-                    if ( psi_y == 0.0 || forceEB ) {
+                    if ( psi_y == 0.0 ) {
                         disps.at( 2 ) = ay * pos_5 + by * pos_4 + cy * pos_3 + dy * pos_2 + ey * pos + fy;
                     } else {
                         disps.at( 2 ) = ay * pos_5 + by * pos_4 + ( cy - 20 * ay * psi_y ) * pos_3 + ( dy - 12 * by * psi_y ) * pos_2 + ( ey - 6 * cy * psi_y ) * pos + fy;
@@ -1149,7 +1149,7 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                     wink.at( 3 ) = -disps.at( 3 ) * wz;
                 } else {
                     // displacement
-                    if ( psi_z == 0 || forceEB ) {
+                    if ( psi_z == 0 ) {
                         disps.at( 3 ) = az * pos_5 + bz * pos_4 + cz * pos_3 + dz * pos_2 + ez * pos + fz;
                     } else {
                         disps.at( 3 ) = az * pos_5 + bz * pos_4 + ( cz - 20 * az * psi_z ) * pos_3 + ( dz - 12 * bz * psi_z ) * pos_2 + ( ez - 6 * cz * psi_z ) * pos + fz;
