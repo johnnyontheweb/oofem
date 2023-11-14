@@ -399,7 +399,7 @@ void oofem_print_help()
 
 void oofem_print_version()
 {
-    printf("\n%s (%s, %s)\nof %s on %s (Git Hash: %s)\n", PRG_VERSION, HOST_TYPE, MODULE_LIST, __DATE__, HOST_NAME, OOFEM_GIT_HASH);
+    //printf("\n%s (%s, %s)\nof %s on %s (Git Hash: %s)\n", PRG_VERSION, HOST_TYPE, MODULE_LIST, __DATE__, HOST_NAME, OOFEM_GIT_HASH);
     oofem_print_epilog();
 }
 
