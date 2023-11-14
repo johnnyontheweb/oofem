@@ -1578,3 +1578,4 @@ comp64/version.vcxproj
 comp32/oofem_version.h
 comp32/version.vcxproj
 comp32/version.vcxproj.filters
+2019_new/oofem_version.h
