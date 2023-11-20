@@ -236,8 +236,9 @@ int EigenSolverMatrix :: assembleEnd()
 
 void EigenSolverMatrix :: zero()
 {
-	this->eigenMatrix->data().clear(); // don't know if this works as intended
-
+	//this->eigenMatrix->data().clear(); // don't know if this works as intended
+	this->eigenMatrix->setZero();
+	this->eigenMatrix->data().squeeze();
     // increment version
     this->version++;
 }
