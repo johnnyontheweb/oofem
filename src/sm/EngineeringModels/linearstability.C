@@ -246,16 +246,16 @@ void LinearStability :: solveYourselfAt(TimeStep *tStep)
     this->terminateLinStatic( tStep );
 
     // Normal forces already known, proceed with linear stability
-    stiffnessMatrix->zero();
+    //stiffnessMatrix->zero();
     if ( !initialStressMatrix ) {
         initialStressMatrix = stiffnessMatrix->clone();
     } else {
         initialStressMatrix->zero();
     }
 
-    OOFEM_LOG_INFO("Assembling stiffness matrix\n");
-    this->assemble( *stiffnessMatrix, tStep, TangentAssembler(TangentStiffness),
-                   EModelDefaultEquationNumbering(), this->giveDomain(1) );
+    //OOFEM_LOG_INFO("Assembling stiffness matrix\n");
+    //this->assemble( *stiffnessMatrix, tStep, TangentAssembler(TangentStiffness),
+    //               EModelDefaultEquationNumbering(), this->giveDomain(1) );
 
     OOFEM_LOG_INFO("Assembling initial stress matrix\n");
     this->assemble( *initialStressMatrix, tStep, InitialStressMatrixAssembler(),
