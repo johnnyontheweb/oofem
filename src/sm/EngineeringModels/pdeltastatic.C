@@ -268,7 +268,7 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 		if (newNorm!=0) oldNorm = newNorm;
 		maxIter += 1;
 
-        if ( 2 == 1 ) {
+        if ( false ) {
                 
 		// terminate linear static computation (necessary, in order to compute stresses in elements).
 		this->updateAfterStatic(this->giveCurrentStep(), this->giveDomain(1)); // not needed for beam - conservatively left (shells?)

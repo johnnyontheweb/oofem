@@ -557,12 +557,12 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
 	//double oldNorm = totalDisplacement.computeSquaredNorm(); double newNorm = 0;
 	//bool escape = false; int maxIter = 0;
 
-    if ( 1 == 2 ) {
+    if ( false ) {
 	//do {
 	//	// PDELTA approx solution with iterations - maximum 10 iterations
 	//	if (newNorm != 0) oldNorm = newNorm;
 		//maxIter += 1;
-		this->updateComponent(tStep, NonLinearLhs, this->giveDomain(di));
+        this->updateComponent( tStep, InternalRhs, this->giveDomain( di ) );
 #ifdef VERBOSE
 		OOFEM_LOG_INFO("Assembling initial stress matrix\n");
 #endif
@@ -606,14 +606,16 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
 //	} while (escape == false);
 
 	// END pdelta ----------------------------------------------------------
+
     } else {
+        //this->updateComponent( tStep, InternalRhs, this->giveDomain( di ) );
         FloatArray feq( totalDisplacement.giveSize() );
         this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ),
                             VM_Total, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
         incrementalLoadVector.subtract( feq );
 	    // SOLVER
         if ( initialLoadVector.isNotEmpty() ) {
-          numMetStatus = nMethod->solve(*stiffnessMatrix, incrementalLoadVector, & initialLoadVector,
+          numMetStatus = nMethod->solve(*stiffnessMatrix, incrementalLoadVector, &initialLoadVector,
                                           totalDisplacement, incrementOfDisplacement, internalForces,
                                           internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
         } else {

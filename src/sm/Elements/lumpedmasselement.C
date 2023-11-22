@@ -58,11 +58,15 @@ void
 LumpedMassElement :: computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep)
 {
     int ndofs = this->computeNumberOfDofs();
-    answer.resize(ndofs, ndofs);
-    answer.zero();
+    answer.resize(ndofs, ndofs); answer.zero();
     answer.beDiagonal(this->components);
 }
 
+void LumpedMassElement ::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
+{
+    int ndofs = this->computeNumberOfDofs();
+    answer.resize( ndofs, ndofs ); answer.zero();
+}
 
 void
 LumpedMassElement :: initializeFrom(InputRecord &ir)
