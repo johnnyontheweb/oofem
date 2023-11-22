@@ -200,6 +200,9 @@ void VarLinearStability :: solveYourself()
 
 void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
 {
+    int neq = this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() );
+    FloatArray displacementVector( neq ), loadVector( neq ), loadVector2( neq );
+
     tStep->setNumber(0); // variable loading a t=0
     tStep->setTime(0.0);
 
@@ -223,15 +226,64 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
                    EModelDefaultEquationNumbering(), this->giveDomain(1) );
 #endif
 
-    OOFEM_LOG_INFO("Assembling load\n");
-    int neq = this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() );
-    FloatArray displacementVector( neq ), loadVector( neq ), loadVector2( neq );
+    // Normal forces already known, proceed with linear stability
+    // stiffnessMatrix->zero();
+    if ( !initialStressMatrix ) {
+        initialStressMatrix = stiffnessMatrix->clone(); // copy matrix and its values
+    } else {
+        initialStressMatrix->zero();
+    }
 
+    // OOFEM_LOG_INFO("Assembling stiffness matrix\n"); // is this here for changes in stiffness after first resolution? if no, use initial
+    // this->assemble( *stiffnessMatrix, tStep, TangentAssembler(TangentStiffness),
+    //                EModelDefaultEquationNumbering(), this->giveDomain(1) );
+
+    // -----------------------------------------------------------------
+    // create the actual initial stiffness matrix using only time = 1
+    TimeStep tStep1( *tStep );
+    tStep1.setNumber( 1 ); // constant loading a t=0
+    tStep1.setTime( 1.0 );
+    TimeStep *tStep1Ptr = &tStep1;
+
+    // loadVector.zero();
+    // loadVector.negated(); // revert previous negation, keep constant loading
+    //  Internal forces first, negated;
+    field->update( VM_Total, tStep1Ptr, displacementVector, EModelDefaultEquationNumbering() );
+    this->assembleVector( loadVector2, tStep1Ptr, InternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
+    loadVector2.negated();
+    // external forces
+    this->assembleVector( loadVector2, tStep1Ptr, ExternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
+    this->updateSharedDofManagers( loadVector2, EModelDefaultEquationNumbering(), ReactionExchangeTag );
+
+    if ( loadVector2.computeNorm() > 1.e-10 ) { // constant loading
+        //loadVector.add( loadVector2 ); // sum to be consistent with deformed shape?
+        OOFEM_LOG_INFO( "Solving linear static problem\n" );
+        nMethodLS->solve( *stiffnessMatrix, loadVector2, displacementVector );
+        // Initial displacements are stored at position 0; this is a bit of a hack. In the future, a cleaner approach of handling fields could be suitable,
+        // but currently, it all converges down to the same giveUnknownComponent, so this is the easisest approach.
+        field->update( VM_Total, tStep1Ptr, displacementVector, EModelDefaultEquationNumbering() );
+        // terminate linear static computation (necessary, in order to compute stresses in elements).
+        // Recompute for updated state:
+        // this->assembleVector(loadVector, tStep1Ptr, InternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(1));
+        this->terminateLinStatic( tStep1Ptr );
+
+        initialStressMatrix->zero(); // rewrite initialStressMatrix
+        OOFEM_LOG_INFO( "Assembling initial stress matrix for constant loading\n" );
+        this->assemble( *initialStressMatrix, tStep1Ptr, InitialStressMatrixAssembler(),
+            EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
+        // add constant loads to update the stiffness matrix
+        stiffnessMatrix->add( 1.0, *initialStressMatrix );
+        //displacementVector.zero(); // no, consider deformed shape for multipliers
+    } // constant loading
+    // -----------------------------------------------------------------
+
+    initialStressMatrix->zero(); // rewrite initialStressMatrix
+    OOFEM_LOG_INFO("Assembling variable loading\n");
     // Internal forces first, negated;
     field->update(VM_Total, tStep, displacementVector, EModelDefaultEquationNumbering());
     this->assembleVector( loadVector, tStep, InternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(1) );
     loadVector.negated();
-
+    // external forces
     this->assembleVector( loadVector, tStep, ExternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(1) );
     this->updateSharedDofManagers(loadVector, EModelDefaultEquationNumbering(), ReactionExchangeTag);
 
@@ -245,57 +297,9 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
     //this->assembleVector( loadVector, tStep, InternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(1) );
     this->terminateLinStatic( tStep );
 
-    // Normal forces already known, proceed with linear stability
-    //stiffnessMatrix->zero();
-    if ( !initialStressMatrix ) {
-        initialStressMatrix = stiffnessMatrix->clone();
-    } else {
-        initialStressMatrix->zero();
-    }
-
-    //OOFEM_LOG_INFO("Assembling stiffness matrix\n"); // is this here for changes in stiffness after first resolution? if no, use initial
-    //this->assemble( *stiffnessMatrix, tStep, TangentAssembler(TangentStiffness), 
-    //               EModelDefaultEquationNumbering(), this->giveDomain(1) );
-
     OOFEM_LOG_INFO("Assembling initial stress matrix for variable loading\n");
     this->assemble( *initialStressMatrix, tStep, InitialStressMatrixAssembler(),
                    EModelDefaultEquationNumbering(), this->giveDomain(1) );
-
-    // create the actual initial stiffness matrix using only time = 1
-    TimeStep tStep1(*tStep);
-    tStep1.setNumber(1);  // constant loading a t=0
-    tStep1.setTime(1.0);
-    TimeStep* tStep1Ptr = &tStep1;
-
-    //loadVector.zero();
-    //loadVector.negated(); // revert previous negation, keep constant loading
-    // Internal forces first, negated;
-    field->update(VM_Total, tStep1Ptr, displacementVector, EModelDefaultEquationNumbering());
-    this->assembleVector(loadVector2, tStep1Ptr, InternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(1));
-    loadVector2.negated();
-
-    this->assembleVector(loadVector2, tStep1Ptr, ExternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(1));
-    this->updateSharedDofManagers(loadVector2, EModelDefaultEquationNumbering(), ReactionExchangeTag);
-
-    if ( loadVector2.computeNorm() > 1.e-10 ) { // constant loading
-        // subtract constant loads to update the stiffness matrix
-        stiffnessMatrix->add( -1.0, *initialStressMatrix );
-        loadVector.add( loadVector2 ); // sum both since we have linear analysis
-        OOFEM_LOG_INFO( "Solving linear static problem\n" );
-        nMethodLS->solve( *stiffnessMatrix, loadVector, displacementVector );
-        // Initial displacements are stored at position 0; this is a bit of a hack. In the future, a cleaner approach of handling fields could be suitable,
-        // but currently, it all converges down to the same giveUnknownComponent, so this is the easisest approach.
-        field->update( VM_Total, tStep1Ptr, displacementVector, EModelDefaultEquationNumbering() );
-        // terminate linear static computation (necessary, in order to compute stresses in elements).
-        // Recompute for updated state:
-        //this->assembleVector(loadVector, tStep1Ptr, InternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(1));
-        this->terminateLinStatic( tStep1Ptr );
-
-        initialStressMatrix->zero(); // rewrite initialStressMatrix, the previous one has already been subtracted to K
-        OOFEM_LOG_INFO( "Assembling initial stress matrix for constant loading\n" );
-        this->assemble( *initialStressMatrix, tStep1Ptr, InitialStressMatrixAssembler(),
-            EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
-    } // constant loading
     initialStressMatrix->times(-1.0);
 
     //FloatMatrix stiff, initstr;

@@ -231,7 +231,7 @@ void LinearStability :: solveYourselfAt(TimeStep *tStep)
     field->update(VM_Total, tStep, displacementVector, EModelDefaultEquationNumbering());
     this->assembleVector( loadVector, tStep, InternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(1) );
     loadVector.negated();
-
+    // external forces
     this->assembleVector( loadVector, tStep, ExternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(1) );
     this->updateSharedDofManagers(loadVector, EModelDefaultEquationNumbering(), ReactionExchangeTag);
 
