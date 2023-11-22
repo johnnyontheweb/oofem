@@ -238,7 +238,7 @@ void LinearStability :: solveYourselfAt(TimeStep *tStep)
     OOFEM_LOG_INFO("Solving linear static problem\n");
     nMethodLS->solve(*stiffnessMatrix, loadVector, displacementVector);
     // Initial displacements are stored at position 0; this is a bit of a hack. In the future, a cleaner approach of handling fields could be suitable,
-    // but currently, it all converges down to the same giveUnknownComponent, so this is the easisest approach.
+    // but currently, it all converges down to the same giveUnknownComponent, so this is the easiest approach.
     field->update(VM_Total, tStep, displacementVector, EModelDefaultEquationNumbering());
     // terminate linear static computation (necessary, in order to compute stresses in elements).
     // Recompute for updated state:
