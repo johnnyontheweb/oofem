@@ -490,22 +490,22 @@ NonLinearDynamic :: proceedStep(int di, TimeStep *tStep)
     NM_Status numMetStatus;
 
     if ( secOrder ) {
-        if ( 1 == 2 ) {
-       this->updateComponent( tStep, NonLinearLhs, this->giveDomain( di ) );
+        if ( true ) {
+            // this->updateComponent( tStep, NonLinearLhs, this->giveDomain( di ) );
 #ifdef VERBOSE
-        OOFEM_LOG_INFO( "Assembling initial stress matrix\n" );
+            OOFEM_LOG_INFO( "Assembling initial stress matrix\n" );
 #endif
-        // initialStressMatrix.reset(stiffnessMatrix->GiveCopy());
-        initialStressMatrix->zero();
+            // initialStressMatrix.reset(stiffnessMatrix->GiveCopy());
+            initialStressMatrix->zero();
 
-        this->assemble( *initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain( di ) );
-        std::unique_ptr<SparseMtrx> Kiter;
-        Kiter = effectiveStiffnessMatrix->clone();
-        Kiter->add( 1, *initialStressMatrix );
+            this->assemble( *initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain( di ) );
+            std::unique_ptr<SparseMtrx> Kiter;
+            Kiter = effectiveStiffnessMatrix->clone();
+            Kiter->add( 1, *initialStressMatrix );
 
-        //numMetStatus = nMethod->solve(*Kiter, rhs, NULL,
-        //    totalDisplacement, incrementOfDisplacement, forcesVector,
-        //    internalForcesEBENorm, loadLevel, SparseNonLinearSystemNM::rlm_total, currentIterations, tStep);
+        numMetStatus = nMethod->solve( *Kiter, rhs, NULL,
+                totalDisplacement, incrementOfDisplacement, forcesVector,
+                internalForcesEBENorm, loadLevel, SparseNonLinearSystemNM ::rlm_total, currentIterations, tStep );
         } else {
 #ifdef VERBOSE
             OOFEM_LOG_INFO( "Assembling initial stress matrix\n" );
@@ -514,12 +514,17 @@ NonLinearDynamic :: proceedStep(int di, TimeStep *tStep)
             this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ),
                 VM_Total, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
             forcesVector.subtract( feq );
+
+            numMetStatus = nMethod->solve( *effectiveStiffnessMatrix, rhs, NULL,
+                totalDisplacement, incrementOfDisplacement, forcesVector,
+                internalForcesEBENorm, loadLevel, SparseNonLinearSystemNM ::rlm_total, currentIterations, tStep );
         }
- 
-    }
-	numMetStatus = nMethod->solve(*effectiveStiffnessMatrix, rhs, NULL,
+
+    } else {
+	    numMetStatus = nMethod->solve(*effectiveStiffnessMatrix, rhs, NULL,
                                     totalDisplacement, incrementOfDisplacement, forcesVector,
                                     internalForcesEBENorm, loadLevel, SparseNonLinearSystemNM :: rlm_total, currentIterations, tStep);
+    }
 
     if ( !( numMetStatus & NM_Success ) ) {
         OOFEM_ERROR("NRSolver failed to solve problem");

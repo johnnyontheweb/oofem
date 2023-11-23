@@ -200,8 +200,8 @@ NonLinearStatic :: initializeFrom(InputRecord &ir)
         updateElasticStiffnessFlag = true;
     }
 
-    secOrder = false;
-    IR_GIVE_OPTIONAL_FIELD(ir, secOrder, _IFT_NonLinearStatic_secondOrder);
+    //secOrder = false;
+    //IR_GIVE_OPTIONAL_FIELD(ir, secOrder, _IFT_NonLinearStatic_secondOrder);
     //if (secOrder && sparseMtrxType > 1) {
     //	sparseMtrxType = SMT_EigenSparse;
     //	solverType = ST_EigenLib;
@@ -562,16 +562,24 @@ NonLinearStatic :: proceedStep(int di, TimeStep *tStep)
         incrementOfDisplacement.zero();
     }
 
-    // 2nd order effects
-    if ( secOrder ) {
-#ifdef VERBOSE
-    OOFEM_LOG_INFO( "Assembling initial stress matrix\n" );
-#endif
-    FloatArray feq( totalDisplacement.giveSize() );
-    this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ),
-        VM_Total, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
-    incrementalLoadVector.subtract( feq );
-    }
+//    // 2nd order effects
+//    if ( secOrder ) {
+//#ifdef VERBOSE
+//    OOFEM_LOG_INFO( "Assembling initial stress matrix\n" );
+//#endif
+//        if ( this->initialGuessType == IG_Tangent ) {
+//            initialStressMatrix->zero();
+//            this->assemble( *initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain( di ) );
+//            //std::unique_ptr<SparseMtrx> Kiter;
+//            //Kiter = stiffnessMatrix->clone(); // initialGuessType == IG_Tangent is required, otherwise K is zero
+//            stiffnessMatrix->add( 1, *initialStressMatrix ); // thanks to updateMatrix we can use the same K
+//        }else{
+//            FloatArray feq( totalDisplacement.giveSize() );
+//            this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ),
+//                VM_Total, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
+//            incrementalLoadVector.subtract( feq );
+//        }
+//    }
 
     if ( initialLoadVector.isNotEmpty() ) {
         numMetStatus = nMethod->solve(* stiffnessMatrix, incrementalLoadVector, & initialLoadVector,
@@ -651,32 +659,32 @@ NonLinearStatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *
             this->assemble(* stiffnessMatrix, tStep, TangentAssembler(TangentStiffness),
                            EModelDefaultEquationNumbering(), d);
 
-	    if (secOrder) {
-                if ( 1 == 2 ) {
-		            // update internal state - nodes ...
-		            for (auto &dman : d->giveDofManagers()) {
-		                dman->updateYourself(tStep);
-		            }
-		            // ... and elements
-		            for (auto &elem : d->giveElements()) {
-		                elem->updateInternalState(tStep);
-		                elem->updateYourself(tStep);
-		            }
-            #ifdef VERBOSE
-		            OOFEM_LOG_INFO("Assembling initial stress matrix\n");
-            #endif
-		            initialStressMatrix->zero();
-		            this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), d);
-		            stiffnessMatrix->add(1, *initialStressMatrix); // in 1st step this would be zero
+	    //if (secOrder) {
+     //           if ( 1 == 2 ) {
+		   //         // update internal state - nodes ...
+		   //         for (auto &dman : d->giveDofManagers()) {
+		   //             dman->updateYourself(tStep);
+		   //         }
+		   //         // ... and elements
+		   //         for (auto &elem : d->giveElements()) {
+		   //             elem->updateInternalState(tStep);
+		   //             elem->updateYourself(tStep);
+		   //         }
+     //       #ifdef VERBOSE
+		   //         OOFEM_LOG_INFO("Assembling initial stress matrix\n");
+     //       #endif
+		   //         initialStressMatrix->zero();
+		   //         this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), d);
+		   //         stiffnessMatrix->add(1, *initialStressMatrix); // in 1st step this would be zero
 
-                //} else {
-                //    FloatArray feq( displacementVector.giveSize() );
-                //    this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ),
-                //        VM_Incremental, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
-                //    incrementalLoadVector.subtract( feq );
-                }
+     //           //} else {
+     //           //    FloatArray feq( displacementVector.giveSize() );
+     //           //    this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ),
+     //           //        VM_Incremental, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
+     //           //    incrementalLoadVector.subtract( feq );
+     //           }
 
-	         }
+	    //     }
 
         } else if ( ( stiffMode == nls_secantStiffness ) || ( stiffMode == nls_secantInitialStiffness && initFlag ) ) {
 #ifdef VERBOSE
