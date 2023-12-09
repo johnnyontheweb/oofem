@@ -591,7 +591,7 @@ NonLinearStatic :: proceedStep(int di, TimeStep *tStep)
                                       internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
     }
 
-    if (numMetStatus > 1) {
+    if ( numMetStatus != CR_CONVERGED ) {
 	OOFEM_ERROR("Solver couldn't find equilibrium at step number %5d.%d in %d iterations\n", tStep->giveNumber(), tStep->giveVersion(), currentIterations);
     }
     OOFEM_LOG_RELEVANT("Equilibrium reached at load level = %f in %d iterations\n", cumulatedLoadLevel + loadLevel, currentIterations);
