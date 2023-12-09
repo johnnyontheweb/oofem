@@ -75,7 +75,7 @@ public:
      * @param x solution array
      * @return NM_Status value
      */
-    virtual NM_Status solve(SparseMtrx &A, FloatArray &b, FloatArray &x);
+    virtual ConvergedReason solve(SparseMtrx &A, FloatArray &b, FloatArray &x);
 
     virtual const char *giveClassName() const { return "LDLTFactEigenLib"; }
 	virtual LinSystSolverType giveLinSystSolverType() const { return ST_EigenLib; }

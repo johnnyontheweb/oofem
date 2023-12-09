@@ -32,39 +32,21 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef mklpardisosolver_h
-#define mklpardisosolver_h
-
-#include "sparselinsystemnm.h"
-#include "convergedreason.h"
-
-#define _IFT_MKLPardisoSolver_Name "mklpardiso"
-
+#ifndef convergedreason_h
+#define convergedreason_h
 namespace oofem {
-
-/**
- * Implements the solution of linear system of equation in the form @f$ A\cdot x=b @f$ using solvers
- * from MKL Pardiso. It will not work with Pardiso 5.0.
- * Only works with the CSC (compressed sparse column) sparse matrix implementation.
- * 
- * @author Mikael Öhman
- */
-class OOFEM_EXPORT MKLPardisoSolver : public SparseLinearSystemNM
-{
-public:
-    /**
-     * Constructor.
-     * @param d Domain which solver belongs to.
-     * @param m Engineering model which solver belongs to.
-     */
-    MKLPardisoSolver(Domain * d, EngngModel * m);
-    virtual ~MKLPardisoSolver();
-
-    ConvergedReason solve(SparseMtrx &A, FloatArray &b, FloatArray &x) override;
-
-    const char *giveClassName() const override { return "MKLPardisoSolver"; }
-    LinSystSolverType giveLinSystSolverType() const override { return ST_MKLPardiso; }
-    SparseMtrxType giveRecommendedMatrix(bool symmetric) const override { return SMT_CompCol; }
-};
+  /**
+   * Typedef to determine reason for a  solver to have converged or diverged
+   */
+  typedef enum {
+    CR_UNKNOWN                             = 0,
+    /* converged */
+    CR_CONVERGED                           = 1,
+    /* diverged */
+    CR_DIVERGED_ITS                        = -1,
+    CR_DIVERGED_TOL                        = -2,
+    /* failed */
+    CR_FAILED                              = -99
+  } ConvergedReason;
 } // end namespace oofem
-#endif // mklpardisosolver_h
+#endif // convergedreason_h

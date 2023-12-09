@@ -487,7 +487,7 @@ NonLinearDynamic :: proceedStep(int di, TimeStep *tStep)
     if (totIterations == 0) {
 	incrementOfDisplacement.zero();
     }
-    NM_Status numMetStatus;
+    ConvergedReason numMetStatus;
 
     if ( secOrder ) {
         if ( true ) {
@@ -526,10 +526,16 @@ NonLinearDynamic :: proceedStep(int di, TimeStep *tStep)
                                     internalForcesEBENorm, loadLevel, SparseNonLinearSystemNM :: rlm_total, currentIterations, tStep);
     }
 
-    if ( !( numMetStatus & NM_Success ) ) {
+    numMetStatus = nMethod->solve(*effectiveStiffnessMatrix, rhs, NULL,
+                                            totalDisplacement, incrementOfDisplacement, forcesVector,
+                                            internalForcesEBENorm, loadLevel, SparseNonLinearSystemNM :: rlm_total, currentIterations, tStep);
+    if ( numMetStatus != CR_CONVERGED ) {
         OOFEM_ERROR("NRSolver failed to solve problem");
     }
+    tStep->numberOfIterations = currentIterations;
+    tStep->convergedReason = numMetStatus;
 
+    
     rhs = previousVelocityVector;
     rhs2 = previousAccelerationVector;
     for ( int i = 1; i <= neq; i++ ) {

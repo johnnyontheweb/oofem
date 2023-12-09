@@ -54,7 +54,7 @@ SubspaceIteration :: SubspaceIteration(Domain *d, EngngModel *m) :
 }
 
 
-NM_Status
+ConvergedReason
 SubspaceIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatrix &_r, double rtol, int nroot)
 //
 // this function solve the generalized eigenproblem using the Generalized
@@ -71,6 +71,7 @@ SubspaceIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Floa
     int nc1, ij = 0;
     FloatMatrix ar, br, vec;
     std :: unique_ptr< SparseLinearSystemNM > solver( GiveClassFactory().createSparseLinSolver(ST_Direct, domain, engngModel) );
+    ConvergedReason status = CR_UNKNOWN;
 
     GJacobi mtd(domain, engngModel);
     outStream = domain->giveEngngModel()->giveOutputStream();
@@ -361,11 +362,13 @@ SubspaceIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Floa
             }
         }
 
-        fprintf(outStream, "SubspaceIteration :: solveYourselfAt: Convergence reached for RTOL=%20.15f\n", rtol);
+        OOFEM_LOG_INFO("SubspaceIteration :: solveYourselfAt: Convergence reached for RTOL=%20.15f\n", rtol);
+        status = CR_CONVERGED;
         break;
 label400:
         if ( nite >= nitem ) {
-            fprintf(outStream, "SubspaceIteration :: solveYourselfAt: Convergence not reached in %d iteration - using current values\n", nitem);
+            OOFEM_WARNING("SubspaceIteration :: solveYourselfAt: Convergence not reached in %d iteration - using current values", nitem);
+            status = CR_DIVERGED_ITS;
             break;
         }
 
@@ -395,6 +398,6 @@ label400:
         }
     }
 
-    return NM_Success;
+    return status;
 }
 } // end namespace oofem

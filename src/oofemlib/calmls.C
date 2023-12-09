@@ -104,7 +104,7 @@ CylindricalALM :: ~CylindricalALM()
 {}
 
 
-NM_Status
+ConvergedReason
 CylindricalALM :: solve(SparseMtrx &k, FloatArray &R, FloatArray *R0,
                         FloatArray &X, FloatArray &dX, FloatArray &F,
                         const FloatArray &internalForcesEBENorm, double &ReachedLambda, referenceLoadInputModeType rlm,
@@ -120,7 +120,7 @@ CylindricalALM :: solve(SparseMtrx &k, FloatArray &R, FloatArray *R0,
     int irest = 0;
     int HPsize, i, ind;
     double _RR, _XX;
-    NM_Status status;
+    ConvergedReason status = CR_UNKNOWN;
     bool converged, errorOutOfRangeFlag;
     // print iteration header
 
@@ -156,7 +156,7 @@ CylindricalALM :: solve(SparseMtrx &k, FloatArray &R, FloatArray *R0,
     deltaXt.resize(neq);
     deltaXt.zero();
 
-    status = NM_None;
+    status = CR_UNKNOWN;
     this->giveLinearSolver();
 
     // create HPC Map if needed
@@ -340,7 +340,7 @@ restart:
                 calm_NR_ModeTick = CALM_DEFAULT_NRM_TICKS;
                 goto restart;
             } else {
-                status = NM_NoSuccess;
+                status = CR_DIVERGED_ITS;
                 OOFEM_ERROR("can't continue further");
             }
         }
@@ -420,8 +420,8 @@ restart:
                 calm_NR_ModeTick = CALM_DEFAULT_NRM_TICKS;
                 goto restart;
             } else {
-                status = NM_NoSuccess;
-                OOFEM_ERROR("Convergence not reached after %d restarts and %d iterations", maxRestarts, nsmax);
+                status = CR_DIVERGED_ITS;
+                OOFEM_WARNING("Convergence not reached after %d iterations", nsmax);
                 // exit(1);
                 break;
             }
@@ -477,7 +477,7 @@ restart:
 
     OOFEM_LOG_INFO("CALMLS:       Adjusted step length: %-15e\n", deltaL);
 
-    status = NM_Success;
+    status = CR_CONVERGED;
     solved = 1;
     ReachedLambda = Lambda;
     old_dX = dX;

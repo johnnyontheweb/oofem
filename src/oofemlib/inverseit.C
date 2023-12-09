@@ -54,7 +54,7 @@ InverseIteration :: InverseIteration(Domain *d, EngngModel *m) :
 }
 
 
-NM_Status
+ConvergedReason
 InverseIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &eigv, FloatMatrix &r, double rtol, int nroot)
 {
 	FILE *outStream;
@@ -192,9 +192,10 @@ InverseIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &eigv, FloatM
     if ( it < nitem ) {
 	fprintf(outStream, "InverseIteration :: convergence reached in %d iterations\n", it);
     } else {
-	fprintf(outStream, "InverseIteration :: convergence not reached after %d iterations\n", it);
+        OOFEM_WARNING("convergence not reached after %d iterations\n", it);
+        return CR_DIVERGED_ITS;
     }
 
-    return NM_Success;
+    return CR_CONVERGED;
 }
 } // end namespace oofem

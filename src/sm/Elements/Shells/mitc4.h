@@ -133,6 +133,11 @@ public:
     int computeLoadGToLRotationMtrx(FloatMatrix &answer) override;
     std::array<FloatMatrixF<3,3>, 4> computeLToDirectorRotationMatrix();
     int computeLoadLEToLRotationMatrix(FloatMatrix &answer, int iEdge, GaussPoint *gp) override;
+#ifdef __OOFEG
+    void drawRawGeometry(oofegGraphicContext &gc, TimeStep *tStep) override;
+    void drawDeformedGeometry(oofegGraphicContext &gc, TimeStep *tStep, UnknownType type) override;
+    void drawScalar(oofegGraphicContext &gc, TimeStep *tStep) override;
+#endif
 
     //virtual void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord = 0);
     double computeArea() override;

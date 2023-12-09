@@ -36,7 +36,6 @@
 #include "gjacobi.h"
 #include "mathfem.h"
 #include "floatmatrix.h"
-#include "nmstatus.h"
 
 namespace oofem {
 GJacobi :: GJacobi(Domain *d, EngngModel *m) :
@@ -53,7 +52,7 @@ GJacobi :: ~GJacobi() { }
 
 #define GJacobi_ZERO_CHECK_TOL 1.e-40
 
-NM_Status
+ConvergedReason
 GJacobi :: solve(FloatMatrix &a, FloatMatrix &b, FloatArray &eigv, FloatMatrix &x)
 //
 // this function solve the generalized eigenproblem using the Generalized
@@ -107,7 +106,7 @@ GJacobi :: solve(FloatMatrix &a, FloatMatrix &b, FloatArray &eigv, FloatMatrix &
     }
 
     if ( n == 1 ) {
-        return NM_Success;
+        return CR_CONVERGED;
     }
 
     //
@@ -310,7 +309,10 @@ label280:
         }
     }                                  // label 270
 
-    solved = 1;
-    return NM_Success;
+    if (nsweep<nsmax) {
+      return CR_CONVERGED;
+    } else {
+      return CR_DIVERGED_ITS;
+    }
 }
 } // end namespace oofem

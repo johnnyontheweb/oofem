@@ -113,7 +113,7 @@ SpoolesSolver :: initializeFrom(InputRecord &ir)
 }
 
 
-NM_Status
+ConvergedReason
 SpoolesSolver :: solve(SparseMtrx &A, FloatArray &b, FloatArray &x)
 {
     int errorValue, mtxType, symmetryflag;
@@ -283,15 +283,13 @@ SpoolesSolver :: solve(SparseMtrx &A, FloatArray &b, FloatArray &x)
         }
 
         if ( rootchv != NULL ) {
-            //fprintf( msgFile, "\n\n matrix found to be singular\n" );
-            OOFEM_ERROR( "error: matrix found to be singular" )
-            //exit(-1);
+            fprintf(msgFile, "\n\n matrix found to be singular\n");
+            return CR_FAILED;
         }
 
         if ( errorValue >= 0 ) {
-            //fprintf( msgFile, "\n\n error encountered at front %d", errorValue );
-            OOFEM_ERROR( "error encountered at front %d", errorValue )
-            //exit(-1);
+            fprintf(msgFile, "\n\n error encountered at front %d", errorValue);
+            return CR_FAILED;
         }
 
         /*--------------------------------------------------------------------*/
@@ -372,6 +370,6 @@ SpoolesSolver :: solve(SparseMtrx &A, FloatArray &b, FloatArray &x)
     DenseMtx_free(mtxX);
     DenseMtx_free(mtxY);
     /*--------------------------------------------------------------------*/
-    return ( 1 );
+    return ( CR_CONVERGED );
 }
 } // end namespace oofem

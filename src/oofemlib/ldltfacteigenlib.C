@@ -48,7 +48,7 @@ LDLTFactEigenLib :: ~LDLTFactEigenLib()
 {
 }
 
-NM_Status
+ConvergedReason
 LDLTFactEigenLib :: solve(SparseMtrx &A, FloatArray &b, FloatArray &x)
 {
     // check whether Lhs supports factorization
@@ -69,8 +69,8 @@ LDLTFactEigenLib :: solve(SparseMtrx &A, FloatArray &b, FloatArray &x)
 		x[i] = opx[i];
 
 	if (sparseSolver.info() != Eigen::Success)
-		return NM_NoSuccess;
+		return CR_FAILED;
 
-    return NM_Success;
+    return CR_CONVERGED;
 }
 } // end namespace oofem

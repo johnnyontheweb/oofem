@@ -362,8 +362,8 @@ void LinearStatic :: solveYourselfAt(TimeStep *tStep)
 #ifdef VERBOSE
     OOFEM_LOG_INFO("\n\nSolving ...\n\n");
 #endif
-    NM_Status s = nMethod->solve(*stiffnessMatrix, loadVector, displacementVector);
-    if ( !( s & NM_Success ) ) {
+    ConvergedReason s = nMethod->solve(*stiffnessMatrix, loadVector, displacementVector);
+    if ( s != CR_CONVERGED ) {
 		badRow = stiffnessMatrix->giveErrorFlag();
 		int nodeNum = 0, elemNum = 0;
 		DofIDItem dofID;
@@ -382,7 +382,8 @@ void LinearStatic :: solveYourselfAt(TimeStep *tStep)
 			OOFEM_WARNING("No success in solving system.");
 		} // solvertype 0
     }
-
+    tStep->numberOfIterations = 1;
+    tStep->convergedReason = s;
     tStep->incrementStateCounter();            // update solution state counter
 }
 

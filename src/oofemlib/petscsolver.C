@@ -35,6 +35,7 @@
 #include "petscsolver.h"
 
 #include "petscsparsemtrx.h"
+#include "convergedreason.h"
 #include "engngm.h"
 #include "floatarray.h"
 #include "verbose.h"
@@ -51,7 +52,7 @@ PetscSolver :: PetscSolver(Domain *d, EngngModel *m) : SparseLinearSystemNM(d, m
 
 PetscSolver :: ~PetscSolver() { }
 
-NM_Status PetscSolver :: solve(SparseMtrx &A, FloatArray &b, FloatArray &x)
+ConvergedReason PetscSolver :: solve(SparseMtrx &A, FloatArray &b, FloatArray &x)
 {
     int neqs = b.giveSize();
     x.resize(neqs);
@@ -73,7 +74,7 @@ NM_Status PetscSolver :: solve(SparseMtrx &A, FloatArray &b, FloatArray &x)
     VecDuplicate(globRhsVec, & globSolVec);
 
     //VecView(globRhsVec,PETSC_VIEWER_STDOUT_WORLD);
-    NM_Status s = this->petsc_solve(*Lhs, globRhsVec, globSolVec);
+    ConvergedReason s = this->petsc_solve(*Lhs, globRhsVec, globSolVec);
     //VecView(globSolVec,PETSC_VIEWER_STDOUT_WORLD);
 
     Lhs->scatterG2L(globSolVec, x);
@@ -84,7 +85,7 @@ NM_Status PetscSolver :: solve(SparseMtrx &A, FloatArray &b, FloatArray &x)
     return s;
 }
 
-NM_Status
+ConvergedReason
 PetscSolver :: petsc_solve(PetscSparseMtrx &Lhs, Vec b, Vec x)
 {
     int nite;
@@ -171,16 +172,16 @@ PetscSolver :: petsc_solve(PetscSparseMtrx &Lhs, Vec b, Vec x)
     OOFEM_LOG_INFO( "PetscSolver:  User time consumed by solution: %.2fs, KSPConvergedReason: %d, number of iterations: %d\n", timer.getUtime(), reason, nite );
 
     if ( reason < 0 ) {
-        return NM_NoSuccess;
+        return CR_DIVERGED_ITS;
     } else {
-        return NM_Success;
+        return CR_CONVERGED;
     }
 }
 
 
 #if 0
 ///@todo Parallel mode of this.
-NM_Status PetscSolver :: solve(SparseMtrx &A, FloatMatrix &B, FloatMatrix &X)
+ConvergedReason PetscSolver :: solve(SparseMtrx &A, FloatMatrix &B, FloatMatrix &X)
 {
     PetscSparseMtrx *Lhs = dynamic_cast< PetscSparseMtrx * >(&A);
     if ( !Lhs ) {
@@ -193,7 +194,7 @@ NM_Status PetscSolver :: solve(SparseMtrx &A, FloatMatrix &B, FloatMatrix &X)
     bool newLhs = true;
     int rows = B.giveNumberOfRows();
     int cols = B.giveNumberOfColumns();
-    NM_Status s;
+    ConvergedReason s;
     X.resize(rows, cols);
     double *Xptr = X.givePointer();
 
@@ -201,7 +202,7 @@ NM_Status PetscSolver :: solve(SparseMtrx &A, FloatMatrix &B, FloatMatrix &X)
         VecCreateSeqWithArray(PETSC_COMM_SELF, rows, B.givePointer() + rows * i, & globRhsVec);
         VecDuplicate(globRhsVec, & globSolVec);
         s = this->petsc_solve(*Lhs, globRhsVec, globSolVec, newLhs);
-        if ( !( s & NM_Success ) ) {
+        if ( !( s ==  CR_CONVERGED ) ) {
             OOFEM_WARNING("No success at solving column %d", i + 1);
             return s;
         }

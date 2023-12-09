@@ -66,7 +66,7 @@ EigenSolver :: EigenSolver(Domain *d, EngngModel *m) :
 
 EigenSolver :: ~EigenSolver() { }
 
-NM_Status
+ConvergedReason
 EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatrix &_r, double rtol, int nroot)
 {
 	FILE *outStream;
@@ -138,6 +138,6 @@ EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatri
 	} else {
 		fprintf(outStream, "Eigen-Spectra :: convergence not reached\n");
 	}
-	return NM_Success;
+	return CR_CONVERGED;
 }
 } // end namespace oofem
