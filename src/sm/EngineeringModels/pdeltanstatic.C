@@ -521,9 +521,10 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
 #ifdef VERBOSE
         OOFEM_LOG_RELEVANT("Computing initial guess\n");
 #endif
-	FloatArray extrapolatedForces;
+	    FloatArray extrapolatedForces;
         this->assemblePrescribedExtrapolatedForces( extrapolatedForces, tStep, TangentStiffnessMatrix, this->giveDomain(di) );
         extrapolatedForces.negated();
+        //this->updateMatrix( *stiffnessMatrix, tStep, this->giveDomain( di ) );
         this->updateComponent( tStep, NonLinearLhs, this->giveDomain(di) );
         SparseLinearSystemNM *linSolver = nMethod->giveLinearSolver();
         OOFEM_LOG_RELEVANT("solving for increment\n");
@@ -557,12 +558,12 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
 	//double oldNorm = totalDisplacement.computeSquaredNorm(); double newNorm = 0;
 	//bool escape = false; int maxIter = 0;
 
-    if ( 1 == 2 ) {
+    if ( this->initialGuessType == IG_Tangent ) { // we have non-zero stiffness matrix
 	//do {
 	//	// PDELTA approx solution with iterations - maximum 10 iterations
 	//	if (newNorm != 0) oldNorm = newNorm;
 		//maxIter += 1;
-		this->updateComponent(tStep, NonLinearLhs, this->giveDomain(di));
+        //this->updateComponent( tStep, InternalRhs, this->giveDomain( di ) );
 #ifdef VERBOSE
 		OOFEM_LOG_INFO("Assembling initial stress matrix\n");
 #endif
@@ -571,7 +572,7 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
 
 		this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain(di));
 		std::unique_ptr< SparseMtrx > Kiter;
-        Kiter = stiffnessMatrix->clone();
+        Kiter = stiffnessMatrix->clone(); // initialGuessType == IG_Tangent is required, otherwise K is zero
 		Kiter->add(1, *initialStressMatrix);
 
 		//#ifdef DEBUG
@@ -606,14 +607,16 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
 //	} while (escape == false);
 
 	// END pdelta ----------------------------------------------------------
+
     } else {
+        //this->updateComponent( tStep, InternalRhs, this->giveDomain( di ) );
         FloatArray feq( totalDisplacement.giveSize() );
         this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ),
                             VM_Total, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
         incrementalLoadVector.subtract( feq );
 	    // SOLVER
         if ( initialLoadVector.isNotEmpty() ) {
-          numMetStatus = nMethod->solve(*stiffnessMatrix, incrementalLoadVector, & initialLoadVector,
+          numMetStatus = nMethod->solve(*stiffnessMatrix, incrementalLoadVector, &initialLoadVector,
                                           totalDisplacement, incrementOfDisplacement, internalForces,
                                           internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
         } else {

@@ -69,8 +69,8 @@ public:
     { computeLumpedMassMatrix(answer, tStep); }
     void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep) override
     { answer.clear(); }
-    void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep) override
-    { answer.clear(); }
+    void computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep ) override;
+    // { answer.clear(); }
     void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord = 0) override
     { answer.clear(); }
 

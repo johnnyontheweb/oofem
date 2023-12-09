@@ -301,6 +301,12 @@ MITC4Shell::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
     Kgx.add( sxy, Kgxy );
     // once for local z
     answer.assemble( Kgx, asmz );
+
+    //if ( drillType ) {
+    //    IntArray drillDofs  = { 6, 12, 18, 24 };
+    //    auto drillStiffness = eye<4>() * 0.001;
+    //    answer.assemble( drillStiffness, drillDofs );
+    //}
     // done
 }
 
@@ -479,8 +485,7 @@ MITC4Shell::computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, T
     StructuralElement::computeStiffnessMatrix(answer, rMode, tStep);
 
     // bool drillType = this->giveStructuralCrossSection()->give( CS_DrillingType, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint( 0 ) );
-    bool drillType = true; // NF mod - drilling always accounted in
-    if ( drillType == 1 ) {
+    if ( drillType ) {
         double relDrillCoeff = this->giveStructuralCrossSection()->give(CS_RelDrillingStiffness, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint(0) );
         if ( relDrillCoeff == 0.0 ) {
             relDrillCoeff = 0.001; // default

@@ -231,14 +231,14 @@ void LinearStability :: solveYourselfAt(TimeStep *tStep)
     field->update(VM_Total, tStep, displacementVector, EModelDefaultEquationNumbering());
     this->assembleVector( loadVector, tStep, InternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(1) );
     loadVector.negated();
-
+    // external forces
     this->assembleVector( loadVector, tStep, ExternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(1) );
     this->updateSharedDofManagers(loadVector, EModelDefaultEquationNumbering(), ReactionExchangeTag);
 
     OOFEM_LOG_INFO("Solving linear static problem\n");
     nMethodLS->solve(*stiffnessMatrix, loadVector, displacementVector);
     // Initial displacements are stored at position 0; this is a bit of a hack. In the future, a cleaner approach of handling fields could be suitable,
-    // but currently, it all converges down to the same giveUnknownComponent, so this is the easisest approach.
+    // but currently, it all converges down to the same giveUnknownComponent, so this is the easiest approach.
     field->update(VM_Total, tStep, displacementVector, EModelDefaultEquationNumbering());
     // terminate linear static computation (necessary, in order to compute stresses in elements).
     // Recompute for updated state:
@@ -246,16 +246,16 @@ void LinearStability :: solveYourselfAt(TimeStep *tStep)
     this->terminateLinStatic( tStep );
 
     // Normal forces already known, proceed with linear stability
-    stiffnessMatrix->zero();
+    //stiffnessMatrix->zero();
     if ( !initialStressMatrix ) {
         initialStressMatrix = stiffnessMatrix->clone();
     } else {
         initialStressMatrix->zero();
     }
 
-    OOFEM_LOG_INFO("Assembling stiffness matrix\n");
-    this->assemble( *stiffnessMatrix, tStep, TangentAssembler(TangentStiffness),
-                   EModelDefaultEquationNumbering(), this->giveDomain(1) );
+    //OOFEM_LOG_INFO("Assembling stiffness matrix\n");
+    //this->assemble( *stiffnessMatrix, tStep, TangentAssembler(TangentStiffness),
+    //               EModelDefaultEquationNumbering(), this->giveDomain(1) );
 
     OOFEM_LOG_INFO("Assembling initial stress matrix\n");
     this->assemble( *initialStressMatrix, tStep, InitialStressMatrixAssembler(),

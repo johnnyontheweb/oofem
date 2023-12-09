@@ -94,7 +94,7 @@ protected:
     double prevStepLength, currentStepLength;
     FloatArray totalDisplacement,  incrementOfDisplacement;
     FloatArray internalForces;
-    std::unique_ptr< SparseMtrx > initialStressMatrix;
+    //std::unique_ptr< SparseMtrx > initialStressMatrix;
     /// A load vector already applied, which does not scales.
     FloatArray initialLoadVector;
     /**
@@ -124,7 +124,7 @@ protected:
     /// Associated time function for time step increment.
     int dtFunction;
     // second order contribution for elements
-    bool secOrder;
+    //bool secOrder; // use PdeltaNstatic instead
 
    /**
      * The following parameter allows to specify how the reference load vector

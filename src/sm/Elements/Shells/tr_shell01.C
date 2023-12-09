@@ -246,7 +246,7 @@ TR_SHELL01::computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
 
     // calculate the matrices - hp constant thickness
     FloatArray n1, n2, n3;
-    this->giveNodeCoordinates(n2,n2, n3);
+    this->giveNodeCoordinates(n1,n2, n3);
 
     double x12, x23, x13, y12, y23, y13;
     x12 = n1.at(1) - n2.at(1);

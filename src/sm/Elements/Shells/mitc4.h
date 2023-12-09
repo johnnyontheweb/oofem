@@ -82,7 +82,7 @@ protected:
     static IntArray shellOrdering;
     /// Ordering for the drilling dofs (the out-of-plane rotations)
     static IntArray drillOrdering;
-    
+    bool drillType = true; // NF mod - drilling always accounted in
     /**
      * Transformation Matrix form GtoL(3,3) is stored
      * at the element level for computation efficiency.
