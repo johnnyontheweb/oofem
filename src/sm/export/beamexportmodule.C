@@ -1,36 +1,36 @@
 /*
-*
-*                 #####    #####   ######  ######  ###   ###
-*               ##   ##  ##   ##  ##      ##      ## ### ##
-*              ##   ##  ##   ##  ####    ####    ##  #  ##
-*             ##   ##  ##   ##  ##      ##      ##     ##
-*            ##   ##  ##   ##  ##      ##      ##     ##
-*            #####    #####   ##      ######  ##     ##
-*
-*
-*             OOFEM : Object Oriented Finite Element Code
-*
-*               Copyright (C) 1993 - 2013   Borek Patzak
-*
-*
-*
-*       Czech Technical University, Faculty of Civil Engineering,
-*   Department of Structural Mechanics, 166 29 Prague, Czech Republic
-*
-*  This library is free software; you can redistribute it and/or
-*  modify it under the terms of the GNU Lesser General Public
-*  License as published by the Free Software Foundation; either
-*  version 2.1 of the License, or (at your option) any later version.
-*
-*  This program is distributed in the hope that it will be useful,
-*  but WITHOUT ANY WARRANTY; without even the implied warranty of
-*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-*  Lesser General Public License for more details.
-*
-*  You should have received a copy of the GNU Lesser General Public
-*  License along with this library; if not, write to the Free Software
-*  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
-*/
+ *
+ *                 #####    #####   ######  ######  ###   ###
+ *               ##   ##  ##   ##  ##      ##      ## ### ##
+ *              ##   ##  ##   ##  ####    ####    ##  #  ##
+ *             ##   ##  ##   ##  ##      ##      ##     ##
+ *            ##   ##  ##   ##  ##      ##      ##     ##
+ *            #####    #####   ##      ######  ##     ##
+ *
+ *
+ *             OOFEM : Object Oriented Finite Element Code
+ *
+ *               Copyright (C) 1993 - 2013   Borek Patzak
+ *
+ *
+ *
+ *       Czech Technical University, Faculty of Civil Engineering,
+ *   Department of Structural Mechanics, 166 29 Prague, Czech Republic
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2.1 of the License, or (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
 
 #include "beamexportmodule.h"
 #include "timestep.h"
@@ -59,8 +59,6 @@
 
 using namespace std;
 
-const bool forceEB = true; // Winkler only
-
 namespace oofem {
 REGISTER_ExportModule( BeamExportModule )
 
@@ -73,7 +71,7 @@ BeamExportModule ::~BeamExportModule() {}
 
 void BeamExportModule::initializeFrom( InputRecord &ir )
 {
-    ExportModule::initializeFrom(ir);
+    ExportModule::initializeFrom( ir );
 
     isRespSpec = ir.hasField( _IFT_BeamExportModule_isrespspec );
 
@@ -123,10 +121,10 @@ void addComponents( FloatArray &dst, std::pair<FloatArray, FloatArray> &src, dou
     dst.at( 6 ) -= ( V2E + V2I ) / len / len * pos3 - ( 2 * V2I + V2E ) / len * pos2 + V2I * pos;
 }
 
-//int checkValidType(const char* name)
+// int checkValidType(const char* name)
 //{
 //	return (strcmp(name, "Beam3d") == 0) || (strcmp(name, "Beam2d") == 0) || (strcmp(name, "beam3d") == 0) || (strcmp(name, "beam2d") == 0);
-//}
+// }
 
 void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
 {
@@ -146,11 +144,11 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
 
                 int elNum;
                 elNum = elem->giveNumber();
-                //elNum = elem->giveLabel();
+                // elNum = elem->giveLabel();
 
                 // store IDs of known beams
                 beamIDs.push_back( elNum );
-                //beamIDs.push_back(elNum);
+                // beamIDs.push_back(elNum);
 
                 BeamBaseElement *SElem;
 
@@ -197,22 +195,22 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                 FinalLoads.second.resize( 6 );
                 FinalLoads.second.zero();
 
-                //FloatArray FinalLoads;
-                //FinalLoads.resize(6);
-                //FinalLoads.zero();
+                // FloatArray FinalLoads;
+                // FinalLoads.resize(6);
+                // FinalLoads.zero();
 
-                //FloatArray FinalLoadsL;
-                //FinalLoadsL.resize(12); // 6 by 2 position (start & end)
-                //FinalLoadsL.zero();
+                // FloatArray FinalLoadsL;
+                // FinalLoadsL.resize(12); // 6 by 2 position (start & end)
+                // FinalLoadsL.zero();
 
                 // temporary stuff for winker
-                //double wy, wz;
-                //wy = wz = 0.0;
-                //double qIy, qIz, qEy, qEz;
-                //qIy = qIz = qEy = qEz = 0.0;
+                // double wy, wz;
+                // wy = wz = 0.0;
+                // double qIy, qIz, qEy, qEz;
+                // qIy = qIz = qEy = qEz = 0.0;
 
                 // get end forces without the reduction due to winkler soil presence
-                //if (strcmp(SElem->giveClassName(), "Beam3d") == 0 || strcmp(SElem->giveClassName(), "beam3d") == 0){
+                // if (strcmp(SElem->giveClassName(), "Beam3d") == 0 || strcmp(SElem->giveClassName(), "beam3d") == 0){
                 //	Beam3d *B3d = static_cast<Beam3d *>(SElem);
                 //	B3d->giveEndForcesVector(Fl2, tStep, false);
                 //	FloatArray compArr, diff;
@@ -228,7 +226,7 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                 //	qEy = -(3 * diff.at(8) - diff.at(2)) / l;
                 //	qEz = -(3 * diff.at(9) - diff.at(3)) / l;
                 //}
-                //else {
+                // else {
                 //	Beam2d *B2d = static_cast<Beam2d *>(SElem);
                 //	B2d->giveEndForcesVector(Fl2, tStep, false);
                 //	FloatArray compArr, diff;
@@ -258,13 +256,13 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                 temp.at( 6 ) = 6;
 
                 std::list<double> midPoints;
-                //midPoints.push_back(0.125);
+                // midPoints.push_back(0.125);
                 midPoints.push_back( 0.25 );
-                //midPoints.push_back(0.375);
+                // midPoints.push_back(0.375);
                 midPoints.push_back( 0.5 );
-                //midPoints.push_back(0.625);
+                // midPoints.push_back(0.625);
                 midPoints.push_back( 0.75 );
-                //midPoints.push_back(0.875);
+                // midPoints.push_back(0.875);
 
                 IntArray *loads    = elem->giveBoundaryLoadArray();
                 int nBoundaryLoads = loads->giveSize() / 2;
@@ -308,12 +306,12 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                         FinalLoads.second.add( compArr );
 
                         //// add stations inside load
-                        //midPoints.push_back(CLoad->startLocal);
-                        //double halfL = CLoad->endLocal - CLoad->startLocal;
-                        //midPoints.push_back(CLoad->startLocal + 0.25 * halfL);
-                        //midPoints.push_back(CLoad->startLocal + 0.5 * halfL);
-                        //midPoints.push_back(CLoad->startLocal + 0.75 * halfL);
-                        //midPoints.push_back(CLoad->endLocal);
+                        // midPoints.push_back(CLoad->startLocal);
+                        // double halfL = CLoad->endLocal - CLoad->startLocal;
+                        // midPoints.push_back(CLoad->startLocal + 0.25 * halfL);
+                        // midPoints.push_back(CLoad->startLocal + 0.5 * halfL);
+                        // midPoints.push_back(CLoad->startLocal + 0.75 * halfL);
+                        // midPoints.push_back(CLoad->endLocal);
                     }
                 }
 
@@ -321,17 +319,17 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                 ForceDict[0.0] = I;
 
                 // temporary stuff for winkler
-                //FloatArray wI, wE;
-                //wI.resize(2); wE.resize(2);
-                //wI.at(1) = qIy; wI.at(2) = qIz;
-                //wE.at(1) = qEy; wE.at(2) = qEz;
-                //winkDict[0.0] = wI;
+                // FloatArray wI, wE;
+                // wI.resize(2); wE.resize(2);
+                // wI.at(1) = qIy; wI.at(2) = qIz;
+                // wE.at(1) = qEy; wE.at(2) = qEz;
+                // winkDict[0.0] = wI;
 
 
-                //double tempmidpoint = 0;
-                //int count = 0;
+                // double tempmidpoint = 0;
+                // int count = 0;
 
-                //for (GaussPoint *gp : *elem->giveDefaultIntegrationRulePtr()) {
+                // for (GaussPoint *gp : *elem->giveDefaultIntegrationRulePtr()) {
                 //	//double dV = elem->computeVolumeAround(gp);
                 //	FloatArray ipState;
                 //	FloatArray winkState;
@@ -389,21 +387,21 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                 /*winkDict[l] = wE;*/
 
                 BeamForces[elem->giveNumber()] = ForceDict;
-                //BeamWinkler[elem->giveNumber()] = winkDict;
-                //BeamForces[elem->giveLabel()] = ForceDict;
+                // BeamWinkler[elem->giveNumber()] = winkDict;
+                // BeamForces[elem->giveLabel()] = ForceDict;
 
-                //pair <double, double> loadPair;
-                //loadPair.first = FinalLoads.at(2);
-                //loadPair.second = FinalLoads.at(3);
+                // pair <double, double> loadPair;
+                // loadPair.first = FinalLoads.at(2);
+                // loadPair.second = FinalLoads.at(3);
 
                 // save loads
                 BeamLoads[elem->giveNumber()] = FinalLoads;
 
-                //elem->giveBodyLoadArray
+                // elem->giveBodyLoadArray
             }
         }
 
-        //vector< unique_ptr< GeneralBoundaryCondition > > BCs = d->giveBcs();
+        // vector< unique_ptr< GeneralBoundaryCondition > > BCs = d->giveBcs();
 
         // only if sets are defined. actually not used, wrong end forces in oofem for beam edge loads.
         if ( d->giveNumberOfSets() ) {
@@ -417,7 +415,7 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
             // loop through the loads
             for ( auto &bc : d->giveBcs() ) {
                 // int bType = bc->giveBCValType(); // UNUSED: ConstantEdgeLoad is never == 2, they're all == 0 == unknown
-                //if (bc->giveBCValType() == ForceLoadBVT) {
+                // if (bc->giveBCValType() == ForceLoadBVT) {
                 if ( strcmp( bc->giveClassName(), "ConstantEdgeLoad" ) == 0 ) {
                     ConstantEdgeLoad *CLoad = static_cast<ConstantEdgeLoad *>( bc.get() );
 
@@ -443,7 +441,7 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
 
                             // CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
                             CLoad->computeValues( compArr, tStep, coords, temp, VM_Total );
-                            //d->giveElement(elNum)->computeBoundaryEdgeLoadVector(compArr, CLoad, edgeNum, ExternalForcesVector, VM_Total, tStep); // always vm_total???
+                            // d->giveElement(elNum)->computeBoundaryEdgeLoadVector(compArr, CLoad, edgeNum, ExternalForcesVector, VM_Total, tStep); // always vm_total???
 
                             // transform to local coordinates
                             d->giveElement( elNum )->computeGtoLRotationMatrix( T );
@@ -515,7 +513,7 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
 
                             // CLoad->computeValues(compArr, tStep, NULL, temp, VM_Total);
                             CLoad->computeValues( compArr, tStep, coords, temp, VM_Total );
-                            //d->giveElement(elNum)->computeBoundaryEdgeLoadVector(compArr, CLoad, edgeNum, ExternalForcesVector, VM_Total, tStep); // always vm_total???
+                            // d->giveElement(elNum)->computeBoundaryEdgeLoadVector(compArr, CLoad, edgeNum, ExternalForcesVector, VM_Total, tStep); // always vm_total???
 
                             // transform to local coordinates
                             d->giveElement( elNum )->computeGtoLRotationMatrix( T );
@@ -590,9 +588,9 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
             double l_3 = l_2 * l;
             double l_4 = l_2 * l_2;
             double ksi;
-            //FloatMatrix shapeFunctions(2, 12);
+            // FloatMatrix shapeFunctions(2, 12);
             bool calc = false;
-            //double phiy, phiz;
+            // double phiy, phiz;
 
             elem->computeVectorOf( VM_Total, tStep, rl );
             temp.resize( 6 );
@@ -608,7 +606,7 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
             T.resizeWithData( 6, 6 );
 
             dI.beSubArrayOf( rl, temp );
-            //dI.rotatedWith(T, 'n');  // no need?
+            // dI.rotatedWith(T, 'n');  // no need?
 
             DofManager *dofMan = elem->giveDofManager( 1 );
             dofMan->giveCompleteUnknownVector( dNI, VM_Total, tStep );
@@ -631,9 +629,9 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
             for ( int i = 1; i <= 6; i++ )
                 temp.at( i ) += 6;
             dE.beSubArrayOf( rl, temp );
-            //dE.rotatedWith(T, 'n');
+            // dE.rotatedWith(T, 'n');
 
-            //ddN = dE - dI;
+            // ddN = dE - dI;
 
             DispDict[0.0] = dI; // -dNI;
 
@@ -656,6 +654,14 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
             double alphaY = 0, alphaZ = 0;
             double lambdaY1 = 0, lambdaY2 = 0;
             double lambdaZ1 = 0, lambdaZ2 = 0;
+            double lambdaY1_2 = 0;
+            double lambdaY2_2 = 0;
+            double lambdaY1_3 = 0;
+            double lambdaY2_3 = 0;
+            double lambdaZ1_2 = 0;
+            double lambdaZ2_2 = 0;
+            double lambdaZ1_3 = 0;
+            double lambdaZ2_3 = 0;
 
             // saving winkler reaction for each gp
             map<double, FloatArray> WinkDict;
@@ -668,13 +674,13 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
             std::map<double, FloatArray> &Forces = BeamForces[elem->giveNumber()];
 
             for ( auto &force : Forces ) {
-                //for (GaussPoint *gp : *elem->giveDefaultIntegrationRulePtr()) {
-                //FloatArray ipState;
+                // for (GaussPoint *gp : *elem->giveDefaultIntegrationRulePtr()) {
+                // FloatArray ipState;
                 double pos = force.first;
                 double pos_2, pos_3, pos_4, pos_5;
 
-                //ksi = 0.5 + 0.5 * gp->giveNaturalCoordinate(1);
-                //pos = ksi*l;
+                // ksi = 0.5 + 0.5 * gp->giveNaturalCoordinate(1);
+                // pos = ksi*l;
 
                 pos_2 = pos * pos;
                 pos_3 = pos_2 * pos;
@@ -683,7 +689,7 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
 
                 // calculate this stuff on the first pass. Constant section along the length
                 if ( !calc ) {
-                    GaussPoint *gp = *( elem->giveDefaultIntegrationRulePtr()->begin() );
+                    GaussPoint *gp    = *( elem->giveDefaultIntegrationRulePtr()->begin() );
                     auto MatStiffness = SCSect->give3dBeamStiffMtrx( ElasticStiffness, gp, tStep );
 
                     EA    = MatStiffness.at( 1, 1 );
@@ -707,11 +713,11 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
 
                     double vy_0, vy_l, vz_0, vz_l; // transversal displacements
                     double phiy_0, phiy_l, phiz_0, phiz_l; // rotation / first derivatives
-                    //double By, Ay, Bz, Az;
+                    // double By, Ay, Bz, Az;
                     double dx_0, dx_l; // axial displacements
                     double tx_0, tx_l; // torsional rotations
 
-                    //map<double, FloatArray> &td = BeamDisplacements[elNum];
+                    // map<double, FloatArray> &td = BeamDisplacements[elNum];
 
                     vy_0   = disps->at( 2 );
                     vz_0   = disps->at( 3 );
@@ -732,8 +738,8 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                     Material *subSoilMatTemp = B3d->giveSubSoilMaterial();
                     if ( subSoilMatTemp != NULL ) {
                         StructuralMaterial *subSoilMat = (StructuralMaterial *)subSoilMatTemp;
-                        FloatMatrix subMat = subSoilMat->give3dBeamSubSoilStiffMtrx( MatResponseMode::TangentStiffness, gp, tStep );
-                        wy = subMat.at( 2, 2 );
+                        FloatMatrix subMat             = subSoilMat->give3dBeamSubSoilStiffMtrx( MatResponseMode::TangentStiffness, gp, tStep );
+                        wy                             = subMat.at( 2, 2 );
                         if ( wy > 1e-6 ) hasWinklerY = true;
 
                         W0.at( 2 ) = -dI.at( 2 ) * wy;
@@ -754,7 +760,7 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                         FloatArray rhs( 4 );
                         FloatArray abcd( 4 );
 
-                        if ( psi_y == 0.0 || forceEB ) { // Euler Bernoulli formulation
+                        if ( psi_y == 0.0 ) { // Euler Bernoulli formulation
                             lambdaY = sqrt( sqrt( wy / 4 / EJzz ) );
 
                             odeMtrx.at( 1, 1 ) = 1;
@@ -782,8 +788,10 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                             deltaY  = alphaY * alphaY - 4 * lambdaY;
 
                             if ( deltaY > 0 ) {
-                                lambdaY1 = sqrt( alphaY / 2 + 0.5 * sqrt( deltaY ) );
-                                lambdaY2 = sqrt( alphaY / 2 - 0.5 * sqrt( deltaY ) );
+                                lambdaY1   = sqrt( alphaY / 2 + 0.5 * sqrt( deltaY ) );
+                                lambdaY2   = sqrt( alphaY / 2 - 0.5 * sqrt( deltaY ) );
+                                lambdaY1_2 = lambdaY1 * lambdaY1;
+                                lambdaY2_2 = lambdaY2 * lambdaY2;
 
                                 odeMtrx.at( 1, 1 ) = 1;
                                 odeMtrx.at( 1, 2 ) = 1;
@@ -793,17 +801,21 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                                 odeMtrx.at( 2, 2 ) = exp( -l * lambdaY1 );
                                 odeMtrx.at( 2, 3 ) = exp( l * lambdaY2 );
                                 odeMtrx.at( 2, 4 ) = exp( -l * lambdaY2 );
-                                odeMtrx.at( 3, 1 ) = lambdaY1 * ( lambdaY1 * lambdaY1 * psi_y - alphaY * psi_y + 1 );
-                                odeMtrx.at( 3, 2 ) = -lambdaY1 * ( lambdaY1 * lambdaY1 * psi_y - alphaY * psi_y + 1 );
-                                odeMtrx.at( 3, 3 ) = lambdaY2 * ( lambdaY2 * lambdaY2 * psi_y - alphaY * psi_y + 1 );
-                                odeMtrx.at( 3, 4 ) = -lambdaY2 * ( lambdaY2 * lambdaY2 * psi_y - alphaY * psi_y + 1 );
-                                odeMtrx.at( 4, 1 ) = lambdaY1 * ( lambdaY1 * lambdaY1 * psi_y - alphaY * psi_y + 1 ) * exp( l * lambdaY1 );
-                                odeMtrx.at( 4, 2 ) = -lambdaY1 * ( lambdaY1 * lambdaY1 * psi_y - alphaY * psi_y + 1 ) / exp( l * lambdaY1 );
-                                odeMtrx.at( 4, 3 ) = lambdaY2 * ( lambdaY2 * lambdaY2 * psi_y - alphaY * psi_y + 1 ) * exp( l * lambdaY2 );
-                                odeMtrx.at( 4, 4 ) = -lambdaY2 * ( lambdaY2 * lambdaY2 * psi_y - alphaY * psi_y + 1 ) / exp( l * lambdaY2 );
+                                odeMtrx.at( 3, 1 ) = lambdaY1 * ( -psi_y * ( alphaY - lambdaY1_2 ) + 1 );
+                                odeMtrx.at( 3, 2 ) = lambdaY1 * ( psi_y * ( alphaY - lambdaY1_2 ) - 1 );
+                                odeMtrx.at( 3, 3 ) = lambdaY2 * ( -psi_y * ( alphaY - lambdaY2_2 ) + 1 );
+                                odeMtrx.at( 3, 4 ) = lambdaY2 * ( psi_y * ( alphaY - lambdaY2_2 ) - 1 );
+                                odeMtrx.at( 4, 1 ) = lambdaY1 * ( -psi_y * ( alphaY - lambdaY1_2 ) + 1 ) * exp( l * lambdaY1 );
+                                odeMtrx.at( 4, 2 ) = lambdaY1 * ( psi_y * ( alphaY - lambdaY1_2 ) - 1 ) * exp( -l * lambdaY1 );
+                                odeMtrx.at( 4, 3 ) = lambdaY2 * ( -psi_y * ( alphaY - lambdaY2_2 ) + 1 ) * exp( l * lambdaY2 );
+                                odeMtrx.at( 4, 4 ) = lambdaY2 * ( psi_y * ( alphaY - lambdaY2_2 ) - 1 ) * exp( -l * lambdaY2 );
                             } else if ( deltaY == 0 ) {
-                                lambdaY1 = sqrt( alphaY / 2 );
-                                lambdaY2 = -sqrt( alphaY / 2 );
+                                lambdaY1   = sqrt( alphaY / 2 );
+                                lambdaY2   = -sqrt( alphaY / 2 );
+                                lambdaY1_2 = lambdaY1 * lambdaY1;
+                                lambdaY2_2 = lambdaY2 * lambdaY2;
+                                lambdaY1_3 = lambdaY1 * lambdaY1_2;
+                                lambdaY2_3 = lambdaY2 * lambdaY2_2;
 
                                 odeMtrx.at( 1, 1 ) = 1;
                                 odeMtrx.at( 1, 2 ) = 1;
@@ -811,41 +823,45 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                                 odeMtrx.at( 2, 2 ) = exp( -l * lambdaY1 );
                                 odeMtrx.at( 2, 3 ) = l * exp( l * lambdaY1 );
                                 odeMtrx.at( 2, 4 ) = l * exp( -l * lambdaY1 );
-                                odeMtrx.at( 3, 1 ) = lambdaY1 * ( lambdaY1 * lambdaY1 * psi_y - alphaY * psi_y + 1 );
-                                odeMtrx.at( 3, 2 ) = -lambdaY1 * ( lambdaY1 * lambdaY1 * psi_y - alphaY * psi_y + 1 );
-                                odeMtrx.at( 3, 3 ) = lambdaY1 * ( 3 * lambdaY1 * lambdaY1 * psi_y - alphaY * psi_y + 1 );
-                                odeMtrx.at( 3, 4 ) = lambdaY1 * ( 3 * lambdaY1 * lambdaY1 * psi_y - alphaY * psi_y + 1 );
-                                odeMtrx.at( 4, 1 ) = lambdaY1 * ( lambdaY1 * lambdaY1 * psi_y - alphaY * psi_y + 1 ) * exp( l * lambdaY1 );
-                                odeMtrx.at( 4, 2 ) = -lambdaY1 * ( lambdaY1 * lambdaY1 * psi_y - alphaY * psi_y + 1 ) / exp( l * lambdaY1 );
-                                odeMtrx.at( 4, 3 ) = ( l * lambdaY1 * ( lambdaY1 * lambdaY1 * psi_y - alphaY * psi_y + 1 ) + 3 * lambdaY1 * lambdaY1 * psi_y - alphaY * psi_y + 1 ) * exp( l * lambdaY1 );
-                                odeMtrx.at( 4, 4 ) = ( -l * lambdaY1 * ( lambdaY1 * lambdaY1 * psi_y - alphaY * psi_y + 1 ) + 3 * lambdaY1 * lambdaY1 * psi_y - alphaY * psi_y + 1 ) / exp( l * lambdaY1 );
+                                odeMtrx.at( 3, 1 ) = lambdaY1 * ( -psi_y * ( alphaY - lambdaY1_2 ) + 1 );
+                                odeMtrx.at( 3, 2 ) = lambdaY1 * ( psi_y * ( alphaY - lambdaY1_2 ) - 1 );
+                                odeMtrx.at( 3, 3 ) = -psi_y * ( alphaY - 3 * lambdaY1_2 ) + 1;
+                                odeMtrx.at( 3, 4 ) = -psi_y * ( alphaY - 3 * lambdaY1_2 ) + 1;
+                                odeMtrx.at( 4, 1 ) = lambdaY1 * ( -psi_y * ( alphaY - lambdaY1_2 ) + 1 ) * exp( l * lambdaY1 );
+                                odeMtrx.at( 4, 2 ) = lambdaY1 * ( psi_y * ( alphaY - lambdaY1_2 ) - 1 ) * exp( -l * lambdaY1 );
+                                odeMtrx.at( 4, 3 ) = ( l * lambdaY1 + psi_y * ( -alphaY * ( l * lambdaY1 + 1 ) + l * lambdaY1_3 + 3 * lambdaY1_2 ) + 1 ) * exp( l * lambdaY1 );
+                                odeMtrx.at( 4, 4 ) = ( -l * lambdaY1 + psi_y * ( alphaY * ( l * lambdaY1 - 1 ) - l * lambdaY1_3 + 3 * lambdaY1_2 ) + 1 ) * exp( -l * lambdaY1 );
                             } else {
-                                lambdaY1 = sqrt( alphaY / 4 + 0.5 * sqrt( lambdaY ) );
-                                lambdaY2 = sqrt( -alphaY / 4 + 0.5 * sqrt( lambdaY ) );
+                                lambdaY1   = sqrt( alphaY / 4 + 0.5 * sqrt( lambdaY ) );
+                                lambdaY2   = sqrt( -alphaY / 4 + 0.5 * sqrt( lambdaY ) );
+                                lambdaY1_2 = lambdaY1 * lambdaY1;
+                                lambdaY2_2 = lambdaY2 * lambdaY2;
+                                lambdaY1_3 = lambdaY1 * lambdaY1_2;
+                                lambdaY2_3 = lambdaY2 * lambdaY2_2;
 
                                 odeMtrx.at( 1, 1 ) = 1;
                                 odeMtrx.at( 1, 2 ) = 1;
-                                odeMtrx.at( 2, 1 ) = cos( l * lambdaY2 ) * exp( l * lambdaY1 );
-                                odeMtrx.at( 2, 2 ) = cos( l * lambdaY2 ) / exp( l * lambdaY1 );
-                                odeMtrx.at( 2, 3 ) = sin( l * lambdaY2 ) * exp( l * lambdaY1 );
-                                odeMtrx.at( 2, 4 ) = sin( l * lambdaY2 ) / exp( l * lambdaY1 );
-                                odeMtrx.at( 3, 1 ) = lambdaY1 * ( lambdaY1 * lambdaY1 * psi_y - 3 * lambdaY2 * lambdaY2 * psi_y - alphaY * psi_y + 1 );
-                                odeMtrx.at( 3, 2 ) = -lambdaY1 * ( lambdaY1 * lambdaY1 * psi_y - 3 * lambdaY2 * lambdaY2 * psi_y - alphaY * psi_y + 1 );
-                                odeMtrx.at( 3, 3 ) = lambdaY2 * ( 3 * lambdaY1 * lambdaY1 * psi_y - lambdaY2 * lambdaY2 * psi_y - alphaY * psi_y + 1 );
-                                odeMtrx.at( 3, 4 ) = lambdaY2 * ( 3 * lambdaY1 * lambdaY1 * psi_y - lambdaY2 * lambdaY2 * psi_y - alphaY * psi_y + 1 );
-                                odeMtrx.at( 4, 1 ) = ( lambdaY1 * ( lambdaY1 * lambdaY1 * psi_y - 3 * lambdaY2 * lambdaY2 * psi_y - alphaY * psi_y + 1 ) * cos( l * lambdaY2 ) - lambdaY2 * ( 3 * lambdaY1 * lambdaY1 * psi_y - lambdaY2 * lambdaY2 * psi_y - alphaY * psi_y + 1 ) * sin( l * lambdaY2 ) ) * exp( l * lambdaY1 );
-                                odeMtrx.at( 4, 2 ) = -( lambdaY1 * ( lambdaY1 * lambdaY1 * psi_y - 3 * lambdaY2 * lambdaY2 * psi_y - alphaY * psi_y + 1 ) * cos( l * lambdaY2 ) + lambdaY2 * ( 3 * lambdaY1 * lambdaY1 * psi_y - lambdaY2 * lambdaY2 * psi_y - alphaY * psi_y + 1 ) * sin( l * lambdaY2 ) ) / exp( l * lambdaY1 );
-                                odeMtrx.at( 4, 3 ) = ( lambdaY2 * ( 3 * lambdaY1 * lambdaY1 * psi_y - lambdaY2 * lambdaY2 * psi_y - alphaY * psi_y + 1 ) * cos( l * lambdaY2 ) + lambdaY1 * ( lambdaY1 * lambdaY1 * psi_y - 3 * lambdaY2 * lambdaY2 * psi_y - alphaY * psi_y + 1 ) * sin( l * lambdaY2 ) ) * exp( l * lambdaY1 );
-                                odeMtrx.at( 4, 4 ) = -( -lambdaY2 * ( 3 * lambdaY1 * lambdaY1 * psi_y - lambdaY2 * lambdaY2 * psi_y - alphaY * psi_y + 1 ) * cos( l * lambdaY2 ) + lambdaY1 * ( lambdaY1 * lambdaY1 * psi_y - 3 * lambdaY2 * lambdaY2 * psi_y - alphaY * psi_y + 1 ) * sin( l * lambdaY2 ) ) / exp( l * lambdaY1 );
+                                odeMtrx.at( 2, 1 ) = exp( l * lambdaY1 ) * cos( l * lambdaY2 );
+                                odeMtrx.at( 2, 2 ) = exp( -l * lambdaY1 ) * cos( l * lambdaY2 );
+                                odeMtrx.at( 2, 3 ) = exp( l * lambdaY1 ) * sin( l * lambdaY2 );
+                                odeMtrx.at( 2, 4 ) = exp( -l * lambdaY1 ) * sin( l * lambdaY2 );
+                                odeMtrx.at( 3, 1 ) = lambdaY1 * ( -psi_y * ( alphaY - lambdaY1_2 + 3 * lambdaY2_2 ) + 1 );
+                                odeMtrx.at( 3, 2 ) = lambdaY1 * ( psi_y * ( alphaY - lambdaY1_2 + 3 * lambdaY2_2 ) - 1 );
+                                odeMtrx.at( 3, 3 ) = lambdaY2 * ( -psi_y * ( alphaY - 3 * lambdaY1_2 + lambdaY2_2 ) + 1 );
+                                odeMtrx.at( 3, 4 ) = lambdaY2 * ( -psi_y * ( alphaY - 3 * lambdaY1_2 + lambdaY2_2 ) + 1 );
+                                odeMtrx.at( 4, 1 ) = ( lambdaY1 * cos( l * lambdaY2 ) - lambdaY2 * sin( l * lambdaY2 ) - psi_y * ( alphaY * ( lambdaY1 * cos( l * lambdaY2 ) - lambdaY2 * sin( l * lambdaY2 ) ) - lambdaY1_3 * cos( l * lambdaY2 ) + 3 * lambdaY1_2 * lambdaY2 * sin( l * lambdaY2 ) + 3 * lambdaY1 * lambdaY2_2 * cos( l * lambdaY2 ) - lambdaY2_3 * sin( l * lambdaY2 ) ) ) * exp( l * lambdaY1 );
+                                odeMtrx.at( 4, 2 ) = ( -lambdaY1 * cos( l * lambdaY2 ) - lambdaY2 * sin( l * lambdaY2 ) + psi_y * ( alphaY * ( lambdaY1 * cos( l * lambdaY2 ) + lambdaY2 * sin( l * lambdaY2 ) ) - lambdaY1_3 * cos( l * lambdaY2 ) - 3 * lambdaY1_2 * lambdaY2 * sin( l * lambdaY2 ) + 3 * lambdaY1 * lambdaY2_2 * cos( l * lambdaY2 ) + lambdaY2_3 * sin( l * lambdaY2 ) ) ) * exp( -l * lambdaY1 );
+                                odeMtrx.at( 4, 3 ) = ( lambdaY1 * sin( l * lambdaY2 ) + lambdaY2 * cos( l * lambdaY2 ) - psi_y * ( alphaY * ( lambdaY1 * sin( l * lambdaY2 ) + lambdaY2 * cos( l * lambdaY2 ) ) - lambdaY1_3 * sin( l * lambdaY2 ) - 3 * lambdaY1_2 * lambdaY2 * cos( l * lambdaY2 ) + 3 * lambdaY1 * lambdaY2_2 * sin( l * lambdaY2 ) + lambdaY2_3 * cos( l * lambdaY2 ) ) ) * exp( l * lambdaY1 );
+                                odeMtrx.at( 4, 4 ) = ( -lambdaY1 * sin( l * lambdaY2 ) + lambdaY2 * cos( l * lambdaY2 ) + psi_y * ( alphaY * ( lambdaY1 * sin( l * lambdaY2 ) - lambdaY2 * cos( l * lambdaY2 ) ) - lambdaY1_3 * sin( l * lambdaY2 ) + 3 * lambdaY1_2 * lambdaY2 * cos( l * lambdaY2 ) + 3 * lambdaY1 * lambdaY2_2 * sin( l * lambdaY2 ) - lambdaY2_3 * cos( l * lambdaY2 ) ) ) * exp( -l * lambdaY1 );
                             }
 
-                            rhs.at( 1 ) = dI.at( 2 ); //-qi.at(2) / wy;
-                            rhs.at( 2 ) = dE.at( 2 ) - ( 1 / EJzz * ( qi.at( 2 ) * l_4 / 24 + ( qf.at( 2 ) - qi.at( 2 ) ) / 120 * l_4 ) - 1 / GKyAy * ( qi.at( 2 ) * l_2 / 2 + ( qf.at( 2 ) - qi.at( 2 ) ) / 6 * l_2 ) ); // - qf.at( 2 ) / wy;
-                            rhs.at( 3 ) = dI.at( 6 ); //-(qf.at(2) - qi.at(2)) / (wy * l);
-                            rhs.at( 4 ) = dE.at( 6 ) - 1 / EJzz * ( qi.at( 2 ) * l_3 / 6 + ( qf.at( 2 ) - qi.at( 2 ) ) / 24 * l_3 ); //- ( qf.at( 2 ) - qi.at( 2 ) ) / ( wy * l );
+                            rhs.at( 1 ) = dI.at( 2 ) - qi.at( 2 ) / wy;
+                            rhs.at( 2 ) = dE.at( 2 ) - qf.at( 2 ) / wy;
+                            rhs.at( 3 ) = dI.at( 6 ) - ( -EJzz * wy / GKyAy + GKyAy ) * ( -qi.at( 2 ) + qf.at( 2 ) ) / ( GKyAy * wy * l );
+                            rhs.at( 4 ) = dE.at( 6 ) - ( -EJzz * wy / GKyAy + GKyAy ) * ( -qi.at( 2 ) + qf.at( 2 ) ) / ( GKyAy * wy * l );
                         }
 
-                        //odeMtrx.computeReciprocalCondition('1');
+                        // odeMtrx.computeReciprocalCondition('1');
                         odeMtrx.solveForRhs( rhs, abcd );
 
 #ifdef DEBUG
@@ -858,11 +874,11 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                         dy = abcd.at( 4 );
                     } else {
                         if ( psi_y == 0.0 ) { // Euler Bernoulli formulation
-                            //ay = bl.at(2) / 24 / EJzz;
-                            //dy = phiz_0;
-                            //fy = vy_0;
-                            //by = (2 * (vy_0 - vy_l) + l*(phiz_l + phiz_0)) / (l_3)-2 * ay*l;
-                            //cy = -(3 * (vy_0 - vy_l) + l*(2 * phiz_0 + phiz_l)) / l_2 + ay*l_2;
+                            // ay = bl.at(2) / 24 / EJzz;
+                            // dy = phiz_0;
+                            // fy = vy_0;
+                            // by = (2 * (vy_0 - vy_l) + l*(phiz_l + phiz_0)) / (l_3)-2 * ay*l;
+                            // cy = -(3 * (vy_0 - vy_l) + l*(2 * phiz_0 + phiz_l)) / l_2 + ay*l_2;
 
                             ay = ( qf.at( 2 ) - qi.at( 2 ) ) / 120 / EJzz / l;
                             by = qi.at( 2 ) / 24 / EJzz;
@@ -871,11 +887,11 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                             ey = phiz_0;
                             fy = vy_0;
                         } else { // timoshenko formulation for transversal displacements
-                            //ay = bl.at(2) / 24 / EJzz;
-                            //dy = phiz_0;
-                            //fy = vy_0;
-                            //by = (2 / l*(vy_0 - vy_l) + (phiz_l + phiz_0)) / (l_2 + 12 * psi_y) - 2 * ay*l;
-                            //cy = -(72 * EJzz*GKyAy*l* (vy_0 - vy_l) + GKyAy*l_2*(24 * EJzz*(2 * phiz_0 + phiz_l) - l_3*bl.at(2)) + 12 * EJzz*(12 * EJzz*(phiz_0 - phiz_l) - l_3*bl.at(2))) / (24 * EJzz*l* (GKyAy*l_2 + 12 * EJzz));
+                            // ay = bl.at(2) / 24 / EJzz;
+                            // dy = phiz_0;
+                            // fy = vy_0;
+                            // by = (2 / l*(vy_0 - vy_l) + (phiz_l + phiz_0)) / (l_2 + 12 * psi_y) - 2 * ay*l;
+                            // cy = -(72 * EJzz*GKyAy*l* (vy_0 - vy_l) + GKyAy*l_2*(24 * EJzz*(2 * phiz_0 + phiz_l) - l_3*bl.at(2)) + 12 * EJzz*(12 * EJzz*(phiz_0 - phiz_l) - l_3*bl.at(2))) / (24 * EJzz*l* (GKyAy*l_2 + 12 * EJzz));
 
                             ay = ( qf.at( 2 ) - qi.at( 2 ) ) / 120 / EJzz / l;
                             by = qi.at( 2 ) / 24 / EJzz;
@@ -891,7 +907,7 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                         FloatArray rhs( 4 );
                         FloatArray abcd( 4 );
 
-                        if ( psi_z == 0.0 || forceEB ) { // Euler Bernoulli formulation
+                        if ( psi_z == 0.0 ) { // Euler Bernoulli formulation
                             lambdaZ = sqrt( sqrt( wz / 4 / EJyy ) );
 
                             odeMtrx.at( 1, 1 ) = 1;
@@ -909,8 +925,8 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                             odeMtrx.at( 4, 3 ) = -lambdaZ * ( cos( l * lambdaZ ) + sin( l * lambdaZ ) ) / exp( l * lambdaZ );
                             odeMtrx.at( 4, 4 ) = lambdaZ * ( cos( l * lambdaZ ) - sin( l * lambdaZ ) ) / exp( l * lambdaZ );
 
-                            rhs.at( 1 ) = dI.at( 3 ) - qi.at( 3 ) / wy;
-                            rhs.at( 2 ) = dE.at( 3 ) - qf.at( 3 ) / wy;
+                            rhs.at( 1 ) = dI.at( 3 ) - qi.at( 3 ) / wz;
+                            rhs.at( 2 ) = dE.at( 3 ) - qf.at( 3 ) / wz;
                             rhs.at( 3 ) = -dI.at( 5 ) - ( qf.at( 3 ) - qi.at( 3 ) ) / ( wz * l );
                             rhs.at( 4 ) = -dE.at( 5 ) - ( qf.at( 3 ) - qi.at( 3 ) ) / ( wz * l );
                         } else { // Timoshenko formulation
@@ -919,8 +935,10 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                             deltaZ  = alphaZ * alphaZ - 4 * lambdaZ;
 
                             if ( deltaZ > 0 ) {
-                                lambdaZ1 = sqrt( alphaZ / 2 + 0.5 * sqrt( deltaZ ) );
-                                lambdaZ2 = sqrt( alphaZ / 2 - 0.5 * sqrt( deltaZ ) );
+                                lambdaZ1   = sqrt( alphaZ / 2 + 0.5 * sqrt( deltaZ ) );
+                                lambdaZ2   = sqrt( alphaZ / 2 - 0.5 * sqrt( deltaZ ) );
+                                lambdaZ1_2 = lambdaZ1 * lambdaZ1;
+                                lambdaZ2_2 = lambdaZ2 * lambdaZ2;
 
                                 odeMtrx.at( 1, 1 ) = 1;
                                 odeMtrx.at( 1, 2 ) = 1;
@@ -930,17 +948,21 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                                 odeMtrx.at( 2, 2 ) = exp( -l * lambdaZ1 );
                                 odeMtrx.at( 2, 3 ) = exp( l * lambdaZ2 );
                                 odeMtrx.at( 2, 4 ) = exp( -l * lambdaZ2 );
-                                odeMtrx.at( 3, 1 ) = lambdaZ1 * ( lambdaZ1 * lambdaZ1 * psi_z - alphaZ * psi_z + 1 );
-                                odeMtrx.at( 3, 2 ) = -lambdaZ1 * ( lambdaZ1 * lambdaZ1 * psi_z - alphaZ * psi_z + 1 );
-                                odeMtrx.at( 3, 3 ) = lambdaZ2 * ( lambdaZ2 * lambdaZ2 * psi_z - alphaZ * psi_z + 1 );
-                                odeMtrx.at( 3, 4 ) = -lambdaZ2 * ( lambdaZ2 * lambdaZ2 * psi_z - alphaZ * psi_z + 1 );
-                                odeMtrx.at( 4, 1 ) = lambdaZ1 * ( lambdaZ1 * lambdaZ1 * psi_z - alphaZ * psi_z + 1 ) * exp( l * lambdaZ1 );
-                                odeMtrx.at( 4, 2 ) = -lambdaZ1 * ( lambdaZ1 * lambdaZ1 * psi_z - alphaZ * psi_z + 1 ) / exp( l * lambdaZ1 );
-                                odeMtrx.at( 4, 3 ) = lambdaZ2 * ( lambdaZ2 * lambdaZ2 * psi_z - alphaZ * psi_z + 1 ) * exp( l * lambdaZ2 );
-                                odeMtrx.at( 4, 4 ) = -lambdaZ2 * ( lambdaZ2 * lambdaZ2 * psi_z - alphaZ * psi_z + 1 ) / exp( l * lambdaZ2 );
+                                odeMtrx.at( 3, 1 ) = lambdaZ1 * ( psi_z * ( alphaZ - lambdaZ1_2 ) - 1 );
+                                odeMtrx.at( 3, 2 ) = lambdaZ1 * ( -psi_z * ( alphaZ - lambdaZ1_2 ) + 1 );
+                                odeMtrx.at( 3, 3 ) = lambdaZ2 * ( psi_z * ( alphaZ - lambdaZ2_2 ) - 1 );
+                                odeMtrx.at( 3, 4 ) = lambdaZ2 * ( -psi_z * ( alphaZ - lambdaZ2_2 ) + 1 );
+                                odeMtrx.at( 4, 1 ) = lambdaZ1 * ( psi_z * ( alphaZ - lambdaZ1_2 ) - 1 ) * exp( l * lambdaZ1 );
+                                odeMtrx.at( 4, 2 ) = lambdaZ1 * ( -psi_z * ( alphaZ - lambdaZ1_2 ) + 1 ) * exp( -l * lambdaZ1 );
+                                odeMtrx.at( 4, 3 ) = lambdaZ2 * ( psi_z * ( alphaZ - lambdaZ2_2 ) - 1 ) * exp( l * lambdaZ2 );
+                                odeMtrx.at( 4, 4 ) = lambdaZ2 * ( -psi_z * ( alphaZ - lambdaZ2_2 ) + 1 ) * exp( -l * lambdaZ2 );
                             } else if ( deltaZ == 0 ) {
-                                lambdaZ1 = sqrt( alphaZ / 2 );
-                                lambdaZ2 = -sqrt( alphaZ / 2 );
+                                lambdaZ1   = sqrt( alphaZ / 2 );
+                                lambdaZ2   = -sqrt( alphaZ / 2 );
+                                lambdaZ1_2 = lambdaZ1 * lambdaZ1;
+                                lambdaZ2_2 = lambdaZ2 * lambdaZ2;
+                                lambdaZ1_3 = lambdaZ1 * lambdaZ1_2;
+                                lambdaZ2_3 = lambdaZ2 * lambdaZ2_2;
 
                                 odeMtrx.at( 1, 1 ) = 1;
                                 odeMtrx.at( 1, 2 ) = 1;
@@ -948,38 +970,42 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                                 odeMtrx.at( 2, 2 ) = exp( -l * lambdaZ1 );
                                 odeMtrx.at( 2, 3 ) = l * exp( l * lambdaZ1 );
                                 odeMtrx.at( 2, 4 ) = l * exp( -l * lambdaZ1 );
-                                odeMtrx.at( 3, 1 ) = lambdaZ1 * ( lambdaZ1 * lambdaZ1 * psi_z - alphaZ * psi_z + 1 );
-                                odeMtrx.at( 3, 2 ) = -lambdaZ1 * ( lambdaZ1 * lambdaZ1 * psi_z - alphaZ * psi_z + 1 );
-                                odeMtrx.at( 3, 3 ) = lambdaZ1 * ( 3 * lambdaZ1 * lambdaZ1 * psi_z - alphaZ * psi_z + 1 );
-                                odeMtrx.at( 3, 4 ) = lambdaZ1 * ( 3 * lambdaZ1 * lambdaZ1 * psi_z - alphaZ * psi_z + 1 );
-                                odeMtrx.at( 4, 1 ) = lambdaZ1 * ( lambdaZ1 * lambdaZ1 * psi_z - alphaZ * psi_z + 1 ) * exp( l * lambdaZ1 );
-                                odeMtrx.at( 4, 2 ) = -lambdaZ1 * ( lambdaZ1 * lambdaZ1 * psi_z - alphaZ * psi_z + 1 ) / exp( l * lambdaZ1 );
-                                odeMtrx.at( 4, 3 ) = ( l * lambdaZ1 * ( lambdaZ1 * lambdaZ1 * psi_z - alphaZ * psi_z + 1 ) + 3 * lambdaZ1 * lambdaZ1 * psi_z - alphaZ * psi_z + 1 ) * exp( l * lambdaZ1 );
-                                odeMtrx.at( 4, 4 ) = ( -l * lambdaZ1 * ( lambdaZ1 * lambdaZ1 * psi_z - alphaZ * psi_z + 1 ) + 3 * lambdaZ1 * lambdaZ1 * psi_z - alphaZ * psi_z + 1 ) / exp( l * lambdaZ1 );
+                                odeMtrx.at( 3, 1 ) = lambdaZ1 * ( psi_z * ( alphaZ - lambdaZ1_2 ) - 1 );
+                                odeMtrx.at( 3, 2 ) = lambdaZ1 * ( -psi_z * ( alphaZ - lambdaZ1_2 ) + 1 );
+                                odeMtrx.at( 3, 3 ) = psi_z * ( alphaZ - 3 * lambdaZ1_2 ) - 1;
+                                odeMtrx.at( 3, 4 ) = psi_z * ( alphaZ - 3 * lambdaZ1_2 ) - 1;
+                                odeMtrx.at( 4, 1 ) = lambdaZ1 * ( psi_z * ( alphaZ - lambdaZ1_2 ) - 1 ) * exp( l * lambdaZ1 );
+                                odeMtrx.at( 4, 2 ) = lambdaZ1 * ( -psi_z * ( alphaZ - lambdaZ1_2 ) + 1 ) * exp( -l * lambdaZ1 );
+                                odeMtrx.at( 4, 3 ) = ( -l * lambdaZ1 - psi_z * ( -alphaZ * ( l * lambdaZ1 + 1 ) + l * lambdaZ1_3 + 3 * lambdaZ1_2 ) - 1 ) * exp( l * lambdaZ1 );
+                                odeMtrx.at( 4, 4 ) = ( l * lambdaZ1 - psi_z * ( alphaZ * ( l * lambdaZ1 - 1 ) - l * lambdaZ1_3 + 3 * lambdaZ1_2 ) - 1 ) * exp( -l * lambdaZ1 );
                             } else {
-                                lambdaZ1 = sqrt( alphaZ / 4 + 0.5 * sqrt( lambdaZ ) );
-                                lambdaZ2 = sqrt( -alphaZ / 4 + 0.5 * sqrt( lambdaZ ) );
+                                lambdaZ1   = sqrt( alphaZ / 4 + 0.5 * sqrt( lambdaZ ) );
+                                lambdaZ2   = sqrt( -alphaZ / 4 + 0.5 * sqrt( lambdaZ ) );
+                                lambdaZ1_2 = lambdaZ1 * lambdaZ1;
+                                lambdaZ2_2 = lambdaZ2 * lambdaZ2;
+                                lambdaZ1_3 = lambdaZ1 * lambdaZ1_2;
+                                lambdaZ2_3 = lambdaZ2 * lambdaZ2_2;
 
                                 odeMtrx.at( 1, 1 ) = 1;
                                 odeMtrx.at( 1, 2 ) = 1;
-                                odeMtrx.at( 2, 1 ) = cos( l * lambdaZ2 ) * exp( l * lambdaZ1 );
-                                odeMtrx.at( 2, 2 ) = cos( l * lambdaZ2 ) / exp( l * lambdaZ1 );
-                                odeMtrx.at( 2, 3 ) = sin( l * lambdaZ2 ) * exp( l * lambdaZ1 );
-                                odeMtrx.at( 2, 4 ) = sin( l * lambdaZ2 ) / exp( l * lambdaZ1 );
-                                odeMtrx.at( 3, 1 ) = lambdaZ1 * ( lambdaZ1 * lambdaZ1 * psi_z - 3 * lambdaZ2 * lambdaZ2 * psi_z - alphaZ * psi_z + 1 );
-                                odeMtrx.at( 3, 2 ) = -lambdaZ1 * ( lambdaZ1 * lambdaZ1 * psi_z - 3 * lambdaZ2 * lambdaZ2 * psi_z - alphaZ * psi_z + 1 );
-                                odeMtrx.at( 3, 3 ) = lambdaZ2 * ( 3 * lambdaZ1 * lambdaZ1 * psi_z - lambdaZ2 * lambdaZ2 * psi_z - alphaZ * psi_z + 1 );
-                                odeMtrx.at( 3, 4 ) = lambdaZ2 * ( 3 * lambdaZ1 * lambdaZ1 * psi_z - lambdaZ2 * lambdaZ2 * psi_z - alphaZ * psi_z + 1 );
-                                odeMtrx.at( 4, 1 ) = ( lambdaZ1 * ( lambdaZ1 * lambdaZ1 * psi_z - 3 * lambdaZ2 * lambdaZ2 * psi_z - alphaZ * psi_z + 1 ) * cos( l * lambdaZ2 ) - lambdaZ2 * ( 3 * lambdaZ1 * lambdaZ1 * psi_z - lambdaZ2 * lambdaZ2 * psi_z - alphaZ * psi_z + 1 ) * sin( l * lambdaZ2 ) ) * exp( l * lambdaZ1 );
-                                odeMtrx.at( 4, 2 ) = -( lambdaZ1 * ( lambdaZ1 * lambdaZ1 * psi_z - 3 * lambdaZ2 * lambdaZ2 * psi_z - alphaZ * psi_z + 1 ) * cos( l * lambdaZ2 ) + lambdaZ2 * ( 3 * lambdaZ1 * lambdaZ1 * psi_z - lambdaZ2 * lambdaZ2 * psi_z - alphaZ * psi_z + 1 ) * sin( l * lambdaZ2 ) ) / exp( l * lambdaZ1 );
-                                odeMtrx.at( 4, 3 ) = ( lambdaZ2 * ( 3 * lambdaZ1 * lambdaZ1 * psi_z - lambdaZ2 * lambdaZ2 * psi_z - alphaZ * psi_z + 1 ) * cos( l * lambdaZ2 ) + lambdaZ1 * ( lambdaZ1 * lambdaZ1 * psi_z - 3 * lambdaZ2 * lambdaZ2 * psi_z - alphaZ * psi_z + 1 ) * sin( l * lambdaZ2 ) ) * exp( l * lambdaZ1 );
-                                odeMtrx.at( 4, 4 ) = -( -lambdaZ2 * ( 3 * lambdaZ1 * lambdaZ1 * psi_z - lambdaZ2 * lambdaZ2 * psi_z - alphaZ * psi_z + 1 ) * cos( l * lambdaZ2 ) + lambdaZ1 * ( lambdaZ1 * lambdaZ1 * psi_z - 3 * lambdaZ2 * lambdaZ2 * psi_z - alphaZ * psi_z + 1 ) * sin( l * lambdaZ2 ) ) / exp( l * lambdaZ1 );
+                                odeMtrx.at( 2, 1 ) = exp( l * lambdaZ1 ) * cos( l * lambdaZ2 );
+                                odeMtrx.at( 2, 2 ) = exp( -l * lambdaZ1 ) * cos( l * lambdaZ2 );
+                                odeMtrx.at( 2, 3 ) = exp( l * lambdaZ1 ) * sin( l * lambdaZ2 );
+                                odeMtrx.at( 2, 4 ) = exp( -l * lambdaZ1 ) * sin( l * lambdaZ2 );
+                                odeMtrx.at( 3, 1 ) = lambdaZ1 * ( psi_z * ( alphaZ - lambdaZ1_2 + 3 * lambdaZ2_2 ) - 1 );
+                                odeMtrx.at( 3, 2 ) = lambdaZ1 * ( -psi_z * ( alphaZ - lambdaZ1_2 + 3 * lambdaZ2_2 ) + 1 );
+                                odeMtrx.at( 3, 3 ) = lambdaZ2 * ( psi_z * ( alphaZ - 3 * lambdaZ1_2 + lambdaZ2_2 ) - 1 );
+                                odeMtrx.at( 3, 4 ) = lambdaZ2 * ( psi_z * ( alphaZ - 3 * lambdaZ1_2 + lambdaZ2_2 ) - 1 );
+                                odeMtrx.at( 4, 1 ) = ( -lambdaZ1 * cos( l * lambdaZ2 ) + lambdaZ2 * sin( l * lambdaZ2 ) + psi_z * ( alphaZ * ( lambdaZ1 * cos( l * lambdaZ2 ) - lambdaZ2 * sin( l * lambdaZ2 ) ) - lambdaZ1_3 * cos( l * lambdaZ2 ) + 3 * lambdaZ1_2 * lambdaZ2 * sin( l * lambdaZ2 ) + 3 * lambdaZ1 * lambdaZ2_2 * cos( l * lambdaZ2 ) - lambdaZ2_3 * sin( l * lambdaZ2 ) ) ) * exp( l * lambdaZ1 );
+                                odeMtrx.at( 4, 2 ) = ( lambdaZ1 * cos( l * lambdaZ2 ) + lambdaZ2 * sin( l * lambdaZ2 ) - psi_z * ( alphaZ * ( lambdaZ1 * cos( l * lambdaZ2 ) + lambdaZ2 * sin( l * lambdaZ2 ) ) - lambdaZ1_3 * cos( l * lambdaZ2 ) - 3 * lambdaZ1_2 * lambdaZ2 * sin( l * lambdaZ2 ) + 3 * lambdaZ1 * lambdaZ2_2 * cos( l * lambdaZ2 ) + lambdaZ2_3 * sin( l * lambdaZ2 ) ) ) * exp( -l * lambdaZ1 );
+                                odeMtrx.at( 4, 3 ) = ( -lambdaZ1 * sin( l * lambdaZ2 ) - lambdaZ2 * cos( l * lambdaZ2 ) + psi_z * ( alphaZ * ( lambdaZ1 * sin( l * lambdaZ2 ) + lambdaZ2 * cos( l * lambdaZ2 ) ) - lambdaZ1_3 * sin( l * lambdaZ2 ) - 3 * lambdaZ1_2 * lambdaZ2 * cos( l * lambdaZ2 ) + 3 * lambdaZ1 * lambdaZ2_2 * sin( l * lambdaZ2 ) + lambdaZ2_3 * cos( l * lambdaZ2 ) ) ) * exp( l * lambdaZ1 );
+                                odeMtrx.at( 4, 4 ) = ( lambdaZ1 * sin( l * lambdaZ2 ) - lambdaZ2 * cos( l * lambdaZ2 ) - psi_z * ( alphaZ * ( lambdaZ1 * sin( l * lambdaZ2 ) - lambdaZ2 * cos( l * lambdaZ2 ) ) - lambdaZ1_3 * sin( l * lambdaZ2 ) + 3 * lambdaZ1_2 * lambdaZ2 * cos( l * lambdaZ2 ) + 3 * lambdaZ1 * lambdaZ2_2 * sin( l * lambdaZ2 ) - lambdaZ2_3 * cos( l * lambdaZ2 ) ) ) * exp( -l * lambdaZ1 );
                             }
 
-                            rhs.at( 1 ) = dI.at( 3 ); // -qi.at(3) / wy;
-                            rhs.at( 2 ) = dE.at( 3 ) - ( 1 / EJyy * ( qi.at( 3 ) * l_4 / 24 + ( qf.at( 3 ) - qi.at( 3 ) ) / 120 * l_4 ) - 1 / GKzAz * ( qi.at( 3 ) * l_2 / 2 + ( qf.at( 3 ) - qi.at( 3 ) ) / 6 * l_2 ) ); //-qf.at(3) / wy;
-                            rhs.at( 3 ) = -dI.at( 5 ); // -(qf.at(3) - qi.at(3)) / (wz * l); // - o + per il secondo addendo?
-                            rhs.at( 4 ) = -dE.at( 5 ) - 1 / EJyy * ( qi.at( 3 ) * l_3 / 6 + ( qf.at( 3 ) - qi.at( 3 ) ) / 24 * l_3 ); //- (qf.at(3) - qi.at(3)) / (wz * l);
+                            rhs.at( 1 ) = dI.at( 3 ) - ( qi.at( 3 ) / wz );
+                            rhs.at( 2 ) = dE.at( 3 ) - ( qf.at( 3 ) / wz );
+                            rhs.at( 3 ) = dI.at( 5 ) - ( qi.at( 3 ) - qf.at( 3 ) ) * ( -EJyy * wz / GKzAz + GKzAz ) / ( GKzAz * wz * l );
+                            rhs.at( 4 ) = dE.at( 5 ) - ( qi.at( 3 ) - qf.at( 3 ) ) * ( -EJyy * wz / GKzAz + GKzAz ) / ( GKzAz * wz * l );
                         }
 
                         odeMtrx.solveForRhs( rhs, abcd );
@@ -990,11 +1016,11 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                         dz = abcd.at( 4 );
                     } else {
                         if ( psi_z == 0.0 ) { // Euler Bernoulli formulation
-                            //az = bl.at(3) / 24 / EJyy;
-                            //dz = phiy_0;
-                            //fz = vz_0;
-                            //bz = (2 * (vz_0 - vz_l) + l*(phiy_l + phiy_0)) / (l_3)-2 * az*l;
-                            //cz = -(3 * (vz_0 - vz_l) + l*(2 * phiy_0 + phiy_l)) / l_2 + az*l_2;
+                            // az = bl.at(3) / 24 / EJyy;
+                            // dz = phiy_0;
+                            // fz = vz_0;
+                            // bz = (2 * (vz_0 - vz_l) + l*(phiy_l + phiy_0)) / (l_3)-2 * az*l;
+                            // cz = -(3 * (vz_0 - vz_l) + l*(2 * phiy_0 + phiy_l)) / l_2 + az*l_2;
 
                             az = ( qf.at( 3 ) - qi.at( 3 ) ) / 120 / EJyy / l;
                             bz = qi.at( 3 ) / 24 / EJyy;
@@ -1003,11 +1029,11 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                             ez = phiy_0;
                             fz = vz_0;
                         } else { // timoshenko formulation for transversal displacements
-                            //az = bl.at(3) / 24 / EJyy;
-                            //dz = phiy_0;
-                            //fz = vz_0;
-                            //bz = (2 / l*(vz_0 - vz_l) + (phiy_l + phiy_0)) / (l_2 + 12 * psi_z) - 2 * az*l;
-                            //cz = -(72 * EJyy*GKzAz*l* (vz_0 - vz_l) + GKzAz*l_2*(24 * EJyy*(2 * phiy_0 + phiy_l) - l_3*bl.at(3)) + 12 * EJyy*(12 * EJyy*(phiy_0 - phiy_l) - l_3*bl.at(3))) / (24 * EJyy*l* (GKzAz*l_2 + 12 * EJyy));
+                            // az = bl.at(3) / 24 / EJyy;
+                            // dz = phiy_0;
+                            // fz = vz_0;
+                            // bz = (2 / l*(vz_0 - vz_l) + (phiy_l + phiy_0)) / (l_2 + 12 * psi_z) - 2 * az*l;
+                            // cz = -(72 * EJyy*GKzAz*l* (vz_0 - vz_l) + GKzAz*l_2*(24 * EJyy*(2 * phiy_0 + phiy_l) - l_3*bl.at(3)) + 12 * EJyy*(12 * EJyy*(phiy_0 - phiy_l) - l_3*bl.at(3))) / (24 * EJyy*l* (GKzAz*l_2 + 12 * EJyy));
 
                             az = ( qf.at( 3 ) - qi.at( 3 ) ) / 120 / EJyy / l;
                             bz = qi.at( 3 ) / 24 / EJyy;
@@ -1019,9 +1045,9 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                     }
 
                     // axial displacements
-                    //anx = -bl.at(1) / 2 / EA;
-                    //bnx = (dx_l - dx_0) / l - anx*l;
-                    //cnx = dx_0;
+                    // anx = -bl.at(1) / 2 / EA;
+                    // bnx = (dx_l - dx_0) / l - anx*l;
+                    // cnx = dx_0;
 
                     anx = ( qf.at( 1 ) - qi.at( 1 ) ) / ( 6 * EA * l );
                     bnx = qi.at( 1 ) / ( 2 * EA );
@@ -1029,9 +1055,9 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                     dnx = dx_0;
 
                     // torsional rotations
-                    //atx = -bl.at(4) / 2 / GJ;
-                    //btx = (tx_l - tx_0) / l - atx*l;
-                    //ctx = tx_0;
+                    // atx = -bl.at(4) / 2 / GJ;
+                    // btx = (tx_l - tx_0) / l - atx*l;
+                    // ctx = tx_0;
 
                     atx = ( qf.at( 4 ) - qi.at( 4 ) ) / ( 6 * GJ * l );
                     btx = qi.at( 4 ) / ( 2 * GJ );
@@ -1053,45 +1079,31 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                 lamxZ2 = lambdaZ2 * pos;
 
                 if ( hasWinklerY ) {
-                    if ( psi_y == 0.0 || forceEB ) {
-                        // displacement
-                        // disps.at(2) = exp(lamxY)*(ay*cos(lamxY) + by*sin(lamxY)) + (cy*cos(lamxY) + dy*sin(lamxY)) / exp(lamxY) + bl.at(2) / wy;
-                        disps.at( 2 ) = exp( lamxY ) * ( ay * cos( lamxY ) + by * sin( lamxY ) ) + ( cy * cos( lamxY ) + dy * sin( lamxY ) ) / exp( lamxY ) + ( qi.at( 2 ) + ( qf.at( 2 ) - qi.at( 2 ) ) * pos / l ) / wy;
-                        // rotation
-                        disps.at( 6 ) = exp( lamxY ) * ( lambdaY * ( ay + by ) * cos( lamxY ) + lambdaY * ( by - ay ) * sin( lamxY ) ) - ( lambdaY * ( cy - dy ) * cos( lamxY ) + lambdaY * ( cy + dy ) * sin( lamxY ) ) / ( exp( lamxY ) ) + ( qf.at( 2 ) - qi.at( 2 ) ) / l / wy;
-                        // adjust the diagrams
+                    if ( psi_y == 0.0 ) {
+                        disps.at( 2 )                                    = exp( lamxY ) * ( ay * cos( lamxY ) + by * sin( lamxY ) ) + ( cy * cos( lamxY ) + dy * sin( lamxY ) ) / exp( lamxY ) + ( qi.at( 2 ) + ( qf.at( 2 ) - qi.at( 2 ) ) * pos / l ) / wy;
+                        disps.at( 6 )                                    = exp( lamxY ) * ( lambdaY * ( ay + by ) * cos( lamxY ) + lambdaY * ( by - ay ) * sin( lamxY ) ) - ( lambdaY * ( cy - dy ) * cos( lamxY ) + lambdaY * ( cy + dy ) * sin( lamxY ) ) / ( exp( lamxY ) ) + ( qf.at( 2 ) - qi.at( 2 ) ) / l / wy;
                         BeamForces[elem->giveNumber()].at( pos ).at( 6 ) = 2 * lambdaY * lambdaY * EJzz * ( exp( lamxY ) * ( by * cos( lamxY ) - ay * sin( lamxY ) ) + ( -dy * cos( lamxY ) + cy * sin( lamxY ) ) / exp( lamxY ) );
                         BeamForces[elem->giveNumber()].at( pos ).at( 2 ) = 2 * lambdaY * lambdaY * lambdaY * EJzz * ( -exp( lamxY ) * ( ( ay - by ) * cos( lamxY ) + ( by + ay ) * sin( lamxY ) ) + ( ( cy + dy ) * cos( lamxY ) + ( -cy + dy ) * sin( lamxY ) ) / ( exp( lamxY ) ) );
                     } else {
                         if ( deltaY > 0 ) {
-                            // displacement
-                            disps.at( 2 ) = ay * exp( lamxY1 ) + by / exp( lamxY1 ) + cy * exp( lamxY2 ) + dy / exp( lamxY2 );
-                            // rotation
-                            disps.at( 6 ) = psi_y * ( ay * lambdaY1 * lambdaY1 * lambdaY1 * exp( lamxY1 ) - by * lambdaY1 * lambdaY1 * lambdaY1 * exp( -lamxY1 ) + cy * lambdaY2 * lambdaY2 * lambdaY2 * exp( lamxY2 ) - dy * lambdaY2 * lambdaY2 * lambdaY2 * exp( -lamxY2 ) ) - ( alphaY * psi_y - 1 ) * ( ay * lambdaY1 * exp( lamxY1 ) - by * lambdaY1 * exp( -lamxY1 ) + cy * lambdaY2 * exp( lamxY2 ) - dy * lambdaY2 * exp( -lamxY2 ) );
-                            // adjust the diagrams
-                            BeamForces[elem->giveNumber()].at( pos ).at( 6 ) = EJzz * ( ay * lambdaY1 * lambdaY1 * exp( lamxY1 ) + by * lambdaY1 * lambdaY1 * exp( -lamxY1 ) + cy * lambdaY2 * lambdaY2 * exp( lamxY2 ) + dy * lambdaY2 * lambdaY2 * exp( -lamxY2 ) - alphaY * ( ay * exp( lamxY1 ) + by * exp( -lamxY1 ) + cy * exp( lamxY2 ) + dy * exp( -lamxY2 ) ) );
-                            BeamForces[elem->giveNumber()].at( pos ).at( 2 ) = EJzz * ( ay * lambdaY1 * lambdaY1 * lambdaY1 * exp( lamxY1 ) - by * lambdaY1 * lambdaY1 * lambdaY1 * exp( -lamxY1 ) + cy * lambdaY2 * lambdaY2 * lambdaY2 * exp( lamxY2 ) - dy * lambdaY2 * lambdaY2 * lambdaY2 * exp( -lamxY2 ) + alphaY * ( ay * lambdaY1 * exp( lamxY1 ) - by * lambdaY1 * exp( -lamxY1 ) + cy * lambdaY2 * exp( lamxY2 ) - dy * lambdaY2 * exp( -lamxY2 ) ) );
+                            disps.at( 2 )                                    = ay * exp( lamxY1 ) + by * exp( -lamxY1 ) + cy * exp( lamxY2 ) + dy * exp( -lamxY2 );
+                            disps.at( 6 )                                    = ( -by * lambdaY1 * ( -psi_y * ( alphaY - lambdaY1_2 ) + 1 ) * exp( lamxY2 ) - dy * lambdaY2 * ( -psi_y * ( alphaY - lambdaY2_2 ) + 1 ) * exp( lamxY1 ) + ( ay * lambdaY1 * ( -psi_y * ( alphaY - lambdaY1_2 ) + 1 ) * exp( lamxY1 ) + cy * lambdaY2 * ( -psi_y * ( alphaY - lambdaY2_2 ) + 1 ) * exp( lamxY2 ) ) * exp( pos * ( lambdaY1 + lambdaY2 ) ) ) * exp( -pos * ( lambdaY1 + lambdaY2 ) );
+                            BeamForces[elem->giveNumber()].at( pos ).at( 6 ) = EJzz * ( -by * ( alphaY - lambdaY1_2 ) * exp( lamxY2 ) - dy * ( alphaY - lambdaY2_2 ) * exp( lamxY1 ) + ( -ay * ( alphaY - lambdaY1_2 ) * exp( lamxY1 ) - cy * ( alphaY - lambdaY2_2 ) * exp( lamxY2 ) ) * exp( pos * ( lambdaY1 + lambdaY2 ) ) ) * exp( -pos * ( lambdaY1 + lambdaY2 ) );
+                            BeamForces[elem->giveNumber()].at( pos ).at( 2 ) = EJzz * ( -by * lambdaY1 * ( alphaY - lambdaY1_2 ) * exp( lamxY2 ) - dy * lambdaY2 * ( alphaY - lambdaY2_2 ) * exp( lamxY1 ) + ( ay * lambdaY1 * ( alphaY - lambdaY1_2 ) * exp( lamxY1 ) + cy * lambdaY2 * ( alphaY - lambdaY2_2 ) * exp( lamxY2 ) ) * exp( pos * ( lambdaY1 + lambdaY2 ) ) ) * exp( -pos * ( lambdaY1 + lambdaY2 ) );
                         } else if ( deltaY == 0 ) {
-                            // displacement
-                            disps.at( 2 ) = ay * exp( lamxY1 ) + by / exp( lamxY1 ) + pos * ( cy * exp( lamxY1 ) + dy / exp( lamxY1 ) );
-                            // rotation
-                            disps.at( 6 ) = psi_y * ( lambdaY1 * lambdaY1 * exp( lamxY1 ) * ( cy * lamxY1 + ay * lambdaY1 + 3 * cy ) - lambdaY1 * lambdaY1 * exp( -lamxY1 ) * ( dy * lamxY1 + by * lambdaY1 - 3 * dy ) ) - ( alphaY * psi_y - 1 ) * ( exp( lamxY1 ) * ( cy * lamxY1 + ay * lambdaY1 + cy ) - exp( -lamxY1 ) * ( dy * lamxY1 + by * lambdaY1 - dy ) );
-                            // adjust the diagrams
-                            BeamForces[elem->giveNumber()].at( pos ).at( 6 ) = EJzz * ( lambdaY1 * exp( lamxY1 ) * ( cy * lamxY1 + ay * lambdaY1 + 2 * cy ) + lambdaY1 * exp( -lamxY1 ) * ( dy * lamxY1 + by * lambdaY1 - 2 * dy ) - alphaY * ( ay * exp( lamxY1 ) + by * exp( -lamxY1 ) + cy * pos * exp( lamxY1 ) + dy * pos * exp( -lamxY1 ) ) );
-                            BeamForces[elem->giveNumber()].at( pos ).at( 2 ) = EJzz * ( lambdaY1 * lambdaY1 * exp( lamxY1 ) * ( cy * lamxY1 + ay * lambdaY1 + 3 * cy ) - lambdaY1 * lambdaY1 * exp( -lamxY1 ) * ( dy * lamxY1 + by * lambdaY1 - 3 * dy ) + alphaY * ( exp( lamxY1 ) * ( cy * lamxY1 + ay * lambdaY1 + cy ) - exp( -lamxY1 ) * ( dy * lamxY1 + by * lambdaY1 - dy ) ) );
+                            disps.at( 2 )                                    = ay * exp( lamxY1 ) + by * exp( -lamxY1 ) + pos * ( cy * exp( lamxY1 ) + dy * exp( -lamxY1 ) );
+                            disps.at( 6 )                                    = ( -by * lambdaY1 * ( -psi_y * ( alphaY - lambdaY1_2 ) + 1 ) - dy * ( lamxY1 - psi_y * ( alphaY * ( lamxY1 - 1 ) - lambdaY1_3 * pos + 3 * lambdaY1_2 ) - 1 ) + ( ay * lambdaY1 * ( -psi_y * ( alphaY - lambdaY1_2 ) + 1 ) + cy * ( lamxY1 + psi_y * ( -alphaY * ( lamxY1 + 1 ) + lambdaY1_3 * pos + 3 * lambdaY1_2 ) + 1 ) ) * exp( 2 * lamxY1 ) ) * exp( -lamxY1 );
+                            BeamForces[elem->giveNumber()].at( pos ).at( 6 ) = EJzz * ( -by * ( alphaY - lambdaY1_2 ) - dy * ( alphaY * pos - lambdaY1_2 * pos + 2 * lambdaY1 ) + ( -ay * ( alphaY - lambdaY1_2 ) + cy * ( -alphaY * pos + lambdaY1_2 * pos + 2 * lambdaY1 ) ) * exp( 2 * lamxY1 ) ) * exp( -lamxY1 );
+                            BeamForces[elem->giveNumber()].at( pos ).at( 2 ) = EJzz * ( -by * lambdaY1 * ( alphaY - lambdaY1_2 ) - dy * ( alphaY * ( lamxY1 - 1 ) - lambdaY1_3 * pos + 3 * lambdaY1_2 ) + ( ay * lambdaY1 * ( alphaY - lambdaY1_2 ) - cy * ( -alphaY * ( lamxY1 + 1 ) + lambdaY1_3 * pos + 3 * lambdaY1_2 ) ) * exp( 2 * lamxY1 ) ) * exp( -lamxY1 );
                         } else {
-                            // displacement
-                            disps.at( 2 ) = exp( lamxY1 ) * ( ay * cos( lamxY2 ) + cy * sin( lamxY2 ) ) + ( by * cos( lamxY2 ) + dy * sin( lamxY2 ) ) / exp( lamxY1 );
-                            // rotation
-                            disps.at( 6 ) = psi_y * ( exp( lamxY1 ) * ( ( ay * lambdaY1 * ( lambdaY1 * lambdaY1 - 3 * lambdaY2 * lambdaY2 ) + cy * lambdaY2 * ( 3 * lambdaY1 * lambdaY1 - lambdaY2 * lambdaY2 ) ) * cos( lamxY2 ) - ( ay * lambdaY2 * ( 3 * lambdaY1 * lambdaY1 - lambdaY2 * lambdaY2 ) + cy * lambdaY1 * ( 3 * lambdaY2 * lambdaY2 - lambdaY1 * lambdaY1 ) ) * sin( lamxY2 ) ) - exp( -lamxY1 ) * ( ( by * lambdaY1 * ( lambdaY1 * lambdaY1 - 3 * lambdaY2 * lambdaY2 ) + dy * lambdaY2 * ( lambdaY2 * lambdaY2 - 3 * lambdaY1 * lambdaY1 ) ) * cos( lamxY2 ) + ( by * lambdaY2 * ( 3 * lambdaY1 * lambdaY1 - lambdaY2 * lambdaY2 ) + dy * lambdaY1 * ( lambdaY1 * lambdaY1 - 3 * lambdaY2 * lambdaY2 ) ) * sin( lamxY2 ) ) ) - ( alphaY * psi_y - 1 ) * ( exp( lamxY1 ) * ( ( ay * lambdaY1 + cy * lambdaY2 ) * cos( lamxY2 ) + ( cy * lambdaY1 - ay * lambdaY2 ) * sin( lamxY2 ) ) - exp( -lamxY1 ) * ( ( by * lambdaY1 - dy * lambdaY2 ) * cos( lamxY2 ) + ( by * lambdaY2 + dy * lambdaY1 ) * sin( lamxY2 ) ) );
-                            // adjust the diagrams
-                            BeamForces[elem->giveNumber()].at( pos ).at( 6 ) = EJzz * ( exp( lamxY1 ) * ( ( ay * ( lambdaY1 * lambdaY1 - lambdaY2 * lambdaY2 ) + 2 * cy * lambdaY1 * lambdaY2 ) * cos( lamxY2 ) - ( 2 * ay * lambdaY1 * lambdaY2 + cy * ( lambdaY2 * lambdaY2 - lambdaY1 * lambdaY1 ) ) * sin( lamxY2 ) ) + exp( -lamxY1 ) * ( ( by * ( lambdaY1 * lambdaY1 - lambdaY2 * lambdaY2 ) - 2 * dy * lambdaY1 * lambdaY2 ) * cos( lamxY2 ) + ( 2 * by * lambdaY1 * lambdaY2 + dy * ( lambdaY1 * lambdaY1 - lambdaY2 * lambdaY2 ) ) * sin( lamxY2 ) ) - alphaY * ( ay * exp( lamxY1 ) * cos( lamxY2 ) + by * exp( -lamxY1 ) * cos( lamxY2 ) + cy * exp( lamxY1 ) * sin( lamxY2 ) + dy * exp( -lamxY1 ) * sin( lamxY2 ) ) );
-                            BeamForces[elem->giveNumber()].at( pos ).at( 2 ) = EJzz * ( exp( lamxY1 ) * ( ( ay * lambdaY1 * ( lambdaY1 * lambdaY1 - 3 * lambdaY2 * lambdaY2 ) + cy * lambdaY2 * ( 3 * lambdaY1 * lambdaY1 - lambdaY2 * lambdaY2 ) ) * cos( lamxY2 ) - ( ay * lambdaY2 * ( 3 * lambdaY1 * lambdaY1 - lambdaY2 * lambdaY2 ) + cy * lambdaY1 * ( 3 * lambdaY2 * lambdaY2 - lambdaY1 * lambdaY1 ) ) * sin( lamxY2 ) ) - exp( -lamxY1 ) * ( ( by * lambdaY1 * ( lambdaY1 * lambdaY1 - 3 * lambdaY2 * lambdaY2 ) + dy * lambdaY2 * ( lambdaY2 * lambdaY2 - 3 * lambdaY1 * lambdaY1 ) ) * cos( lamxY2 ) + ( by * lambdaY2 * ( 3 * lambdaY1 * lambdaY1 - lambdaY2 * lambdaY2 ) + dy * lambdaY1 * ( lambdaY1 * lambdaY1 - 3 * lambdaY2 * lambdaY2 ) ) * sin( lamxY2 ) ) + alphaY * ( exp( lamxY1 ) * ( ( ay * lambdaY1 + cy * lambdaY2 ) * cos( lamxY2 ) + ( cy * lambdaY1 - ay * lambdaY2 ) * sin( lamxY2 ) ) - exp( -lamxY1 ) * ( ( by * lambdaY1 - dy * lambdaY2 ) * cos( lamxY2 ) + ( by * lambdaY2 + dy * lambdaY1 ) * sin( lamxY2 ) ) ) );
+                            disps.at( 2 )                                    = exp( lamxY1 ) * ( ay * cos( lamxY2 ) + cy * sin( lamxY2 ) ) + ( by * cos( lamxY2 ) + dy * sin( lamxY2 ) ) * exp( -lamxY1 );
+                            disps.at( 6 )                                    = ( -by * ( lambdaY1 * cos( lamxY2 ) + lambdaY2 * sin( lamxY2 ) - psi_y * ( alphaY * ( lambdaY1 * cos( lamxY2 ) + lambdaY2 * sin( lamxY2 ) ) - lambdaY1_3 * cos( lamxY2 ) - 3 * lambdaY1_2 * lambdaY2 * sin( lamxY2 ) + 3 * lambdaY1 * lambdaY2_2 * cos( lamxY2 ) + lambdaY2_3 * sin( lamxY2 ) ) ) - dy * ( lambdaY1 * sin( lamxY2 ) - lambdaY2 * cos( lamxY2 ) - psi_y * ( alphaY * ( lambdaY1 * sin( lamxY2 ) - lambdaY2 * cos( lamxY2 ) ) - lambdaY1_3 * sin( lamxY2 ) + 3 * lambdaY1_2 * lambdaY2 * cos( lamxY2 ) + 3 * lambdaY1 * lambdaY2_2 * sin( lamxY2 ) - lambdaY2_3 * cos( lamxY2 ) ) ) + ( -ay * ( -lambdaY1 * cos( lamxY2 ) + lambdaY2 * sin( lamxY2 ) + psi_y * ( alphaY * ( lambdaY1 * cos( lamxY2 ) - lambdaY2 * sin( lamxY2 ) ) - lambdaY1_3 * cos( lamxY2 ) + 3 * lambdaY1_2 * lambdaY2 * sin( lamxY2 ) + 3 * lambdaY1 * lambdaY2_2 * cos( lamxY2 ) - lambdaY2_3 * sin( lamxY2 ) ) ) + cy * ( lambdaY1 * sin( lamxY2 ) + lambdaY2 * cos( lamxY2 ) - psi_y * ( alphaY * ( lambdaY1 * sin( lamxY2 ) + lambdaY2 * cos( lamxY2 ) ) - lambdaY1_3 * sin( lamxY2 ) - 3 * lambdaY1_2 * lambdaY2 * cos( lamxY2 ) + 3 * lambdaY1 * lambdaY2_2 * sin( lamxY2 ) + lambdaY2_3 * cos( lamxY2 ) ) ) ) * exp( 2 * lamxY1 ) ) * exp( -lamxY1 );
+                            BeamForces[elem->giveNumber()].at( pos ).at( 6 ) = EJzz * ( -by * ( alphaY * cos( lamxY2 ) - lambdaY1_2 * cos( lamxY2 ) - 2 * lambdaY1 * lambdaY2 * sin( lamxY2 ) + lambdaY2_2 * cos( lamxY2 ) ) - dy * ( alphaY * sin( lamxY2 ) - lambdaY1_2 * sin( lamxY2 ) + 2 * lambdaY1 * lambdaY2 * cos( lamxY2 ) + lambdaY2_2 * sin( lamxY2 ) ) + ( -ay * ( alphaY * cos( lamxY2 ) - lambdaY1_2 * cos( lamxY2 ) + 2 * lambdaY1 * lambdaY2 * sin( lamxY2 ) + lambdaY2_2 * cos( lamxY2 ) ) - cy * ( alphaY * sin( lamxY2 ) - lambdaY1_2 * sin( lamxY2 ) - 2 * lambdaY1 * lambdaY2 * cos( lamxY2 ) + lambdaY2_2 * sin( lamxY2 ) ) ) * exp( 2 * lamxY1 ) ) * exp( -lamxY1 );
+                            BeamForces[elem->giveNumber()].at( pos ).at( 2 ) = EJzz * ( -by * ( alphaY * ( lambdaY1 * cos( lamxY2 ) + lambdaY2 * sin( lamxY2 ) ) - lambdaY1_3 * cos( lamxY2 ) - 3 * lambdaY1_2 * lambdaY2 * sin( lamxY2 ) + 3 * lambdaY1 * lambdaY2_2 * cos( lamxY2 ) + lambdaY2_3 * sin( lamxY2 ) ) - dy * ( alphaY * ( lambdaY1 * sin( lamxY2 ) - lambdaY2 * cos( lamxY2 ) ) - lambdaY1_3 * sin( lamxY2 ) + 3 * lambdaY1_2 * lambdaY2 * cos( lamxY2 ) + 3 * lambdaY1 * lambdaY2_2 * sin( lamxY2 ) - lambdaY2_3 * cos( lamxY2 ) ) + ( ay * ( alphaY * ( lambdaY1 * cos( lamxY2 ) - lambdaY2 * sin( lamxY2 ) ) - lambdaY1_3 * cos( lamxY2 ) + 3 * lambdaY1_2 * lambdaY2 * sin( lamxY2 ) + 3 * lambdaY1 * lambdaY2_2 * cos( lamxY2 ) - lambdaY2_3 * sin( lamxY2 ) ) + cy * ( alphaY * ( lambdaY1 * sin( lamxY2 ) + lambdaY2 * cos( lamxY2 ) ) - lambdaY1_3 * sin( lamxY2 ) - 3 * lambdaY1_2 * lambdaY2 * cos( lamxY2 ) + 3 * lambdaY1 * lambdaY2_2 * sin( lamxY2 ) + lambdaY2_3 * cos( lamxY2 ) ) ) * exp( 2 * lamxY1 ) ) * exp( -lamxY1 );
                         }
-                        disps.at(2) += 1 / EJzz * (qi.at(2) * pos_4 / 24 + (qf.at(2) - qi.at(2)) / 120 / l * pos_5) - 1 / GKyAy * (qi.at(2) * pos_2 / 2 + (qf.at(2) - qi.at(2)) / 6 / l * pos_3);
-                        disps.at(6) += 1 / EJzz * (qi.at(2) * pos_3 / 6 + (qf.at(2) - qi.at(2)) / 24 / l * pos_4);
-                        BeamForces[elem->giveNumber()].at(pos).at(6) += (qi.at(2) * pos_2 / 2 + (qf.at(2) - qi.at(2)) / 6 / l * pos_3);
-                        BeamForces[elem->giveNumber()].at(pos).at(2) += (qi.at(2) * pos + (qf.at(2) - qi.at(2)) / 2 / l * pos_2);
+                        disps.at( 2 ) += ( qi.at( 2 ) + pos / l * ( qf.at( 2 ) - qi.at( 2 ) ) ) / wy;
+                        disps.at( 6 ) += ( 1 / wy * ( qf.at( 2 ) - qi.at( 2 ) ) / l * ( 1 - EJzz / GKyAy / GKyAy * wy ) );
+                        // nothing to add to shear and moment when loads are linear.
                     }
                     wink.at( 2 ) = -disps.at( 2 ) * wy;
                 } else {
@@ -1102,12 +1114,12 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                         disps.at( 2 ) = ay * pos_5 + by * pos_4 + ( cy - 20 * ay * psi_y ) * pos_3 + ( dy - 12 * by * psi_y ) * pos_2 + ( ey - 6 * cy * psi_y ) * pos + fy;
                     }
                     // rotation
-                    //disps.at(6) = 4 * ay*pos_3 + 3 * by*pos_2 + 2 * cy*pos + dy;
+                    // disps.at(6) = 4 * ay*pos_3 + 3 * by*pos_2 + 2 * cy*pos + dy;
                     disps.at( 6 ) = 5 * ay * pos_4 + 4 * by * pos_3 + 3 * cy * pos_2 + 2 * dy * pos + ey;
                 }
 
                 if ( hasWinklerZ ) {
-                    if ( psi_z == 0.0 || forceEB ) {
+                    if ( psi_z == 0.0 ) {
                         // displacement
                         disps.at( 3 ) = exp( lamxZ ) * ( az * cos( lamxZ ) + bz * sin( lamxZ ) ) + ( cz * cos( lamxZ ) + dz * sin( lamxZ ) ) / exp( lamxZ ) + ( qi.at( 3 ) + ( qf.at( 3 ) - qi.at( 3 ) ) * pos / l ) / wz;
                         // rotation
@@ -1117,34 +1129,24 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                         BeamForces[elem->giveNumber()].at( pos ).at( 3 ) = 2 * lambdaZ * lambdaZ * lambdaZ * EJyy * ( -exp( lamxZ ) * ( ( az - bz ) * cos( lamxZ ) + ( bz + az ) * sin( lamxZ ) ) + ( ( cz + dz ) * cos( lamxZ ) + ( -cz + dz ) * sin( lamxZ ) ) / ( exp( lamxZ ) ) );
                     } else {
                         if ( deltaZ > 0 ) {
-                            // displacement
-                            disps.at( 3 ) = az * exp( lamxZ1 ) + bz / exp( lamxZ1 ) + cz * exp( lamxZ2 ) + dz / exp( lamxZ2 );
-                            // rotation
-                            disps.at( 5 ) = -psi_z * ( az * lambdaZ1 * lambdaZ1 * lambdaZ1 * exp( lamxZ1 ) - bz * lambdaZ1 * lambdaZ1 * lambdaZ1 * exp( -lamxZ1 ) + cz * lambdaZ2 * lambdaZ2 * lambdaZ2 * exp( lamxZ2 ) - dz * lambdaZ2 * lambdaZ2 * lambdaZ2 * exp( -lamxZ2 ) ) + ( alphaZ * psi_z - 1 ) * ( az * lambdaZ1 * exp( lamxZ1 ) - bz * lambdaZ1 * exp( -lamxZ1 ) + cz * lambdaZ2 * exp( lamxZ2 ) - dz * lambdaZ2 * exp( -lamxZ2 ) );
-                            // adjust the diagrams
-                            BeamForces[elem->giveNumber()].at( pos ).at( 5 ) = -EJyy * ( az * lambdaZ1 * lambdaZ1 * exp( lamxZ1 ) + bz * lambdaZ1 * lambdaZ1 * exp( -lamxZ1 ) + cz * lambdaZ2 * lambdaZ2 * exp( lamxZ2 ) + dz * lambdaZ2 * lambdaZ2 * exp( -lamxZ2 ) - alphaZ * ( az * exp( lamxZ1 ) + bz * exp( -lamxZ1 ) + cz * exp( lamxZ2 ) + dz * exp( -lamxZ2 ) ) );
-                            BeamForces[elem->giveNumber()].at( pos ).at( 3 ) = EJyy * ( az * lambdaZ1 * lambdaZ1 * lambdaZ1 * exp( lamxZ1 ) - bz * lambdaZ1 * lambdaZ1 * lambdaZ1 * exp( -lamxZ1 ) + cz * lambdaZ2 * lambdaZ2 * lambdaZ2 * exp( lamxZ2 ) - dz * lambdaZ2 * lambdaZ2 * lambdaZ2 * exp( -lamxZ2 ) + alphaZ * ( az * lambdaZ1 * exp( lamxZ1 ) - bz * lambdaZ1 * exp( -lamxZ1 ) + cz * lambdaZ2 * exp( lamxZ2 ) - dz * lambdaZ2 * exp( -lamxZ2 ) ) );
+                            disps.at( 3 )                                    = az * exp( lamxZ1 ) + bz * exp( -lamxZ1 ) + cz * exp( lamxZ2 ) + dz * exp( -lamxZ2 );
+                            disps.at( 5 )                                    = ( bz * lambdaZ1 * ( -psi_z * ( alphaZ - lambdaZ1_2 ) + 1 ) * exp( lamxZ2 ) + dz * lambdaZ2 * ( -psi_z * ( alphaZ - lambdaZ2_2 ) + 1 ) * exp( lamxZ1 ) - ( az * lambdaZ1 * ( -psi_z * ( alphaZ - lambdaZ1_2 ) + 1 ) * exp( lamxZ1 ) + cz * lambdaZ2 * ( -psi_z * ( alphaZ - lambdaZ2_2 ) + 1 ) * exp( lamxZ2 ) ) * exp( pos * ( lambdaZ1 + lambdaZ2 ) ) ) * exp( -pos * ( lambdaZ1 + lambdaZ2 ) );
+                            BeamForces[elem->giveNumber()].at( pos ).at( 5 ) = EJyy * ( bz * ( alphaZ - lambdaZ1_2 ) * exp( lamxZ2 ) + dz * ( alphaZ - lambdaZ2_2 ) * exp( lamxZ1 ) + ( az * ( alphaZ - lambdaZ1_2 ) * exp( lamxZ1 ) + cz * ( alphaZ - lambdaZ2_2 ) * exp( lamxZ2 ) ) * exp( pos * ( lambdaZ1 + lambdaZ2 ) ) ) * exp( -pos * ( lambdaZ1 + lambdaZ2 ) );
+                            BeamForces[elem->giveNumber()].at( pos ).at( 3 ) = EJyy * ( -bz * lambdaZ1 * ( alphaZ - lambdaZ1_2 ) * exp( lamxZ2 ) - dz * lambdaZ2 * ( alphaZ - lambdaZ2_2 ) * exp( lamxZ1 ) + ( az * lambdaZ1 * ( alphaZ - lambdaZ1_2 ) * exp( lamxZ1 ) + cz * lambdaZ2 * ( alphaZ - lambdaZ2_2 ) * exp( lamxZ2 ) ) * exp( pos * ( lambdaZ1 + lambdaZ2 ) ) ) * exp( -pos * ( lambdaZ1 + lambdaZ2 ) );
                         } else if ( deltaZ == 0 ) {
-                            // displacement
-                            disps.at( 3 ) = az * exp( lamxZ1 ) + bz / exp( lamxZ1 ) + pos * ( cz * exp( lamxZ1 ) + dz / exp( lamxZ1 ) );
-                            // rotation
-                            disps.at( 5 ) = -psi_z * ( lambdaZ1 * lambdaZ1 * exp( lamxZ1 ) * ( cz * lamxZ1 + az * lambdaZ1 + 3 * cz ) - lambdaZ1 * lambdaZ1 * exp( -lamxZ1 ) * ( dz * lamxZ1 + bz * lambdaZ1 - 3 * dz ) ) + ( alphaZ * psi_z - 1 ) * ( exp( lamxZ1 ) * ( cz * lamxZ1 + az * lambdaZ1 + cz ) - exp( -lamxZ1 ) * ( dz * lamxZ1 + bz * lambdaZ1 - dz ) );
-                            // adjust the diagrams
-                            BeamForces[elem->giveNumber()].at( pos ).at( 5 ) = -EJyy * ( lambdaZ1 * exp( lamxZ1 ) * ( cz * lamxZ1 + az * lambdaZ1 + 2 * cz ) + lambdaZ1 * exp( -lamxZ1 ) * ( dz * lamxZ1 + bz * lambdaZ1 - 2 * dz ) - alphaZ * ( az * exp( lamxZ1 ) + bz * exp( -lamxZ1 ) + cz * pos * exp( lamxZ1 ) + dz * pos * exp( -lamxZ1 ) ) );
-                            BeamForces[elem->giveNumber()].at( pos ).at( 3 ) = EJyy * ( lambdaZ1 * lambdaZ1 * exp( lamxZ1 ) * ( cz * lamxZ1 + az * lambdaZ1 + 3 * cz ) - lambdaZ1 * lambdaZ1 * exp( -lamxZ1 ) * ( dz * lamxZ1 + bz * lambdaZ1 - 3 * dz ) + alphaZ * ( exp( lamxZ1 ) * ( cz * lamxZ1 + az * lambdaZ1 + cz ) - exp( -lamxZ1 ) * ( dz * lamxZ1 + bz * lambdaZ1 - dz ) ) );
+                            disps.at( 3 )                                    = az * exp( lamxZ1 ) + bz * exp( -lamxZ1 ) + pos * ( cz * exp( lamxZ1 ) + dz * exp( -lamxZ1 ) );
+                            disps.at( 5 )                                    = ( bz * lambdaZ1 * ( -psi_z * ( alphaZ - lambdaZ1_2 ) + 1 ) + dz * ( lamxZ1 + psi_z * ( alphaZ * ( -lamxZ1 + 1 ) + lambdaZ1_3 * pos - 3 * lambdaZ1_2 ) - 1 ) - ( az * lambdaZ1 * ( -psi_z * ( alphaZ - lambdaZ1_2 ) + 1 ) + cz * ( lamxZ1 + psi_z * ( -alphaZ * ( lamxZ1 + 1 ) + lambdaZ1_3 * pos + 3 * lambdaZ1_2 ) + 1 ) ) * exp( 2 * lamxZ1 ) ) * exp( -lamxZ1 );
+                            BeamForces[elem->giveNumber()].at( pos ).at( 5 ) = EJyy * ( bz * ( alphaZ - lambdaZ1_2 ) + dz * ( alphaZ * pos - lambdaZ1_2 * pos + 2 * lambdaZ1 ) + ( az * ( alphaZ - lambdaZ1_2 ) - cz * ( -alphaZ * pos + lambdaZ1_2 * pos + 2 * lambdaZ1 ) ) * exp( 2 * lamxZ1 ) ) * exp( -lamxZ1 );
+                            BeamForces[elem->giveNumber()].at( pos ).at( 3 ) = EJyy * ( -bz * lambdaZ1 * ( alphaZ - lambdaZ1_2 ) - dz * ( alphaZ * ( lamxZ1 - 1 ) - lambdaZ1_3 * pos + 3 * lambdaZ1_2 ) + ( az * lambdaZ1 * ( alphaZ - lambdaZ1_2 ) - cz * ( -alphaZ * ( lamxZ1 + 1 ) + lambdaZ1_3 * pos + 3 * lambdaZ1_2 ) ) * exp( 2 * lamxZ1 ) ) * exp( -lamxZ1 );
                         } else {
-                            // displacement
-                            disps.at( 3 ) = exp( lamxZ1 ) * ( az * cos( lamxZ2 ) + cz * sin( lamxZ2 ) ) + ( bz * cos( lamxZ2 ) + dz * sin( lamxZ2 ) ) / exp( lamxZ1 );
-                            // rotation
-                            disps.at( 5 ) = -psi_z * ( exp( lamxZ1 ) * ( ( az * lambdaZ1 * ( lambdaZ1 * lambdaZ1 - 3 * lambdaZ2 * lambdaZ2 ) + cz * lambdaZ2 * ( 3 * lambdaZ1 * lambdaZ1 - lambdaZ2 * lambdaZ2 ) ) * cos( lamxZ2 ) - ( az * lambdaZ2 * ( 3 * lambdaZ1 * lambdaZ1 - lambdaZ2 * lambdaZ2 ) + cz * lambdaZ1 * ( 3 * lambdaZ2 * lambdaZ2 - lambdaZ1 * lambdaZ1 ) ) * sin( lamxZ2 ) ) - exp( -lamxZ1 ) * ( ( bz * lambdaZ1 * ( lambdaZ1 * lambdaZ1 - 3 * lambdaZ2 * lambdaZ2 ) + dz * lambdaZ2 * ( lambdaZ2 * lambdaZ2 - 3 * lambdaZ1 * lambdaZ1 ) ) * cos( lamxZ2 ) + ( bz * lambdaZ2 * ( 3 * lambdaZ1 * lambdaZ1 - lambdaZ2 * lambdaZ2 ) + dz * lambdaZ1 * ( lambdaZ1 * lambdaZ1 - 3 * lambdaZ2 * lambdaZ2 ) ) * sin( lamxZ2 ) ) ) + ( alphaZ * psi_z - 1 ) * ( exp( lamxZ1 ) * ( ( az * lambdaZ1 + cz * lambdaZ2 ) * cos( lamxZ2 ) + ( cz * lambdaZ1 - az * lambdaZ2 ) * sin( lamxZ2 ) ) - exp( -lamxZ1 ) * ( ( bz * lambdaZ1 - dz * lambdaZ2 ) * cos( lamxZ2 ) + ( bz * lambdaZ2 + dz * lambdaZ1 ) * sin( lamxZ2 ) ) );
-                            // adjust the diagrams
-                            BeamForces[elem->giveNumber()].at( pos ).at( 5 ) = -EJyy * ( exp( lamxZ1 ) * ( ( az * ( lambdaZ1 * lambdaZ1 - lambdaZ2 * lambdaZ2 ) + 2 * cz * lambdaZ1 * lambdaZ2 ) * cos( lamxZ2 ) - ( 2 * az * lambdaZ1 * lambdaZ2 + cz * ( lambdaZ2 * lambdaZ2 - lambdaZ1 * lambdaZ1 ) ) * sin( lamxZ2 ) ) + exp( -lamxZ1 ) * ( ( bz * ( lambdaZ1 * lambdaZ1 - lambdaZ2 * lambdaZ2 ) - 2 * dz * lambdaZ1 * lambdaZ2 ) * cos( lamxZ2 ) + ( 2 * bz * lambdaZ1 * lambdaZ2 + dz * ( lambdaZ1 * lambdaZ1 - lambdaZ2 * lambdaZ2 ) ) * sin( lamxZ2 ) ) - alphaZ * ( az * exp( lamxZ1 ) * cos( lamxZ2 ) + bz * exp( -lamxZ1 ) * cos( lamxZ2 ) + cz * exp( lamxZ1 ) * sin( lamxZ2 ) + dz * exp( -lamxZ1 ) * sin( lamxZ2 ) ) );
-                            BeamForces[elem->giveNumber()].at( pos ).at( 3 ) = EJyy * ( exp( lamxZ1 ) * ( ( az * lambdaZ1 * ( lambdaZ1 * lambdaZ1 - 3 * lambdaZ2 * lambdaZ2 ) + cz * lambdaZ2 * ( 3 * lambdaZ1 * lambdaZ1 - lambdaZ2 * lambdaZ2 ) ) * cos( lamxZ2 ) - ( az * lambdaZ2 * ( 3 * lambdaZ1 * lambdaZ1 - lambdaZ2 * lambdaZ2 ) + cz * lambdaZ1 * ( 3 * lambdaZ2 * lambdaZ2 - lambdaZ1 * lambdaZ1 ) ) * sin( lamxZ2 ) ) - exp( -lamxZ1 ) * ( ( bz * lambdaZ1 * ( lambdaZ1 * lambdaZ1 - 3 * lambdaZ2 * lambdaZ2 ) + dz * lambdaZ2 * ( lambdaZ2 * lambdaZ2 - 3 * lambdaZ1 * lambdaZ1 ) ) * cos( lamxZ2 ) + ( bz * lambdaZ2 * ( 3 * lambdaZ1 * lambdaZ1 - lambdaZ2 * lambdaZ2 ) + dz * lambdaZ1 * ( lambdaZ1 * lambdaZ1 - 3 * lambdaZ2 * lambdaZ2 ) ) * sin( lamxZ2 ) ) + alphaZ * ( exp( lamxZ1 ) * ( ( az * lambdaZ1 + cz * lambdaZ2 ) * cos( lamxZ2 ) + ( cz * lambdaZ1 - az * lambdaZ2 ) * sin( lamxZ2 ) ) - exp( -lamxZ1 ) * ( ( bz * lambdaZ1 - dz * lambdaZ2 ) * cos( lamxZ2 ) + ( bz * lambdaZ2 + dz * lambdaZ1 ) * sin( lamxZ2 ) ) ) );
+                            disps.at( 3 )                                    = exp( lamxZ1 ) * ( az * cos( lamxZ2 ) + cz * sin( lamxZ2 ) ) + ( bz * cos( lamxZ2 ) + dz * sin( lamxZ2 ) ) * exp( -lamxZ1 );
+                            disps.at( 5 )                                    = ( bz * ( lambdaZ1 * cos( lamxZ2 ) + lambdaZ2 * sin( lamxZ2 ) - psi_z * ( alphaZ * ( lambdaZ1 * cos( lamxZ2 ) + lambdaZ2 * sin( lamxZ2 ) ) - lambdaZ1_3 * cos( lamxZ2 ) - 3 * lambdaZ1_2 * lambdaZ2 * sin( lamxZ2 ) + 3 * lambdaZ1 * lambdaZ2_2 * cos( lamxZ2 ) + lambdaZ2_3 * sin( lamxZ2 ) ) ) + dz * ( lambdaZ1 * sin( lamxZ2 ) - lambdaZ2 * cos( lamxZ2 ) + psi_z * ( alphaZ * ( -lambdaZ1 * sin( lamxZ2 ) + lambdaZ2 * cos( lamxZ2 ) ) + lambdaZ1_3 * sin( lamxZ2 ) - 3 * lambdaZ1_2 * lambdaZ2 * cos( lamxZ2 ) - 3 * lambdaZ1 * lambdaZ2_2 * sin( lamxZ2 ) + lambdaZ2_3 * cos( lamxZ2 ) ) ) + ( az * ( -lambdaZ1 * cos( lamxZ2 ) + lambdaZ2 * sin( lamxZ2 ) + psi_z * ( alphaZ * ( lambdaZ1 * cos( lamxZ2 ) - lambdaZ2 * sin( lamxZ2 ) ) - lambdaZ1_3 * cos( lamxZ2 ) + 3 * lambdaZ1_2 * lambdaZ2 * sin( lamxZ2 ) + 3 * lambdaZ1 * lambdaZ2_2 * cos( lamxZ2 ) - lambdaZ2_3 * sin( lamxZ2 ) ) ) - cz * ( lambdaZ1 * sin( lamxZ2 ) + lambdaZ2 * cos( lamxZ2 ) - psi_z * ( alphaZ * ( lambdaZ1 * sin( lamxZ2 ) + lambdaZ2 * cos( lamxZ2 ) ) - lambdaZ1_3 * sin( lamxZ2 ) - 3 * lambdaZ1_2 * lambdaZ2 * cos( lamxZ2 ) + 3 * lambdaZ1 * lambdaZ2_2 * sin( lamxZ2 ) + lambdaZ2_3 * cos( lamxZ2 ) ) ) ) * exp( 2 * lamxZ1 ) ) * exp( -lamxZ1 );
+                            BeamForces[elem->giveNumber()].at( pos ).at( 5 ) = EJyy * ( bz * ( alphaZ * cos( lamxZ2 ) - lambdaZ1_2 * cos( lamxZ2 ) - 2 * lambdaZ1 * lambdaZ2 * sin( lamxZ2 ) + lambdaZ2_2 * cos( lamxZ2 ) ) + dz * ( alphaZ * sin( lamxZ2 ) - lambdaZ1_2 * sin( lamxZ2 ) + 2 * lambdaZ1 * lambdaZ2 * cos( lamxZ2 ) + lambdaZ2_2 * sin( lamxZ2 ) ) + ( az * ( alphaZ * cos( lamxZ2 ) - lambdaZ1_2 * cos( lamxZ2 ) + 2 * lambdaZ1 * lambdaZ2 * sin( lamxZ2 ) + lambdaZ2_2 * cos( lamxZ2 ) ) + cz * ( alphaZ * sin( lamxZ2 ) - lambdaZ1_2 * sin( lamxZ2 ) - 2 * lambdaZ1 * lambdaZ2 * cos( lamxZ2 ) + lambdaZ2_2 * sin( lamxZ2 ) ) ) * exp( 2 * lamxZ1 ) ) * exp( -lamxZ1 );
+                            BeamForces[elem->giveNumber()].at( pos ).at( 3 ) = EJyy * ( -bz * ( alphaZ * ( lambdaZ1 * cos( lamxZ2 ) + lambdaZ2 * sin( lamxZ2 ) ) - lambdaZ1_3 * cos( lamxZ2 ) - 3 * lambdaZ1_2 * lambdaZ2 * sin( lamxZ2 ) + 3 * lambdaZ1 * lambdaZ2_2 * cos( lamxZ2 ) + lambdaZ2_3 * sin( lamxZ2 ) ) - dz * ( alphaZ * ( lambdaZ1 * sin( lamxZ2 ) - lambdaZ2 * cos( lamxZ2 ) ) - lambdaZ1_3 * sin( lamxZ2 ) + 3 * lambdaZ1_2 * lambdaZ2 * cos( lamxZ2 ) + 3 * lambdaZ1 * lambdaZ2_2 * sin( lamxZ2 ) - lambdaZ2_3 * cos( lamxZ2 ) ) + ( az * ( alphaZ * ( lambdaZ1 * cos( lamxZ2 ) - lambdaZ2 * sin( lamxZ2 ) ) - lambdaZ1_3 * cos( lamxZ2 ) + 3 * lambdaZ1_2 * lambdaZ2 * sin( lamxZ2 ) + 3 * lambdaZ1 * lambdaZ2_2 * cos( lamxZ2 ) - lambdaZ2_3 * sin( lamxZ2 ) ) + cz * ( alphaZ * ( lambdaZ1 * sin( lamxZ2 ) + lambdaZ2 * cos( lamxZ2 ) ) - lambdaZ1_3 * sin( lamxZ2 ) - 3 * lambdaZ1_2 * lambdaZ2 * cos( lamxZ2 ) + 3 * lambdaZ1 * lambdaZ2_2 * sin( lamxZ2 ) + lambdaZ2_3 * cos( lamxZ2 ) ) ) * exp( 2 * lamxZ1 ) ) * exp( -lamxZ1 );
                         }
-                        disps.at(3) += 1 / EJyy * (qi.at(3) * pos_4 / 24 + (qf.at(3) - qi.at(3)) / 120 / l * pos_5) - 1 / GKzAz * (qi.at(3) * pos_2 / 2 + (qf.at(3) - qi.at(3)) / 6 / l * pos_3);
-                        disps.at(5) += 1 / EJyy * (qi.at(3) * pos_3 / 6 + (qf.at(3) - qi.at(3)) / 24 / l * pos_4);
-                        BeamForces[elem->giveNumber()].at(pos).at(5) -= (qi.at(3) * pos_2 / 2 + (qf.at(3) - qi.at(3)) / 6 / l * pos_3);
-                        BeamForces[elem->giveNumber()].at(pos).at(3) += (qi.at(3) * pos + (qf.at(3) - qi.at(3)) / 2 / l * pos_2);
+                        disps.at( 3 ) += 1 / wz * ( qi.at( 3 ) + ( qf.at( 3 ) - qi.at( 3 ) ) / l * pos );
+                        disps.at( 5 ) += 1 / wz * ( qf.at( 3 ) - qi.at( 3 ) ) / l * ( EJyy / GKzAz / GKzAz * wz - 1 );
+                        // nothing to add to shear and moment when loads are linear.
                     }
                     wink.at( 3 ) = -disps.at( 3 ) * wz;
                 } else {
@@ -1161,12 +1163,12 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
 
                 disps.at( 4 ) = atx * pos_3 + btx * pos_2 + ctx * pos + dtx;
 
-                //disps -= (dI+ddN*ksi);
+                // disps -= (dI+ddN*ksi);
 
                 DispDict[pos] = disps;
                 WinkDict[pos] = wink;
 
-                //ipDisp.beProductOf(shapeFunctions, rl);
+                // ipDisp.beProductOf(shapeFunctions, rl);
             }
 
             DispDict[l] = dE; // -dNE;
@@ -1175,13 +1177,13 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
             // save the displacements
             BeamDisplacements[elem->giveNumber()] = DispDict;
             BeamWinkler[elem->giveNumber()]       = WinkDict;
-            //BeamDisplacements[elem->giveLabel()] = DispDict;
+            // BeamDisplacements[elem->giveLabel()] = DispDict;
         }
     }
 
-    //for (auto &set : d->giveSets()) {
+    // for (auto &set : d->giveSets()) {
     //	IntArray &ElEdges = set->giveEdgeList();
-    //}
+    // }
 
     //	d->giveSets or d->giveLoad ?
 
@@ -1190,8 +1192,8 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
         BeamDisplacementsList.push_back( BeamDisplacements );
         BeamForcesList.push_back( BeamForces );
         BeamWinklerList.push_back( BeamWinkler );
-        //BeamExportModule::addMultiply(combBeamDisplacements, BeamDisplacements,,1.0);
-        //BeamExportModule::addMultiply(combBeamForces, BeamForces,,1.0);
+        // BeamExportModule::addMultiply(combBeamDisplacements, BeamDisplacements,,1.0);
+        // BeamExportModule::addMultiply(combBeamForces, BeamForces,,1.0);
 
     } else {
 
@@ -1207,10 +1209,10 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
             BeamForces        = combBeamForces;
             BeamWinkler       = combBeamWinkler;
 
-            //#ifdef DEBUG
+            // #ifdef DEBUG
             //				map<double, FloatArray> elem = combBeamDisplacements[7];
             //				OOFEM_WARNING("Stop %e", elem.at(4).at(1));
-            //#endif
+            // #endif
 
             combBeamDisplacements.clear();
             combBeamForces.clear();
@@ -1258,9 +1260,9 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
 
 #ifdef MEMSTR
         fprintf( this->stream, "endStep\n" );
-        //if (usestream) fprintf(this->stream, "endStep\n");
+        // if (usestream) fprintf(this->stream, "endStep\n");
 #endif
-        //for (auto &bForces : BeamForces) {
+        // for (auto &bForces : BeamForces) {
         //	map< double, FloatArray >pForces = bForces.second;
         //	int ID = bForces.first;
         //	for (auto &vals : pForces) {
@@ -1272,17 +1274,17 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
         //		}
         //		fprintf(this->stream, "\n");
         //	}
-        //}
+        // }
 
         // write file in the format:
         // elementNumber distanceFromIend N_x T_z T_y M_x M_y M_z
         // if 3 Gauss points are used, there would be 5 lines per beam (at distances 0, 0.1127*L, 0.5*L, 0.8873*L, L), ->>> to check
 
-        //fprintf(this->stream, "%d ", avgState.giveSize());
-        //for ( auto s: avgState ) {
-        //    fprintf(this->stream, "%e ", s);
-        //}
-        //fprintf(this->stream, "    ");
+        // fprintf(this->stream, "%d ", avgState.giveSize());
+        // for ( auto s: avgState ) {
+        //     fprintf(this->stream, "%e ", s);
+        // }
+        // fprintf(this->stream, "    ");
 
         BeamDisplacements.clear();
         BeamForces.clear();
@@ -1476,9 +1478,9 @@ void BeamExportModule::initialize()
 #endif
     // ";" as separator
     fprintf( this->stream, "#Time;BeamNo;DistanceFromI;N_x;T_y;T_z;M_x;M_y;M_z;dx;dy;dz;rx;ry;rz;q_winky;q_winkz;" );
-    //for ( int var: this->ists ) {
-    //    fprintf(this->stream, "%s    ", __InternalStateTypeToString( ( InternalStateType ) var) );
-    //}
+    // for ( int var: this->ists ) {
+    //     fprintf(this->stream, "%s    ", __InternalStateTypeToString( ( InternalStateType ) var) );
+    // }
     fprintf( this->stream, "\n" );
     fflush( this->stream );
 }
@@ -1487,7 +1489,7 @@ void BeamExportModule::terminate()
 {
 #ifdef MEMSTR
     fprintf( this->stream, "strTerm\n" );
-    //if (usestream) fprintf(this->stream, "strTerm\n");
+    // if (usestream) fprintf(this->stream, "strTerm\n");
 #endif
     fflush( this->stream );
     // #ifndef MEMSTR
