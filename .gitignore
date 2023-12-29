@@ -1586,3 +1586,10 @@ comp32/version.vcxproj.filters
 /2019_new/src/sm/Materials/cmake_install.cmake
 /2019_new/src/sm/Materials/sm_materials.vcxproj
 /2019_new/src/sm/Materials/sm_materials.vcxproj.filters
+/comp64/src/sm/Materials/INSTALL.vcxproj
+/comp64/src/sm/Materials/INSTALL.vcxproj.filters
+/comp64/src/sm/Materials/PACKAGE.vcxproj
+/comp64/src/sm/Materials/PACKAGE.vcxproj.filters
+/comp64/src/sm/Materials/cmake_install.cmake
+/comp64/src/sm/Materials/sm_materials.vcxproj
+/comp64/src/sm/Materials/sm_materials.vcxproj.filters

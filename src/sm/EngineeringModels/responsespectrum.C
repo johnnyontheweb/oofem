@@ -166,6 +166,9 @@ void ResponseSpectrum::initializeFrom( InputRecord &ir )
         OOFEM_WARNING( "less than 3 vector components set. Setting the remaining to zero" );
         dir.resizeWithValues( 3 );
     }
+    if ( dir.computeNorm() == 0 ) {
+        OOFEM_ERROR( "No direction vector set." ); // to prevent error in normalize()
+    }
     dir.normalize();
 
     val = 0;
