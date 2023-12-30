@@ -2229,6 +2229,11 @@ StructuralMaterial::computeStressIndependentStrainVector(GaussPoint *gp, TimeSte
 FloatArrayF< 6 >
 StructuralMaterial::computeStressIndependentStrainVector_3d(GaussPoint *gp, TimeStep *tStep, ValueModeType mode) const
 {
+    // we assume response spectrum doesn't have these types of load.
+    if ( strcmp( this->giveDomain()->giveEngngModel()->giveClassName(), "ResponseSpectrum" ) == 0 ) {
+        return zeros< 6 >();
+    }
+
     if ( gp->giveIntegrationRule() == NULL ) {
         ///@todo Hack for loose gausspoints. We shouldn't ask for "gp->giveElement()". FIXME
         return zeros< 6 >();
