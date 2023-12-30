@@ -237,7 +237,7 @@ void
 Quad1PlateSubSoil :: computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep)
 // Returns the lumped mass matrix of the receiver.
 {
-  // OOFEM_ERROR("Mass matrix not provided");
+    answer.resize(4, 4);
 }
 
 
