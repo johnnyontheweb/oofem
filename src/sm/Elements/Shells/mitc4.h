@@ -100,6 +100,7 @@ private:
     //std::auto_ptr<FloatMatrix> NMatrix;
     std::vector<std::unique_ptr<FloatMatrix>> BMatrices;
     std::vector<std::unique_ptr<FloatMatrix>> LMatrices;
+    std::unique_ptr<FloatMatrix> FullGtoLRotationMatrix;
 
 public:
     MITC4Shell(int n, Domain *d);

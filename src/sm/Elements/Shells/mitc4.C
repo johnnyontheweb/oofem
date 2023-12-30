@@ -850,6 +850,10 @@ MITC4Shell::computeGtoLRotationMatrix(FloatMatrix &answer)
 // Returns the rotation matrix of the receiver of the size [24,24]
 // r(local) = T * r(global)
 // for one node (r written transposed): {u,v,w,alpha,beta} = T * {u,v,w,r1,r2,r3}
+    if (FullGtoLRotationMatrix) {
+        answer = *FullGtoLRotationMatrix;
+        return 1;
+    }
     auto LtoDir = this->computeLToDirectorRotationMatrix();
 
     answer.resize( 24, 24 );
@@ -870,6 +874,8 @@ MITC4Shell::computeGtoLRotationMatrix(FloatMatrix &answer)
     //        GtoLRotationMatrix.at( 3, i ) = e[2].at( i );
     //    }
     //}
+
+    FullGtoLRotationMatrix.reset(new FloatMatrix(answer));
 
     return 1;
 }
