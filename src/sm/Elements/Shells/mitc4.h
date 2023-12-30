@@ -50,6 +50,8 @@
 #define _IFT_MITC4Shell_FirstLocalAxis "lcs1"
 #define _IFT_MITC4Shell_macroElem "macroelem"
 
+#define Float3Tuple std::tuple<double, double, double>
+
 namespace oofem {
 class FEI2dQuadLin;
 #ifndef __CHARTENSOR
@@ -61,6 +63,28 @@ enum CharTensor {
     GlobalForceTensor,
 };
 #endif
+
+Float3Tuple MakeFloat3Tuple( const FloatArray &src )
+{
+    return std::make_tuple( src.at( 1 ), src.at( 2 ), src.at( 3 ) );
+}
+
+struct key_hash {
+    std::size_t operator()( const Float3Tuple &k ) const
+    {
+        std::size_t hashValue = 0;
+        hash_combine( hashValue, std::get<0>( k ) );
+        hash_combine( hashValue, std::get<1>( k ) );
+        hash_combine( hashValue, std::get<2>( k ) );
+        return hashValue;
+    }
+
+private:
+    void hash_combine( std::size_t &seed, const double &value ) const
+    {
+        seed ^= std::hash<double>{}( value ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+    }
+};
 
 /**
  * This class implements an quad element based on Mixed Interpolation of Tensorial Components (MITC).
@@ -100,6 +124,7 @@ private:
     //std::auto_ptr<FloatMatrix> NMatrix;
     std::vector<std::unique_ptr<FloatMatrix>> BMatrices;
     std::vector<std::unique_ptr<FloatMatrix>> LMatrices;
+    std::unordered_map<Float3Tuple, FloatArray, key_hash> GlobalCoords;
     std::unique_ptr<FloatMatrix> FullGtoLRotationMatrix;
 
 public:

@@ -1118,11 +1118,17 @@ MITC4Shell::computeLocalCoordinates(FloatArray &answer, const FloatArray &coords
 int
 MITC4Shell::computeGlobalCoordinates(FloatArray &answer, const FloatArray &lcoords)
 {
+    const Float3Tuple key = MakeFloat3Tuple( lcoords );
+    if (GlobalCoords.find(key) != GlobalCoords.end()) {
+        answer = GlobalCoords[key];
+        return true;
+    }
     FloatMatrix N;
     computeNmatrixAt( lcoords, N );
 
     answer.resize( 3 );
     for ( int _i = 1; _i <= 3; _i++ ) { answer.at( _i ) = N.at( _i, _i ) * this->giveNode( 1 )->giveCoordinate( _i ) + N.at( _i, _i + 6 ) * this->giveNode( 2 )->giveCoordinate( _i ) + N.at( _i, _i + 12 ) * this->giveNode( 3 )->giveCoordinate( _i ) + N.at( _i, _i + 18 ) * this->giveNode( 4 )->giveCoordinate( _i ); }
+    GlobalCoords[key] = answer;
     return true;
 }
 
