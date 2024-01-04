@@ -1593,3 +1593,10 @@ comp32/version.vcxproj.filters
 /comp64/src/sm/Materials/cmake_install.cmake
 /comp64/src/sm/Materials/sm_materials.vcxproj
 /comp64/src/sm/Materials/sm_materials.vcxproj.filters
+/comp32/src/sm/Materials/INSTALL.vcxproj
+/comp32/src/sm/Materials/INSTALL.vcxproj.filters
+/comp32/src/sm/Materials/PACKAGE.vcxproj
+/comp32/src/sm/Materials/PACKAGE.vcxproj.filters
+/comp32/src/sm/Materials/cmake_install.cmake
+/comp32/src/sm/Materials/sm_materials.vcxproj
+/comp32/src/sm/Materials/sm_materials.vcxproj.filters
