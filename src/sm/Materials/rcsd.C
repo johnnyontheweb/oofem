@@ -304,8 +304,8 @@ RCSDMaterial :: computeStrength(GaussPoint *gp, double charLength)
         // we reduce Ft and there is no softening but sudden drop
         Ft = sqrt(2. * Ee * Gf / charLength);
         //
-        OOFEM_LOG_RELEVANT("Reducing Ft to %f in element %d, gp %d, Le %f\n",
-                           Ft, gp->giveElement()->giveNumber(), gp->giveNumber(), charLength);
+        //OOFEM_LOG_RELEVANT("Reducing Ft to %f in element %d, gp %d, Le %f\n",
+        //                   Ft, gp->giveElement()->giveNumber(), gp->giveNumber(), charLength);
     }
 
     return Ft;
