@@ -59,7 +59,7 @@ LDLTFactorization :: solve(SparseMtrx &A, FloatArray &b, FloatArray &x)
 
     // solving
     A.factorized()->backSubstitutionWith(x);
-
+    if ( A.giveErrorFlag() ) return CR_FAILED;
     return CR_CONVERGED;
 }
 } // end namespace oofem
