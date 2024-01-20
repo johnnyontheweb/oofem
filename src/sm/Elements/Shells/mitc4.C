@@ -266,42 +266,19 @@ MITC4Shell::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
     sy /= ( 6 * b / a );
     sxy /= ( 2 );
 
-    Kgx.at( 1, 1 ) = 2;
-    Kgx.at( 2, 2 ) = 2;
-    Kgx.at( 3, 3 ) = 2;
-    Kgx.at( 4, 4 ) = 2;
-    Kgx.at( 1, 2 ) = -2;
-    Kgx.at( 1, 3 ) = -1;
-    Kgx.at( 1, 4 ) = 1;
-    Kgx.at( 2, 3 ) = 1;
-    Kgx.at( 2, 4 ) = -1;
-    Kgx.at( 3, 4 ) = -2;
+    Kgx.at(1, 1) = 2; Kgx.at(2, 2) = 2; Kgx.at(3, 3) = 2; Kgx.at(4, 4) = 2;
+    Kgx.at(1, 2) = -2; Kgx.at(1, 3) = -1; Kgx.at(1, 4) = 1;
+    Kgx.at(2, 3) = 1; Kgx.at(2, 4) = -1; Kgx.at(3, 4) = -2;
 
-    Kgy.at( 1, 1 ) = 2;
-    Kgy.at( 2, 2 ) = 2;
-    Kgy.at( 3, 3 ) = 2;
-    Kgy.at( 4, 4 ) = 2;
-    Kgy.at( 1, 2 ) = 1;
-    Kgy.at( 1, 3 ) = -1;
-    Kgy.at( 1, 4 ) = -2;
-    Kgy.at( 2, 3 ) = -2;
-    Kgy.at( 2, 4 ) = -1;
-    Kgy.at( 3, 4 ) = 1;
+    Kgy.at(1, 1) = 2; Kgy.at(2, 2) = 2; Kgy.at(3, 3) = 2; Kgy.at(4, 4) = 2;
+    Kgy.at(1, 2) = 1; Kgy.at(1, 3) = -1; Kgy.at(1, 4) = -2;
+    Kgy.at(2, 3) = -2; Kgy.at(2, 4) = -1; Kgy.at(3, 4) = 1;
 
-    Kgxy.at( 1, 1 ) = 1;
-    Kgxy.at( 2, 2 ) = -1;
-    Kgxy.at( 3, 3 ) = 1;
-    Kgxy.at( 4, 4 ) = -1;
-    Kgxy.at( 1, 2 ) = 0;
-    Kgxy.at( 1, 3 ) = -1;
-    Kgxy.at( 1, 4 ) = 0;
-    Kgxy.at( 2, 3 ) = 0;
-    Kgxy.at( 2, 4 ) = 1;
-    Kgxy.at( 3, 4 ) = 0;
+    Kgxy.at(1, 1) = 1; Kgxy.at(2, 2) = -1; Kgxy.at(3, 3) = 1; Kgxy.at(4, 4) = -1;
+    Kgxy.at(1, 2) = 0; Kgxy.at(1, 3) = -1; Kgxy.at(1, 4) = 0;
+    Kgxy.at(2, 3) = 0; Kgxy.at(2, 4) = 1; Kgxy.at(3, 4) = 0;
 
-    Kgx.symmetrized();
-    Kgy.symmetrized();
-    Kgxy.symmetrized();
+    Kgx.symmetrized(); Kgy.symmetrized(); Kgxy.symmetrized();
 
     // assemble them
     Kgx.times( sx );
@@ -309,12 +286,6 @@ MITC4Shell::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
     Kgx.add( sxy, Kgxy );
     // once for local z
     answer.assemble( Kgx, asmz );
-
-    //if ( drillType ) {
-    //    IntArray drillDofs  = { 6, 12, 18, 24 };
-    //    auto drillStiffness = eye<4>() * 0.001;
-    //    answer.assemble( drillStiffness, drillDofs );
-    //}
     // done
 }
 
@@ -494,32 +465,30 @@ MITC4Shell::computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, T
 
     // bool drillType = this->giveStructuralCrossSection()->give( CS_DrillingType, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint( 0 ) );
     if ( drillType ) {
-        double relDrillCoeff = this->giveStructuralCrossSection()->give(CS_RelDrillingStiffness, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint(0) );
-        if ( relDrillCoeff == 0.0 ) {
-            relDrillCoeff = 0.001; // default
-        }
+        // double relDrillCoeff = this->giveStructuralCrossSection()->give(CS_RelDrillingStiffness, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint(0) );
+        //if ( relDrillCoeff == 0.0 ) {
+        //    relDrillCoeff = 0.001; // default
+        //}
 
         int j = 1;
-        while ( answer.at( j, j ) == 0 ) { j++; }
-        drillCoeff = answer.at( j, j );
-        // find the smallest non-zero number on the diagonal
-        for ( int i = j; i <= 24; i++ ) { if ( drillCoeff > answer.at( i, i ) && answer.at( i, i ) != 0 ) { drillCoeff = answer.at( i, i ); } }
+        //while ( answer.at( j, j ) == 0 ) { j++; }
+        //drillCoeff = answer.at( j, j );
+        //// find the smallest non-zero number on the diagonal
+        //for ( int i = j; i <= 24; i++ ) { if ( drillCoeff > answer.at( i, i ) && answer.at( i, i ) != 0 ) { drillCoeff = answer.at( i, i ); } }
 
-        drillCoeff *= relDrillCoeff;
+        //drillCoeff *= relDrillCoeff;
+        drillCoeff = this->giveStructuralCrossSection()->give( CS_DrillingStiffness, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint( 0 ) );
 
-        IntArray drillDofs = { 6, 12, 18, 24 };
         auto drillStiffness = eye<4>() * drillCoeff;
-#if 0
+        //#if 0
         // NF mod - use drilling from section input
         FloatArray n;
         //FloatMatrix drillStiffness;
         for ( auto &gp : *integrationRulesArray [ 0 ] ) {
             double dV = this->computeVolumeAround(gp);
-            // double drillCoeff = this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp);
-            // double coeff = drillCoeff;
-            if ( this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp) > 0 ) {
-                drillCoeff *= this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp);
-            }
+            //if ( this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp) > 0 ) {
+            //    drillCoeff *= this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp);
+            //}
             // Drilling stiffness is here for improved numerical properties
             this->interp_lin.evalN( n, gp->giveNaturalCoordinates(), FEIVoidCellGeometry() );
             for ( int j = 0; j < 4; j++ ) {
@@ -528,8 +497,8 @@ MITC4Shell::computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, T
             drillStiffness.plusDyadSymmUpper( n, drillCoeff * dV );
         }
         drillStiffness.symmetrized();
-#endif
-        answer.assemble( drillStiffness, drillDofs );
+        //#endif
+        answer.assemble( drillStiffness, this->drillOrdering );
     }
 }
 
@@ -544,11 +513,8 @@ MITC4Shell::giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int us
     if ( drillType == 1 ) {
         FloatArray n, tmp;
         FloatArray drillUnknowns, drillMoment;
-        IntArray drillDofs = {
-            6, 12, 18, 24
-        };
         this->computeVectorOf( VM_Total, tStep, tmp );
-        drillUnknowns.beSubArrayOf( tmp, drillDofs );
+        drillUnknowns.beSubArrayOf( tmp, drillOrdering );
 
 #if 0
         for ( auto &gp : *integrationRulesArray [ 0 ] ) {
@@ -575,7 +541,7 @@ MITC4Shell::giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int us
 
         drillMoment.beProductOf( drillStiffness, drillUnknowns );
 
-        answer.assemble( drillMoment, drillDofs );
+        answer.assemble( drillMoment, drillOrdering );
     }
 }
 

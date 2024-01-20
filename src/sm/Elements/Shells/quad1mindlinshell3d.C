@@ -331,9 +331,9 @@ Quad1MindlinShell3D::computeInitialStressMatrix(FloatMatrix &answer, TimeStep *t
     FloatArray str, str2;
     //this->giveCharacteristicVector(str, InternalForcesVector, VM_Total, tStep);
     for (GaussPoint *gp : *this->giveDefaultIntegrationRulePtr()) {
-	this->giveIPValue(str2, gp, IST_ShellForceTensor, tStep);
-	str2.times(gp->giveWeight());
-	str.add(str2);
+	    this->giveIPValue(str2, gp, IST_ShellForceTensor, tStep);
+	    str2.times(gp->giveWeight());
+	    str.add(str2);
     }
     // str.times(2.0); // the weights add up to 0.5 for a tria
     // this needs to be transformed to local
