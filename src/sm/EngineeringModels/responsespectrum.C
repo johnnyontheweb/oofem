@@ -290,6 +290,7 @@ void ResponseSpectrum::solveYourself()
     // cut off, but output at least one
     int nValid = 1;
     for ( int i = 1; i < eigVal.giveSize(); ++i ) {
+        eigVal( i ) = abs( eigVal( i ) ); // force positive results even for ill-conditioned matrices
         if ( eigVal( i ) > 1e10 && i > 0 ) {
             nValid = i;
             break;

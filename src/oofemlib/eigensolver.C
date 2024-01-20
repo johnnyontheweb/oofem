@@ -120,7 +120,7 @@ EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatri
 	_eigv.resize(nroot); _eigv.zero(); // return zero if not converged for all
 
 	for (int i=0;i<evalues.size();++i)
-		_eigv.at(i+1)=1/abs(evalues.coeff(i).real()); // force positive results even for ill-conditioned matrices
+		_eigv.at(i+1)=1/(evalues.coeff(i).real());
 
 	Eigen::MatrixXcd evectors = eigs.eigenvectors();
 	_r.resize(evectors.rows(), evectors.cols());

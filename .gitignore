@@ -1600,3 +1600,11 @@ comp32/version.vcxproj.filters
 /comp32/src/sm/Materials/cmake_install.cmake
 /comp32/src/sm/Materials/sm_materials.vcxproj
 /comp32/src/sm/Materials/sm_materials.vcxproj.filters
+/2019_cloud/src/sm/Materials/INSTALL.vcxproj
+/2019_cloud/src/sm/Materials/INSTALL.vcxproj.filters
+/2019_cloud/src/sm/Materials/PACKAGE.vcxproj
+/2019_cloud/src/sm/Materials/PACKAGE.vcxproj.filters
+/2019_cloud/src/sm/Materials/cmake_install.cmake
+/2019_cloud/src/sm/Materials/sm_materials.vcxproj
+/2019_cloud/src/sm/Materials/sm_materials.vcxproj.filters
+2019_cloud/oofem_version.h
