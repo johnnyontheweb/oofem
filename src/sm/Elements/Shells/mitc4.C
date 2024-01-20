@@ -218,7 +218,7 @@ MITC4Shell::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
         str2.times( gp->giveWeight() );
         str.add( str2 );
     }
-    // str.times(2.0); // the weights add up to 0.5 for a tria
+    str.times(1 / 8.0); // the weights add up to 8 for a mitc4 quad
     // this needs to be transformed to local
     FloatMatrix strmat{ 3, 3 };
     strmat.at( 1, 1 ) = str.at( 1 );
