@@ -508,9 +508,7 @@ MITC4Shell::giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int us
     // This element adds an additional stiffness for the so called drilling dofs.
     StructuralElement::giveInternalForcesVector(answer, tStep, useUpdatedGpRecord);
 
-    //bool drillType = this->giveStructuralCrossSection()->give( CS_DrillingType, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint( 0 ) );
-    bool drillType = true; // NF mod - drilling always accounted in
-    if ( drillType == 1 ) {
+    if ( drillType ) {
         FloatArray n, tmp;
         FloatArray drillUnknowns, drillMoment;
         this->computeVectorOf( VM_Total, tStep, tmp );

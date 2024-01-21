@@ -389,6 +389,43 @@ TR_SHELL03 :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType 
     }
 }
 
+void TR_SHELL03::computeStiffnessMatrix( FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep )
+{
+    // This element adds an additional stiffness for the so called drilling dofs.
+    StructuralElement::computeStiffnessMatrix( answer, rMode, tStep );
+
+    // bool drillType = this->giveStructuralCrossSection()->give( CS_DrillingType, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint( 0 ) );
+    if ( drillType ) {
+        double drillCoeff = this->giveStructuralCrossSection()->give( CS_DrillingStiffness, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint( 0 ) );
+        auto drillStiffness = eye<3>() * drillCoeff;
+        answer.assemble( drillStiffness, this->drillOrdering );
+    }
+}
+
+void TR_SHELL03::giveInternalForcesVector( FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord )
+{
+    // This element adds an additional stiffness for the so called drilling dofs.
+    StructuralElement::giveInternalForcesVector( answer, tStep, useUpdatedGpRecord );
+
+    if ( drillType == 1 ) {
+        FloatArray n, tmp;
+        FloatArray drillUnknowns, drillMoment;
+        this->computeVectorOf( VM_Total, tStep, tmp );
+        drillUnknowns.beSubArrayOf( tmp, drillOrdering );
+
+        double drillCoeff = this->giveStructuralCrossSection()->give( CS_DrillingStiffness, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint( 0 ) );
+        FloatMatrix drillStiffness;
+        drillStiffness.resize( 3, 3 );
+        drillStiffness.zero();
+        for ( int i = 1; i <= 3; i++ ) {
+            drillStiffness.at( i, i ) = drillCoeff;
+        }
+
+        drillMoment.beProductOf( drillStiffness, drillUnknowns );
+
+        answer.assemble( drillMoment, drillOrdering );
+    }
+}
 
 void
 TR_SHELL03 :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,
