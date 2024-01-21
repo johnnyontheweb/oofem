@@ -330,12 +330,13 @@ Quad1MindlinShell3D::computeInitialStressMatrix(FloatMatrix &answer, TimeStep *t
     // stress vector
     FloatArray str, str2;
     //this->giveCharacteristicVector(str, InternalForcesVector, VM_Total, tStep);
+    double wsum = 0;
     for (GaussPoint *gp : *this->giveDefaultIntegrationRulePtr()) {
 	    this->giveIPValue(str2, gp, IST_ShellForceTensor, tStep);
-	    str2.times(gp->giveWeight());
+        str2.times( gp->giveWeight() ); wsum += gp->giveWeight();
 	    str.add(str2);
     }
-    str.times(1 / 4.0); // the weights add up to 4 for a quad
+    str.times(1.0/wsum); // the weights sum up to 4 for a quad
     // this needs to be transformed to local
     FloatMatrix strmat{ 3, 3 };
     strmat.at(1, 1) = str.at(1); strmat.at(2, 2) = str.at(2); strmat.at(3, 3) = str.at(3);

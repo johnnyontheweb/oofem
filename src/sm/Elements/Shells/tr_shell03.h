@@ -76,7 +76,7 @@ protected:
 
     static IntArray loc_plate;
     static IntArray loc_membrane;
-    bool drillType = true; // NF mod - drilling always accounted in
+    bool drillType = false; // NF mod - drilling not accounted in for tria
     IntArray drillOrdering = { 6, 12, 18 };
     // 1st local axis
     FloatArray la1;
@@ -167,12 +167,12 @@ protected:
 	int computeLoadLEToLRotationMatrix(FloatMatrix &answer, int iEdge, GaussPoint *gp) override;
 
 public:
-    void computeStiffnessMatrix( FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep ) override;
-    //{ OOFEM_ERROR("calling of this function is not allowed"); }
+    void computeStiffnessMatrix( FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep ) override
+    { OOFEM_ERROR("calling of this function is not allowed"); }
     void computeMassMatrix(FloatMatrix &answer, TimeStep *tStep) override
     { OOFEM_ERROR("calling of this function is not allowed"); }
-    void giveInternalForcesVector( FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord ) override;
-    //{ OOFEM_ERROR("calling of this function is not allowed"); }
+    void giveInternalForcesVector( FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord ) override
+    { OOFEM_ERROR("calling of this function is not allowed"); }
 	void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep) override;
 
 private:

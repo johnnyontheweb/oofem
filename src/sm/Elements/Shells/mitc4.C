@@ -213,12 +213,13 @@ MITC4Shell::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
     // stress vector
     FloatArray str, str2;
     //this->giveCharacteristicVector(str, InternalForcesVector, VM_Total, tStep);
+    double wsum = 0;
     for ( GaussPoint *gp : *this->giveDefaultIntegrationRulePtr() ) {
         this->giveIPValue( str2, gp, IST_ShellForceTensor, tStep );
-        str2.times( gp->giveWeight() );
+        str2.times( gp->giveWeight() ); wsum += gp->giveWeight();
         str.add( str2 );
     }
-    str.times(1 / 8.0); // the weights add up to 8 for a mitc4 quad
+    str.times(1.0 / wsum); // the weights sum up to 8 for a mitc4 quad
     // this needs to be transformed to local
     FloatMatrix strmat{ 3, 3 };
     strmat.at( 1, 1 ) = str.at( 1 );
@@ -479,10 +480,11 @@ MITC4Shell::computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, T
         //drillCoeff *= relDrillCoeff;
         drillCoeff = this->giveStructuralCrossSection()->give( CS_DrillingStiffness, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint( 0 ) );
 
-        auto drillStiffness = eye<4>() * drillCoeff;
-        //#if 0
+        auto drillStiffness = eye<4>() * drillCoeff; 
+#if 0
         // NF mod - use drilling from section input
         FloatArray n;
+        drillStiffness=zero<4,4>();
         //FloatMatrix drillStiffness;
         for ( auto &gp : *integrationRulesArray [ 0 ] ) {
             double dV = this->computeVolumeAround(gp);
@@ -497,7 +499,7 @@ MITC4Shell::computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, T
             drillStiffness.plusDyadSymmUpper( n, drillCoeff * dV );
         }
         drillStiffness.symmetrized();
-        //#endif
+#endif
         answer.assemble( drillStiffness, this->drillOrdering );
     }
 }
