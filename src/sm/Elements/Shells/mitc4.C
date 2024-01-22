@@ -211,7 +211,7 @@ MITC4Shell::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
     IntArray asmz{ 3, 9, 15, 21 }; // local z
 
     // stress vector
-    FloatArray str, str2;
+    FloatArray str, str2, strain;
     //this->giveCharacteristicVector(str, InternalForcesVector, VM_Total, tStep);
     double wsum = 0;
     for ( GaussPoint *gp : *this->giveDefaultIntegrationRulePtr() ) {
@@ -229,8 +229,6 @@ MITC4Shell::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
     strmat.at( 1, 3 ) = str.at( 5 );
     strmat.at( 2, 3 ) = str.at( 4 );
     strmat.symmetrized();
-    //FloatMatrix rot;
-    //this->computeGtoLRotationMatrix(rot);
     strmat.rotatedWith( GtoLRotationMatrix, 't' ); // back to local
 
     // if above are local and Forces by unit length
@@ -894,7 +892,7 @@ MITC4Shell::giveCharacteristicTensor(CharTensor type, GaussPoint *gp, TimeStep *
     if ( type == GlobalForceTensor ) {
         FloatArray localStress, localStrain;
         this->computeStrainVector( localStrain, gp, tStep );
-        this->computeThermalStrainVector( localStrain, gp, tStep );
+        // this->computeThermalStrainVector( localStrain, gp, tStep );
         this->computeStressVector( localStress, localStrain, gp, tStep );
         auto stress = mat->transformStressVectorTo( GtoLRotationMatrix, localStress, false );
         return from_voigt_stress( stress );
@@ -976,7 +974,7 @@ MITC4Shell::giveMidplaneIPValue(int gpXY, InternalStateType type, TimeStep *tSte
 
             FloatArray localStress, localStrain;
             this->computeStrainVector( localStrain, gp, tStep );
-            this->computeThermalStrainVector( localStrain, gp, tStep );
+            //this->computeThermalStrainVector( localStrain, gp, tStep );
             this->computeStressVector( localStress, localStrain, gp, tStep );
             mLocal += w * FloatArrayF< 6 >(localStress);
         }
