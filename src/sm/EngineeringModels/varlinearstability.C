@@ -241,8 +241,8 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
     // -----------------------------------------------------------------
     // create the actual initial stiffness matrix using only time = 1
     TimeStep tStep1( *tStep );
-    tStep1.setNumber( 1 ); // constant loading a t=0
-    tStep1.setTime( 1.0 );
+    tStep1.setNumber( 1 );
+    tStep1.setTime( 1.0 ); // constant loading a t=1
     TimeStep *tStep1Ptr = &tStep1;
 
     //  Internal forces first, negated;

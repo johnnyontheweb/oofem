@@ -211,7 +211,7 @@ MITC4Shell::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
     IntArray asmz{ 3, 9, 15, 21 }; // local z
 
     // stress vector
-    FloatArray str, str2, strain;
+    FloatArray str, str2;
     //this->giveCharacteristicVector(str, InternalForcesVector, VM_Total, tStep);
     double wsum = 0;
     for ( GaussPoint *gp : *this->giveDefaultIntegrationRulePtr() ) {
@@ -221,6 +221,7 @@ MITC4Shell::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
     }
     str.times(1.0 / wsum); // the weights sum up to 8 for a mitc4 quad
     // this needs to be transformed to local
+    // FloatArrayF<6> str1 = StructuralMaterial::transformStressVectorTo( GtoLRotationMatrix, str, false); // back to local
     FloatMatrix strmat{ 3, 3 };
     strmat.at( 1, 1 ) = str.at( 1 );
     strmat.at( 2, 2 ) = str.at( 2 );
