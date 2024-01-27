@@ -293,11 +293,13 @@ TR_SHELL03::computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
 	y23 = n2.at(2) - n3.at(2);
 
 	Kgx.at(1, 1) = y23*y23; Kgx.at(2, 2) = y13*y13; Kgx.at(3, 3) = y12*y12;
-	Kgx.at(1, 2) = -y23*y13; Kgx.at(1, 3) = y23*y12; Kgx.at(2, 3) = -y13*y12;
+	Kgx.at(1, 2) = y23*-y13; Kgx.at(1, 3) = y23*y12; Kgx.at(2, 3) = -y13*y12;
+
 	Kgy.at(1, 1) = x23*x23; Kgy.at(2, 2) = x13*x13; Kgy.at(3, 3) = x12*x12;
-	Kgy.at(1, 2) = -y23*y13; Kgy.at(1, 3) = y23*y12; Kgy.at(2, 3) = -y13*y12;
-	Kgxy.at(1, 1) = -2 * y23*x23; Kgxy.at(2,2) = -2 * y13*x13; Kgxy.at(3,3) = -2 * y12*x12;
-	Kgxy.at(1, 2) = y23*x13 + x23*y13; Kgxy.at(1, 3) = -y23*x12 - x23*y12; Kgxy.at(2,3) = y13*x12+x13*y12;
+	Kgy.at(1, 2) = -x23*x13; Kgy.at(1, 3) = x23*x12; Kgy.at(2, 3) = x13*-x12;
+
+	Kgxy.at(1, 1) = 2 * y23*-x23; Kgxy.at(2,2) = 2 * -y13*x13; Kgxy.at(3,3) = 2 * y12*-x12;
+	Kgxy.at(1, 2) = y23*x13 + x23*y13; Kgxy.at(1, 3) = y23*-x12 + -x23*y12; Kgxy.at(2,3) = y13*x12+x13*y12;
 
 	Kgx.symmetrized(); Kgy.symmetrized(); Kgxy.symmetrized();
 
