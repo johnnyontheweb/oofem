@@ -76,9 +76,9 @@ LumpedMassElement :: initializeFrom(InputRecord &ir)
     IR_GIVE_FIELD(ir, components, _IFT_LumpedMassElement_components);
     IR_GIVE_OPTIONAL_FIELD( ir, dofs, _IFT_LumpedMassElement_dofs );
     if ( dofs.isEmpty() ) {
-        dofs.resize( components.giveSize() );
-        // assume 6 dofs
-        for ( int i = 1; i <= 6; i++ )
+        int Ndofs = components.giveSize();
+        dofs.resize( Ndofs );
+        for ( int i = 1; i <= Ndofs; i++ )
             dofs.at( i ) = i;
     }
 }

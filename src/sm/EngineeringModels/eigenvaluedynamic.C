@@ -85,8 +85,8 @@ public:
     int giveDofEquationNumber( Dof *dof ) const override
     {
         int num          = dof->giveDofManager()->giveNumber();
-        const auto dType = dof->giveDofType();
-        return dofs.at( num ).at( dType );
+        const auto dType = dof->giveDofType(); // starts from 0
+        return dofs.at( num )( dType );
     }
 };
 
