@@ -190,7 +190,7 @@ InverseIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &eigv, FloatM
     }
 
     if ( it < nitem ) {
-	fprintf(outStream, "InverseIteration :: convergence reached in %d iterations\n", it);
+	    fprintf(outStream, "InverseIteration :: convergence reached in %d iterations\n", it);
     } else {
         OOFEM_WARNING("convergence not reached after %d iterations\n", it);
         return CR_DIVERGED_ITS;

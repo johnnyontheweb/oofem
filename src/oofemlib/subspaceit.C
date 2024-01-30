@@ -363,6 +363,7 @@ SubspaceIteration :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, Floa
         }
 
         OOFEM_LOG_INFO("SubspaceIteration :: solveYourselfAt: Convergence reached for RTOL=%20.15f\n", rtol);
+        fprintf( outStream, "SubspaceIteration :: convergence reached\n" );
         status = CR_CONVERGED;
         break;
 label400:
