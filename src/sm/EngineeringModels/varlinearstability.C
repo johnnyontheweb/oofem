@@ -126,8 +126,8 @@ VarLinearStability :: initializeFrom(InputRecord &ir)
     linStype = LinSystSolverType::ST_Direct;
 
     if (solverType == GenEigvalSolverType::GES_Eigen){
-	sparseMtrxType = SparseMtrxType::SMT_EigenSparse; // linStype = ST_Spooles;
-	linStype = LinSystSolverType::ST_EigenLib;
+	    sparseMtrxType = SparseMtrxType::SMT_EigenSparse; // linStype = ST_Spooles;
+	    linStype = LinSystSolverType::ST_EigenLib;
     }
 
     nMetaSteps = 0;

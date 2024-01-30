@@ -105,10 +105,18 @@ EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatri
 	//// calculate the two smallest eigenvalues
 	//arpack.compute(*A, *B, nroot, "SM");
 
-	Spectra::SparseCholesky<double> op(A->giveEigenMatrix());
 	Spectra::SparseSymMatProd<double> opB(B->giveEigenMatrix());
+#if 1
+	// cholesky
+	Spectra::SparseCholesky<double> op(A->giveEigenMatrix());
 	// Construct eigen solver object, requesting the largest three eigenvalues
 	Spectra::SymGEigsSolver< double, Spectra::LARGEST_MAGN, Spectra::SparseSymMatProd<double>, Spectra::SparseCholesky<double>, Spectra::GEIGS_CHOLESKY  > eigs(&opB, &op, nroot, min(2 * nroot, a.giveNumberOfColumns()));
+#else
+	// with regular inverse
+    Spectra::SparseRegularInverse<double> op( A->giveEigenMatrix() );
+    // Construct eigen solver object, requesting the largest three eigenvalues
+    Spectra::SymGEigsSolver<double, Spectra::LARGEST_MAGN, Spectra::SparseSymMatProd<double>, Spectra::SparseRegularInverse<double>, Spectra::GEIGS_REGULAR_INVERSE> eigs( &opB, &op, nroot, min( 2 * nroot, a.giveNumberOfColumns() ) );
+#endif
 	// Initialize and compute
 	eigs.init();
 	int nconv = eigs.compute(1000, rtol);
