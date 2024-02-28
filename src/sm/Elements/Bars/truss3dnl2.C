@@ -62,7 +62,8 @@ Truss3dnl2 :: initializeFrom(InputRecord &ir)
   Truss3d :: initializeFrom(ir);
   X = this-> giveCellGeometryWrapper()->giveVertexCoordinates( 1 );
   X.append(this-> giveCellGeometryWrapper()->giveVertexCoordinates( 2 ));
-  L = this->computeLength();
+  L = this->computeLength();    
+  numberOfGaussPoints = 1;
 }
 
   

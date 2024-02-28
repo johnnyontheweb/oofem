@@ -59,7 +59,8 @@ void
 Truss3dnl :: initializeFrom(InputRecord &ir)
 {
   Truss3d :: initializeFrom(ir);
-  initialStretch = 1;
+    initialStretch      = 1;
+    numberOfGaussPoints = 1;
   IR_GIVE_OPTIONAL_FIELD(ir, initialStretch, _IFT_Truss3dnl_initialStretch);
 }
 
