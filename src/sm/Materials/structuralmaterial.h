@@ -129,7 +129,7 @@ protected:
     /// absolute stress tolerance for stress control
     double SCAbsTol = 1.e-12;
     /// maximum iterations for stress-control
-    int SCMaxiter = 100000;
+    int SCMaxiter = 1000;
 
 public:
     /// Voigt index map

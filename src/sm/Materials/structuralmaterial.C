@@ -243,8 +243,8 @@ StructuralMaterial::giveRealStressVector_ShellStressControl(const FloatArray &st
         //vE.printYourself("vE");
     }
 
-    OOFEM_WARNING("Iteration did not converge");
-    return FloatArray();
+    //OOFEM_WARNING("Iteration did not converge");
+    return this->giveRealStressVector_3d( vE, gp, tStep );
 }
 
 
