@@ -39,6 +39,7 @@
 #include "zznodalrecoverymodel.h"
 #include "sprnodalrecoverymodel.h"
 #include "nodalaveragingrecoverymodel.h"
+#include "sm/CrossSections/layeredcrosssection.h" 
 
 ///@name Input fields for Quad1MindlinShell3D element
 //@{
@@ -70,7 +71,9 @@ class FEI2dQuadLin;
  */
 class Quad1MindlinShell3D : public StructuralElement,
 public ZZNodalRecoveryModelInterface,
-public SPRNodalRecoveryModelInterface, public NodalAveragingRecoveryModelInterface
+                            public SPRNodalRecoveryModelInterface,
+                            public NodalAveragingRecoveryModelInterface, 
+                            public LayeredCrossSectionInterface
 {
 protected:
     /// Cached nodal coordinates in local c.s.,
@@ -129,6 +132,10 @@ public:
     int SPRNodalRecoveryMI_giveNumberOfIP() override { return this->numberOfGaussPoints; }
     SPRPatchType SPRNodalRecoveryMI_givePatchType() override{ return SPRPatchType_2dxy; }
     void NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node, InternalStateType type, TimeStep *tStep) override;
+
+  // layered cross section support functions
+    void computeStrainVectorInLayer( FloatArray &answer, const FloatArray &masterGpStrain,
+        GaussPoint *masterGp, GaussPoint *slaveGp, TimeStep *tStep ) override;
 
 protected:
     void computeGaussPoints() override;

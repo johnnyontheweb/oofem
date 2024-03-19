@@ -1216,7 +1216,7 @@ LayeredCrossSection::initializeFrom(InputRecord &ir)
     interfacerMaterials.zero();
     IR_GIVE_OPTIONAL_FIELD(ir, interfacerMaterials, _IFT_LayeredCrossSection_interfacematerials);
 
-    numberOfIntegrationPoints = 1;
+    numberOfIntegrationPoints = 2;
     IR_GIVE_OPTIONAL_FIELD(ir, numberOfIntegrationPoints, _IFT_LayeredCrossSection_nintegrationpoints);
     this->layerIntegrationPoints.resize(numberOfLayers);
     for ( int i = 1; i <= numberOfLayers; i++ ) {

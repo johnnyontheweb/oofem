@@ -571,8 +571,8 @@ Quad1MindlinShell3D :: initializeFrom(InputRecord &ir)
     // optional record for 1st local axes
     la1.resize(3);
     la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
-    //IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_TR_Quad1MindlinShell3D_FirstLocalAxis);
-    this->la1 = ir.hasField(_IFT_TR_Quad1MindlinShell3D_FirstLocalAxis);
+    IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_TR_Quad1MindlinShell3D_FirstLocalAxis);
+    //this->la1 = ir.hasField(_IFT_TR_Quad1MindlinShell3D_FirstLocalAxis);
 }
 
 
@@ -777,10 +777,38 @@ Quad1MindlinShell3D :: computeGtoLRotationMatrix(FloatMatrix &answer)
     return true;
 }
 
+//
+// layered cross section support functions
+//
+void Quad1MindlinShell3D ::computeStrainVectorInLayer( FloatArray &answer, const FloatArray &masterGpStrain,
+    GaussPoint *masterGp, GaussPoint *slaveGp, TimeStep *tStep )
+// returns full 3d strain vector of given layer (whose z-coordinate from center-line is
+// stored in slaveGp) for given tStep
+// // strainVectorShell {eps_x,eps_y,gamma_xy, kappa_x, kappa_y, kappa_xy, gamma_zx, gamma_zy, gamma_rot}
+{
+    double layerZeta, layerZCoord, top, bottom;
+
+    top         = this->giveCrossSection()->give( CS_TopZCoord, masterGp );
+    bottom      = this->giveCrossSection()->give( CS_BottomZCoord, masterGp );
+    layerZeta   = slaveGp->giveNaturalCoordinate( 3 );
+    layerZCoord = 0.5 * ( ( 1. - layerZeta ) * bottom + ( 1. + layerZeta ) * top );
+
+    answer.resize( 5 ); // {Exx,Eyy,GMyz,GMzx,GMxy}
+
+    answer.at( 1 ) = masterGpStrain.at( 1 ) + masterGpStrain.at( 4 ) * layerZCoord;
+    answer.at( 2 ) = masterGpStrain.at( 2 ) + masterGpStrain.at( 5 ) * layerZCoord;
+    answer.at( 5 ) = masterGpStrain.at( 3 ) + masterGpStrain.at( 6 ) * layerZCoord;
+    answer.at( 3 ) = masterGpStrain.at( 8 );
+    answer.at( 4 ) = masterGpStrain.at( 7 );
+}
+
+
 Interface *
 Quad1MindlinShell3D :: giveInterface(InterfaceType interface)
 {
-    if ( interface == ZZNodalRecoveryModelInterfaceType ) {
+    if ( interface == LayeredCrossSectionInterfaceType ) {
+        return static_cast<LayeredCrossSectionInterface *>( this );
+    } else if ( interface == ZZNodalRecoveryModelInterfaceType ) {
         return static_cast< ZZNodalRecoveryModelInterface * >(this);
     } else if ( interface == SPRNodalRecoveryModelInterfaceType ) {
         return static_cast< SPRNodalRecoveryModelInterface * >(this);

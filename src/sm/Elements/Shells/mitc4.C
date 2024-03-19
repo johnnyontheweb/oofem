@@ -549,7 +549,7 @@ MITC4Shell::computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int ui
 // Returns the [6x20] strain-displacement matrix {B} of the receiver,
 // evaluated at gp.
 {
-    if ( BMatrices.at( gp->giveNumber() - 1 ) ) {
+    if ( BMatrices.size() > gp->giveNumber() - 1 && BMatrices.at( gp->giveNumber() - 1 ) ) {
         answer = *BMatrices.at( gp->giveNumber() - 1 );
         return;
     }
@@ -698,7 +698,9 @@ MITC4Shell::computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int ui
     answer.at( 6, 20 ) = hkx.at( 4 );
     answer.at( 6, 22 ) = -r3 / 2. * a4 * ( hkx.at( 4 ) * V24.at( 2 ) + hky.at( 4 ) * V24.at( 1 ) );
     answer.at( 6, 23 ) = r3 / 2. * a4 * ( hky.at( 4 ) * V14.at( 1 ) + hky.at( 4 ) * V14.at( 2 ) );
-
+    if ( BMatrices.size() < gp->giveNumber() ) {
+        BMatrices.resize( gp->giveNumber() );
+    }
     BMatrices.at( gp->giveNumber() - 1 ).reset( new FloatMatrix( answer ) );
 }
 
