@@ -517,7 +517,7 @@ NonLinearStatic :: proceedStep(int di, TimeStep *tStep)
         this->assembleIncrementalReferenceLoadVectors(incrementalLoadVector, incrementalLoadVectorOfPrescribed,
                                                       refLoadInputMode, this->giveDomain(di), tStep);
 
-        loadInitFlag = 0;
+        if ( incrementalLoadVector.computeNorm() >0.0 ) loadInitFlag = 0;
     }
 
     if ( tStep->giveNumber() == 1 ) {
