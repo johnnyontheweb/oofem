@@ -1608,3 +1608,5 @@ comp32/version.vcxproj.filters
 /2019_cloud/src/sm/Materials/sm_materials.vcxproj
 /2019_cloud/src/sm/Materials/sm_materials.vcxproj.filters
 2019_cloud/oofem_version.h
+comp32/build_x86.cmd
+comp32/vswhere.exe

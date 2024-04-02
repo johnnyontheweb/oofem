@@ -207,10 +207,10 @@ Interface *AbaqusUserElement1d :: giveInterface(InterfaceType it)
 void AbaqusUserElement1d :: giveDofManDofIDMask(int inode, IntArray &answer) const
 {
 	if (this->mode == 0) {
-		answer = { D_u, D_v, D_w };
+        answer = { D_u };         //, D_v, D_w
 	}
 	else if (this->mode == 1) {
-		answer = { R_u, R_v, R_w };
+        answer = { R_u };             //, R_v, R_w
 	}
 }
 

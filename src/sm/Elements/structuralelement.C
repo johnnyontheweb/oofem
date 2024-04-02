@@ -468,7 +468,7 @@ StructuralElement :: computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tSte
         summ += answer.at(k, k);
     }
 
-    answer.times(dim * mass / summ);
+    if ( summ != 0) answer.times( dim * mass / summ );
 }
 
 
