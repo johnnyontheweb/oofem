@@ -111,7 +111,7 @@ private:
     FloatMatrix amatrx, tempAmatrx;
 
     /// ndofel
-    int ndofel = 0;
+    int ndofel = 12; // 6d spring
 
     /// mcrd
     int mcrd = 0;

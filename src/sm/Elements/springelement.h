@@ -91,7 +91,10 @@ public:
     { computeLumpedMassMatrix(answer, tStep); }
     void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep) override;
     void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep) override
-    { answer.clear(); }
+    {
+        answer.resize( numberOfDofMans, numberOfDofMans );
+        answer.zero();
+    }
 
     void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord = 0) override;
 
