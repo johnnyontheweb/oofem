@@ -1344,8 +1344,6 @@ Beam3d :: computeInternalForcesFromBodyLoadVectorAtPoint(FloatArray &answer, Loa
 void
 Beam3d :: giveCompositeExportData(std::vector< VTKPiece > &vtkPieces, IntArray &primaryVarsToExport, IntArray &internalVarsToExport, IntArray cellVarsToExport, TimeStep *tStep )
 {
-  
-
   // divide element into several small ones
   vtkPieces.resize(1);
   vtkPieces[0].setNumberOfCells(Beam3d_nSubBeams);
@@ -1381,70 +1379,33 @@ Beam3d :: giveCompositeExportData(std::vector< VTKPiece > &vtkPieces, IntArray &
     vtkPieces[0].setCellType(i+1,3);
   }
 
-    InternalStateType isttype;
-    int n = internalVarsToExport.giveSize();
-    vtkPieces [ 0 ].setNumberOfInternalVarsToExport(internalVarsToExport, nNodes);
-    for ( int i = 1; i <= n; i++ ) {
-        isttype = ( InternalStateType ) internalVarsToExport.at(i);
-        for ( int nN = 1; nN <= nNodes; nN++ ) {
-            if ( isttype == IST_BeamForceMomentTensor ) {
-                FloatArray coords = vtkPieces [ 0 ].giveNodeCoords(nN);
-                FloatArray endForces;
-                this->giveInternalForcesVectorAtPoint(endForces, tStep, coords);
-                vtkPieces [ 0 ].setInternalVarInNode(isttype, nN, endForces);
-            } else if ( isttype == IST_X_LCS || isttype == IST_Y_LCS || isttype == IST_Z_LCS ) {
-                FloatArray answer;
-                FloatMatrix rotMat;
-                int col = 0;
-                if ( isttype == IST_X_LCS ) {
-                    col = 1;
-                } else if ( isttype == IST_Y_LCS ) {
-                    col = 2;
-                } else if ( isttype == IST_Z_LCS ) {
-                    col = 3;
-                }
-
-                if ( !this->giveLocalCoordinateSystem(rotMat) ) {
-                    rotMat.resize(3, 3);
-                    rotMat.beUnitMatrix();
-                }
-                answer.beRowOf(rotMat, col);
-                vtkPieces[0].setInternalVarInNode(isttype, nN, answer);
-            } else {
-                fprintf( stderr, "VTKXMLExportModule::exportIntVars: unsupported variable type %s\n", __InternalStateTypeToString(isttype) );
-            }
-        }
-    }
-  }
-
-  n = primaryVarsToExport.giveSize();
-  vtkPieces[0].setNumberOfPrimaryVarsToExport(n, nNodes);
+  InternalStateType isttype;
+  int n = primaryVarsToExport.giveSize();
+  vtkPieces[0].setNumberOfPrimaryVarsToExport( n, nNodes );
   for ( int i = 1; i <= n; i++ ) {
-    UnknownType utype = (UnknownType) primaryVarsToExport.at(i);
-    if ( utype == DisplacementVector ) {
-      FloatMatrix Tgl, n;
-      FloatArray d(3);
-      
-      Tgl = this->B3SSMI_getUnknownsGtoLRotationMatrix();
-      for (int nN = 1; nN <= nNodes; nN++) {
-        FloatArray u, dl, dg;
-        this->computeVectorOf(VM_Total, tStep, u);
-        xi.at(1) = nodeXi.at(nN);
-        this->computeNmatrixAt(xi, n);
-        dl.beProductOf(n,u); // local interpolated displacement
-        dg.beTProductOf(Tgl, dl); // local displacement tranformed to global c.s.
-        d.at(1)=dg.at(1); d.at(2)=dg.at(2); d.at(3)=dg.at(3); 
-	    vtkPieces[0].setPrimaryVarInNode(utype, nN, d );
+      UnknownType utype = (UnknownType)primaryVarsToExport.at( i );
+      if ( utype == DisplacementVector ) {
+          FloatMatrix Tgl, n;
+          FloatArray d( 3 );
+
+          Tgl = this->B3SSMI_getUnknownsGtoLRotationMatrix();
+          for ( int nN = 1; nN <= nNodes; nN++ ) {
+              FloatArray u, dl, dg;
+              this->computeVectorOf( VM_Total, tStep, u );
+              xi.at( 1 ) = nodeXi.at( nN );
+              this->computeNmatrixAt( xi, n );
+              dl.beProductOf( n, u ); // local interpolated displacement
+              dg.beTProductOf( Tgl, dl ); // local displacement tranformed to global c.s.
+              d.at( 1 ) = dg.at( 1 );
+              d.at( 2 ) = dg.at( 2 );
+              d.at( 3 ) = dg.at( 3 );
+              vtkPieces[0].setPrimaryVarInNode( utype, nN, d );
+          }
+      } else {
+          fprintf( stderr, "VTKXMLExportModule::exportPrimaryVars: unsupported variable type %s\n", __UnknownTypeToString( utype ) );
       }
-    } else {
-      fprintf( stderr, "VTKXMLExportModule::exportPrimaryVars: unsupported variable type %s\n", __UnknownTypeToString(utype) );
-    }
   }
 
 }
-
-
-
-
 
 } // end namespace oofem
