@@ -95,7 +95,7 @@ protected:
     TimeDiscretizationType initialTimeDiscretization;
     double gamma, beta;
     double eta, delta;
-    double a0, a1, a2, a3, a4, a5, a6, a7;
+    double a0, a1, a2, a3, a4, a5, a6, a7, a8, a9;
 
     FloatArray velocityVector, accelerationVector, previousLoadVector;
     FloatArray previousVelocityVector, previousAccelerationVector;

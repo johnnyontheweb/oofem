@@ -539,9 +539,12 @@ NonLinearDynamic :: proceedStep(int di, TimeStep *tStep)
     rhs = previousVelocityVector;
     rhs2 = previousAccelerationVector;
     for ( int i = 1; i <= neq; i++ ) {
-        accelerationVector.at(i) = a0 * incrementOfDisplacement.at(i) - a2 *rhs.at(i) - a3 *rhs2.at(i);
-        velocityVector.at(i)     = a1 * incrementOfDisplacement.at(i) - a4 *rhs.at(i) - a5 *rhs2.at(i)
-        - a6 *previousIncrementOfDisplacement.at(i);
+        accelerationVector.at( i ) = a0 * incrementOfDisplacement.at( i ) - a2 * previousVelocityVector.at( i ) - a3 * previousAccelerationVector.at( i );
+        //velocityVector.at(i)     = a1 * incrementOfDisplacement.at(i) - a4 *previousVelocityVector.at(i) - a5 *previousAccelerationVector.at(i)
+        //- a6 *previousIncrementOfDisplacement.at(i);
+        velocityVector.at( i ) = previousVelocityVector.at( i )
+            + a8 * previousAccelerationVector.at( i )
+            + a9 * accelerationVector.at( i ) - a6 * previousIncrementOfDisplacement.at( i );
     }
     totIterations += currentIterations;
 }
@@ -568,7 +571,7 @@ NonLinearDynamic :: determineConstants(TimeStep *tStep)
     deltaT = tStep->giveTimeIncrement();
 
     double dt2 = deltaT * deltaT;
-
+    a8 = a9 = 0;
     if ( timeDiscretization == TD_Newmark ) {
         a0 = 1. / ( beta * dt2 );
         a1 = gamma / ( beta * deltaT );
@@ -577,6 +580,8 @@ NonLinearDynamic :: determineConstants(TimeStep *tStep)
         a4 = ( gamma / beta ) - 1.;
         a5 = deltaT / 2. * ( gamma / beta - 2. );
         a6 = 0.;
+        a8 = deltaT * ( 1 - gamma );
+        a9 = deltaT * gamma;
     } else if ( timeDiscretization == TD_TwoPointBackward ) {
         a0 = 1. / dt2;
         a1 = 1. / deltaT;
