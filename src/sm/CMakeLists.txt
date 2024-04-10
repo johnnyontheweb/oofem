@@ -26,6 +26,7 @@ set (sm_emodel
     EngineeringModels/pdeltanstatic.C
     EngineeringModels/nlinearstatic.C
     EngineeringModels/nlineardynamic.C
+    EngineeringModels/newmarkdynamic.C
     EngineeringModels/eigenvaluedynamic.C
     EngineeringModels/linearstability.C
 	EngineeringModels/varlinearstability.C
