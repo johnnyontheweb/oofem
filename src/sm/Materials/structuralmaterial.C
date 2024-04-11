@@ -155,7 +155,7 @@ StructuralMaterial::giveRealStressVector_StressControl(const FloatArray &reduced
     FloatArray answer;
     int SCManrSteps = 10;
     FloatMatrix reducedTangentInverse;
-    for ( int k = 0; k < SCMaxiter; k++ ) { // Allow for a generous 100000 iterations.
+    for ( int k = 0; k < SCMaxiter; k++ ) { // Allow for a generous 100 iterations.
         vS = this->giveRealStressVector_3d(vE, gp, tStep);
         // For debugging the iterations:
         //vE.printYourself("vE");

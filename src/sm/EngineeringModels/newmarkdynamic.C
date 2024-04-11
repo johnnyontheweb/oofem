@@ -517,11 +517,7 @@ NewmarkDynamic :: proceedStep(int di, TimeStep *tStep)
     rhs2 = previousAccelerationVector;
     for ( int i = 1; i <= neq; i++ ) {
         accelerationVector.at( i ) = a0 * incrementOfDisplacement.at( i ) - a2 * previousVelocityVector.at( i ) - a3 * previousAccelerationVector.at( i );
-        //velocityVector.at(i)     = a1 * incrementOfDisplacement.at(i) - a4 *previousVelocityVector.at(i) - a5 *previousAccelerationVector.at(i)
-        //- a6 *previousIncrementOfDisplacement.at(i);
-        velocityVector.at( i ) = previousVelocityVector.at( i )
-            + a8 * previousAccelerationVector.at( i )
-            + a9 * accelerationVector.at( i ) - a6 * previousIncrementOfDisplacement.at( i );
+        velocityVector.at( i ) = previousVelocityVector.at( i ) + a6 * previousAccelerationVector.at( i ) + a7 * accelerationVector.at( i );
     }
     totIterations += currentIterations;
 }
@@ -533,7 +529,6 @@ NewmarkDynamic :: determineConstants(TimeStep *tStep)
     deltaT = tStep->giveTimeIncrement();
 
     double dt2 = deltaT * deltaT;
-    a8 = a9 = 0;
     a0 = 1. / ( beta * dt2 );
     a1 = gamma / ( beta * deltaT );
     a2 = 1. / ( beta * deltaT );
