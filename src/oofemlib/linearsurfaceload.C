@@ -71,10 +71,8 @@ LinearSurfaceLoad :: computeValueAt(FloatArray &answer, TimeStep *tStep, const F
     }
 
     double factor = this->giveTimeFunction()->evaluate(tStep, mode);
-    answer.beScaled(factor, componentArray);
-
-	double fplane = loadPlane(coords);
-	answer.beScaled(fplane, componentArray);
+    double fplane = loadPlane( coords );
+    answer.beScaled( factor * fplane, componentArray );
 }
 
 double

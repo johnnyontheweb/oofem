@@ -137,7 +137,8 @@ NRSolver :: initializeFrom(InputRecord &ir)
     rtold.resize(1);
     rtold = FloatArray {
         0.0
-    };                       // Default off (0.0 or negative values mean that residual is ignored)
+    };                       
+    // Default off (0.0 or negative values mean that residual is ignored)
     IR_GIVE_OPTIONAL_FIELD(ir, rtolf.at(1), _IFT_NRSolver_rtolv);
     IR_GIVE_OPTIONAL_FIELD(ir, rtold.at(1), _IFT_NRSolver_rtolv);
 
