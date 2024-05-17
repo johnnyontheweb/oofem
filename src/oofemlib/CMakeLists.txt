@@ -179,6 +179,7 @@ set (core_export
     outputmanager.C
     exportmodule.C
     exportmodulemanager.C
+    exportregion.C
     outputexportmodule.C
     errorcheckingexportmodule.C
     vtkexportmodule.C
@@ -193,6 +194,7 @@ set (core_export
     matlabexportmodule.C
     gpexportmodule.C
     solutionstatusexportmodule.C
+    vtkhdf5exportmodule.C
     )
 
 set (core_monitors
@@ -251,6 +253,7 @@ set (core_fei
     fei3dhexatriquad.C
     fei3dwedgelin.C 
     fei3dwedgequad.C
+    fei3dhexaconst.C
     )
 
 set (core_xfem
