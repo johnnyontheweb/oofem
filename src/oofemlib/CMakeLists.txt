@@ -43,6 +43,8 @@ set (core_unsorted
 	eigensolvermatrix.C
     # 
     loadbalancer.C
+    #
+    oofemcfg.C
     )
 
 #oofegutils
