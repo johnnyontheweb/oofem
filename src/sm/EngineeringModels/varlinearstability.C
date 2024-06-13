@@ -36,6 +36,7 @@
 //#define LIN_STAB_COMPATIBILITY_MODE
 
 #include "sm/EngineeringModels/varlinearstability.h"
+#include "oofemcfg.h"
 #include "timestep.h"
 #include "element.h"
 #include "contextioerr.h"

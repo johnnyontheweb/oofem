@@ -33,6 +33,7 @@
  */
 
 #include "sm/EngineeringModels/dummyenum.h"
+#include "oofemcfg.h"
 #include "domain.h"
 #include "classfactory.h"
 #include "exportmodulemanager.h"

@@ -33,6 +33,7 @@
  */
 
 #include "sm/EngineeringModels/responsespectrum.h"
+#include "oofemcfg.h"
 #include "timestep.h"
 #include "floatmatrix.h"
 #include "floatarray.h"
