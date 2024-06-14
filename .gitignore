@@ -1610,3 +1610,5 @@ comp32/version.vcxproj.filters
 2019_cloud/oofem_version.h
 comp32/build_x86.cmd
 comp32/vswhere.exe
+comp32/oofemenv.h
+comp64/oofemenv.h

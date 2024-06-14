@@ -47,6 +47,7 @@
 #define _IFT_Beam3d_dofstocondense "dofstocondense"
 #define _IFT_Beam3d_refnode "refnode"
 #define _IFT_Beam3d_refangle "refangle"
+#define _IFT_Beam3d_yaxis "yaxis"
 #define _IFT_Beam3d_zaxis "zaxis"
 #define _IFT_Beam3d_subsoilmat "subsoilmat"
 #define _IFT_Beam3d_macroElem "macroelem"
@@ -81,7 +82,7 @@ protected:
 
     double kappay, kappaz, length;
     int referenceNode;
-    FloatArray zaxis;
+    FloatArray yaxis, zaxis;
     double referenceAngle = 0;
     int printGPs = 1;
     //IntArray *dofsToCondense;
