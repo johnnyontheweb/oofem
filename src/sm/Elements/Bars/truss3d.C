@@ -85,8 +85,8 @@ Truss3d :: giveInterface(InterfaceType interface)
 void
 Truss3d :: NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node, InternalStateType type, TimeStep *tStep)
 {
-    answer.clear();
-    // OOFEM_WARNING("IP values will not be transferred to nodes. Use ZZNodalRecovery instead (parameter stype 1)");
+    auto gp = integrationRulesArray [ 0 ]->getIntegrationPoint(0);
+    this->giveCrossSection()->giveIPValue(answer, gp, type, tStep);
 }
 
 
@@ -136,64 +136,86 @@ Truss3d :: computeLength()
 }
 
 
+//void
+//Truss3d :: computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
+//{
+//	// computes initial stress matrix of receiver (or geometric stiffness matrix)
+//
+//	FloatMatrix stiff;
+//	FloatArray endForces;
+//
+//	double l = this->computeLength();
+//	double N;
+//
+//	answer.resize(6, 6);
+//	answer.zero();
+//
+//	answer.at(2, 2) = 1;
+//	answer.at(2, 5) = -1;
+//
+//	answer.at(3, 3) = 1;
+//	answer.at(3, 6) = -1;
+//
+//	answer.at(5, 2) = -1;
+//	answer.at(5, 5) = 1;
+//
+//	answer.at(6, 3) = -1;
+//	answer.at(6, 6) = 1;
+//
+//	// GaussPoint* gp = integrationRulesArray[0]->getIntegrationPoint(0);
+//	// double area = this->giveStructuralCrossSection()->give(CS_Area, gp);
+//
+//	FloatMatrix lcs;
+//	this->giveLocalCoordinateSystem(lcs);
+//
+//	FloatMatrix transf(6, 6);
+//	IntArray ind({ 1, 2, 3 });
+//	IntArray ind2({ 4, 5, 6 });
+//	transf.assemble(lcs, ind, ind);
+//	transf.assemble(lcs, ind2, ind2);
+//
+//	answer.rotatedWith(transf, 'n');
+//	// ask end forces in g.c.s
+//	this->giveEndForcesVector(endForces, tStep);
+//
+//	FloatArray N1, N2;
+//	N1.beSubArrayOf(endForces, ind);
+//	N2.beSubArrayOf(endForces, ind2);
+//
+//	FloatArray lx;
+//	lx.beDifferenceOf(this->giveNode(2)->giveCoordinates(), this->giveNode(1)->giveCoordinates());
+//	lx.normalize();
+//
+//	// sign of N
+//	N = (-N1.dotProduct(lx) + N2.dotProduct(lx)) / 2.;
+//	answer.times(N / l);
+//}
+
+
 void
-Truss3d :: computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
+Truss3d::computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
 {
-	// computes initial stress matrix of receiver (or geometric stiffness matrix)
+    // computes initial stress matrix of receiver (or geometric stiffness matrix)
+    double area, NForce, contrib;
+    double l0 = this->computeLength();
+    FloatArray stress, strain;
+    GaussPoint *gp = integrationRulesArray [ 0 ]->getIntegrationPoint(0);
+    
+    this->computeStrainVector(strain, gp, tStep);
+    this->computeStressVector(stress, strain, gp, tStep);
+    area = this->giveCrossSection()->give(CS_Area, gp);
+    NForce = stress.at(1)*area;
+    contrib = NForce / l0;
+    
+    answer.resize(6, 6);
+    answer.zero();
 
-	FloatMatrix stiff;
-	FloatArray endForces;
-
-	double l = this->computeLength();
-	double N;
-
-	answer.resize(6, 6);
-	answer.zero();
-
-	answer.at(2, 2) = 1;
-	answer.at(2, 5) = -1;
-
-	answer.at(3, 3) = 1;
-	answer.at(3, 6) = -1;
-
-	answer.at(5, 2) = -1;
-	answer.at(5, 5) = 1;
-
-	answer.at(6, 3) = -1;
-	answer.at(6, 6) = 1;
-
-	// GaussPoint* gp = integrationRulesArray[0]->getIntegrationPoint(0);
-	// double area = this->giveStructuralCrossSection()->give(CS_Area, gp);
-
-	FloatMatrix lcs;
-	this->giveLocalCoordinateSystem(lcs);
-
-	FloatMatrix transf(6, 6);
-	IntArray ind({ 1, 2, 3 });
-	IntArray ind2({ 4, 5, 6 });
-	transf.assemble(lcs, ind, ind);
-	transf.assemble(lcs, ind2, ind2);
-
-	answer.rotatedWith(transf, 'n');
-	// ask end forces in g.c.s
-	this->giveEndForcesVector(endForces, tStep);
-
-	FloatArray N1, N2;
-	N1.beSubArrayOf(endForces, ind);
-	N2.beSubArrayOf(endForces, ind2);
-
-	FloatArray lx;
-	lx.beDifferenceOf(this->giveNode(2)->giveCoordinates(), this->giveNode(1)->giveCoordinates());
-	lx.normalize();
-
-	// sign of N
-	N = (-N1.dotProduct(lx) + N2.dotProduct(lx)) / 2.;
-	answer.times(N / l);
+    answer.at(2,2)=answer.at(3,3)=answer.at(5,5)=answer.at(6,6) = contrib;
+    answer.at(2,5)=answer.at(5,2)=answer.at(3,6)=answer.at(6,3) = -contrib;
 }
 
-
 void
-Truss3d :: computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep)
+Truss3d::computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep)
 // Returns the lumped mass matrix of the receiver. This expression is
 // valid in both local and global axes.
 {

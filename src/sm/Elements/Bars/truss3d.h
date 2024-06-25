@@ -70,7 +70,7 @@ public:
 
     double computeLength() override;
 
-    virtual void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep);
+    void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep) override;
     void computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep) override;
     void computeMassMatrix(FloatMatrix &answer, TimeStep *tStep) override
     { this->computeLumpedMassMatrix(answer, tStep); }
