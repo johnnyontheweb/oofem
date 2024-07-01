@@ -292,29 +292,21 @@ void SpringElement3D::computeInitialStressMatrix( FloatMatrix &answer, TimeStep 
     answer.resize( 12, 12 );
     answer.zero();
 
-    // computes initial stress matrix of receiver (or geometric stiffness matrix)
-
-    FloatMatrix stiff;
-    FloatArray endForces;
-
     double l = this->computeLength();
-    if ( l > 0 ) {
+    if ( l > 0 && d==0 ) {
         double N;
 
-        answer.resize( 6, 6 );
-        answer.zero();
+        answer.at( 2, 2 ) = 1;
+        answer.at( 2, 8 ) = -1;
 
-        answer.at( 2, 2 )  = 1;
-        answer.at( 2, 11 ) = -1;
+        answer.at( 3, 3 ) = 1;
+        answer.at( 3, 9 ) = -1;
 
-        answer.at( 3, 3 )  = 1;
-        answer.at( 3, 12 ) = -1;
+        answer.at( 8, 2 ) = -1;
+        answer.at( 8, 8 ) = 1;
 
-        answer.at( 11, 2 )  = -1;
-        answer.at( 11, 11 ) = 1;
-
-        answer.at( 12, 3 )  = -1;
-        answer.at( 12, 12 ) = 1;
+        answer.at( 9, 3 ) = -1;
+        answer.at( 9, 9 ) = 1;
 
         FloatMatrix lcs;
         this->giveLocalCoordinateSystem( lcs );
@@ -324,6 +316,7 @@ void SpringElement3D::computeInitialStressMatrix( FloatMatrix &answer, TimeStep 
 
         answer.rotatedWith( transf, 'n' );
         // ask end forces in g.c.s
+        FloatArray endForces;
         this->giveInternalForcesVector( endForces, tStep );
 
         FloatArray N1, N2;
