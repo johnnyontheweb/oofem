@@ -109,6 +109,11 @@ EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatri
 #if 1
 	// cholesky
 	Spectra::SparseCholesky<double> op(A->giveEigenMatrix());
+    if ( op.info() != Spectra::SUCCESSFUL ) {
+        fprintf( outStream, "Eigen-Spectra :: Stiffness matrix is singular.\n" );
+        OOFEM_LOG_INFO( "Eigen-Spectra :: Stiffness matrix is singular.\n" );
+        return CR_FAILED;
+    }
 	// Construct eigen solver object, requesting the largest three eigenvalues
 	Spectra::SymGEigsSolver< double, Spectra::LARGEST_MAGN, Spectra::SparseSymMatProd<double>, Spectra::SparseCholesky<double>, Spectra::GEIGS_CHOLESKY  > eigs(&opB, &op, nroot, min(2 * nroot, a.giveNumberOfColumns()));
 #else

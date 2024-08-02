@@ -277,7 +277,7 @@ void EigenSolverMatrix :: writeToFile(const char *fname) const
 	FILE *file = fopen(fname, "w");
 	for (int i = 1; i <= nRows; ++i) {
 		for (int j = 1; j <= nColumns; ++j) {
-			fprintf(file, "%10.3e  ", this->at(i, j));
+			fprintf(file, "%10.8e  ", this->at(i, j));
 		}
 		fprintf(file, "\n");
 	}

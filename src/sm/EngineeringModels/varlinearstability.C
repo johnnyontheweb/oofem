@@ -315,8 +315,11 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
     //initialStressMatrix->writeToFile("M.dat");
 #endif
 
-    nMethod->solve(*stiffnessMatrix, *initialStressMatrix, eigVal, eigVec, rtolv, numberOfRequiredEigenValues);
+    auto cr = nMethod->solve(*stiffnessMatrix, *initialStressMatrix, eigVal, eigVec, rtolv, numberOfRequiredEigenValues);
     this->field->updateAll(eigVec, EModelDefaultEquationNumbering());
+    if ( cr != CR_CONVERGED ) {
+        OOFEM_ERROR( "Buckling solver couldn't find a solution." );
+    }
 }
 
 
