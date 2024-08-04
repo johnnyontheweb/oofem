@@ -231,8 +231,15 @@ FiberedCrossSection::giveGeneralizedStress_Beam3d(const FloatArrayF< 6 > &strain
         // another approach - use several functions with assumed kinematic constraints
 
         // resolve current layer z-coordinate
-        double fiberThick  = this->fiberThicks.at(i);
-        double fiberWidth  = this->fiberWidths.at(i);
+        double fiberArea = 0;
+        if ( this->fiberAreas.giveSize() == 0 ) {
+            fiberArea = this->fiberThicks.at( i ) * this->fiberWidths.at( i );
+        }else{
+            fiberArea = this->fiberAreas.at( i );
+        }
+        //double fiberThick  = this->fiberThicks.at(i);
+        //double fiberWidth  = this->fiberWidths.at(i);
+
         double fiberYCoord = fiberGp->giveNaturalCoordinate(1);
         double fiberZCoord = fiberGp->giveNaturalCoordinate(2);
 
@@ -242,14 +249,14 @@ FiberedCrossSection::giveGeneralizedStress_Beam3d(const FloatArrayF< 6 > &strain
 
         // perform integration
         // 1) membrane terms N, Qz, Qy
-        answer.at(1) += reducedFiberStress.at(1) * fiberWidth * fiberThick;
-        answer.at(2) += reducedFiberStress.at(2) * fiberWidth * fiberThick;
-        answer.at(3) += reducedFiberStress.at(3) * fiberWidth * fiberThick;
+        answer.at(1) += reducedFiberStress.at(1) * fiberArea;
+        answer.at(2) += reducedFiberStress.at(2) * fiberArea;
+        answer.at(3) += reducedFiberStress.at(3) * fiberArea;
         // 2) bending terms mx, my, mxy
-        answer.at(4) += ( reducedFiberStress.at(2) * fiberWidth * fiberThick * fiberYCoord -
-                          reducedFiberStress.at(3) * fiberWidth * fiberThick * fiberZCoord );
-        answer.at(5) += reducedFiberStress.at(1) * fiberWidth * fiberThick * fiberZCoord;
-        answer.at(6) -= reducedFiberStress.at(1) * fiberWidth * fiberThick * fiberYCoord;
+        answer.at(4) += ( reducedFiberStress.at(2) * fiberArea * fiberYCoord -
+                          reducedFiberStress.at(3) * fiberArea * fiberZCoord );
+        answer.at(5) += reducedFiberStress.at(1) * fiberArea * fiberZCoord;
+        answer.at(6) -= reducedFiberStress.at(1) * fiberArea * fiberYCoord;
     }
 
     // now we must update master gp ///@ todo simply chosen the first fiber material as master material /JB
@@ -347,8 +354,14 @@ FiberedCrossSection::give3dBeamStiffMtrx(MatResponseMode rMode, GaussPoint *gp, 
         //
         // resolve current layer z-coordinate
         //
-        double fiberThick  = this->fiberThicks.at(i);
-        double fiberWidth  = this->fiberWidths.at(i);
+        double fiberArea = 0;
+        if ( this->fiberAreas.giveSize() == 0 ) {
+            fiberArea = this->fiberThicks.at( i ) * this->fiberWidths.at( i );
+        } else {
+            fiberArea = this->fiberAreas.at( i );
+        }
+        //double fiberThick  = this->fiberThicks.at(i);
+        //double fiberWidth  = this->fiberWidths.at(i);
         double fiberZCoord = fiberZcoords.at(i);
         double fiberYCoord = fiberYcoords.at(i);
         double fiberYCoord2 = fiberYCoord * fiberYCoord;
@@ -357,18 +370,18 @@ FiberedCrossSection::give3dBeamStiffMtrx(MatResponseMode rMode, GaussPoint *gp, 
         // perform integration
         //
         // 1) membrane terms N, Qz, Qy
-        beamStiffness.at(1, 1) += fiberMatrix.at(1, 1) * fiberWidth * fiberThick;
+        beamStiffness.at( 1, 1 ) += fiberMatrix.at( 1, 1 ) * fiberArea;
 
-        beamStiffness.at(2, 2) += fiberMatrix.at(2, 2) * fiberWidth * fiberThick;
+        beamStiffness.at( 2, 2 ) += fiberMatrix.at( 2, 2 ) * fiberArea;
 
-        beamStiffness.at(3, 3) += fiberMatrix.at(3, 3) * fiberWidth * fiberThick;
+        beamStiffness.at( 3, 3 ) += fiberMatrix.at( 3, 3 ) * fiberArea;
 
         // 2) bending terms mx, my, mz
         // G*Ik
-        beamStiffness.at(4, 4) += fiberMatrix.at(2, 2) * ( fiberWidth * fiberThick * fiberZCoord2 + fiberWidth * fiberThick * fiberYCoord2 );
+        beamStiffness.at( 4, 4 ) += fiberMatrix.at( 2, 2 ) * ( fiberArea * fiberZCoord2 + fiberArea * fiberYCoord2 );
 
-        beamStiffness.at(5, 5) += fiberMatrix.at(1, 1) * fiberWidth * fiberThick * fiberZCoord2;
-        beamStiffness.at(6, 6) += fiberMatrix.at(1, 1) * fiberWidth * fiberThick * fiberYCoord2;
+        beamStiffness.at( 5, 5 ) += fiberMatrix.at( 1, 1 ) * fiberArea * fiberZCoord2;
+        beamStiffness.at( 6, 6 ) += fiberMatrix.at( 1, 1 ) * fiberArea * fiberYCoord2;
     }
 
     return beamStiffness;
@@ -503,39 +516,45 @@ FiberedCrossSection::giveIPValue(FloatArray &answer, GaussPoint *gp, InternalSta
 }
 
 
-void
-FiberedCrossSection::initializeFrom(InputRecord &ir)
+void FiberedCrossSection::initializeFrom( InputRecord &ir )
 {
-#  ifdef VERBOSE
+#ifdef VERBOSE
     // VERBOSE_PRINT1 ("Instanciating cross section ",this->giveNumber())
-#  endif
+#endif
 
-    CrossSection::initializeFrom(ir);
+    CrossSection::initializeFrom( ir );
 
-    IR_GIVE_FIELD(ir, fiberMaterials, _IFT_FiberedCrossSection_fibermaterials);
-    IR_GIVE_FIELD(ir, fiberThicks, _IFT_FiberedCrossSection_thicks);
-    IR_GIVE_FIELD(ir, fiberWidths, _IFT_FiberedCrossSection_widths);
+    IR_GIVE_FIELD( ir, fiberMaterials, _IFT_FiberedCrossSection_fibermaterials );
+    // fiber dimensions
+    IR_GIVE_OPTIONAL_FIELD( ir, fiberThicks, _IFT_FiberedCrossSection_thicks );
+    IR_GIVE_OPTIONAL_FIELD( ir, fiberWidths, _IFT_FiberedCrossSection_widths );
+    // as an alternative, read fiber areas
+    IR_GIVE_OPTIONAL_FIELD( ir, fiberAreas, _IFT_FiberedCrossSection_areas );
+
+    if ( fiberThicks.giveSize() == 0 && fiberAreas.giveSize() == 0 )
+        throw ValueInputException( ir, _IFT_FiberedCrossSection_fibermaterials, "Array size mismatch " );
 
     // read coordinates of fiber centers from (main pprincipal axes) mid-section
-    IR_GIVE_FIELD(ir, fiberYcoords, _IFT_FiberedCrossSection_fiberycentrecoords);
-    IR_GIVE_FIELD(ir, fiberZcoords, _IFT_FiberedCrossSection_fiberzcentrecoords);
+    IR_GIVE_FIELD( ir, fiberYcoords, _IFT_FiberedCrossSection_fiberycentrecoords );
+    IR_GIVE_FIELD( ir, fiberZcoords, _IFT_FiberedCrossSection_fiberzcentrecoords );
 
-    IR_GIVE_FIELD(ir, thick, _IFT_FiberedCrossSection_thick);
-    IR_GIVE_FIELD(ir, width, _IFT_FiberedCrossSection_width);
+    IR_GIVE_FIELD( ir, thick, _IFT_FiberedCrossSection_thick );
+    IR_GIVE_FIELD( ir, width, _IFT_FiberedCrossSection_width );
 
     int num = fiberMaterials.giveSize();
-    if ( num != fiberThicks.giveSize()    ||
-         num != fiberWidths.giveSize()    ||
-         num != fiberYcoords.giveSize()   ||
-         num != fiberZcoords.giveSize() ) {
-        throw ValueInputException(ir, _IFT_FiberedCrossSection_fibermaterials, "Array size mismatch ");
+    if ( ( fiberThicks.giveSize() > 0 && num != fiberThicks.giveSize() ) || ( fiberWidths.giveSize() > 0 && num != fiberWidths.giveSize() ) || ( fiberAreas.giveSize() > 0 && num != fiberAreas.giveSize() ) || num != fiberYcoords.giveSize() || num != fiberZcoords.giveSize() ) {
+        throw ValueInputException( ir, _IFT_FiberedCrossSection_fibermaterials, "Array size mismatch " );
     }
 
     if ( num <= 0 ) {
-        throw ValueInputException(ir, _IFT_FiberedCrossSection_fibermaterials, "number of fibers == 0 is not allowed");
+        throw ValueInputException( ir, _IFT_FiberedCrossSection_fibermaterials, "number of fibers == 0 is not allowed" );
     }
 
-    area = fiberThicks.dotProduct(fiberWidths);
+    if ( fiberAreas.giveSize() == 0 ) {
+        area = fiberThicks.dotProduct( fiberWidths );
+    } else {
+        area = fiberAreas.sum();
+    }
 }
 
 void FiberedCrossSection::createMaterialStatus(GaussPoint &iGP)

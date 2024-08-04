@@ -50,6 +50,7 @@
 #define _IFT_FiberedCrossSection_fibermaterials "fibermaterials"
 #define _IFT_FiberedCrossSection_thicks "thicks"
 #define _IFT_FiberedCrossSection_widths "widths"
+#define _IFT_FiberedCrossSection_areas "areas"
 #define _IFT_FiberedCrossSection_fiberycentrecoords "fiberycentrecoords"
 #define _IFT_FiberedCrossSection_fiberzcentrecoords "fiberzcentrecoords"
 #define _IFT_FiberedCrossSection_thick "thick"
@@ -92,6 +93,7 @@ protected:
     IntArray fiberMaterials; ///< Material of each fiber.
     FloatArray fiberThicks; ///< Thickness for each fiber.
     FloatArray fiberWidths; ///< Width for each fiber.
+    FloatArray fiberAreas; ///< Area for each fiber.
     int numberOfFibers = 0;     ///< Number of fibers.
     double thick = 0.; ///< Total thickness.
     double width = 0.; ///< Total width.

@@ -1612,3 +1612,5 @@ comp32/build_x86.cmd
 comp32/vswhere.exe
 comp32/oofemenv.h
 comp64/oofemenv.h
+2019_cloud/oofemenv.h
+2019_new/oofemenv.h
