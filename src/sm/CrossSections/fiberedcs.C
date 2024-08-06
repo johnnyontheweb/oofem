@@ -381,7 +381,7 @@ FiberedCrossSection::give3dBeamStiffMtrx(MatResponseMode rMode, GaussPoint *gp, 
         beamStiffness.at( 4, 4 ) += fiberMatrix.at( 2, 2 ) *  fiberArea * fiberZCoord2 + fiberMatrix.at( 3, 3 ) * fiberArea * fiberYCoord2;
 
         beamStiffness.at( 5, 5 ) += fiberMatrix.at( 1, 1 ) * fiberArea * fiberZCoord2;
-        beamStiffness.at( 6, 6 ) += fiberMatrix.at( 1, 1 ) * fiberArea * fiberYCoord2;
+        beamStiffness.at( 6, 6 ) -= fiberMatrix.at( 1, 1 ) * fiberArea * fiberYCoord2;
     }
 
     return beamStiffness;
