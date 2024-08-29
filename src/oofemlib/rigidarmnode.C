@@ -59,10 +59,6 @@ RigidArmNode :: initializeFrom(InputRecord &ir)
     if ( masterMask.giveSize() != this->dofidmask->giveSize() ) {
         throw ValueInputException(ir, _IFT_DofManager_mastermask, "mastermask size mismatch");
     }
-
-    if (masterDofMngr == this->giveLabel()) {
-	OOFEM_ERROR("rigidarmnode %d is own master", this->giveLabel());
-    }
 }
 
 void
@@ -77,6 +73,10 @@ RigidArmNode :: postInitialize()
     this->masterNode = dynamic_cast< Node * >( this->domain->giveDofManager(masterDofMngr) );
     if ( !masterNode ) {
         OOFEM_WARNING("master dofManager is not a node");
+    }
+
+    if ( this->masterNode->giveLabel() == this->giveLabel() ) {
+        OOFEM_ERROR( "rigidarmnode %d is own master", this->giveLabel() );
     }
 
     int masterNdofs = masterNode->giveNumberOfDofs();
