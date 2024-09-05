@@ -88,6 +88,7 @@ public:
     const FloatMatrix *computeGtoLRotationMatrix();
     //virtual bool computeGtoLRotationMatrix(FloatMatrix &answer);
     FloatArray la1;
+    Element_Geometry_Type giveGeometryType() const override { return EGT_triangle_1; }
 
 #ifdef __OOFEG
     void drawRawGeometry(oofegGraphicContext &gc, TimeStep *tStep) override;

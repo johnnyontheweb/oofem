@@ -250,7 +250,6 @@ TrPlaneStress2d :: giveCharacteristicSize(GaussPoint *gp, FloatArray &normalToCr
     }
 
     OOFEM_ERROR("invalid method");
-    return 0.;
 }
 
 

@@ -43,14 +43,17 @@
 #include <cstdlib>
 #include <cstring>
 #include <ostream>
+#include <iostream>
+#include <fstream>
+#include <iomanip>
 #include <numeric>
 #define RESIZE(nr, nc) \
     { \
         this->nRows = nr; this->nColumns = nc; \
-        int nsize = this->nRows * this->nColumns; \
-        if ( nsize < ( int ) this->values.size() ) { \
+        std::size_t nsize = this->nRows * this->nColumns; \
+        if ( nsize < this->values.size() ) { \
             this->values.resize(nsize); \
-        } else if ( nsize > ( int ) this->values.size() ) { \
+        } else if ( nsize > this->values.size() ) { \
             this->values.assign(nsize, 0.); \
         } \
     }
@@ -126,7 +129,7 @@ FloatMatrix :: FloatMatrix(std :: initializer_list< std :: initializer_list< dou
     auto p = this->values.begin();
     for ( auto col : mat ) {
 #if DEBUG
-        if ( this->nRows != ( int ) col.size() ) {
+        if ( this->nRows != col.size() ) {
             OOFEM_ERROR("Initializer list has inconsistent column sizes.");
         }
 #endif
@@ -144,7 +147,7 @@ FloatMatrix &FloatMatrix :: operator = ( std :: initializer_list< std :: initial
     auto p = this->values.begin();
     for ( auto col : mat ) {
 #if DEBUG
-        if ( this->nRows != ( int ) col.size() ) {
+        if ( this->nRows != col.size() ) {
                 OOFEM_ERROR("Initializer list has inconsistent column sizes.");
         }
 #endif
@@ -164,7 +167,7 @@ FloatMatrix &FloatMatrix :: operator = ( std :: initializer_list< FloatArray >ma
     auto p = this->values.begin();
     for ( auto col : mat ) {
 #if DEBUG
-        if ( this->nRows != col.giveSize() ) {
+        if ( this->nRows != col.size() ) {
                 OOFEM_ERROR("Initializer list has inconsistent column sizes.");
         }
 #endif
@@ -178,7 +181,7 @@ FloatMatrix &FloatMatrix :: operator = ( std :: initializer_list< FloatArray >ma
 }
 
 
-void FloatMatrix :: checkBounds(int i, int j) const
+void FloatMatrix :: checkBounds(std::size_t i, std::size_t j) const
 // Checks that the receiver includes a position (i,j).
 {
     if ( i <= 0 ) {
@@ -210,10 +213,10 @@ bool FloatMatrix :: isFinite() const
 
 void FloatMatrix :: assemble(const FloatMatrix &src, const IntArray &loc)
 {
-    int ii, jj, size = src.giveNumberOfRows();
+    std::size_t ii, jj, size = src.giveRowSize();
 
 #ifndef NDEBUG
-    if ( size != loc.giveSize() ) {
+    if ( size != loc.size() ) {
         OOFEM_ERROR("dimensions of 'src' and 'loc' mismatch");
     }
 
@@ -222,9 +225,9 @@ void FloatMatrix :: assemble(const FloatMatrix &src, const IntArray &loc)
     }
 #endif
 
-    for ( int i = 1; i <= size; i++ ) {
+    for ( std::size_t i = 1; i <= size; i++ ) {
         if ( ( ii = loc.at(i) ) ) {
-            for ( int j = 1; j <= size; j++ ) {
+            for ( std::size_t j = 1; j <= size; j++ ) {
                 if ( ( jj = loc.at(j) ) ) {
                     this->at(ii, jj) += src.at(i, j);
                 }
@@ -337,10 +340,10 @@ void FloatMatrix :: beProductOf(const FloatMatrix &aMatrix, const FloatMatrix &b
            & beta, this->givePointer(), & this->nRows,
            aMatrix.nColumns, bMatrix.nColumns, this->nColumns);
 #  else
-    for ( int i = 1; i <= aMatrix.nRows; i++ ) {
-        for ( int j = 1; j <= bMatrix.nColumns; j++ ) {
+    for ( std::size_t i = 1; i <= aMatrix.nRows; i++ ) {
+        for ( std::size_t j = 1; j <= bMatrix.nColumns; j++ ) {
             double coeff = 0.;
-            for ( int k = 1; k <= aMatrix.nColumns; k++ ) {
+            for ( std::size_t k = 1; k <= aMatrix.nColumns; k++ ) {
                 coeff += aMatrix.at(i, k) * bMatrix.at(k, j);
             }
 
@@ -367,10 +370,10 @@ void FloatMatrix :: beTProductOf(const FloatMatrix &aMatrix, const FloatMatrix &
            & beta, this->givePointer(), & this->nRows,
            aMatrix.nColumns, bMatrix.nColumns, this->nColumns);
 #  else
-    for ( int i = 1; i <= aMatrix.nColumns; i++ ) {
-        for ( int j = 1; j <= bMatrix.nColumns; j++ ) {
+    for ( std::size_t i = 1; i <= aMatrix.nColumns; i++ ) {
+        for (std::size_t j = 1; j <= bMatrix.nColumns; j++ ) {
             double coeff = 0.;
-            for ( int k = 1; k <= aMatrix.nRows; k++ ) {
+            for (std::size_t k = 1; k <= aMatrix.nRows; k++ ) {
                 coeff += aMatrix.at(k, i) * bMatrix.at(k, j);
             }
 
@@ -397,10 +400,10 @@ void FloatMatrix :: beProductTOf(const FloatMatrix &aMatrix, const FloatMatrix &
            & beta, this->givePointer(), & this->nRows,
            aMatrix.nColumns, bMatrix.nColumns, this->nColumns);
 #  else
-    for ( int i = 1; i <= aMatrix.nRows; i++ ) {
-        for ( int j = 1; j <= bMatrix.nRows; j++ ) {
+    for (std::size_t i = 1; i <= aMatrix.nRows; i++ ) {
+        for (std::size_t j = 1; j <= bMatrix.nRows; j++ ) {
             double coeff = 0.;
-            for ( int k = 1; k <= aMatrix.nColumns; k++ ) {
+            for (std::size_t k = 1; k <= aMatrix.nColumns; k++ ) {
                 coeff += aMatrix.at(i, k) * bMatrix.at(j, k);
             }
 
@@ -430,10 +433,10 @@ void FloatMatrix :: addProductOf(const FloatMatrix &aMatrix, const FloatMatrix &
            & beta, this->givePointer(), & this->nRows,
            aMatrix.nColumns, bMatrix.nColumns, this->nColumns);
 #  else
-    for ( int i = 1; i <= aMatrix.nRows; i++ ) {
-        for ( int j = 1; j <= bMatrix.nColumns; j++ ) {
+    for (std::size_t i = 1; i <= aMatrix.nRows; i++ ) {
+        for (std::size_t j = 1; j <= bMatrix.nColumns; j++ ) {
             double coeff = 0.;
-            for ( int k = 1; k <= aMatrix.nColumns; k++ ) {
+            for (std::size_t k = 1; k <= aMatrix.nColumns; k++ ) {
                 coeff += aMatrix.at(i, k) * bMatrix.at(k, j);
             }
 
@@ -462,10 +465,10 @@ void FloatMatrix :: addTProductOf(const FloatMatrix &aMatrix, const FloatMatrix 
            & beta, this->givePointer(), & this->nRows,
            aMatrix.nColumns, bMatrix.nColumns, this->nColumns);
 #  else
-    for ( int i = 1; i <= aMatrix.nColumns; i++ ) {
-        for ( int j = 1; j <= bMatrix.nColumns; j++ ) {
+    for (std::size_t i = 1; i <= aMatrix.nColumns; i++ ) {
+        for (std::size_t j = 1; j <= bMatrix.nColumns; j++ ) {
             double coeff = 0.;
-            for ( int k = 1; k <= aMatrix.nRows; k++ ) {
+            for (std::size_t k = 1; k <= aMatrix.nRows; k++ ) {
                 coeff += aMatrix.at(k, i) * bMatrix.at(k, j);
             }
 
@@ -726,10 +729,10 @@ void FloatMatrix :: plusProductSymmUpper(const FloatMatrix &a, const FloatMatrix
         }
     }
 #else
-    for ( int i = 1; i <= nRows; i++ ) {
-        for ( int j = i; j <= nColumns; j++ ) {
+    for (std::size_t i = 1; i <= nRows; i++ ) {
+        for (std::size_t j = i; j <= nColumns; j++ ) {
             double summ = 0.;
-            for ( int k = 1; k <= a.nRows; k++ ) {
+            for (std::size_t k = 1; k <= a.nRows; k++ ) {
                 summ += a.at(k, i) * b.at(k, j);
             }
 
@@ -754,8 +757,8 @@ void FloatMatrix :: plusDyadSymmUpper(const FloatArray &a, double dV)
           this->givePointer(), & this->nRows,
           sizeA, this->nColumns);
 #else
-    for ( int i = 1; i <= nRows; i++ ) {
-        for ( int j = i; j <= nColumns; j++ ) {
+    for (std::size_t i = 1; i <= nRows; i++ ) {
+        for (std::size_t j = i; j <= nColumns; j++ ) {
             this->at(i, j) += a.at(i) * a.at(j) * dV;
         }
     }
@@ -781,10 +784,10 @@ void FloatMatrix :: plusProductUnsym(const FloatMatrix &a, const FloatMatrix &b,
            & beta, this->givePointer(), & this->nRows,
            a.nColumns, b.nColumns, this->nColumns);
 #else
-    for ( int i = 1; i <= nRows; i++ ) {
-        for ( int j = 1; j <= nColumns; j++ ) {
+    for (std::size_t i = 1; i <= nRows; i++ ) {
+        for (std::size_t j = 1; j <= nColumns; j++ ) {
             double summ = 0.;
-            for ( int k = 1; k <= a.nRows; k++ ) {
+            for (std::size_t k = 1; k <= a.nRows; k++ ) {
                 summ += a.at(k, i) * b.at(k, j);
             }
 
@@ -810,8 +813,8 @@ void FloatMatrix :: plusDyadUnsym(const FloatArray &a, const FloatArray &b, doub
           b.givePointer(), & inc, this->givePointer(), & this->nRows,
           sizeA, sizeB, this->nColumns);
 #else
-    for ( int i = 1; i <= nRows; i++ ) {
-        for ( int j = 1; j <= nColumns; j++ ) {
+    for (std::size_t i = 1; i <= nRows; i++ ) {
+        for (std::size_t j = 1; j <= nColumns; j++ ) {
             this->at(i, j) += a.at(i) * b.at(j) * dV;
         }
     }
@@ -899,40 +902,40 @@ bool FloatMatrix :: beInverseOf(const FloatMatrix &src)
         FloatMatrix tmp = src;
         // initialize answer to be unity matrix;
         this->zero();
-        for ( int i = 1; i <= nRows; i++ ) {
+        for (std::size_t i = 1; i <= nRows; i++ ) {
             this->at(i, i) = 1.0;
         }
 
         // lower triangle elimination by columns
-        for ( int i = 1; i < nRows; i++ ) {
+        for (std::size_t i = 1; i < nRows; i++ ) {
             piv = tmp.at(i, i);
             if ( fabs(piv) < 1.e-30 ) {
                 OOFEM_WARNING("pivot (%d,%d) to close to small (< 1.e-20)", i, i);
                 return false;
             }
 
-            for ( int j = i + 1; j <= nRows; j++ ) {
+            for (std::size_t j = i + 1; j <= nRows; j++ ) {
                 linkomb = tmp.at(j, i) / tmp.at(i, i);
-                for ( int k = i; k <= nRows; k++ ) {
+                for (std::size_t k = i; k <= nRows; k++ ) {
                     tmp.at(j, k) -= tmp.at(i, k) * linkomb;
                 }
 
-                for ( int k = 1; k <= nRows; k++ ) {
+                for (std::size_t k = 1; k <= nRows; k++ ) {
                     this->at(j, k) -= this->at(i, k) * linkomb;
                 }
             }
         }
 
         // upper triangle elimination by columns
-        for ( int i = nRows; i > 1; i-- ) {
+        for ( std::size_t i = nRows; i > 1; i-- ) {
             piv = tmp.at(i, i);
-            for ( int j = i - 1; j > 0; j-- ) {
+            for ( std::size_t j = i - 1; j > 0; j-- ) {
                 linkomb = tmp.at(j, i) / piv;
-                for ( int k = i; k > 0; k-- ) {
+                for ( std::size_t k = i; k > 0; k-- ) {
                     tmp.at(j, k) -= tmp.at(i, k) * linkomb;
                 }
 
-                for ( int k = nRows; k > 0; k-- ) {
+                for ( std::size_t k = nRows; k > 0; k-- ) {
                     // tmp -> at(j,k)-= tmp  ->at(i,k)*linkomb;
                     this->at(j, k) -= this->at(i, k) * linkomb;
                 }
@@ -940,8 +943,8 @@ bool FloatMatrix :: beInverseOf(const FloatMatrix &src)
         }
 
         // diagonal scaling
-        for ( int i = 1; i <= nRows; i++ ) {
-            for ( int j = 1; j <= nRows; j++ ) {
+        for ( std::size_t i = 1; i <= nRows; i++ ) {
+            for ( std::size_t j = 1; j <= nRows; j++ ) {
                 this->at(i, j) /= tmp.at(i, i);
             }
         }
@@ -952,7 +955,7 @@ bool FloatMatrix :: beInverseOf(const FloatMatrix &src)
 
 
 void FloatMatrix :: beSubMatrixOf(const FloatMatrix &src,
-                                  int topRow, int bottomRow, int topCol, int bottomCol)
+                                  std::size_t topRow, std::size_t bottomRow, std::size_t topCol, std::size_t bottomCol)
 /*
  * modifies receiver to be  submatrix of the src matrix
  * size of receiver  submatrix is determined from
@@ -971,14 +974,14 @@ void FloatMatrix :: beSubMatrixOf(const FloatMatrix &src,
 #endif
 
 
-    int topRm1, topCm1;
+    std::size_t topRm1, topCm1;
     topRm1 = topRow - 1;
     topCm1 = topCol - 1;
 
     // allocate return value
     this->resize(bottomRow - topRm1, bottomCol - topCm1);
-    for ( int i = topRow; i <= bottomRow; i++ ) {
-        for ( int j = topCol; j <= bottomCol; j++ ) {
+    for (std::size_t i = topRow; i <= bottomRow; i++ ) {
+        for (std::size_t j = topCol; j <= bottomCol; j++ ) {
             this->at(i - topRm1, j - topCm1) = src.at(i, j);
         }
     }
@@ -1109,7 +1112,7 @@ bool FloatMatrix :: solveForRhs(const FloatArray &b, FloatArray &answer, bool tr
         OOFEM_ERROR("cannot solve a %d by %d matrix", nRows, nColumns);
     }
 
-    if ( nRows != b.giveSize() ) {
+    if ( nRows != b.size() ) {
         OOFEM_ERROR("dimension mismatch");
     }
 #  endif
@@ -1127,7 +1130,7 @@ bool FloatMatrix :: solveForRhs(const FloatArray &b, FloatArray &answer, bool tr
         return false;
     }
 #else
-    int pivRow;
+    std::size_t pivRow;
     double piv, linkomb, help;
     FloatMatrix *mtrx, trans;
     if ( transpose ) {
@@ -1141,11 +1144,11 @@ bool FloatMatrix :: solveForRhs(const FloatArray &b, FloatArray &answer, bool tr
 
     // initialize answer to be unity matrix;
     // lower triangle elimination by columns
-    for ( int i = 1; i < nRows; i++ ) {
+    for ( std::size_t i = 1; i < nRows; i++ ) {
         // find the suitable row and pivot
         piv = fabs( mtrx->at(i, i) );
         pivRow = i;
-        for ( int j = i + 1; j <= nRows; j++ ) {
+        for (std::size_t j = i + 1; j <= nRows; j++ ) {
             if ( fabs( mtrx->at(j, i) ) > piv ) {
                 pivRow = j;
                 piv = fabs( mtrx->at(j, i) );
@@ -1158,7 +1161,7 @@ bool FloatMatrix :: solveForRhs(const FloatArray &b, FloatArray &answer, bool tr
 
         // exchange rows
         if ( pivRow != i ) {
-            for ( int j = i; j <= nRows; j++ ) {
+            for (std::size_t j = i; j <= nRows; j++ ) {
                 help = mtrx->at(i, j);
                 mtrx->at(i, j) = mtrx->at(pivRow, j);
                 mtrx->at(pivRow, j) = help;
@@ -1168,9 +1171,9 @@ bool FloatMatrix :: solveForRhs(const FloatArray &b, FloatArray &answer, bool tr
             answer.at(pivRow) = help;
         }
 
-        for ( int j = i + 1; j <= nRows; j++ ) {
+        for (std::size_t j = i + 1; j <= nRows; j++ ) {
             linkomb = mtrx->at(j, i) / mtrx->at(i, i);
-            for ( int k = i; k <= nRows; k++ ) {
+            for (std::size_t k = i; k <= nRows; k++ ) {
                 mtrx->at(j, k) -= mtrx->at(i, k) * linkomb;
             }
 
@@ -1179,9 +1182,9 @@ bool FloatMatrix :: solveForRhs(const FloatArray &b, FloatArray &answer, bool tr
     }
 
     // back substitution
-    for ( int i = nRows; i >= 1; i-- ) {
+    for ( std::size_t i = nRows; i >= 1; i-- ) {
         help = 0.;
-        for ( int j = i + 1; j <= nRows; j++ ) {
+        for ( std::size_t j = i + 1; j <= nRows; j++ ) {
             help += mtrx->at(i, j) * answer.at(j);
         }
 
@@ -1205,7 +1208,7 @@ bool FloatMatrix :: solveForRhs(const FloatMatrix &b, FloatMatrix &answer, bool 
         OOFEM_ERROR("cannot solve a %d by %d matrix", nRows, nColumns);
     }
 
-    if ( nRows != b.giveNumberOfRows() ) {
+    if ( nRows != b.giveRowSize() ) {
         OOFEM_ERROR("dimension mismatch");
     }
 #  endif
@@ -1222,7 +1225,7 @@ bool FloatMatrix :: solveForRhs(const FloatMatrix &b, FloatMatrix &answer, bool 
         return false; //OOFEM_ERROR("error %d", info);
     }
 #else
-    int pivRow, nPs;
+    std::size_t pivRow, nPs;
     double piv, linkomb, help;
     FloatMatrix *mtrx, trans;
     if ( transpose ) {
@@ -1236,11 +1239,11 @@ bool FloatMatrix :: solveForRhs(const FloatMatrix &b, FloatMatrix &answer, bool 
     answer = b;
     // initialize answer to be unity matrix;
     // lower triangle elimination by columns
-    for ( int i = 1; i < nRows; i++ ) {
+    for (std::size_t i = 1; i < nRows; i++ ) {
         // find the suitable row and pivot
         piv = fabs( mtrx->at(i, i) );
         pivRow = i;
-        for ( int j = i + 1; j <= nRows; j++ ) {
+        for (std::size_t j = i + 1; j <= nRows; j++ ) {
             if ( fabs( mtrx->at(j, i) ) > piv ) {
                 pivRow = j;
                 piv = fabs( mtrx->at(j, i) );
@@ -1253,36 +1256,36 @@ bool FloatMatrix :: solveForRhs(const FloatMatrix &b, FloatMatrix &answer, bool 
 
         // exchange rows
         if ( pivRow != i ) {
-            for ( int j = i; j <= nRows; j++ ) {
+            for (std::size_t j = i; j <= nRows; j++ ) {
                 help = mtrx->at(i, j);
                 mtrx->at(i, j) = mtrx->at(pivRow, j);
                 mtrx->at(pivRow, j) = help;
             }
 
-            for ( int j = 1; j <= nPs; j++ ) {
+            for (std::size_t j = 1; j <= nPs; j++ ) {
                 help = answer.at(i, j);
                 answer.at(i, j) = answer.at(pivRow, j);
                 answer.at(pivRow, j) = help;
             }
         }
 
-        for ( int j = i + 1; j <= nRows; j++ ) {
+        for (std::size_t j = i + 1; j <= nRows; j++ ) {
             linkomb = mtrx->at(j, i) / mtrx->at(i, i);
-            for ( int k = i; k <= nRows; k++ ) {
+            for (std::size_t k = i; k <= nRows; k++ ) {
                 mtrx->at(j, k) -= mtrx->at(i, k) * linkomb;
             }
 
-            for ( int k = 1; k <= nPs; k++ ) {
+            for (std::size_t k = 1; k <= nPs; k++ ) {
                 answer.at(j, k) -= answer.at(i, k) * linkomb;
             }
         }
     }
 
     // back substitution
-    for ( int i = nRows; i >= 1; i-- ) {
-        for ( int k = 1; k <= nPs; k++ ) {
+    for ( std::size_t i = nRows; i >= 1; i-- ) {
+        for (std::size_t k = 1; k <= nPs; k++ ) {
             help = 0.;
-            for ( int j = i + 1; j <= nRows; j++ ) {
+            for ( std::size_t j = i + 1; j <= nRows; j++ ) {
                 help += mtrx->at(i, j) * answer.at(j, k);
             }
 
@@ -1327,7 +1330,7 @@ void FloatMatrix :: beUnitMatrix()
 #endif
 
     this->zero();
-    for ( int i = 1; i <= nRows; i++ ) {
+    for (std::size_t i = 1; i <= nRows; i++ ) {
         this->at(i, i) = 1.0;
     }
 }
@@ -1344,7 +1347,7 @@ void FloatMatrix :: bePinvID()
 }
 
 
-void FloatMatrix :: resize(int rows, int columns)
+void FloatMatrix :: resize(std::size_t rows, std::size_t columns)
 //
 // resizes receiver, all data will be lost
 //
@@ -1355,7 +1358,7 @@ void FloatMatrix :: resize(int rows, int columns)
 }
 
 
-void FloatMatrix :: resizeWithData(int rows, int columns)
+void FloatMatrix :: resizeWithData(std::size_t rows, std::size_t columns)
 //
 // resizes receiver, all data kept
 //
@@ -1371,11 +1374,11 @@ void FloatMatrix :: resizeWithData(int rows, int columns)
     this->nColumns = columns;
     this->values.resize(rows * columns);
 
-    int ii = min( rows, old.giveNumberOfRows() );
-    int jj = min( columns, old.giveNumberOfColumns() );
+    std::size_t ii = min( rows, old.giveRowSize() );
+    std::size_t jj = min( columns, old.giveColSize() );
     // copy old values if possible
-    for ( int i = 1; i <= ii; i++ ) {
-        for ( int j = 1; j <= jj; j++ ) {
+    for (std::size_t i = 1; i <= ii; i++ ) {
+        for (std::size_t j = 1; j <= jj; j++ ) {
             this->at(i, j) = old.at(i, j);
         }
     }
@@ -1415,7 +1418,7 @@ double FloatMatrix :: giveDeterminant() const
         OOFEM_ERROR("sorry, cannot compute the determinant of a matrix larger than 3x3");
     }
 
-    return 0.;
+    // return 0.;
 }
 
 
@@ -1437,7 +1440,7 @@ double FloatMatrix :: giveTrace() const
     }
 #  endif
     double answer = 0.;
-    for ( int k = 0; k < nRows; k++ ) {
+    for (std::size_t k = 0; k < nRows; k++ ) {
         answer += values [ k * ( nRows + 1 ) ];
     }
     return answer;
@@ -1447,11 +1450,11 @@ double FloatMatrix :: giveTrace() const
 void FloatMatrix :: printYourself() const
 // Prints the receiver on screen.
 {
-    printf("FloatMatrix with dimensions : %d %d\n",
+    printf("FloatMatrix with dimensions : %zu %zu\n",
            nRows, nColumns);
     if ( nRows <= 250 && nColumns <= 250 ) {
-        for ( int i = 1; i <= nRows; ++i ) {
-            for ( int j = 1; j <= nColumns && j <= 100; ++j ) {
+        for (std::size_t i = 1; i <= nRows; ++i ) {
+            for (std::size_t j = 1; j <= nColumns && j <= 100; ++j ) {
                 printf( "%10.3e  ", this->at(i, j) );
             }
 
@@ -1463,20 +1466,49 @@ void FloatMatrix :: printYourself() const
 }
 
 
+void FloatMatrix :: printYourselfToFile(const std::string filename, const bool showDimensions) const
+// Prints the receiver to file.
+{
+    std :: ofstream matrixfile (filename);
+    if (matrixfile.is_open()) {
+        if (showDimensions)
+            matrixfile << "FloatMatrix with dimensions : " << nRows << ", " << nColumns << "\n";
+        matrixfile << std::scientific << std::right << std::setprecision(3);
+        for (std::size_t i = 1; i <= nRows; ++i ) {
+            for (std::size_t j = 1; j <= nColumns; ++j ) {
+                matrixfile << std::setw(10) << this->at(i, j) << "\t";
+            }
+
+            matrixfile << "\n";
+        }
+        matrixfile.close();
+    } else {
+        OOFEM_ERROR("Failed to write to file");
+    }
+}
+
+
 void FloatMatrix :: printYourself(const std::string &name) const
 // Prints the receiver on screen.
 {
-    printf("%s (%d x %d): \n", name.c_str(), nRows, nColumns);
+    printf("%s (%zu x %zu): \n", name.c_str(), nRows, nColumns);
     if ( nRows <= 250 && nColumns <= 250 ) {
-        for ( int i = 1; i <= nRows; ++i ) {
-            for ( int j = 1; j <= nColumns && j <= 100; ++j ) {
+        for (std::size_t i = 1; i <= nRows; ++i ) {
+            for (std::size_t j = 1; j <= nColumns && j <= 100; ++j ) {
                 printf( "%10.3e  ", this->at(i, j) );
             }
 
             printf("\n");
         }
     } else {
-        printf("   large matrix : coefficients not printed \n");
+        for (std::size_t i = 1; i <= nRows && i <= 20; ++i ) {
+            for (std::size_t j = 1; j <= nColumns && j <= 10; ++j ) {
+                printf( "%10.3e  ", this->at(i, j) );
+            }
+            if ( nColumns > 10 ) printf(" ...");
+            printf("\n");
+        }
+        if ( nRows > 20 )  printf(" ...\n");
     }
 }
 
@@ -1485,8 +1517,8 @@ void FloatMatrix :: pY() const
 // Prints the receiver on screen with higher accuracy than printYourself.
 {
     printf("[");
-    for ( int i = 1; i <= nRows; ++i ) {
-        for ( int j = 1; j <= nColumns; ++j ) {
+    for (std::size_t i = 1; i <= nRows; ++i ) {
+        for (std::size_t j = 1; j <= nColumns; ++j ) {
             printf( "%20.15e", this->at(i, j) );
             if ( j < nColumns ) {
                 printf(",");
@@ -1544,8 +1576,8 @@ void FloatMatrix :: symmetrized()
 
 #   endif
 
-    for ( int i = 2; i <= nRows; i++ ) {
-        for ( int j = 1; j < i; j++ ) {
+    for (std::size_t i = 2; i <= nRows; i++ ) {
+        for (std::size_t j = 1; j < i; j++ ) {
             this->at(i, j) = this->at(j, i);
         }
     }
@@ -1587,9 +1619,9 @@ double FloatMatrix :: computeNorm(char p) const
 #  else
     if ( p == '1' ) { // Maximum absolute column sum.
         double col_sum, max_col = 0.0;
-        for ( int j = 1; j <= this->nColumns; j++ ) {
+        for (std::size_t j = 1; j <= this->nColumns; j++ ) {
             col_sum  = 0.0;
-            for ( int i = 1; i <= this->nRows; i++ ) {
+            for (std::size_t i = 1; i <= this->nRows; i++ ) {
                 col_sum += fabs( this->at(i, j) );
             }
             if ( col_sum > max_col ) {
@@ -1608,7 +1640,7 @@ double FloatMatrix :: computeNorm(char p) const
      *  return sqrt(eigs(0));
      * } */else {
         OOFEM_ERROR("p == %d not implemented.\n", p);
-        return 0.0;
+        // return 0.0;
     }
 #  endif
 }
@@ -1865,7 +1897,7 @@ contextIOResultType FloatMatrix :: restoreYourself(DataStream &stream)
 int
 FloatMatrix :: givePackSize(DataStream &buff) const
 {
-    return buff.givePackSizeOfInt(1) + buff.givePackSizeOfInt(1) +
+    return buff.givePackSizeOfSizet(1) + buff.givePackSizeOfSizet(1) +
            buff.givePackSizeOfDouble(nRows * nColumns);
 }
 
@@ -2058,8 +2090,8 @@ FloatMatrix :: __getitem__(boost :: python :: api :: object t)
 std :: ostream &operator << ( std :: ostream & out, const FloatMatrix & x )
 {
     out << x.nRows << " " << x.nColumns << " {";
-    for ( int i = 0; i < x.nRows; ++i ) {
-        for ( int j = 0; j < x.nColumns; ++j ) {
+    for (std::size_t i = 0; i < x.nRows; ++i ) {
+        for (std::size_t j = 0; j < x.nColumns; ++j ) {
             out << " " << x(i, j);
         }
         out << ";";

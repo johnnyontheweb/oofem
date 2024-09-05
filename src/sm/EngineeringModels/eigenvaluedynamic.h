@@ -75,7 +75,7 @@ private:
     FloatMatrix partFact;
     FloatMatrix massPart;
     int activeVector;
-    int restoreFlag;
+    // int restoreFlag;
     SparseMtrxType sparseMtrxType;
     int numberOfRequiredEigenValues;
     /// Relative tolerance.

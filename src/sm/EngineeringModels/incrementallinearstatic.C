@@ -158,7 +158,6 @@ double IncrementalLinearStatic :: giveDiscreteTime(int iStep)
     }
 
     OOFEM_ERROR("invalid iStep");
-    return 0.0;
 }
 
 
@@ -343,7 +342,7 @@ double IncrementalLinearStatic :: giveUnknownComponent(ValueModeType mode, TimeS
         OOFEM_ERROR("Only the mode requiresUnknownsDictionaryUpdate() is supported");
     }
 
-    return 0.;
+    // return 0.;
 }
 
 

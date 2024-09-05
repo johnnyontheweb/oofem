@@ -1069,12 +1069,14 @@ MITC4Shell::computeLocalCoordinates(FloatArray &answer, const FloatArray &coords
     FloatArray llc;
     auto inputCoords_ElCS = this->giveLocalCoordinates( coords );
     std::vector< FloatArray >lc(3);
-    for ( int _i = 0; _i < 4; _i++ ) { lc[_i] = this->giveLocalCoordinates( this->giveNode( _i + 1 )->giveCoordinates() ); }
-    bool inplane = interp_lin.global2local(llc, inputCoords_ElCS, FEIVertexListGeometryWrapper(lc) ) > 0;
-    answer.resize( 2 );
-    answer.at( 1 ) = inputCoords_ElCS.at( 1 );
-    answer.at( 2 ) = inputCoords_ElCS.at( 2 );
-    GaussPoint _gp( nullptr, 1, answer, 2.0, _2dPlate );
+    for ( int _i = 0; _i < 4; _i++ ) {
+        lc [ _i ] = this->giveLocalCoordinates( this->giveNode(_i + 1)->giveCoordinates() );
+    }
+    bool inplane = interp_lin.global2local(llc, inputCoords_ElCS, FEIVertexListGeometryWrapper(lc, interp_lin.giveGeometryType()) ) > 0;
+    answer.resize(2);
+    answer.at(1) = inputCoords_ElCS.at(1);
+    answer.at(2) = inputCoords_ElCS.at(2);
+    GaussPoint _gp(nullptr, 1, answer, 2.0, _2dPlate);
     // now check if the third local coordinate is within the thickness of element
     bool outofplane = ( fabs(inputCoords_ElCS.at(3) ) <= this->giveCrossSection()->give(CS_Thickness, & _gp) / 2. );
 
@@ -1245,7 +1247,7 @@ MITC4Shell::computeEdgeVolumeAround(GaussPoint *gp, int iEdge)
     lc [ 1 ] = lcF [ 1 ];
     lc [ 2 ] = lcF [ 2 ];
     lc [ 3 ] = lcF [ 3 ];
-    double detJ = this->interp_lin.edgeGiveTransformationJacobian(iEdge, gp->giveNaturalCoordinates(), FEIVertexListGeometryWrapper(lc) );
+    double detJ = this->interp_lin.edgeGiveTransformationJacobian(iEdge, gp->giveNaturalCoordinates(), FEIVertexListGeometryWrapper(lc, interp_lin.giveGeometryType()) );
     return detJ * gp->giveWeight();
 }
 

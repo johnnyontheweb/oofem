@@ -505,7 +505,7 @@ PetscSparseMtrx :: buildInternalStructure(EngngModel *eModel, int di, const Unkn
     this->di = di;
 
 
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
     if ( eModel->isParallel() ) {
         Natural2GlobalOrdering *n2g;
         Natural2LocalOrdering *n2l;
@@ -741,7 +741,7 @@ PetscSparseMtrx :: assemble(const IntArray &loc, const FloatMatrix &mat)
     int ndofe = mat.giveNumberOfRows();
     IntArray gloc(ndofe);
 
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
     if ( emodel->isParallel() ) {
         // translate local code numbers to global ones
         emodel->giveParallelContext(this->di)->giveN2Gmap()->map2New(gloc, loc, 0);
@@ -794,7 +794,7 @@ PetscSparseMtrx :: assemble(const IntArray &loc, const FloatMatrix &mat)
 int
 PetscSparseMtrx :: assemble(const IntArray &rloc, const IntArray &cloc, const FloatMatrix &mat)
 {
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
     if ( emodel->isParallel() ) {
         // translate eq numbers
         IntArray grloc( rloc.giveSize() ), gcloc( cloc.giveSize() );
@@ -818,7 +818,7 @@ PetscSparseMtrx :: assemble(const IntArray &rloc, const IntArray &cloc, const Fl
     MatSetValues(this->mtrx, rsize, grloc.givePointer(),
                  csize, gcloc.givePointer(), mat.givePointer(), ADD_VALUES);
 
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
 }
 #endif
     // increment version
@@ -883,7 +883,7 @@ PetscSparseMtrx :: at(int i, int j) const
 std::unique_ptr<SparseMtrx>
 PetscSparseMtrx :: giveSubMatrix(const IntArray &rows, const IntArray &cols)
 {
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
     auto comm = this->emodel->giveParallelComm();
 #else
     auto comm = PETSC_COMM_SELF;
@@ -948,7 +948,7 @@ void
 PetscSparseMtrx :: writeToFile(const char *fname) const
 {
     PetscViewer viewer;
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
     PetscViewerASCIIOpen(this->emodel->giveParallelComm(), fname, & viewer);
 #else
     PetscViewerASCIIOpen(PETSC_COMM_SELF, fname, & viewer);
@@ -961,7 +961,7 @@ PetscSparseMtrx :: writeToFile(const char *fname) const
 void
 PetscSparseMtrx :: createVecGlobal(Vec *answer) const
 {
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
     if ( emodel->isParallel() ) {
         VecCreate(this->emodel->giveParallelComm(), answer);
         VecSetSizes(* answer, this->leqs, this->geqs);
@@ -969,7 +969,7 @@ PetscSparseMtrx :: createVecGlobal(Vec *answer) const
     } else {
 #endif
     VecCreateSeq(PETSC_COMM_SELF, this->giveNumberOfRows(), answer);
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
 }
 #endif
 }
@@ -980,7 +980,7 @@ PetscSparseMtrx :: scatterG2L(Vec src, FloatArray &dest) const
 {
     PetscScalar *ptr;
 
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
     if ( emodel->isParallel() ) {
         ParallelContext *context = emodel->giveParallelContext(di);
         int neqs = context->giveNumberOfNaturalEqs();
@@ -1010,7 +1010,7 @@ PetscSparseMtrx :: scatterG2L(Vec src, FloatArray &dest) const
         dest.at(i + 1) = ptr [ i ];
     }
     VecRestoreArray(src, & ptr);
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
 }
 #endif
     return 1;
@@ -1022,7 +1022,7 @@ PetscSparseMtrx :: scatterL2G(const FloatArray &src, Vec dest) const
 {
     const PetscScalar *ptr = src.givePointer();
 
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
     if ( emodel->isParallel() ) {
         ParallelContext *context = this->emodel->giveParallelContext(di);
         int size = src.giveSize();
@@ -1049,7 +1049,7 @@ PetscSparseMtrx :: scatterL2G(const FloatArray &src, Vec dest) const
 
     VecAssemblyBegin(dest);
     VecAssemblyEnd(dest);
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
 }
 #endif
     return 1;

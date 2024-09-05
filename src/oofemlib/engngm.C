@@ -76,7 +76,7 @@
     #include <fcntl.h>
 #endif
 
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
  #include "problemcomm.h"
  #include "processcomm.h"
  #include "loadbalancer.h"
@@ -132,7 +132,7 @@ EngngModel :: EngngModel(int i, EngngModel *_master) : domainNeqs(), domainPresc
     numProcs = 1;
     rank = 0;
     nonlocalExt = 0;
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
     loadBalancingFlag = false;
     force_load_rebalance_in_first_step = false;
     lb = NULL;
@@ -162,7 +162,7 @@ EngngModel :: ~EngngModel()
 // #endif
     }
 
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
     delete communicator;
     delete nonlocCommunicator;
     delete commBuff;
@@ -297,7 +297,7 @@ EngngModel :: initializeFrom(InputRecord &ir)
     IR_GIVE_OPTIONAL_FIELD(ir, parallelFlag, _IFT_EngngModel_parallelflag);
     // fprintf (stderr, "Parallel mode is %d\n", parallelFlag);
 
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
     /* Load balancing support */
     _val = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, _val, _IFT_EngngModel_loadBalancingFlag);
@@ -334,7 +334,7 @@ EngngModel :: initializeFrom(InputRecord &ir)
         fprintf(outputStream, "\nStarting analysis on: %s\n", ctime(& this->startTime) );
         fprintf(outputStream, "%s\n", simulationDescription.c_str());
 
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
         if ( this->isParallel() ) {
             fprintf(outputStream, "Problem rank is %d/%d on %s\n\n", this->rank, this->numProcs, this->processor_name);
         }
@@ -505,6 +505,15 @@ EngngModel :: forceEquationNumbering()
     return this->numberOfEquations;
 }
 
+void
+EngngModel::initializeYourself (TimeStep *tStep)
+{
+    // needed only of BCs are changing, no way to get this information now
+    // so to be safe, we alvays reinitialize
+    for ( auto &domain: domainList ) { 
+        domain->giveBCTracker()->initialize();
+    }
+}
 
 void
 EngngModel :: solveYourself()
@@ -620,7 +629,7 @@ EngngModel::solveYourselfNoWritings()
 			//fprintf(out, "\nUser time consumed by solution step %d: %.3f [s]\n\n",
 			//	this->giveCurrentStep()->giveNumber(), _steptime);
 
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
             if ( loadBalancingFlag ) {
                 this->balanceLoad( this->giveCurrentStep() );
             }
@@ -669,7 +678,7 @@ EngngModel :: updateAttributes(MetaStep *mStep)
         this->giveNumericalMethod(mStep1)->initializeFrom(ir);
     }
 
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
     if ( this->giveLoadBalancer() ) {
         this->giveLoadBalancer()->initializeFrom(ir);
     }
@@ -974,7 +983,7 @@ void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAss
                     ma.matrixFromSurfaceLoad(mat, *element, sLoad, boundary, tStep);
 
                     if ( mat.isNotEmpty() ) {
-                        bNodes = element->giveInterpolation()->boundaryGiveNodes(boundary);
+                        bNodes = element->giveInterpolation()->boundaryGiveNodes(boundary, element->giveGeometryType());
                         if ( element->computeDofTransformationMatrix(R, bNodes, true) ) {
                             mat.rotatedWith(R);
                         }
@@ -999,7 +1008,7 @@ void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAss
                     ma.matrixFromEdgeLoad(mat, *element, eLoad, boundary, tStep);
 
                     if ( mat.isNotEmpty() ) {
-                        bNodes = element->giveInterpolation()->boundaryEdgeGiveNodes(boundary);
+                        bNodes = element->giveInterpolation()->boundaryEdgeGiveNodes(boundary, element->giveGeometryType());
                         if ( element->computeDofTransformationMatrix(R, bNodes, true) ) {
                             mat.rotatedWith(R);
                         }
@@ -1107,7 +1116,7 @@ void EngngModel :: assembleVector(FloatArray &answer, TimeStep *tStep,
 {
     if ( eNorms ) {
         int maxdofids = domain->giveMaxDofID();
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
         if ( this->isParallel() ) {
             int val;
             MPI_Allreduce(& maxdofids, & val, 1, MPI_INT, MPI_MAX, this->comm);
@@ -1926,7 +1935,7 @@ EngngModel :: giveDomain(int i)
         OOFEM_ERROR("Undefined domain");
     }
 
-    return NULL;
+    // return NULL;
 }
 
 void
@@ -1971,7 +1980,7 @@ EngngModel :: giveMetaStep(int i)
         OOFEM_ERROR("undefined metaStep (%d)", i);
     }
 
-    return NULL;
+    // return NULL;
 }
 
 void
@@ -2158,7 +2167,7 @@ void EngngModel :: drawNodes(oofegGraphicContext &gc)
 void
 EngngModel :: initializeCommMaps(bool forceInit)
 {
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
     // Set up communication patterns.
     communicator->setUpCommunicationMaps(this, true, forceInit);
     if ( nonlocalExt ) {
@@ -2174,7 +2183,7 @@ int
 EngngModel :: updateSharedDofManagers(FloatArray &answer, const UnknownNumberingScheme &s, int ExchangeTag)
 {
     if ( isParallel() ) {
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
         int result = 1;
  #ifdef __VERBOSE_PARALLEL
         VERBOSEPARALLEL_PRINT( "EngngModel :: updateSharedDofManagers", "Packing data", this->giveRank() );
@@ -2200,7 +2209,6 @@ EngngModel :: updateSharedDofManagers(FloatArray &answer, const UnknownNumbering
         return result;
 #else
         OOFEM_ERROR("Support for parallel mode not compiled in.");
-        return 0;
 #endif
     } else {
         return 1;
@@ -2214,7 +2222,7 @@ EngngModel :: exchangeRemoteElementData(int ExchangeTag)
 {
 
     if ( isParallel() && nonlocalExt ) {
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
         int result = 1;
  #ifdef __VERBOSE_PARALLEL
         VERBOSEPARALLEL_PRINT( "EngngModel :: exchangeRemoteElementData", "Packing remote element data", this->giveRank() );
@@ -2240,14 +2248,13 @@ EngngModel :: exchangeRemoteElementData(int ExchangeTag)
         return result;
 #else
         OOFEM_ERROR("Support for parallel mode not compiled in.");
-        return 0;
 #endif
     } else {
         return 1;
     }
 }
 
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
 void
 EngngModel :: balanceLoad(TimeStep *tStep)
 {

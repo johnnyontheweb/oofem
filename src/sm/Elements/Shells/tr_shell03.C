@@ -793,7 +793,7 @@ TR_SHELL03::computeEdgeVolumeAround(GaussPoint *gp, int iEdge)
 	};
 	this->giveNodeCoordinates(lc[0], lc[1], lc[2]);
 
-	double detJ = this->plate->interp_lin.edgeGiveTransformationJacobian(iEdge, gp->giveNaturalCoordinates(), FEIVertexListGeometryWrapper(lc));
+	double detJ = this->plate->interp_lin.edgeGiveTransformationJacobian( iEdge, gp->giveNaturalCoordinates(), FEIVertexListGeometryWrapper( lc, this->giveGeometryType() ) );
 	return detJ * gp->giveWeight();
 }
 

@@ -81,6 +81,8 @@ public:
     int testElementExtension(ElementExtension ext) override { return ( ( ext == Element_EdgeLoadSupport ) ? 1 : 0 ); }
     // overloaded to take into account possible element local cs (in derived cct3d)
     double computeArea() override;
+    Element_Geometry_Type giveGeometryType() const override {return EGT_triangle_1;}
+
 
     FloatArray la1;
 
