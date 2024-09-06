@@ -481,8 +481,7 @@ StructuralElement :: computeResultingIPTemperatureAt(FloatArray &answer, TimeSte
     int n, nLoads;
     Load *load;
     FloatArray gCoords, temperature;
-    //int nbc = domain->giveNumberOfBoundaryConditions();
-
+    
     if ( this->computeGlobalCoordinates(gCoords, gp->giveNaturalCoordinates() ) == 0 ) {
         OOFEM_ERROR("computeGlobalCoordinates failed");
     }
@@ -500,17 +499,37 @@ StructuralElement :: computeResultingIPTemperatureAt(FloatArray &answer, TimeSte
 
 
     // new approach using sets
+    // --------------------------------------------------------------------------------
+    //int nbc = domain->giveNumberOfBoundaryConditions();
+    //for ( int i = 1; i <= nbc; ++i ) {
+    //GeneralBoundaryCondition *bc = domain->giveBc( i );
+    //// if ((load = dynamic_cast< StructuralTemperatureLoad * >(bc))) {
+    //if ( ( load = static_cast<StructuralTemperatureLoad *>( bc ) ) ) {
+    //    if ( bc->giveSetNumber() && bc->isImposed( tStep ) ) {
+    //        if ( load->giveBCValType() == TemperatureBVT ) {
+    //            Set *set                 = domain->giveSet( bc->giveSetNumber() );
+    //            const IntArray &elements = set->giveElementList();
+    //            if ( elements.contains( this->giveNumber() ) ) {
+    //                load->computeValueAt( temperature, tStep, gCoords, mode );
+    //                answer.add( temperature );
+    //            }
+    //        }
+    //    }
+    //}
+    // --------------------------------------------------------------------------------
     // add exact end forces due to nonnodal loading applied indirectly (via sets)
-    BCTracker *bct = this->domain->giveBCTracker();
-    BCTracker::entryListType bcList = bct->getElementRecords(this->number);
+    if ( this->number >0) {    
+        BCTracker *bct = this->domain->giveBCTracker();
+        BCTracker::entryListType bcList = bct->getElementRecords(this->number);
     
-    for (BCTracker::entryListType::iterator it = bcList.begin(); it != bcList.end(); ++it) {
-      GeneralBoundaryCondition *bc = this->domain->giveBc((*it).bcNumber);
-            if ( ( load = dynamic_cast< StructuralTemperatureLoad * >( bc ) ) ) {
-            if  ( bc->giveSetNumber() && bc->isImposed(tStep) ) {
-                if ( load->giveBCValType() == TemperatureBVT ) {
-                    load->computeValueAt(temperature, tStep, gCoords, mode);
-                    answer.add(temperature);
+        for (BCTracker::entryListType::iterator it = bcList.begin(); it != bcList.end(); ++it) {
+          GeneralBoundaryCondition *bc = this->domain->giveBc((*it).bcNumber);
+                if ( ( load = dynamic_cast< StructuralTemperatureLoad * >( bc ) ) ) {
+                if  ( bc->giveSetNumber() && bc->isImposed(tStep) ) {
+                    if ( load->giveBCValType() == TemperatureBVT ) {
+                        load->computeValueAt(temperature, tStep, gCoords, mode);
+                        answer.add(temperature);
+                    }
                 }
             }
         }
@@ -525,8 +544,7 @@ StructuralElement :: computeResultingIPEigenstrainAt(FloatArray &answer, TimeSte
     int n, nLoads;
     Load *load;
     FloatArray gCoords, eigenstrain;
-    //int nbc = domain->giveNumberOfBoundaryConditions();
-
+    
     if ( this->computeGlobalCoordinates(gCoords, gp->giveNaturalCoordinates() ) == 0 ) {
         OOFEM_ERROR("computeGlobalCoordinates failed");
     }
@@ -546,18 +564,39 @@ StructuralElement :: computeResultingIPEigenstrainAt(FloatArray &answer, TimeSte
     }
 
     // new approach using sets
+    // --------------------------------------------------------------------------------
+    //int nbc = domain->giveNumberOfBoundaryConditions();
+    //for ( int i = 1; i <= nbc; ++i ) {
+    //GeneralBoundaryCondition *bc = domain->giveBc( i );
+    //if ( ( load = static_cast<StructuralEigenstrainLoad *>( bc ) ) ) {
+    //    if ( bc->giveSetNumber() && bc->isImposed( tStep ) ) {
+    //        if ( load->giveBCValType() == EigenstrainBVT ) {
+
+    //            Set *set                 = domain->giveSet( bc->giveSetNumber() );
+    //            const IntArray &elements = set->giveElementList();
+
+    //            if ( elements.contains( this->giveNumber() ) ) {
+    //                load->computeValueAt( eigenstrain, tStep, gCoords, mode );
+    //                answer.add( eigenstrain );
+    //            }
+    //        }
+    //    }
+    //}
+    // --------------------------------------------------------------------------------
     // add exact end forces due to nonnodal loading applied indirectly (via sets)
-    BCTracker *bct = this->domain->giveBCTracker();
-    BCTracker::entryListType bcList = bct->getElementRecords(this->number);
+    if ( this->number > 0 ) {
+        BCTracker *bct = this->domain->giveBCTracker();
+        BCTracker::entryListType bcList = bct->getElementRecords(this->number);
     
-    for (BCTracker::entryListType::iterator it = bcList.begin(); it != bcList.end(); ++it) {
-      GeneralBoundaryCondition *bc = this->domain->giveBc((*it).bcNumber);
+        for (BCTracker::entryListType::iterator it = bcList.begin(); it != bcList.end(); ++it) {
+          GeneralBoundaryCondition *bc = this->domain->giveBc((*it).bcNumber);
  
-        if  ( ( load = dynamic_cast< StructuralEigenstrainLoad * >( bc ) ) ) {
-            if  ( bc->giveSetNumber() && bc->isImposed(tStep) ) {
-                if ( load->giveBCValType() == EigenstrainBVT ) {
-                    load->computeValueAt(eigenstrain, tStep, gCoords, mode);
-                    answer.add(eigenstrain);
+            if  ( ( load = dynamic_cast< StructuralEigenstrainLoad * >( bc ) ) ) {
+                if  ( bc->giveSetNumber() && bc->isImposed(tStep) ) {
+                    if ( load->giveBCValType() == EigenstrainBVT ) {
+                        load->computeValueAt(eigenstrain, tStep, gCoords, mode);
+                        answer.add(eigenstrain);
+                    }
                 }
             }
         }
