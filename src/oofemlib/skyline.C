@@ -208,6 +208,9 @@ int Skyline :: assemble(const IntArray &loc, const FloatMatrix &mat)
         }
 
         for ( int j = 1; j <= ndofe; j++ ) {
+            if ( mat.at( i, j ) == 0 ) {
+                continue;
+            }
             int ac2 = loc.at(j);
             if ( ac2 == 0 ) {
                 continue;
