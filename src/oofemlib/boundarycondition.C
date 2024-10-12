@@ -61,9 +61,9 @@ double BoundaryCondition :: give(Dof *dof, ValueModeType mode, double time)
     if ( (mode == VM_Total) || (mode == VM_TotalIntrinsic)) {
         factor = this->giveTimeFunction()->evaluateAtTime(time);
     } else if ( mode == VM_Velocity ) {
-        factor = this->giveTimeFunction()->evaluateVelocityAtTime(time);
+        factor = 0; //this->giveTimeFunction()->evaluateVelocityAtTime(time);
     } else if ( mode == VM_Acceleration ) {
-        factor = this->giveTimeFunction()->evaluateAccelerationAtTime(time);
+        factor = 0; //this->giveTimeFunction()->evaluateAccelerationAtTime(time);
     } else {
         OOFEM_ERROR("Should not be called for value mode type then total, velocity, or acceleration.");
     }
