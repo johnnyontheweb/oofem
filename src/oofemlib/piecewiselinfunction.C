@@ -94,24 +94,55 @@ double PiecewiseLinFunction :: evaluateVelocityAtTime(double time)
         OOFEM_ERROR("Undefined dates and values");
     }
 
-    for ( int i = 1; i <= this->dates.giveSize(); i++ ) {
-        if ( fabs(dates.at(i) - time) < precision ) {
-            if ( i < this->dates.giveSize() ) {
-                return ( this->values.at(i + 1) - this->values.at(i) ) / ( this->dates.at(i + 1) - this->dates.at(i) );
-            } else {
-                return ( this->values.at(i) - this->values.at(i - 1) ) / ( this->dates.at(i) - this->dates.at(i - 1) );
+    if ( this->acc.giveSize() == 0 ) { // previous behaviour
+        for ( int i = 1; i <= this->dates.giveSize(); i++ ) {
+            if ( fabs( dates.at( i ) - time ) < precision ) {
+                if ( i < this->dates.giveSize() ) {
+                    return ( this->values.at( i + 1 ) - this->values.at( i ) ) / ( this->dates.at( i + 1 ) - this->dates.at( i ) );
+                } else {
+                    return ( this->values.at( i ) - this->values.at( i - 1 ) ) / ( this->dates.at( i ) - this->dates.at( i - 1 ) );
+                }
+            } else if ( dates.at( i ) > time ) {
+                if ( i == 1 ) {
+                    return 0.;
+                }
+
+                xa = this->dates.at( i - 1 );
+                xb = this->dates.at( i );
+                ya = this->values.at( i - 1 );
+                yb = this->values.at( i );
+
+                return ( yb - ya ) / ( xb - xa );
             }
-        } else if ( dates.at(i) > time ) {
-            if ( i == 1 ) {
-                return 0.;
+        }
+    } else { // integrate acceleration to return velocity
+
+        for ( size_t i = 1; i <= this->dates.giveSize(); i++ ) {
+
+            // compile the vector the first time
+            if ( this->vel.giveSize() == 0 ) {
+                vel.resize( dates.giveSize() );
+                vel.at(1)= 0.; // first value is zero
+                for ( size_t j = 2; j < dates.giveSize(); j++ ) {
+                    vel.at(j)= vel.at( j - 1 ) + 0.5 * ( acc.at( j - 1 ) + acc.at( j ) ) * ( dates.at( j ) - dates.at( j - 1 ) );
+                }
             }
 
-            xa = this->dates.at(i - 1);
-            xb = this->dates.at(i);
-            ya = this->values.at(i - 1);
-            yb = this->values.at(i);
+            if ( fabs( dates.at( i ) - time ) < precision ) {
+                return vel.at( i );
+            } else if ( dates.at( i ) > time ) {
+                if ( i == 1 ) {
+                    // OOFEM_WARNING("computational time %f is out of given time %f, using closest value", time, dates.at(i) );
+                    return this->vel.at( i ); // return values, not time! - first value used
+                }
 
-            return ( yb - ya ) / ( xb - xa );
+                xa = this->dates.at( i - 1 );
+                xb = this->dates.at( i );
+                ya = this->vel.at( i - 1 );
+                yb = this->vel.at( i );
+                // linear interpolation
+                return ya + ( time - xa ) * ( yb - ya ) / ( xb - xa );
+            }
         }
     }
 

@@ -57,7 +57,7 @@ class OOFEM_EXPORT PiecewiseLinFunction : public Function
 protected:
     FloatArray dates;
     FloatArray values;
-    FloatArray acc;
+    FloatArray acc, vel;
 
 public:
     PiecewiseLinFunction(int i, Domain * d);
