@@ -257,11 +257,13 @@ void SpringElement3D::printOutputAt( FILE *File, TimeStep *tStep )
         res.at( 4 ) = ( u.at( 10 ) - u.at( 4 ) );
         res.at( 5 ) = ( u.at( 11 ) - u.at( 5 ) );
         res.at( 6 ) = ( u.at( 12 ) - u.at( 6 ) );
+        FloatArray resF = this->computeSpringInternalForce( tStep );
         fprintf( File, "SpringElement3D %d dir 3 %.4e %.4e %.4e refangle %.4e disp 6 %.4e %.4e %.4e %.4e %.4e %.4e macroelem %d : %.4e %.4e %.4e %.4e %.4e %.4e\n", this->giveLabel(), 
             this->dir.at( 1 ), this->dir.at( 2 ), this->dir.at( 3 ), this->referenceAngle, res.at( 1 ), res.at( 2 ), res.at( 3 ), res.at( 4 ), res.at( 5 ), res.at( 6 ), this->macroElem, 
-            this->computeSpringInternalForce( tStep ) ); // print the first 6 items
+            resF.at( 1 ), resF.at( 2 ), resF.at( 3 ), resF.at( 4 ), resF.at( 5 ), resF.at( 6 ) ); // print the first 6 items
     } else { 
-        fprintf( File, "SpringElement3D %d :%.4e %.4e %.4e %.4e %.4e %.4e\n", this->giveLabel(), this->computeSpringInternalForce( tStep ) ); // print the first 6 items
+        FloatArray res = this->computeSpringInternalForce( tStep );
+        fprintf( File, "SpringElement3D %d :%.4e %.4e %.4e %.4e %.4e %.4e\n", this->giveLabel(), res.at(1), res.at(2), res.at(3), res.at(4), res.at(5), res.at(6) ); // print the first 6 items
     }
 }
 
