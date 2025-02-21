@@ -32,7 +32,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "sm/Elements/Shells/TR_SHELL03.h"
+#include "sm/Elements/Shells/tr_shell03.h"
 #include "sm/Materials/structuralms.h"
 #include "fei2dtrlin.h"
 #include "contextioerr.h"
