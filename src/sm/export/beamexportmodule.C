@@ -611,14 +611,14 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
             DofManager *dofMan = elem->giveDofManager( 1 );
             dofMan->giveCompleteUnknownVector( dNI, VM_Total, tStep );
             FloatMatrix N;
-            if ( dofMan->computeL2GTransformation( N, NULL ) ) {
+            if ( dofMan->computeL2GTransformation( N, 0 ) ) {
                 dNI.rotatedWith( N, 'n' ); // rotate to global c.s.
             }
             dNI.rotatedWith( T, 'n' ); // rotate to element c.s.
 
             dofMan = elem->giveDofManager( 2 );
             dofMan->giveCompleteUnknownVector( dNE, VM_Total, tStep );
-            if ( dofMan->computeL2GTransformation( N, NULL ) ) {
+            if ( dofMan->computeL2GTransformation( N, 0 ) ) {
                 dNE.rotatedWith( N, 'n' ); // rotate to global c.s.
             }
             dNE.rotatedWith( T, 'n' ); // rotate to element c.s.
