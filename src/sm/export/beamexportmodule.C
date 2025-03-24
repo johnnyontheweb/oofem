@@ -77,7 +77,7 @@ void BeamExportModule::initializeFrom( InputRecord &ir )
 
     if ( isRespSpec ) {
         const char *name = this->emodel->giveClassName();
-        if ( !strcmp( name, "ResponseSpectrum" ) == 0 ) OOFEM_ERROR( "Using rspec mode without a ResponseSpectrum engineering model" );
+        if ( strcmp( name, "ResponseSpectrum" ) != 0 ) OOFEM_ERROR( "Using rspec mode without a ResponseSpectrum engineering model" );
         rs = dynamic_cast<ResponseSpectrum *>( this->emodel );
         if ( !rs ) OOFEM_ERROR( "Error retrieving engmodel." );
     }
@@ -611,14 +611,15 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
             DofManager *dofMan = elem->giveDofManager( 1 );
             dofMan->giveCompleteUnknownVector( dNI, VM_Total, tStep );
             FloatMatrix N;
-            if ( dofMan->computeL2GTransformation( N, 0 ) ) {
+            IntArray DofIDs; // empty id array, replacing the NULL
+            if ( dofMan->computeL2GTransformation( N, DofIDs ) ) {
                 dNI.rotatedWith( N, 'n' ); // rotate to global c.s.
             }
             dNI.rotatedWith( T, 'n' ); // rotate to element c.s.
 
             dofMan = elem->giveDofManager( 2 );
             dofMan->giveCompleteUnknownVector( dNE, VM_Total, tStep );
-            if ( dofMan->computeL2GTransformation( N, 0 ) ) {
+            if ( dofMan->computeL2GTransformation( N, DofIDs ) ) {
                 dNE.rotatedWith( N, 'n' ); // rotate to global c.s.
             }
             dNE.rotatedWith( T, 'n' ); // rotate to element c.s.
