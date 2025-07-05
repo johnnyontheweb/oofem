@@ -895,32 +895,82 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
     answer.resize(12, 12);
     answer.zero();
 
-    answer.at(2, 2) = ( 4. * kappaz2 + 4. * kappaz + 6. / 5. ) / denomz;
-    answer.at(2, 6) = ( l / 10. ) / denomz;
-    answer.at(2, 8) = ( -4. * kappaz2 - 4. * kappaz - 6. / 5. ) / denomz;
-    answer.at(2, 12) = ( l / 10. ) / denomz;
+    //answer.at(2, 2) = ( 4. * kappaz2 + 4. * kappaz + 6. / 5. ) / denomz;
+    //answer.at(2, 6) = ( l / 10. ) / denomz;
+    //answer.at(2, 8) = ( -4. * kappaz2 - 4. * kappaz - 6. / 5. ) / denomz;
+    //answer.at(2, 12) = ( l / 10. ) / denomz;
 
-    answer.at(3, 3) = ( 4. * kappay2 + 4. * kappay + 6. / 5. ) / denomy;
-    answer.at(3, 5) = ( -l / 10. ) / denomy;
-    answer.at(3, 9) = ( -4. * kappay2 - 4. * kappay - 6. / 5. ) / denomy;
-    answer.at(3, 11) = ( -l / 10. ) / denomy;
+    //answer.at(3, 3) = ( 4. * kappay2 + 4. * kappay + 6. / 5. ) / denomy;
+    //answer.at(3, 5) = ( -l / 10. ) / denomy;
+    //answer.at(3, 9) = ( -4. * kappay2 - 4. * kappay - 6. / 5. ) / denomy;
+    //answer.at(3, 11) = ( -l / 10. ) / denomy;
 
-    answer.at(5, 5) = l * l * ( kappay2 / 3. + kappay / 3. + 2. / 15. ) / denomy;
-    answer.at(5, 9) = ( l / 10. ) / denomy;
-    answer.at(5, 11) = -l * l * ( kappay2 / 3. + kappay / 3. + 1. / 30. ) / denomy;
+    //answer.at(5, 5) = l * l * ( kappay2 / 3. + kappay / 3. + 2. / 15. ) / denomy;
+    //answer.at(5, 9) = ( l / 10. ) / denomy;
+    //answer.at(5, 11) = -l * l * ( kappay2 / 3. + kappay / 3. + 1. / 30. ) / denomy;
 
-    answer.at(6, 6) = l * l * ( kappaz2 / 3. + kappaz / 3. + 2. / 15. ) / denomz;
-    answer.at(6, 8) = ( -l / 10. ) / denomz;
-    answer.at(6, 12) = -l * l * ( kappaz2 / 3. + kappaz / 3. + 1. / 30. ) / denomz;
+    //answer.at(6, 6) = l * l * ( kappaz2 / 3. + kappaz / 3. + 2. / 15. ) / denomz;
+    //answer.at(6, 8) = ( -l / 10. ) / denomz;
+    //answer.at(6, 12) = -l * l * ( kappaz2 / 3. + kappaz / 3. + 1. / 30. ) / denomz;
 
-    answer.at(8, 8) = ( 4. * kappaz2 + 4. * kappaz + 6. / 5. ) / denomz;
-    answer.at(8, 12) = ( -l / 10. ) / denomz;
+    //answer.at(8, 8) = ( 4. * kappaz2 + 4. * kappaz + 6. / 5. ) / denomz;
+    //answer.at(8, 12) = ( -l / 10. ) / denomz;
 
-    answer.at(9, 9) = ( 4. * kappay2 + 4. * kappay + 6. / 5. ) / denomy;
-    answer.at(9, 11) = ( l / 10. ) / denomy;
+    //answer.at(9, 9) = ( 4. * kappay2 + 4. * kappay + 6. / 5. ) / denomy;
+    //answer.at(9, 11) = ( l / 10. ) / denomy;
 
-    answer.at(11, 11) = l * l * ( kappay2 / 3. + kappay / 3. + 2. / 15. ) / denomy;
-    answer.at(12, 12) = l * l * ( kappaz2 / 3. + kappaz / 3. + 2. / 15. ) / denomz;
+    //answer.at(11, 11) = l * l * ( kappay2 / 3. + kappay / 3. + 2. / 15. ) / denomy;
+    //answer.at(12, 12) = l * l * ( kappaz2 / 3. + kappaz / 3. + 2. / 15. ) / denomz;
+
+
+    // Coefficienti Eulero-Bernoulli (nessun effetto shear)
+    double alpha = 6.0 / ( 5.0 * l );
+    double beta  = l / 10.0;
+    double gamma = 2.0 * l * l / 15.0;
+    double delta = l * l / 30.0;
+
+    // Contributi lungo l'asse Z (DOF traslazione y + rotazione x)
+    answer.at( 1, 1 )  = alpha;
+    answer.at( 1, 5 )  = beta;
+    answer.at( 1, 7 )  = -alpha;
+    answer.at( 1, 11 ) = beta;
+
+    answer.at( 5, 1 )  = beta;
+    answer.at( 5, 5 )  = gamma;
+    answer.at( 5, 7 )  = -beta;
+    answer.at( 5, 11 ) = delta;
+
+    answer.at( 7, 1 )  = -alpha;
+    answer.at( 7, 5 )  = -beta;
+    answer.at( 7, 7 )  = alpha;
+    answer.at( 7, 11 ) = -beta;
+
+    answer.at( 11, 1 )  = beta;
+    answer.at( 11, 5 )  = delta;
+    answer.at( 11, 7 )  = -beta;
+    answer.at( 11, 11 ) = gamma;
+
+    // Contributi lungo l'asse Y (DOF traslazione z + rotazione y)
+    answer.at( 2, 2 )  = alpha;
+    answer.at( 2, 4 )  = -beta;
+    answer.at( 2, 8 )  = -alpha;
+    answer.at( 2, 10 ) = -beta;
+
+    answer.at( 4, 2 )  = -beta;
+    answer.at( 4, 4 )  = gamma;
+    answer.at( 4, 8 )  = beta;
+    answer.at( 4, 10 ) = delta;
+
+    answer.at( 8, 2 )  = -alpha;
+    answer.at( 8, 4 )  = beta;
+    answer.at( 8, 8 )  = alpha;
+    answer.at( 8, 10 ) = beta;
+
+    answer.at( 10, 2 )  = -beta;
+    answer.at( 10, 4 )  = delta;
+    answer.at( 10, 8 )  = beta;
+    answer.at( 10, 10 ) = gamma;
+
 
     //minVal = min(fabs(answer.at(2, 2)), fabs(answer.at(3, 3)));
     //minVal = min(minVal, fabs(answer.at(5, 5)));
