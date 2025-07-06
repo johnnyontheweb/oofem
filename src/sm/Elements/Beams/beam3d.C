@@ -877,7 +877,7 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
 {
     // computes initial stress matrix of receiver (or geometric stiffness matrix)
 
-    FloatMatrix stiff;
+    //FloatMatrix stiff;
     FloatArray endForces;
 
     double l = this->computeLength();
@@ -895,81 +895,83 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
     answer.resize(12, 12);
     answer.zero();
 
-    //answer.at(2, 2) = ( 4. * kappaz2 + 4. * kappaz + 6. / 5. ) / denomz;
-    //answer.at(2, 6) = ( l / 10. ) / denomz;
-    //answer.at(2, 8) = ( -4. * kappaz2 - 4. * kappaz - 6. / 5. ) / denomz;
-    //answer.at(2, 12) = ( l / 10. ) / denomz;
+    answer.at(2, 2) = ( 4. * kappaz2 + 4. * kappaz + 6. / 5. ) / denomz;
+    answer.at(2, 6) = ( l / 10. ) / denomz;
+    answer.at(2, 8) = ( -4. * kappaz2 - 4. * kappaz - 6. / 5. ) / denomz;
+    answer.at(2, 12) = ( l / 10. ) / denomz;
 
-    //answer.at(3, 3) = ( 4. * kappay2 + 4. * kappay + 6. / 5. ) / denomy;
-    //answer.at(3, 5) = ( -l / 10. ) / denomy;
-    //answer.at(3, 9) = ( -4. * kappay2 - 4. * kappay - 6. / 5. ) / denomy;
-    //answer.at(3, 11) = ( -l / 10. ) / denomy;
+    answer.at(3, 3) = ( 4. * kappay2 + 4. * kappay + 6. / 5. ) / denomy;
+    answer.at(3, 5) = ( -l / 10. ) / denomy;
+    answer.at(3, 9) = ( -4. * kappay2 - 4. * kappay - 6. / 5. ) / denomy;
+    answer.at(3, 11) = ( -l / 10. ) / denomy;
 
-    //answer.at(5, 5) = l * l * ( kappay2 / 3. + kappay / 3. + 2. / 15. ) / denomy;
-    //answer.at(5, 9) = ( l / 10. ) / denomy;
-    //answer.at(5, 11) = -l * l * ( kappay2 / 3. + kappay / 3. + 1. / 30. ) / denomy;
+    answer.at(5, 5) = l * l * ( kappay2 / 3. + kappay / 3. + 2. / 15. ) / denomy;
+    answer.at(5, 9) = ( l / 10. ) / denomy;
+    answer.at(5, 11) = -l * l * ( kappay2 / 3. + kappay / 3. + 1. / 30. ) / denomy;
 
-    //answer.at(6, 6) = l * l * ( kappaz2 / 3. + kappaz / 3. + 2. / 15. ) / denomz;
-    //answer.at(6, 8) = ( -l / 10. ) / denomz;
-    //answer.at(6, 12) = -l * l * ( kappaz2 / 3. + kappaz / 3. + 1. / 30. ) / denomz;
+    answer.at(6, 6) = l * l * ( kappaz2 / 3. + kappaz / 3. + 2. / 15. ) / denomz;
+    answer.at(6, 8) = ( -l / 10. ) / denomz;
+    answer.at(6, 12) = -l * l * ( kappaz2 / 3. + kappaz / 3. + 1. / 30. ) / denomz;
 
-    //answer.at(8, 8) = ( 4. * kappaz2 + 4. * kappaz + 6. / 5. ) / denomz;
-    //answer.at(8, 12) = ( -l / 10. ) / denomz;
+    answer.at(8, 8) = ( 4. * kappaz2 + 4. * kappaz + 6. / 5. ) / denomz;
+    answer.at(8, 12) = ( -l / 10. ) / denomz;
 
-    //answer.at(9, 9) = ( 4. * kappay2 + 4. * kappay + 6. / 5. ) / denomy;
-    //answer.at(9, 11) = ( l / 10. ) / denomy;
+    answer.at(9, 9) = ( 4. * kappay2 + 4. * kappay + 6. / 5. ) / denomy;
+    answer.at(9, 11) = ( l / 10. ) / denomy;
 
-    //answer.at(11, 11) = l * l * ( kappay2 / 3. + kappay / 3. + 2. / 15. ) / denomy;
-    //answer.at(12, 12) = l * l * ( kappaz2 / 3. + kappaz / 3. + 2. / 15. ) / denomz;
+    answer.at(11, 11) = l * l * ( kappay2 / 3. + kappay / 3. + 2. / 15. ) / denomy;
+    answer.at(12, 12) = l * l * ( kappaz2 / 3. + kappaz / 3. + 2. / 15. ) / denomz;
 
 
-    // Coefficienti Eulero-Bernoulli (nessun effetto shear)
-    double alpha = 6.0 / ( 5.0 * l );
-    double beta  = l / 10.0;
-    double gamma = 2.0 * l * l / 15.0;
-    double delta = l * l / 30.0;
+    //// Coefficienti Eulero-Bernoulli (nessun effetto shear)
+    //double alpha = 6.0 / ( 5.0 * l );
+    //double beta  = l / 10.0;
+    //double gamma = 2.0 * l * l / 15.0;
+    //double delta = l * l / 30.0;
 
-    // Contributi lungo l'asse Z (DOF traslazione y + rotazione x)
-    answer.at( 1, 1 )  = alpha;
-    answer.at( 1, 5 )  = beta;
-    answer.at( 1, 7 )  = -alpha;
-    answer.at( 1, 11 ) = beta;
+    //// Contributi lungo l'asse Z (DOF traslazione y + rotazione x)
+    //answer.at( 1, 1 )  = alpha;
+    //answer.at( 1, 5 )  = beta;
+    //answer.at( 1, 7 )  = -alpha;
+    //answer.at( 1, 11 ) = beta;
 
-    answer.at( 5, 1 )  = beta;
-    answer.at( 5, 5 )  = gamma;
-    answer.at( 5, 7 )  = -beta;
-    answer.at( 5, 11 ) = delta;
+    //answer.at( 5, 1 )  = beta;
+    //answer.at( 5, 5 )  = gamma;
+    //answer.at( 5, 7 )  = -beta;
+    //answer.at( 5, 11 ) = delta;
 
-    answer.at( 7, 1 )  = -alpha;
-    answer.at( 7, 5 )  = -beta;
-    answer.at( 7, 7 )  = alpha;
-    answer.at( 7, 11 ) = -beta;
+    //answer.at( 7, 1 )  = -alpha;
+    //answer.at( 7, 5 )  = -beta;
+    //answer.at( 7, 7 )  = alpha;
+    //answer.at( 7, 11 ) = -beta;
 
-    answer.at( 11, 1 )  = beta;
-    answer.at( 11, 5 )  = delta;
-    answer.at( 11, 7 )  = -beta;
-    answer.at( 11, 11 ) = gamma;
+    //answer.at( 11, 1 )  = beta;
+    //answer.at( 11, 5 )  = delta;
+    //answer.at( 11, 7 )  = -beta;
+    //answer.at( 11, 11 ) = gamma;
 
-    // Contributi lungo l'asse Y (DOF traslazione z + rotazione y)
-    answer.at( 2, 2 )  = alpha;
-    answer.at( 2, 4 )  = -beta;
-    answer.at( 2, 8 )  = -alpha;
-    answer.at( 2, 10 ) = -beta;
+    //// Contributi lungo l'asse Y (DOF traslazione z + rotazione y)
+    //answer.at( 2, 2 )  = alpha;
+    //answer.at( 2, 4 )  = -beta;
+    //answer.at( 2, 8 )  = -alpha;
+    //answer.at( 2, 10 ) = -beta;
 
-    answer.at( 4, 2 )  = -beta;
-    answer.at( 4, 4 )  = gamma;
-    answer.at( 4, 8 )  = beta;
-    answer.at( 4, 10 ) = delta;
+    //answer.at( 4, 2 )  = -beta;
+    //answer.at( 4, 4 )  = gamma;
+    //answer.at( 4, 8 )  = beta;
+    //answer.at( 4, 10 ) = delta;
 
-    answer.at( 8, 2 )  = -alpha;
-    answer.at( 8, 4 )  = beta;
-    answer.at( 8, 8 )  = alpha;
-    answer.at( 8, 10 ) = beta;
+    //answer.at( 8, 2 )  = -alpha;
+    //answer.at( 8, 4 )  = beta;
+    //answer.at( 8, 8 )  = alpha;
+    //answer.at( 8, 10 ) = beta;
 
-    answer.at( 10, 2 )  = -beta;
-    answer.at( 10, 4 )  = delta;
-    answer.at( 10, 8 )  = beta;
-    answer.at( 10, 10 ) = gamma;
+    //answer.at( 10, 2 )  = -beta;
+    //answer.at( 10, 4 )  = delta;
+    //answer.at( 10, 8 )  = beta;
+    //answer.at( 10, 10 ) = gamma;
+
+
 
 
     //minVal = min(fabs(answer.at(2, 2)), fabs(answer.at(3, 3)));
@@ -1006,8 +1008,6 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
     answer.at(4, 10) = -d.at(4, 4) / G / area;
     answer.at(10, 10) = d.at(4, 4) / G / area;;
 
-
-
     answer.symmetrized();
     // ask end forces in g.c.s
     this->giveEndForcesVector(endForces, tStep);
@@ -1016,6 +1016,105 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
     answer.times(N / l);
 
     //answer.beLumpedOf (mass);
+
+
+    // other contributions
+    double My = ( -endForces.at( 5 ) + endForces.at( 11 ) ) / 2.;
+    double Mz = ( -endForces.at( 6 ) + endForces.at( 12 ) ) / 2.;
+    // BENDING MOMENTS
+    FloatMatrix Kg_M;
+    Kg_M.resize( 12, 12 );
+    Kg_M.zero();
+    if (abs(My) > 1e-12) {    
+        // Coefficienti per teoria di Timoshenko
+        double c1 = My / ( l * ( 1 + 2*kappaz ) );
+        double c2 = My * 2 * kappaz / (l * std::pow(( 1 + 2 * kappaz ), 2) );
+        
+        // Termini accoppiati w-theta_y
+        Kg_M.at( 2, 5 )  = c1;
+        Kg_M.at( 2, 11 ) = -c1;
+        Kg_M.at( 5, 2 )  = c1;
+        Kg_M.at( 8, 5 )  = -c1;
+        Kg_M.at( 8, 11 ) = c1;
+        Kg_M.at( 11, 2 ) = -c1;
+        Kg_M.at( 11, 8 ) = c1;
+
+        // correzione per deformabilità a taglio
+        Kg_M.at( 5, 5 ) += c2;
+        Kg_M.at( 5, 11 ) -= c2;
+        Kg_M.at(11, 5) -= c2;
+        Kg_M.at(11, 11) += c2;
+    }
+
+    if ( abs( Mz ) > 1e-12 ) {
+        // Coefficienti per teoria di Timoshenko
+        double c1 = Mz / ( l * ( 1 + 2 * kappay ) );
+        double c2 = Mz * 2 * kappay / ( l * std::pow( ( 1 + 2 * kappay ), 2 ) );
+
+        // Termini accoppiati v-theta_z
+        Kg_M.at( 1, 4 )  = -c1;
+        Kg_M.at( 1, 10 ) = c1;
+        Kg_M.at( 4, 1 )  = -c1;
+        Kg_M.at( 7, 4 )  = c1;
+        Kg_M.at( 7, 10 ) = -c1;
+        Kg_M.at( 10, 1 ) = c1;
+        Kg_M.at( 10, 7 ) = -c1;
+
+        // correzione per deformabilità a taglio
+        Kg_M.at( 4, 4 ) += c2;
+        Kg_M.at( 4, 10 ) -= c2;
+        Kg_M.at( 10, 4 ) -= c2;
+        Kg_M.at( 10, 10 ) += c2;
+    }
+
+    // tagli sempre aggiunti
+    double Vy = ( -endForces.at( 2 ) + endForces.at( 9 ) ) / 2.;
+    double Vz = ( -endForces.at( 3 ) + endForces.at( 10 ) ) / 2.;
+    if ( abs( Vy ) > 1e-12 ) {
+        // Coefficienti per teoria di Timoshenko
+        double c1 = Vy / ( 10*l * ( 1 + 2 * kappaz ) );
+        double c2 = Vy * 2 * kappaz / ( 10*l * std::pow( ( 1 + 2 * kappaz ), 2 ) );
+
+        // Termini accoppiati w-theta_y
+        Kg_M.at( 1, 1 ) += c1;
+        Kg_M.at( 1, 7 ) -= c1;
+        Kg_M.at( 7, 1 ) -= c1;
+        Kg_M.at( 7, 7 ) += c1;
+
+        // correzione per deformabilità a taglio
+        Kg_M.at( 1, 4 ) += c2;
+        Kg_M.at( 1, 10 ) -= c2;
+        Kg_M.at( 4, 1 ) += c2;
+        Kg_M.at( 4, 7 ) -= c2;
+        Kg_M.at( 7, 4 ) -= c2;
+        Kg_M.at( 7, 10 ) += c2;
+        Kg_M.at( 10, 1 ) -= c2;
+        Kg_M.at( 10, 7 ) += c2;
+    }
+    if ( abs( Vz ) > 1e-12 ) {
+        // Coefficienti per teoria di Timoshenko
+        double c1 = Vz / ( 10 * l * ( 1 + 2 * kappaz ) );
+        double c2 = Vz * 2 * kappaz / ( 10 * l * std::pow( ( 1 + 2 * kappaz ), 2 ) );
+
+        // Termini accoppiati w-theta_y
+        Kg_M.at( 2, 2 ) += c1;
+        Kg_M.at( 2, 8 ) -= c1;
+        Kg_M.at( 8, 2 ) -= c1;
+        Kg_M.at( 8, 8 ) += c1;
+
+        // correzione per deformabilità a taglio
+        Kg_M.at( 2, 5 ) -= c2;
+        Kg_M.at(2, 11) += c2;
+        Kg_M.at(5, 2) -= c2;
+        Kg_M.at(5, 8) += c2;
+        Kg_M.at(8, 5) += c2;
+        Kg_M.at(8, 11) -= c2;
+        Kg_M.at(11, 2) += c2;
+        Kg_M.at(11, 8) -= c2;
+    }
+
+    Kg_M.symmetrized();
+    answer.add( Kg_M );
 }
 
 
@@ -1024,7 +1123,7 @@ Beam3d :: computeLumpedInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
 {
     // computes initial stress matrix of receiver (or geometric stiffness matrix)
 
-    FloatMatrix stiff;
+    //FloatMatrix stiff;
     FloatArray endForces;
 
     double l = this->computeLength();
