@@ -1,0 +1,24 @@
+buck_beam-buckling.out
+-> buckling of simple cantilever due to flexural moment
+VarLinearStability nroot 3 rtolv 1e-3 stype 3 nmodules 2
+bem tstep_all domain_all
+nrm tstep_all domain_all vars 2 9 10  stype 0
+domain 3dShell
+OutputManager tstep_all dofman_all element_all
+ndofman 2 nelem 1 ncrosssect 2 nmat 1 nbc 2 nic 0 nltf 5 nset 2
+node 1 coords 3 0e0 0e0 0e0 
+node 2 coords 3 3e0 0e0 0e0 
+Beam3d 1 nodes 2 1 2 mat 1 crossSect 2 refAngle 0 nip 3 printGPs 0
+# fictitious section for LumpedMass elements
+SimpleCS 1 thick 0
+SimpleCS 2 area 1.5e-1 Iy 1.125e-3 Iz 3.125e-3 Ik 3.3088e-3 shearareay 1.25e-1 shearareaz 1.25e-1 thick 3e-1 width 5e-1
+IsoLE 1 d 0 E 2.9962e7 n 2e-1 tAlpha 1e-5
+BoundaryCondition 2 loadTimeFunction 1 DOFs 6 1 2 3 4 5 6  values 6 0 0 0 0 0 0  set 2
+NodalLoad 1 loadTimeFunction 5 Components 1 1e0 DOFs 1 3 set 1 csType 0
+ConstantFunction 1 f(t) 1.0
+PiecewiseLinFunction 2 npoints 2 t 2 0.0 1.0 f(t) 2 1.0 0.0
+PiecewiseLinFunction 3 npoints 3 t 3 -1.0 0.0 1 f(t) 3 0.0 0.0 1
+PiecewiseLinFunction 4 npoints 2 t 2 0.0 1.0 f(t) 2 0.0 1.0
+PiecewiseLinFunction 5 npoints 2 t 2 0.0 1.0 f(t) 2 1.0 0.0
+set 1 nodes 1 2
+set 2 nodes 1 1
