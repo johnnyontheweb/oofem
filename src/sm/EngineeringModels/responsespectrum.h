@@ -58,6 +58,7 @@
 #define _IFT_ResponseSpectrum_dir "dir"
 #define _IFT_ResponseSpectrum_modalCombo "modalcombo"
 #define _IFT_ResponseSpectrum_damp "damp"
+#define _IFT_ResponseSpectrum_combinedForcesFileName "combinedforcesfilename"
 //@}
 
 namespace oofem {
@@ -115,7 +116,9 @@ private:
     std::list<std::map<int, std::map<std::string, FloatArray> > > beamResponseList;
     std::map<int, std::map<int, std::map<int, std::map<std::string, FloatArray> > > > combElemResponse;
     std::map<int, std::map<std::string, FloatArray> > combBeamResponse;
-
+    std::string combinedForcesFileName;
+    FloatArray combForces;
+    std::list<FloatArray> imposedForcesList;
 
 public:
     ResponseSpectrum( int i, EngngModel *_master = nullptr ) :
@@ -160,6 +163,8 @@ public:
 
     // identification
     const char *giveClassName() const override { return "ResponseSpectrum"; }
+
+    void exportCombinedForcesToFile( const std::string &filename );
 };
 } // end namespace oofem
 #endif // responsespectrum_h

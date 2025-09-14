@@ -180,6 +180,9 @@ void ResponseSpectrum::initializeFrom( InputRecord &ir )
     IR_GIVE_OPTIONAL_FIELD( ir, damp, _IFT_ResponseSpectrum_damp );
     csi = damp;
 
+    IR_GIVE_OPTIONAL_FIELD( ir, combinedForcesFileName, _IFT_ResponseSpectrum_combinedForcesFileName );
+
+
     suppressOutput = ir.hasField( _IFT_EngngModel_suppressOutput );
 
     if ( suppressOutput ) {
@@ -210,6 +213,18 @@ void ResponseSpectrum::initializeFrom( InputRecord &ir )
     }
 }
 
+// export nodal forces exportCombinedForcesToFile( combinedForcesFileName );
+void ResponseSpectrum::exportCombinedForcesToFile( const std::string &filename )
+{
+    if ( filename.empty() ) return;
+    FILE *file = fopen( filename.c_str(), "w" );
+    if ( !file ) return;
+    fprintf( file, "# Combined forces after modal combination\n" );
+    for ( int i = 1; i <= combForces.giveSize(); ++i ) {
+        fprintf( file, "%d %.8e\n", i, combForces.at( i ) );
+    }
+    fclose( file );
+}
 
 void ResponseSpectrum::postInitialize()
 {
@@ -697,7 +712,7 @@ void ResponseSpectrum::solveYourself()
     OOFEM_LOG_INFO( "Starting analysis for each mode ...\n" );
 #endif
 
-    // determine dominat mode in requested direction
+    // determine dominant mode in requested direction
     FloatArray dirVect( dir );
     FloatArray dirFactors( numberOfRequiredEigenValues );
     dirVect.normalize();
@@ -739,6 +754,12 @@ void ResponseSpectrum::solveYourself()
         // store the vectors for the current mode
         reactionsList.push_back( reactions );
         dispList.push_back( dummyDisps );
+
+        // calculate mode forces
+        FloatArray imposedForces;
+        massMatrix->times( dummyDisps, imposedForces ); // M * u_disp
+        imposedForces *= sAcc * dir.dotProduct( pf ); // sAcc * pf * M * u
+        imposedForcesList.push_back( imposedForces );
 
         map<int, map<int, map<int, map<string, FloatArray> > > > elemResponse;
         map<int, map<string, FloatArray> > beamResponse;
@@ -814,6 +835,8 @@ void ResponseSpectrum::solveYourself()
         this->CQC();
     }
 
+    exportCombinedForcesToFile( combinedForcesFileName );
+
     //
     // zero matrix
     //
@@ -876,6 +899,18 @@ void ResponseSpectrum::SRSS()
 
     calcRoot( combElemResponse );
     calcRoot( combBeamResponse );
+
+    // model forces
+    combForces.resize( imposedForcesList.front().giveSize() );
+    combForces.zero();
+    for ( auto &forces : imposedForcesList ) {
+        for ( int i = 1; i <= forces.giveSize(); ++i ) {
+            combForces.at( i ) += pow( forces.at( i ), 2 );
+        }
+    }
+    for ( int i = 1; i <= combForces.giveSize(); ++i ) {
+        combForces.at( i ) = sqrt( combForces.at( i ) );
+    }
 }
 
 
@@ -934,6 +969,25 @@ void ResponseSpectrum::CQC()
         res *= signbit( disps.at( z ) ) ? -1 : 1;
         combDisps.at( z ) = res;
     }
+
+    // calculate mode forces
+    combForces.resize( imposedForcesList.front().giveSize() );
+    combForces.zero();
+    auto it1 = imposedForcesList.begin();
+    for ( int i = 1; it1 != imposedForcesList.end(); ++it1, ++i ) {
+        FloatArray &forces1 = *it1;
+        auto it2            = imposedForcesList.begin();
+        for ( int j = 1; it2 != imposedForcesList.end(); ++it2, ++j ) {
+            FloatArray &forces2 = *it2;
+            for ( int k = 1; k <= forces1.giveSize(); ++k ) {
+                combForces.at( k ) += fabs( forces1.at( k ) * forces2.at( k ) * rhos.at( i, j ) );
+            }
+        }
+    }
+    for ( int k = 1; k <= combForces.giveSize(); ++k ) {
+        combForces.at( k ) = sqrt( combForces.at( k ) );
+    }
+
 }
 
 
