@@ -196,6 +196,8 @@ PdeltaNstatic :: initializeFrom(InputRecord &ir)
       updateElasticStiffnessFlag = true;
     }
 
+    IR_GIVE_OPTIONAL_FIELD( ir, flexkg, _IFT_PdeltaNstatic_flexkg );
+
 	//secOrder = false;
 	//IR_GIVE_OPTIONAL_FIELD(ir, secOrder, _IFT_PdeltaNstatic_secondOrder);
 	//if (secOrder && sparseMtrxType > 1) {

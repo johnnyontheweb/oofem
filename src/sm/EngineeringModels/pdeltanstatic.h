@@ -54,6 +54,7 @@
 #define _IFT_PdeltaNstatic_updateElasticStiffnessFlag "updateelasticstiffnessflag"
 //#define _IFT_PdeltaNstatic_secondOrder "secorder"
 //#define _IFT_PDeltaStatic_rtolv "rtolv"
+#define _IFT_PdeltaNstatic_flexkg "flexkg"
 //@}
 
 namespace oofem {
@@ -137,6 +138,9 @@ protected:
     /// The initial guess type to use before starting the nonlinear solver.
     InitialGuess initialGuessType;
 
+    /// Flag to use modified initial stress matrix computation
+    bool flexkg = false;
+
 public:
     PdeltaNstatic(int i, EngngModel * _master = NULL);
     virtual ~PdeltaNstatic();
@@ -170,6 +174,9 @@ public:
     /// For load balancing purposes we store all values so hash is computed from mode value only
     virtual int giveUnknownDictHashIndx(ValueModeType mode, TimeStep *tStep) { return ( int ) mode; }
     virtual int giveCurrentNumberOfIterations() override {return currentIterations;}
+
+    /// Returns true if modified initial stress matrix should be used
+    bool giveFlexuralInitialStress() const { return flexkg; }
 
 #ifdef __OOFEG
     void showSparseMtrxStructure(int type, oofegGraphicContext &gc, TimeStep *tStep);

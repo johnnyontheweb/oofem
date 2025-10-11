@@ -1,4 +1,4 @@
-/*
+﻿/*
  *
  *                 #####    #####   ######  ######  ###   ###
  *               ##   ##  ##   ##  ##      ##      ## ### ##
@@ -61,6 +61,7 @@
 
 #include "eigenvectorprimaryfield.h"
 #include "sm/EngineeringModels/varlinearstability.h"
+#include "sm/EngineeringModels/pdeltanstatic.h"
 
 namespace oofem {
 REGISTER_Element(Beam3d);
@@ -1023,7 +1024,8 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
     // Check if modified initial stress is requested from VarLinearStability model
     EngngModel *em          = this->domain->giveEngngModel();
     VarLinearStability *vls = dynamic_cast<VarLinearStability *>( em );
-    bool useModified        = ( vls && vls->giveFlexuralInitialStress() );
+    PdeltaNstatic *sls      = dynamic_cast<PdeltaNstatic *>( em );
+    bool useModified        = ( vls && vls->giveFlexuralInitialStress() ) || ( sls && sls->giveFlexuralInitialStress() );
     if ( useModified ) {
         // ask displacements in l.c.s
         FloatArray rl;
@@ -1086,6 +1088,49 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
 
         //}
 
+       FloatMatrix K_IM;
+       K_IM.resize( 12, 12 );
+       K_IM.zero();
+
+        // Componenti della matrice K_IM da momento esterno
+       //  (91): K_IM(5,2) = -6S3θx1
+       K_IM.at( 5, 2 ) = -6 * S3 * rl.at( 4 );
+       //  (92): K_IM(5,6) = -4S2Lθx1
+       K_IM.at( 5, 6 ) = -4 * S2 * l * rl.at( 4 );
+       //  (93): K_IM(5,8) = 6S3θx1
+       K_IM.at( 5, 8 ) = 6 * S3 * rl.at( 4 );
+       //  (94): K_IM(5,12) = -2S2Lθx1
+       K_IM.at( 5, 12 ) = -2 * S2 * l * rl.at( 4 );
+       //  (95): K_IM(6,3) = -6S2θx1
+       K_IM.at( 6, 3 ) = -6 * S2 * rl.at( 4 );
+       //  (96): K_IM(6,5) = 4S2Lθx1
+       K_IM.at( 6, 5 ) = 4 * S2 * l * rl.at( 4 );
+       //  (97): K_IM(6,9) = 6S2θx1
+       K_IM.at( 6, 9 ) = 6 * S2 * rl.at( 4 );
+       //  (98): K_IM(6,11) = 2S2Lθx1
+       K_IM.at( 6, 11 ) = 2 * S2 * l * rl.at( 4 );
+       //  (99): K_IM(11,2) = -6S3θx2
+       K_IM.at( 11, 2 ) = -6 * S3 * rl.at( 10 );
+       //  (100): K_IM(11,6) = -2S2Lθx2
+       K_IM.at( 11, 6 ) = -2 * S2 * l * rl.at( 10 );
+       //  (101): K_IM(11,8) = 6S3θx2
+       K_IM.at( 11, 8 ) = 6 * S3 * rl.at( 10 );
+       //  (102): K_IM(11,12) = -4S2Lθx2
+       K_IM.at( 11, 12 ) = -4 * S2 * l * rl.at( 10 );
+       //  (103): K_IM(12,3) = -6S2θx2
+       K_IM.at( 12, 3 ) = -6 * S2 * rl.at( 10 );
+       //  (104): K_IM(12,5) = 2S2Lθx2
+       K_IM.at( 12, 5 ) = 2 * S2 * l * rl.at( 10 );
+       //  (105): K_IM(12,9) = 6S2θx2
+       K_IM.at( 12, 9 ) = 6 * S2 * rl.at( 10 );
+       //  (106): K_IM(12,11) = 4S2Lθx2
+       K_IM.at( 12, 11 ) = 4 * S2 * l * rl.at( 10 );
+       // K_IM è una matrice asimmetrica, quindi NON chiamare symmetrized()
+       // K_IM.symmetrized();
+       // Aggiungi K_IM alla matrice di risposta
+       answer.add( K_IM );
+
+
         //// tagli sempre aggiunti
         // double Vy = ( -endForces.at( 2 ) + endForces.at( 9 ) ) / 2.;
         // double Vz = ( -endForces.at( 3 ) + endForces.at( 10 ) ) / 2.;
@@ -1100,7 +1145,7 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
         //    Kg_M.at( 7, 1 ) -= c1;
         //    Kg_M.at( 7, 7 ) += c1;
 
-        //    // correzione per deformabilit� a taglio
+        //    // correzione per deformabilità a taglio
         //    Kg_M.at( 1, 4 ) += c2;
         //    Kg_M.at( 1, 10 ) -= c2;
         //    Kg_M.at( 4, 1 ) += c2;
@@ -1121,7 +1166,7 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
         //    Kg_M.at( 8, 2 ) -= c1;
         //    Kg_M.at( 8, 8 ) += c1;
 
-        //    // correzione per deformabilit� a taglio
+        //    // correzione per deformabilità a taglio
         //    Kg_M.at( 2, 5 ) -= c2;
         //    Kg_M.at(2, 11) += c2;
         //    Kg_M.at(5, 2) -= c2;
