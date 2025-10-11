@@ -131,6 +131,8 @@ VarLinearStability :: initializeFrom(InputRecord &ir)
 	    linStype = LinSystSolverType::ST_EigenLib;
     }
 
+    IR_GIVE_OPTIONAL_FIELD( ir, flexkg, _IFT_VarLinearStability_flexkg );
+    
     nMetaSteps = 0;
 
     suppressOutput = ir.hasField(_IFT_EngngModel_suppressOutput);

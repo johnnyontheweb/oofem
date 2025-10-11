@@ -59,6 +59,9 @@
  #include "oofeggraphiccontext.h"
 #endif
 
+#include "eigenvectorprimaryfield.h"
+#include "sm/EngineeringModels/varlinearstability.h"
+
 namespace oofem {
 REGISTER_Element(Beam3d);
 
@@ -923,13 +926,13 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
     answer.at(12, 12) = l * l * ( kappaz2 / 3. + kappaz / 3. + 2. / 15. ) / denomz;
 
 
-    //// Coefficienti Eulero-Bernoulli (nessun effetto shear)
+    //// Coefficients for Eulero-Bernoulli (no shear effects)
     //double alpha = 6.0 / ( 5.0 * l );
     //double beta  = l / 10.0;
     //double gamma = 2.0 * l * l / 15.0;
     //double delta = l * l / 30.0;
 
-    //// Contributi lungo l'asse Z (DOF traslazione y + rotazione x)
+    //// along Z axis
     //answer.at( 1, 1 )  = alpha;
     //answer.at( 1, 5 )  = beta;
     //answer.at( 1, 7 )  = -alpha;
@@ -950,7 +953,7 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
     //answer.at( 11, 7 )  = -beta;
     //answer.at( 11, 11 ) = gamma;
 
-    //// Contributi lungo l'asse Y (DOF traslazione z + rotazione y)
+    //// along Y axis
     //answer.at( 2, 2 )  = alpha;
     //answer.at( 2, 4 )  = -beta;
     //answer.at( 2, 8 )  = -alpha;
@@ -1017,115 +1020,121 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
 
     //answer.beLumpedOf (mass);
 
-    // ask displacements in l.c.s
-    FloatArray rl;
-    this->computeVectorOf( VM_Total, tStep, rl );
-    // other contributions
-    //double My = ( -endForces.at( 5 ) + endForces.at( 11 ) ) / 2.;
-    //double Mz = ( -endForces.at( 6 ) + endForces.at( 12 ) ) / 2.;
-    // BENDING MOMENTS
-    FloatMatrix Kg_M;
-    Kg_M.resize( 12, 12 );
-    Kg_M.zero();
-    //if ( abs( My ) > 1e-12 || abs( Mz ) > 1e-12 ) {    
-        // coeff
+    // Check if modified initial stress is requested from VarLinearStability model
+    EngngModel *em          = this->domain->giveEngngModel();
+    VarLinearStability *vls = dynamic_cast<VarLinearStability *>( em );
+    bool useModified        = ( vls && vls->giveFlexuralInitialStress() );
+    if ( useModified ) {
+        // ask displacements in l.c.s
+        FloatArray rl;
+        this->computeVectorOf( VM_Total, tStep, rl );
+        // other contributions
+        // double My = ( -endForces.at( 5 ) + endForces.at( 11 ) ) / 2.;
+        // double Mz = ( -endForces.at( 6 ) + endForces.at( 12 ) ) / 2.;
+        // BENDING MOMENTS
+        FloatMatrix Kg_M;
+        Kg_M.resize( 12, 12 );
+        Kg_M.zero();
+        // if ( abs( My ) > 1e-12 || abs( Mz ) > 1e-12 ) {
+        //  coeff
         double E  = mat->give( 'E', gp );
         double Iy = this->giveCrossSection()->give( CS_InertiaMomentY, gp );
-        double S2 = Iy * E / (l * l);
+        double S2 = Iy * E / ( l * l );
         double Iz = this->giveCrossSection()->give( CS_InertiaMomentZ, gp );
         double S3 = Iz * E / ( l * l );
 
-        Kg_M.at( 2, 3 ) = 6 * ( -S2 + S3 ) / l * (rl.at(4)+rl.at(10));
-        Kg_M.at( 2, 4 ) = 2 * S3 * ( rl.at( 5 ) - rl.at( 11 ) );
-        Kg_M.at( 2, 5 ) = 2 * S2 * ( 2 * rl.at( 4 ) + rl.at( 10 ) ) + 2 * S3 * ( rl.at( 4 ) - rl.at( 10 ) );
-        Kg_M.at( 2, 9 ) = 6 * ( S2 - S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
+        Kg_M.at( 2, 3 )  = 6 * ( -S2 + S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
+        Kg_M.at( 2, 4 )  = 2 * S3 * ( rl.at( 5 ) - rl.at( 11 ) );
+        Kg_M.at( 2, 5 )  = 2 * S2 * ( 2 * rl.at( 4 ) + rl.at( 10 ) ) + 2 * S3 * ( rl.at( 4 ) - rl.at( 10 ) );
+        Kg_M.at( 2, 9 )  = 6 * ( S2 - S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
         Kg_M.at( 2, 10 ) = 2 * S3 * ( rl.at( 11 ) - rl.at( 5 ) );
         Kg_M.at( 2, 11 ) = 2 * S2 * ( rl.at( 4 ) + 2 * rl.at( 10 ) ) + 2 * S3 * ( rl.at( 10 ) - rl.at( 4 ) );
 
-        Kg_M.at( 3, 4 ) = 2 * S2 * ( rl.at( 6 ) - rl.at( 12 ) );
-        Kg_M.at( 3, 6 ) = 2 * S2 * ( rl.at( 4 ) - rl.at( 10 ) ) + 2 * S3 * ( rl.at( 4 ) + rl.at( 10 ) );
-        Kg_M.at( 3, 8 ) = 6 * ( S2 - S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
+        Kg_M.at( 3, 4 )  = 2 * S2 * ( rl.at( 6 ) - rl.at( 12 ) );
+        Kg_M.at( 3, 6 )  = 2 * S2 * ( rl.at( 4 ) - rl.at( 10 ) ) + 2 * S3 * (2* rl.at( 4 ) + rl.at( 10 ) );
+        Kg_M.at( 3, 8 )  = 6 * ( S2 - S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
         Kg_M.at( 3, 10 ) = 2 * S2 * ( rl.at( 12 ) - rl.at( 6 ) );
         Kg_M.at( 3, 12 ) = 2 * S2 * ( rl.at( 10 ) - rl.at( 4 ) ) + 2 * S3 * ( rl.at( 4 ) + 2 * rl.at( 10 ) );
 
-        Kg_M.at( 4, 5 ) = - S2 * l * ( rl.at( 6 ) - rl.at( 12 ) );
-        Kg_M.at( 4, 6 ) = -S2 * l * ( rl.at( 5 ) - rl.at( 11 ) );
-        Kg_M.at( 4, 8 ) = -2 * S3 * ( rl.at( 5 ) + rl.at( 11 ) );
-        Kg_M.at( 4, 9 ) = -2 * S2 * ( rl.at( 6 ) - rl.at( 12 ) );
+        Kg_M.at( 4, 5 )  = -S2 * l * ( rl.at( 6 ) - rl.at( 12 ) );
+        Kg_M.at( 4, 6 )  = -S2 * l * ( rl.at( 5 ) - rl.at( 11 ) );
+        Kg_M.at( 4, 8 )  = -2 * S3 * ( rl.at( 5 ) + rl.at( 11 ) );
+        Kg_M.at( 4, 9 )  = -2 * S2 * ( rl.at( 6 ) - rl.at( 12 ) );
         Kg_M.at( 4, 11 ) = -S2 * l * ( rl.at( 6 ) + rl.at( 12 ) );
         Kg_M.at( 4, 12 ) = S3 * l * ( rl.at( 5 ) + rl.at( 11 ) );
 
-        Kg_M.at( 5, 6 ) = ( -2 * S2 * l + S3 * l ) * ( rl.at( 4 ) - rl.at( 10 ) );
-        Kg_M.at( 5, 8 ) = -2 * S2 * ( 2 * rl.at( 4 ) + rl.at( 10 ) ) - 2 * S3 * ( rl.at( 4 ) - rl.at( 10 ) );
+        Kg_M.at( 5, 6 )  = ( -S2 * l + S3 * l ) * ( rl.at( 4 ) - rl.at( 10 ) );
+        Kg_M.at( 5, 8 )  = -2 * S2 * ( 2 * rl.at( 4 ) + rl.at( 10 ) ) - 2 * S3 * ( rl.at( 4 ) - rl.at( 10 ) );
         Kg_M.at( 5, 10 ) = S2 * l * ( rl.at( 6 ) - rl.at( 12 ) );
         Kg_M.at( 5, 12 ) = ( S2 * l + S3 * l ) * ( rl.at( 4 ) - rl.at( 10 ) );
 
-        Kg_M.at( 6, 9 ) = -2 * S2 * ( rl.at( 4 ) - rl.at( 10 ) ) - 2 * S3 * ( 2*rl.at( 4 ) + rl.at( 10 ) );
+        Kg_M.at( 6, 9 )  = -2 * S2 * ( rl.at( 4 ) - rl.at( 10 ) ) - 2 * S3 * ( 2 * rl.at( 4 ) + rl.at( 10 ) );
         Kg_M.at( 6, 10 ) = -S3 * l * ( rl.at( 5 ) - rl.at( 11 ) );
         Kg_M.at( 6, 11 ) = ( S2 * l + S3 * l ) * ( rl.at( 10 ) - rl.at( 4 ) );
 
-        Kg_M.at( 8, 9 ) = 6 * ( -S2 + S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
+        Kg_M.at( 8, 9 )  = 6 * ( -S2 + S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
         Kg_M.at( 8, 10 ) = 2 * S3 * ( rl.at( 5 ) + rl.at( 11 ) );
         Kg_M.at( 8, 11 ) = -2 * S2 * ( rl.at( 4 ) + 2 * rl.at( 10 ) ) + 2 * S3 * ( rl.at( 4 ) - rl.at( 10 ) );
 
-        Kg_M.at( 9, 10 ) = 2*S2  * ( rl.at( 6 ) - rl.at( 12 ) );
-        Kg_M.at( 9, 12 ) = 2*S2  * ( rl.at(4) - rl.at( 10 ) )-2*S3*(rl.at(4)+2*rl.at(10));
+        Kg_M.at( 9, 10 ) = 2 * S2 * ( rl.at( 6 ) - rl.at( 12 ) );
+        Kg_M.at( 9, 12 ) = 2 * S2 * ( rl.at( 4 ) - rl.at( 10 ) ) - 2 * S3 * ( rl.at( 4 ) + 2 * rl.at( 10 ) );
 
         Kg_M.at( 10, 11 ) = S2 * l * ( rl.at( 6 ) - rl.at( 12 ) );
-        Kg_M.at( 10, 12 ) = -S3*l * ( rl.at( 5 ) - rl.at( 11 ) );
+        Kg_M.at( 10, 12 ) = -S3 * l * ( rl.at( 5 ) - rl.at( 11 ) );
 
         Kg_M.at( 11, 12 ) = ( S2 * l - S3 * l ) * ( rl.at( 4 ) - rl.at( 10 ) );
 
-    //}
+        //}
 
-    //// tagli sempre aggiunti
-    //double Vy = ( -endForces.at( 2 ) + endForces.at( 9 ) ) / 2.;
-    //double Vz = ( -endForces.at( 3 ) + endForces.at( 10 ) ) / 2.;
-    //if ( abs( Vy ) > 1e-12 ) {
-    //    // Coefficienti per teoria di Timoshenko
-    //    double c1 = Vy / ( 10*l * ( 1 + 2 * kappaz ) );
-    //    double c2 = Vy * 2 * kappaz / ( 10*l * std::pow( ( 1 + 2 * kappaz ), 2 ) );
+        //// tagli sempre aggiunti
+        // double Vy = ( -endForces.at( 2 ) + endForces.at( 9 ) ) / 2.;
+        // double Vz = ( -endForces.at( 3 ) + endForces.at( 10 ) ) / 2.;
+        // if ( abs( Vy ) > 1e-12 ) {
+        //     // Coefficienti per teoria di Timoshenko
+        //     double c1 = Vy / ( 10*l * ( 1 + 2 * kappaz ) );
+        //     double c2 = Vy * 2 * kappaz / ( 10*l * std::pow( ( 1 + 2 * kappaz ), 2 ) );
 
-    //    // Termini accoppiati w-theta_y
-    //    Kg_M.at( 1, 1 ) += c1;
-    //    Kg_M.at( 1, 7 ) -= c1;
-    //    Kg_M.at( 7, 1 ) -= c1;
-    //    Kg_M.at( 7, 7 ) += c1;
+        //    // Termini accoppiati w-theta_y
+        //    Kg_M.at( 1, 1 ) += c1;
+        //    Kg_M.at( 1, 7 ) -= c1;
+        //    Kg_M.at( 7, 1 ) -= c1;
+        //    Kg_M.at( 7, 7 ) += c1;
 
-    //    // correzione per deformabilità a taglio
-    //    Kg_M.at( 1, 4 ) += c2;
-    //    Kg_M.at( 1, 10 ) -= c2;
-    //    Kg_M.at( 4, 1 ) += c2;
-    //    Kg_M.at( 4, 7 ) -= c2;
-    //    Kg_M.at( 7, 4 ) -= c2;
-    //    Kg_M.at( 7, 10 ) += c2;
-    //    Kg_M.at( 10, 1 ) -= c2;
-    //    Kg_M.at( 10, 7 ) += c2;
-    //}
-    //if ( abs( Vz ) > 1e-12 ) {
-    //    // Coefficienti per teoria di Timoshenko
-    //    double c1 = Vz / ( 10 * l * ( 1 + 2 * kappaz ) );
-    //    double c2 = Vz * 2 * kappaz / ( 10 * l * std::pow( ( 1 + 2 * kappaz ), 2 ) );
+        //    // correzione per deformabilità a taglio
+        //    Kg_M.at( 1, 4 ) += c2;
+        //    Kg_M.at( 1, 10 ) -= c2;
+        //    Kg_M.at( 4, 1 ) += c2;
+        //    Kg_M.at( 4, 7 ) -= c2;
+        //    Kg_M.at( 7, 4 ) -= c2;
+        //    Kg_M.at( 7, 10 ) += c2;
+        //    Kg_M.at( 10, 1 ) -= c2;
+        //    Kg_M.at( 10, 7 ) += c2;
+        //}
+        // if ( abs( Vz ) > 1e-12 ) {
+        //    // Coefficienti per teoria di Timoshenko
+        //    double c1 = Vz / ( 10 * l * ( 1 + 2 * kappaz ) );
+        //    double c2 = Vz * 2 * kappaz / ( 10 * l * std::pow( ( 1 + 2 * kappaz ), 2 ) );
 
-    //    // Termini accoppiati w-theta_y
-    //    Kg_M.at( 2, 2 ) += c1;
-    //    Kg_M.at( 2, 8 ) -= c1;
-    //    Kg_M.at( 8, 2 ) -= c1;
-    //    Kg_M.at( 8, 8 ) += c1;
+        //    // Termini accoppiati w-theta_y
+        //    Kg_M.at( 2, 2 ) += c1;
+        //    Kg_M.at( 2, 8 ) -= c1;
+        //    Kg_M.at( 8, 2 ) -= c1;
+        //    Kg_M.at( 8, 8 ) += c1;
 
-    //    // correzione per deformabilità a taglio
-    //    Kg_M.at( 2, 5 ) -= c2;
-    //    Kg_M.at(2, 11) += c2;
-    //    Kg_M.at(5, 2) -= c2;
-    //    Kg_M.at(5, 8) += c2;
-    //    Kg_M.at(8, 5) += c2;
-    //    Kg_M.at(8, 11) -= c2;
-    //    Kg_M.at(11, 2) += c2;
-    //    Kg_M.at(11, 8) -= c2;
-    //}
+        //    // correzione per deformabilità a taglio
+        //    Kg_M.at( 2, 5 ) -= c2;
+        //    Kg_M.at(2, 11) += c2;
+        //    Kg_M.at(5, 2) -= c2;
+        //    Kg_M.at(5, 8) += c2;
+        //    Kg_M.at(8, 5) += c2;
+        //    Kg_M.at(8, 11) -= c2;
+        //    Kg_M.at(11, 2) += c2;
+        //    Kg_M.at(11, 8) -= c2;
+        //}
 
-    Kg_M.symmetrized();
-    answer.add( Kg_M );
+        Kg_M.symmetrized();
+        answer.add( Kg_M );
+    }
 }
 
 
