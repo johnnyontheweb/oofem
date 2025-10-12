@@ -231,57 +231,69 @@ void ResponseSpectrum::exportCombinedForcesToFile( const std::string &filename )
     if ( filename.empty() ) return;
     FILE *file = fopen( filename.c_str(), "w" );
     if ( !file ) return;
-    //fprintf( file, "# Combined nodal forces after modal combination\n" );
-    //fprintf( file, "# nodeLabel fx fy fz mx my mz\n" );
+    fprintf( file, "# Combined nodal forces after modal combination\n" );
+    fprintf( file, "# nodeLabel type fx fy fz mx my mz\n" );
 
     Domain *domain = this->giveDomain( 1 );
     const EModelDefaultEquationNumbering defNumbering;
     static const DofIDItem dofIDs[] = { D_u, D_v, D_w, R_u, R_v, R_w };
 
-    for ( std::unique_ptr<DofManager> &node : domain->giveDofManagers() ) {
-        Node *actualNode = dynamic_cast<Node *>( node.get() );
-        if ( actualNode && actualNode->hasLocalCS() ) {
-            continue; // skip nodes with LCS
-        }
-        if ( strcmp( node->giveClassName(), "Node" ) != 0 && strcmp( node->giveClassName(), "RigidArmNode" ) != 0 ) {
-            continue;
-        }
-
-        int label = node->giveLabel();
-        FloatArray forces( 6 );
-        forces.zero();
-
-        for ( int iDof = 0; iDof < 6; ++iDof ) {
-            DofIDItem dType = dofIDs[iDof];
-            auto pos        = node->findDofWithDofId( dType );
-            if ( pos == node->end() ) {
+    auto exportForces = [&]( const FloatArray &forcesArray, const std::string &type ) {
+        for ( std::unique_ptr<DofManager> &node : domain->giveDofManagers() ) {
+            Node *actualNode = dynamic_cast<Node *>( node.get() );
+            if ( actualNode && actualNode->hasLocalCS() ) {
+                continue; // skip nodes with LCS
+            }
+            if ( strcmp( node->giveClassName(), "Node" ) != 0 && strcmp( node->giveClassName(), "RigidArmNode" ) != 0 ) {
                 continue;
             }
 
-            if ( ( *pos )->isPrimaryDof() ) {
-                int eqN = ( *pos )->giveEquationNumber( defNumbering );
-                if ( eqN > 0 && eqN <= combForces.giveSize() ) {
-                    forces.at( iDof + 1 ) = combForces.at( eqN );
+            int label = node->giveLabel();
+            FloatArray forces( 6 );
+            forces.zero();
+
+            for ( int iDof = 0; iDof < 6; ++iDof ) {
+                DofIDItem dType = dofIDs[iDof];
+                auto pos        = node->findDofWithDofId( dType );
+                if ( pos == node->end() ) {
+                    continue;
                 }
-            } else {
-                // For slave dofs, the force is associated with the master dof
-                IntArray masterDofMans;
-                ( *pos )->giveMasterDofManArray( masterDofMans );
-                if ( masterDofMans.giveSize() > 0 ) {
-                    auto *masterMan = domain->giveDofManager( masterDofMans.at( 1 ) );
-                    auto masterDof  = masterMan->findDofWithDofId( dType );
-                    if ( masterDof != masterMan->end() ) {
-                        int eqN = ( *masterDof )->giveEquationNumber( defNumbering );
-                        if ( eqN > 0 && eqN <= combForces.giveSize() ) {
-                            forces.at( iDof + 1 ) = combForces.at( eqN );
+
+                if ( ( *pos )->isPrimaryDof() ) {
+                    int eqN = ( *pos )->giveEquationNumber( defNumbering );
+                    if ( eqN > 0 && eqN <= forcesArray.giveSize() ) {
+                        forces.at( iDof + 1 ) = forcesArray.at( eqN );
+                    }
+                } else {
+                    // For slave dofs, the force is associated with the master dof
+                    IntArray masterDofMans;
+                    ( *pos )->giveMasterDofManArray( masterDofMans );
+                    if ( masterDofMans.giveSize() > 0 ) {
+                        auto *masterMan = domain->giveDofManager( masterDofMans.at( 1 ) );
+                        auto masterDof  = masterMan->findDofWithDofId( dType );
+                        if ( masterDof != masterMan->end() ) {
+                            int eqN = ( *masterDof )->giveEquationNumber( defNumbering );
+                            if ( eqN > 0 && eqN <= forcesArray.giveSize() ) {
+                                forces.at( iDof + 1 ) = forcesArray.at( eqN );
+                            }
                         }
                     }
                 }
             }
-        }
 
-        fprintf( file, "%d %.8e %.8e %.8e %.8e %.8e %.8e\n",
-            label, forces.at( 1 ), forces.at( 2 ), forces.at( 3 ), forces.at( 4 ), forces.at( 5 ), forces.at( 6 ) );
+            fprintf( file, "%d %s %.8e %.8e %.8e %.8e %.8e %.8e\n",
+                label, type.c_str(), forces.at( 1 ), forces.at( 2 ), forces.at( 3 ), forces.at( 4 ), forces.at( 5 ), forces.at( 6 ) );
+        }
+    };
+
+    // Export combined forces with type 'C'
+    exportForces( combForces, "C" );
+
+    // Export forces for each mode with mode number
+    int mode = 1;
+    for ( const auto &modeForces : imposedForcesList ) {
+        exportForces( modeForces, std::to_string( mode ) );
+        mode++;
     }
 
     fclose( file );

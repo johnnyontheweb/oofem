@@ -1131,53 +1131,6 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
        //// Aggiungi K_IM alla matrice di risposta
        //answer.add( K_IM );
 
-
-        //// tagli sempre aggiunti
-        // double Vy = ( -endForces.at( 2 ) + endForces.at( 9 ) ) / 2.;
-        // double Vz = ( -endForces.at( 3 ) + endForces.at( 10 ) ) / 2.;
-        // if ( abs( Vy ) > 1e-12 ) {
-        //     // Coefficienti per teoria di Timoshenko
-        //     double c1 = Vy / ( 10*l * ( 1 + 2 * kappaz ) );
-        //     double c2 = Vy * 2 * kappaz / ( 10*l * std::pow( ( 1 + 2 * kappaz ), 2 ) );
-
-        //    // Termini accoppiati w-theta_y
-        //    Kg_M.at( 1, 1 ) += c1;
-        //    Kg_M.at( 1, 7 ) -= c1;
-        //    Kg_M.at( 7, 1 ) -= c1;
-        //    Kg_M.at( 7, 7 ) += c1;
-
-        //    // correzione per deformabilità a taglio
-        //    Kg_M.at( 1, 4 ) += c2;
-        //    Kg_M.at( 1, 10 ) -= c2;
-        //    Kg_M.at( 4, 1 ) += c2;
-        //    Kg_M.at( 4, 7 ) -= c2;
-        //    Kg_M.at( 7, 4 ) -= c2;
-        //    Kg_M.at( 7, 10 ) += c2;
-        //    Kg_M.at( 10, 1 ) -= c2;
-        //    Kg_M.at( 10, 7 ) += c2;
-        //}
-        // if ( abs( Vz ) > 1e-12 ) {
-        //    // Coefficienti per teoria di Timoshenko
-        //    double c1 = Vz / ( 10 * l * ( 1 + 2 * kappaz ) );
-        //    double c2 = Vz * 2 * kappaz / ( 10 * l * std::pow( ( 1 + 2 * kappaz ), 2 ) );
-
-        //    // Termini accoppiati w-theta_y
-        //    Kg_M.at( 2, 2 ) += c1;
-        //    Kg_M.at( 2, 8 ) -= c1;
-        //    Kg_M.at( 8, 2 ) -= c1;
-        //    Kg_M.at( 8, 8 ) += c1;
-
-        //    // correzione per deformabilità a taglio
-        //    Kg_M.at( 2, 5 ) -= c2;
-        //    Kg_M.at(2, 11) += c2;
-        //    Kg_M.at(5, 2) -= c2;
-        //    Kg_M.at(5, 8) += c2;
-        //    Kg_M.at(8, 5) += c2;
-        //    Kg_M.at(8, 11) -= c2;
-        //    Kg_M.at(11, 2) += c2;
-        //    Kg_M.at(11, 8) -= c2;
-        //}
-
         Kg_M.symmetrized();
         answer.add( Kg_M );
     }
