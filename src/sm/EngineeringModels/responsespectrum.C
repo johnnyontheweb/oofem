@@ -214,15 +214,76 @@ void ResponseSpectrum::initializeFrom( InputRecord &ir )
 }
 
 // export nodal forces exportCombinedForcesToFile( combinedForcesFileName );
+//void ResponseSpectrum::exportCombinedForcesToFile( const std::string &filename )
+//{
+//    if ( filename.empty() ) return;
+//    FILE *file = fopen( filename.c_str(), "w" );
+//    if ( !file ) return;
+//    fprintf( file, "# Combined forces after modal combination\n" );
+//    for ( int i = 1; i <= combForces.giveSize(); ++i ) {
+//        fprintf( file, "%d %.8e\n", i, combForces.at( i ) );
+//    }
+//    fclose( file );
+//}
+// export nodal forces exportCombinedForcesToFile( combinedForcesFileName );
 void ResponseSpectrum::exportCombinedForcesToFile( const std::string &filename )
 {
     if ( filename.empty() ) return;
     FILE *file = fopen( filename.c_str(), "w" );
     if ( !file ) return;
-    fprintf( file, "# Combined forces after modal combination\n" );
-    for ( int i = 1; i <= combForces.giveSize(); ++i ) {
-        fprintf( file, "%d %.8e\n", i, combForces.at( i ) );
+    //fprintf( file, "# Combined nodal forces after modal combination\n" );
+    //fprintf( file, "# nodeLabel fx fy fz mx my mz\n" );
+
+    Domain *domain = this->giveDomain( 1 );
+    const EModelDefaultEquationNumbering defNumbering;
+    static const DofIDItem dofIDs[] = { D_u, D_v, D_w, R_u, R_v, R_w };
+
+    for ( std::unique_ptr<DofManager> &node : domain->giveDofManagers() ) {
+        Node *actualNode = dynamic_cast<Node *>( node.get() );
+        if ( actualNode && actualNode->hasLocalCS() ) {
+            continue; // skip nodes with LCS
+        }
+        if ( strcmp( node->giveClassName(), "Node" ) != 0 && strcmp( node->giveClassName(), "RigidArmNode" ) != 0 ) {
+            continue;
+        }
+
+        int label = node->giveLabel();
+        FloatArray forces( 6 );
+        forces.zero();
+
+        for ( int iDof = 0; iDof < 6; ++iDof ) {
+            DofIDItem dType = dofIDs[iDof];
+            auto pos        = node->findDofWithDofId( dType );
+            if ( pos == node->end() ) {
+                continue;
+            }
+
+            if ( ( *pos )->isPrimaryDof() ) {
+                int eqN = ( *pos )->giveEquationNumber( defNumbering );
+                if ( eqN > 0 && eqN <= combForces.giveSize() ) {
+                    forces.at( iDof + 1 ) = combForces.at( eqN );
+                }
+            } else {
+                // For slave dofs, the force is associated with the master dof
+                IntArray masterDofMans;
+                ( *pos )->giveMasterDofManArray( masterDofMans );
+                if ( masterDofMans.giveSize() > 0 ) {
+                    auto *masterMan = domain->giveDofManager( masterDofMans.at( 1 ) );
+                    auto masterDof  = masterMan->findDofWithDofId( dType );
+                    if ( masterDof != masterMan->end() ) {
+                        int eqN = ( *masterDof )->giveEquationNumber( defNumbering );
+                        if ( eqN > 0 && eqN <= combForces.giveSize() ) {
+                            forces.at( iDof + 1 ) = combForces.at( eqN );
+                        }
+                    }
+                }
+            }
+        }
+
+        fprintf( file, "%d %.8e %.8e %.8e %.8e %.8e %.8e\n",
+            label, forces.at( 1 ), forces.at( 2 ), forces.at( 3 ), forces.at( 4 ), forces.at( 5 ), forces.at( 6 ) );
     }
+
     fclose( file );
 }
 

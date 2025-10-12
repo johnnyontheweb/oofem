@@ -54,6 +54,7 @@
 #define _IFT_NonLinearDynamic_eta "eta"
 #define _IFT_NonLinearDynamic_delta "delta"
 #define _IFT_NonLinearDynamic_secondOrder "secorder"
+#define _IFT_NonLinearDynamic_flexkg "flexkg"
 //@}
 
 namespace oofem {
@@ -113,6 +114,8 @@ protected:
     double deltaT;
 	// second order contribution for elements
 	bool secOrder;
+    /// Flag to use modified initial stress matrix computation
+    bool flexkg = false;
 
 public:
     NonLinearDynamic(int i, EngngModel *master = nullptr);
@@ -153,6 +156,9 @@ public:
     void timesMtrx(FloatArray &answer, FloatArray &vec, CharType type, Domain *domain, TimeStep *tStep);
 
     TimeDiscretizationType giveInitialTimeDiscretization() { return initialTimeDiscretization; }
+
+    /// Returns true if modified initial stress matrix should be used
+    bool giveFlexuralInitialStress() const { return flexkg; }
 
 #ifdef __OOFEG
     void showSparseMtrxStructure(int type, oofegGraphicContext &gc, TimeStep *tStep) override;

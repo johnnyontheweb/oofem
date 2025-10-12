@@ -169,6 +169,8 @@ NonLinearDynamic :: initializeFrom(InputRecord &ir)
     //	solverType = ST_EigenLib;
     //}
 
+    IR_GIVE_OPTIONAL_FIELD( ir, flexkg, _IFT_NonLinearDynamic_flexkg );
+
 #ifdef __MPI_PARALLEL_MODE
     if ( isParallel() ) {
         commBuff = new CommunicatorBuff(this->giveNumberOfProcesses(), CBT_static);
