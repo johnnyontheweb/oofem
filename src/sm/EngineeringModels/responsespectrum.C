@@ -265,22 +265,25 @@ void ResponseSpectrum::exportCombinedForcesToFile( const std::string &filename )
                         forces.at( iDof + 1 ) = forcesArray.at( eqN );
                     }
                 } else {
-                    // For slave dofs, the force is associated with the master dof
-                    IntArray masterDofMans;
-                    ( *pos )->giveMasterDofManArray( masterDofMans );
-                    if ( masterDofMans.giveSize() > 0 ) {
-                        auto *masterMan = domain->giveDofManager( masterDofMans.at( 1 ) );
-                        auto masterDof  = masterMan->findDofWithDofId( dType );
-                        if ( masterDof != masterMan->end() ) {
-                            int eqN = ( *masterDof )->giveEquationNumber( defNumbering );
-                            if ( eqN > 0 && eqN <= forcesArray.giveSize() ) {
-                                forces.at( iDof + 1 ) = forcesArray.at( eqN );
-                            }
-                        }
-                    }
+                    continue;
+                    //// For slave dofs, the force is associated with the master dof
+                    //IntArray masterDofMans;
+                    //( *pos )->giveMasterDofManArray( masterDofMans );
+                    //if ( masterDofMans.giveSize() > 0 ) {
+                    //    auto *masterMan = domain->giveDofManager( masterDofMans.at( 1 ) );
+                    //    auto masterDof  = masterMan->findDofWithDofId( dType );
+                    //    if ( masterDof != masterMan->end() ) {
+                    //        int eqN = ( *masterDof )->giveEquationNumber( defNumbering );
+                    //        if ( eqN > 0 && eqN <= forcesArray.giveSize() ) {
+                    //            forces.at( iDof + 1 ) = forcesArray.at( eqN );
+                    //        }
+                    //    }
+                    //}
                 }
             }
-
+            if ( forces.computeNorm() == 0.0 ) {
+                continue;
+            }
             fprintf( file, "%d %s %.8e %.8e %.8e %.8e %.8e %.8e\n",
                 label, type.c_str(), forces.at( 1 ), forces.at( 2 ), forces.at( 3 ), forces.at( 4 ), forces.at( 5 ), forces.at( 6 ) );
         }
