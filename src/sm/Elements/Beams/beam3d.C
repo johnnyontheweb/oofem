@@ -1032,20 +1032,15 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
         // ask displacements in l.c.s
         FloatArray rl;
         this->computeVectorOf( VM_Total, tStep, rl );
-        // other contributions
-        // double My = ( -endForces.at( 5 ) + endForces.at( 11 ) ) / 2.;
-        // double Mz = ( -endForces.at( 6 ) + endForces.at( 12 ) ) / 2.;
+
         // BENDING MOMENTS
         FloatMatrix Kg_M;
         Kg_M.resize( 12, 12 );
         Kg_M.zero();
-        // if ( abs( My ) > 1e-12 || abs( Mz ) > 1e-12 ) {
         //  coeff
         double E  = mat->give( 'E', gp );
-        double Iy = this->giveCrossSection()->give( CS_InertiaMomentY, gp );
-        double S2 = Iy * E / ( l * l );
-        double Iz = this->giveCrossSection()->give( CS_InertiaMomentZ, gp );
-        double S3 = Iz * E / ( l * l );
+        double S2 = this->giveCrossSection()->give( CS_InertiaMomentZ, gp ) * E / ( l * l );
+        double S3 = this->giveCrossSection()->give( CS_InertiaMomentY, gp ) * E / ( l * l );
 
         Kg_M.at( 2, 3 )  = 6 * ( -S2 + S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
         Kg_M.at( 2, 4 )  = 2 * S3 * ( rl.at( 5 ) - rl.at( 11 ) );
@@ -1088,7 +1083,6 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
 
         Kg_M.at( 11, 12 ) = ( S2 * l - S3 * l ) * ( rl.at( 4 ) - rl.at( 10 ) );
 
-        //}
 
        //FloatMatrix K_IM;
        //K_IM.resize( 12, 12 );
