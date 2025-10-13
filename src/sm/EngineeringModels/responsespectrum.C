@@ -834,7 +834,7 @@ void ResponseSpectrum::solveYourself()
         // calculate mode forces
         FloatArray imposedForces;
         massMatrix->times( dummyDisps, imposedForces ); // M * u_disp
-        imposedForces *= sAcc * dir.dotProduct( pf ); // sAcc * pf * M * u
+        imposedForces *= sAcc * dir.dotProduct( pf ) / scaleFactor; // sAcc * pf * M * u
         imposedForcesList.push_back( imposedForces );
 
         map<int, map<int, map<int, map<string, FloatArray> > > > elemResponse;
