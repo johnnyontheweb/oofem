@@ -101,6 +101,9 @@ protected:
     
     // macro element number
     int macroElem;
+
+    bool useModifiedKg = false;
+
 public:
     Beam3d(int n, Domain *d);
     virtual ~Beam3d();
@@ -176,6 +179,7 @@ public:
     const char *giveInputRecordName() const override { return _IFT_Beam3d_Name; }
     virtual void giveInputRecord(DynamicInputRecord &input);
     void initializeFrom(InputRecord &ir) override;
+    void postInitialize() override;
     ///@todo Introduce interpolator and remove these two:
     virtual integrationDomain giveIntegrationDomain() const { return _Line; }
     virtual Element_Geometry_Type giveGeometryType() const { return EGT_Composite; }

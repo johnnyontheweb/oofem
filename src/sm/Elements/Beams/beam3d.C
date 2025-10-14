@@ -627,6 +627,19 @@ Beam3d :: initializeFrom(InputRecord &ir)
     IR_GIVE_OPTIONAL_FIELD(ir, this->printGPs, _IFT_Beam3d_printGPs);
 }
 
+void 
+Beam3d::postInitialize()
+{
+    Element::postInitialize();
+    // Check if modified initial stress is requested
+    EngngModel *em          = this->domain->giveEngngModel();
+    VarLinearStability *vls = dynamic_cast<VarLinearStability *>( em );
+    PdeltaNstatic *sls      = dynamic_cast<PdeltaNstatic *>( em );
+    NonLinearDynamic *nds   = dynamic_cast<NonLinearDynamic *>( em );
+    useModifiedKg           = ( vls && vls->giveFlexuralInitialStress() ) || 
+        ( sls && sls->giveFlexuralInitialStress() ) || ( nds && nds->giveFlexuralInitialStress() );
+}
+
 void
     Beam3d::giveInputRecord(DynamicInputRecord &input)
 {
@@ -1022,13 +1035,7 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
 
     //answer.beLumpedOf (mass);
 
-    // Check if modified initial stress is requested from VarLinearStability model
-    EngngModel *em          = this->domain->giveEngngModel();
-    VarLinearStability *vls = dynamic_cast<VarLinearStability *>( em );
-    PdeltaNstatic *sls      = dynamic_cast<PdeltaNstatic *>( em );
-    NonLinearDynamic *nds   = dynamic_cast<NonLinearDynamic *>( em );
-    bool useModified        = ( vls && vls->giveFlexuralInitialStress() ) || ( sls && sls->giveFlexuralInitialStress() ) || ( nds && nds->giveFlexuralInitialStress() );
-    if ( useModified ) {
+    if ( useModifiedKg ) {
         // ask displacements in l.c.s
         FloatArray rl;
         this->computeVectorOf( VM_Total, tStep, rl );
