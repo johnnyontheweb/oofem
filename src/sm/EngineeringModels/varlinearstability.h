@@ -89,8 +89,6 @@ private:
     /// Numerical method used to solve the static problem.
     LinSystSolverType linStype;
     std ::unique_ptr<SparseLinearSystemNM> nMethodLS;
-    /// Flag to use modified initial stress matrix computation
-    bool flexkg = false;
 
 public:
     VarLinearStability( int i, EngngModel *master = nullptr );
@@ -129,8 +127,7 @@ public:
     const char *giveInputRecordName() const { return _IFT_VarLinearStability_Name; }
     const char *giveClassName() const override { return "VarLinearStability"; }
     fMode giveFormulation() override { return TL; }
-    /// Returns true if modified initial stress matrix should be used
-    bool giveFlexuralInitialStress() const { return flexkg; }
+
 };
 } // end namespace oofem
 #endif // linearstabilityvar_h

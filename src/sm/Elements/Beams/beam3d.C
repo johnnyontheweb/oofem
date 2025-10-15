@@ -59,11 +59,6 @@
  #include "oofeggraphiccontext.h"
 #endif
 
-#include "eigenvectorprimaryfield.h"
-#include "sm/EngineeringModels/varlinearstability.h"
-#include "sm/EngineeringModels/pdeltanstatic.h"
-#include "sm/EngineeringModels/nlineardynamic.h"
-
 namespace oofem {
 REGISTER_Element(Beam3d);
 
@@ -633,11 +628,7 @@ Beam3d::postInitialize()
     Element::postInitialize();
     // Check if modified initial stress is requested
     EngngModel *em          = this->domain->giveEngngModel();
-    VarLinearStability *vls = dynamic_cast<VarLinearStability *>( em );
-    PdeltaNstatic *sls      = dynamic_cast<PdeltaNstatic *>( em );
-    NonLinearDynamic *nds   = dynamic_cast<NonLinearDynamic *>( em );
-    useModifiedKg           = ( vls && vls->giveFlexuralInitialStress() ) || 
-        ( sls && sls->giveFlexuralInitialStress() ) || ( nds && nds->giveFlexuralInitialStress() );
+    useModifiedKg = em->giveFlexuralInitialStress();
 }
 
 void
