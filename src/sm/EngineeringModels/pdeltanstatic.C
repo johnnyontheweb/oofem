@@ -205,7 +205,8 @@ PdeltaNstatic :: initializeFrom(InputRecord &ir)
 	solverType = ST_EigenLib;
 	//}
 
-	//IR_GIVE_FIELD(ir, rtolv, _IFT_PDeltaStatic_rtolv);
+    rtolv = 0.0001;
+	IR_GIVE_OPTIONAL_FIELD( ir, rtolv, _IFT_PDeltaStatic_rtolv );
     
 #ifdef __PARALLEL_MODE
     if ( isParallel() ) {
@@ -541,6 +542,8 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
 
 
 	// pdelta ----------------------------------------------------------
+#if 0
+
 //#ifdef VERBOSE
 //	OOFEM_LOG_INFO("\n\nSolving initial ...\n\n");
 //#endif
@@ -565,7 +568,14 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
 	//	// PDELTA approx solution with iterations - maximum 10 iterations
 	//	if (newNorm != 0) oldNorm = newNorm;
 		//maxIter += 1;
-        //this->updateComponent( tStep, InternalRhs, this->giveDomain( di ) );
+
+        // force at current step for Kg
+        //this->updateComponent( tStep, NonLinearLhs, this->giveDomain( di ) );
+        //SparseLinearSystemNM *linSolver = nMethod->giveLinearSolver();
+        //FloatArray dispTotal;
+        //FloatArray totalLoadVector = incrementalLoadVector;
+        //totalLoadVector.add( initialLoadVector );
+        //linSolver->solve( *stiffnessMatrix, totalLoadVector, dispTotal);
 #ifdef VERBOSE
 		OOFEM_LOG_INFO("Assembling initial stress matrix\n");
 #endif
@@ -577,10 +587,11 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
         Kiter = stiffnessMatrix->clone(); // initialGuessType == IG_Tangent is required, otherwise K is zero
 		Kiter->add(1, *initialStressMatrix);
 
-		//#ifdef DEBUG
-		//		stiffnessMatrix->writeToFile("Ke.dat");
-		//		Kiter->writeToFile("Kiter.dat");
-		//#endif
+		#ifdef DEBUG
+				stiffnessMatrix->writeToFile("Ke.dat");
+                initialStressMatrix->writeToFile( "KG.dat" );
+				//Kiter->writeToFile("Kiter.dat");
+		#endif
 
 		// solve again
 //#ifdef VERBOSE
@@ -627,6 +638,60 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
                                           internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
         }
     }
+
+#endif
+    // NLGEOM pdelta approx solution with iterations
+	// norm of previous displ. vector
+    double oldNorm = totalDisplacement.computeSquaredNorm();
+    double newNorm = 0;
+    bool escape    = false;
+    int maxIter    = 0;
+    do {
+        // PDELTA approx solution with iterations - maximum 10 iterations
+        if ( newNorm != 0 ) oldNorm = newNorm;
+        maxIter += 1;
+#ifdef VERBOSE
+        OOFEM_LOG_INFO( "Assembling initial stress matrix\n" );
+#endif
+        this->updateComponent( tStep, NonLinearLhs, this->giveDomain( di ) );
+        initialStressMatrix->zero();
+        this->assemble( *initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
+        std::unique_ptr<SparseMtrx> Kiter;
+        Kiter = stiffnessMatrix->clone();
+        Kiter->add( 1, *initialStressMatrix );
+//#ifdef DEBUG
+//        stiffnessMatrix->writeToFile( "Ke.dat" );
+//        initialStressMatrix->writeToFile( "KG.dat" );
+//        // Kiter->writeToFile("Kiter.dat");
+//#endif
+        //  solve again
+#ifdef VERBOSE
+        OOFEM_LOG_INFO( "\nSolving iteration %d ...\n", maxIter );
+#endif
+        // SOLVER
+        if ( initialLoadVector.isNotEmpty() ) {
+            numMetStatus = nMethod->solve( *Kiter, incrementalLoadVector, &initialLoadVector,
+                totalDisplacement, incrementOfDisplacement, internalForces,
+                internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep );
+        } else {
+            numMetStatus = nMethod->solve( *Kiter, incrementalLoadVector, NULL,
+                totalDisplacement, incrementOfDisplacement, internalForces,
+                internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep );
+        }
+
+        // check convergence on DISPLACEMENTS: ( u(i)^2 - u(i-1)^2 ) / u(i)^2
+        FloatArray dispTotal = totalDisplacement;
+        //dispTotal.add( incrementOfDisplacement );
+        newNorm = dispTotal.computeSquaredNorm();
+        double toll = abs( ( newNorm - oldNorm ) / newNorm );
+        if ( toll <= rtolv || maxIter >= 20 ) escape = true;
+#ifdef VERBOSE
+        OOFEM_LOG_INFO( "\nCurrent displ. residual: %.2e \n\n", toll );
+#endif
+        // PDELTA end p-delta stiffness
+    } while ( escape == false );
+
+
 
     if (numMetStatus != CR_CONVERGED) {
 		OOFEM_ERROR("Solver couldn't find equilibrium at step number %5d.%d in %d iterations\n", tStep->giveNumber(), tStep->giveVersion(), currentIterations);
@@ -727,6 +792,7 @@ PdeltaNstatic :: printOutputAt(FILE *File, TimeStep *tStep)
 
     this->giveDomain(1)->giveOutputManager()->doDofManOutput(File, tStep);
     this->giveDomain(1)->giveOutputManager()->doElementOutput(File, tStep);
+    this->printReactionForces( tStep, 1, File );
 }
 
 

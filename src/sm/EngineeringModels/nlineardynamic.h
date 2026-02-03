@@ -55,6 +55,7 @@
 #define _IFT_NonLinearDynamic_delta "delta"
 #define _IFT_NonLinearDynamic_secondOrder "secorder"
 #define _IFT_NonLinearDynamic_flexkg "flexkg"
+#define _IFT_NonLinearDynamic_rtolv "rtolv"
 //@}
 
 namespace oofem {
@@ -97,7 +98,7 @@ protected:
     double gamma, beta;
     double eta, delta;
     double a0, a1, a2, a3, a4, a5, a6, a7;
-
+    double rtolv;
     FloatArray velocityVector, accelerationVector, previousLoadVector;
     FloatArray previousVelocityVector, previousAccelerationVector;
     FloatArray help, rhs, rhs2, previousInternalForces;

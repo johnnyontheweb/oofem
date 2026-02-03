@@ -282,8 +282,8 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 		//initialStressMatrix->times(-1.0);
 
 //#ifdef DEBUG
-//	stiffnessMatrix->writeToFile("K.dat");
-//	initialStressMatrix->writeToFile("KG.dat");
+//	stiffnessMatrix->writeToFile("K-pds.dat");
+//	initialStressMatrix->writeToFile("KG-pds.dat");
 //#endif
 
 		//int numEigv = 1;
@@ -313,7 +313,9 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 #endif
 		// displacementVector.zero(); // not needed
 		nMethod->solve(*Kiter, loadVector, displacementVector);
+
         } else {
+
         FloatArray feq( displacementVector.giveSize() );
         this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ),
             VM_Total, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
@@ -358,7 +360,7 @@ void PDeltaStatic :: saveContext(DataStream &stream, ContextMode mode)
 //
 {
     contextIOResultType iores;
-    FILE *file = NULL;
+    //FILE *file = NULL;
 
     StructuralEngngModel::saveContext(stream, mode);
 
