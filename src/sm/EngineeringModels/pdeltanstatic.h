@@ -147,6 +147,7 @@ public:
     void printOutputAt(FILE *file, TimeStep *tStep) override;
 
     void updateComponent(TimeStep *tStep, NumericalCmpn, Domain *d) override;
+    void updateMatrix( SparseMtrx &mat, TimeStep *tStep, Domain *d ) override;
     void updateAttributes(MetaStep *mStep) override;
 
     double giveUnknownComponent(ValueModeType type, TimeStep *tStep, Domain *d, Dof *dof) override;

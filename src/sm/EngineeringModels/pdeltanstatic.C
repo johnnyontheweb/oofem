@@ -525,10 +525,11 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
         OOFEM_LOG_RELEVANT("Computing initial guess\n");
 #endif
 	    FloatArray extrapolatedForces;
-        this->assemblePrescribedExtrapolatedForces( extrapolatedForces, tStep, TangentStiffnessMatrix, this->giveDomain(di) );
+        this->assemblePrescribedExtrapolatedForces( extrapolatedForces, tStep, TangentStiffnessMatrix, this->giveDomain( di ) );
         extrapolatedForces.negated();
-        //this->updateMatrix( *stiffnessMatrix, tStep, this->giveDomain( di ) );
-        this->updateComponent( tStep, NonLinearLhs, this->giveDomain(di) );
+        extrapolatedForces.add( incrementalLoadVector );
+        this->updateMatrix( *stiffnessMatrix, tStep, this->giveDomain( di ) );
+        //this->updateComponent( tStep, NonLinearLhs, this->giveDomain(di) );
         SparseLinearSystemNM *linSolver = nMethod->giveLinearSolver();
         OOFEM_LOG_RELEVANT("solving for increment\n");
         linSolver->solve(*stiffnessMatrix, extrapolatedForces, incrementOfDisplacement);
@@ -542,7 +543,6 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
 
 
 	// pdelta ----------------------------------------------------------
-#if 0
 
 //#ifdef VERBOSE
 //	OOFEM_LOG_INFO("\n\nSolving initial ...\n\n");
@@ -581,7 +581,7 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
 #endif
 		// initialStressMatrix.reset(stiffnessMatrix->GiveCopy());
 		initialStressMatrix->zero();
-
+        this->updateComponent( tStep, NonLinearLhs, this->giveDomain( di ) ); // update
 		this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain(di));
 		std::unique_ptr< SparseMtrx > Kiter;
         Kiter = stiffnessMatrix->clone(); // initialGuessType == IG_Tangent is required, otherwise K is zero
@@ -639,7 +639,9 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
         }
     }
 
-#endif
+
+#if 0
+
     // NLGEOM pdelta approx solution with iterations
 	// norm of previous displ. vector
     double oldNorm = totalDisplacement.computeSquaredNorm();
@@ -668,6 +670,10 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
 #ifdef VERBOSE
         OOFEM_LOG_INFO( "\nSolving iteration %d ...\n", maxIter );
 #endif
+#ifdef DEBUG
+        OOFEM_LOG_INFO( "\nDispl. norm = %.2e \n", totalDisplacement.computeSquaredNorm() );
+#endif // DEBUG
+
         // SOLVER
         if ( initialLoadVector.isNotEmpty() ) {
             numMetStatus = nMethod->solve( *Kiter, incrementalLoadVector, &initialLoadVector,
@@ -683,6 +689,9 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
         FloatArray dispTotal = totalDisplacement;
         //dispTotal.add( incrementOfDisplacement );
         newNorm = dispTotal.computeSquaredNorm();
+#ifdef DEBUG
+        OOFEM_LOG_INFO( "\nUpdated displ. norm = %.2e \n", newNorm );
+#endif // DEBUG
         double toll = abs( ( newNorm - oldNorm ) / newNorm );
         if ( toll <= rtolv || maxIter >= 20 ) escape = true;
 #ifdef VERBOSE
@@ -690,7 +699,7 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
 #endif
         // PDELTA end p-delta stiffness
     } while ( escape == false );
-
+#endif
 
 
     if (numMetStatus != CR_CONVERGED) {
@@ -701,6 +710,38 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
     ///@todo Use temporary variables. updateYourself() should set the final values, while proceedStep should be callable multiple times for each step (if necessary). / Mikael
     OOFEM_LOG_RELEVANT("Equilibrium reached at load level = %f in %d iterations\n", cumulatedLoadLevel + loadLevel, currentIterations);
     prevStepLength =  currentStepLength;
+}
+
+void 
+PdeltaNstatic ::updateMatrix( SparseMtrx &mat, TimeStep *tStep, Domain *d )
+{
+    if ( stiffMode == nls_tangentStiffness ) {
+        mat.zero(); // zero stiffness matrix
+#ifdef VERBOSE
+        OOFEM_LOG_DEBUG( "Assembling tangent stiffness matrix\n" );
+#endif
+        this->assemble( mat, tStep, TangentAssembler( TangentStiffness ), EModelDefaultEquationNumbering(), d );
+    } else if ( ( stiffMode == nls_secantStiffness ) || ( stiffMode == nls_secantInitialStiffness && initFlag ) ) {
+#ifdef VERBOSE
+        OOFEM_LOG_DEBUG( "Assembling secant stiffness matrix\n" );
+#endif
+        mat.zero(); // zero stiffness matrix
+        this->assemble( mat, tStep, TangentAssembler( SecantStiffness ), EModelDefaultEquationNumbering(), d );
+        initFlag = 0;
+    } else if ( ( stiffMode == nls_elasticStiffness ) && ( initFlag || ( this->giveMetaStep( tStep->giveMetaStepNumber() )->giveFirstStepNumber() == tStep->giveNumber() ) || ( updateElasticStiffnessFlag ) ) ) {
+#ifdef VERBOSE
+        OOFEM_LOG_DEBUG( "Assembling elastic stiffness matrix\n" );
+#endif
+        mat.zero(); // zero stiffness matrix
+        this->assemble( mat, tStep, TangentAssembler( ElasticStiffness ),
+            EModelDefaultEquationNumbering(), d );
+        initFlag = 0;
+    } else {
+        // currently no action , this method is mainly intended to
+        // assemble new tangent stiffness after each iteration
+        // when secantStiffMode is on, we use the same stiffness
+        // during iteration process
+    }
 }
 
 void
