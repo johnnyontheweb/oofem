@@ -82,6 +82,9 @@ PdeltaNstatic :: PdeltaNstatic(int i, EngngModel *_master) : LinearStatic(i, _ma
     refLoadInputMode = SparseNonLinearSystemNM :: rlm_total;
     nMethod = NULL;
     initialGuessType = IG_None;
+    deltaT = 1.0;
+    dtFunction = 0;
+    currentIterations = 0;
 }
 
 
@@ -168,6 +171,9 @@ PdeltaNstatic :: updateAttributes(MetaStep *mStep)
         OOFEM_ERROR("deltaT < 0");
     }
 
+    dtFunction = 0;
+    IR_GIVE_OPTIONAL_FIELD( ir, dtFunction, _IFT_PdeltaNstatic_deltatfunction );
+
     _val = nls_tangentStiffness;
     IR_GIVE_OPTIONAL_FIELD(ir, _val, _IFT_PdeltaNstatic_stiffmode);
     this->stiffMode = ( PdeltaNstatic_stiffnessMode ) _val;
@@ -206,7 +212,7 @@ PdeltaNstatic :: initializeFrom(InputRecord &ir)
 	//}
 
     rtolv = 0.0001;
-	IR_GIVE_OPTIONAL_FIELD( ir, rtolv, _IFT_PDeltaStatic_rtolv );
+    IR_GIVE_OPTIONAL_FIELD( ir, rtolv, _IFT_PDeltaNStatic_rtolv );
     
 #ifdef __PARALLEL_MODE
     if ( isParallel() ) {
@@ -291,7 +297,7 @@ TimeStep *PdeltaNstatic :: giveSolutionStepWhenIcApply(bool force)
     if ( !stepWhenIcApply ) {
         int inin = giveNumberOfTimeStepWhenIcApply();
 	//        int nFirst = giveNumberOfFirstStep();
-		stepWhenIcApply.reset(new TimeStep(inin, this, 0, -deltaT, deltaT, 0));
+		stepWhenIcApply = std :: make_unique< TimeStep >(inin, this, 0, -deltaT, deltaT, 0);
     }
 
     return stepWhenIcApply.get();
@@ -305,19 +311,16 @@ TimeStep *PdeltaNstatic :: giveNextStep()
     int mStepNum = 1;
     double totalTime = 0.0;
     StateCounterType counter = 1;
-    double deltaTtmp = deltaT;
-
-    //do not increase deltaT on microproblem
-    if ( pScale == microScale ) {
-        deltaTtmp = 0.;
-    }
+    // double deltaTtmp = deltaT;
+    double deltaTtmp = this->giveDeltaT(istep);
 
     if ( currentStep ) {
-        totalTime = currentStep->giveTargetTime() + deltaTtmp;
         istep = currentStep->giveNumber() + 1;
+	    deltaTtmp = this->giveDeltaT(istep);
+	    totalTime = currentStep->giveTargetTime() + deltaTtmp;
         counter = currentStep->giveSolutionStateCounter() + 1;
         mStepNum = currentStep->giveMetaStepNumber();
-
+	
         if ( !this->giveMetaStep(mStepNum)->isStepValid(istep) ) {
             mStepNum++;
             if ( mStepNum > nMetaSteps ) {
@@ -327,16 +330,43 @@ TimeStep *PdeltaNstatic :: giveNextStep()
     } else {
         // first step -> generate initial step
         TimeStep *newStep = giveSolutionStepWhenIcApply();
-        currentStep.reset(new TimeStep(*newStep));
-		totalTime += deltaTtmp; // starts with first increment
+        currentStep = std :: make_unique< TimeStep >(* newStep);
     }
 
     previousStep = std :: move(currentStep);
-    currentStep.reset( new TimeStep(istep, this, mStepNum, totalTime, deltaTtmp, counter) );
+    currentStep = std :: make_unique< TimeStep >(istep, this, mStepNum, totalTime, deltaTtmp, counter);
     // dt variable are set eq to 0 for statics - has no meaning
     // *Wrong* It has meaning for viscoelastic materials.
 
     return currentStep.get();
+}
+
+Function *
+PdeltaNstatic :: giveDtFunction()
+// Returns the load-time function of the receiver.
+{
+    if ( !dtFunction ) {
+        return NULL;
+    }
+
+    return giveDomain(1)->giveFunction(dtFunction);
+}
+
+
+double
+PdeltaNstatic :: giveDeltaT(int n)
+{
+
+    //do not increase deltaT on microproblem
+    if ( pScale == microScale ) {
+      return 0.;
+    }
+  
+    if ( giveDtFunction() ) {
+      return giveDtFunction()->evaluateAtTime(n);
+    }
+
+    return deltaT;
 }
 
 
@@ -809,7 +839,15 @@ PdeltaNstatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *d)
         OOFEM_LOG_DEBUG("Updating internal forces\n");
 #endif
         // update internalForces and internalForcesEBENorm concurrently
-        this->updateInternalRHS(internalForces, tStep, d, &this->internalForcesEBENorm );
+        this->updateInternalRHS(internalForces, tStep, d, & this->internalForcesEBENorm);
+        break;
+
+    case ExternalRhs:
+#ifdef VERBOSE
+        OOFEM_LOG_DEBUG("Updating external forces\n");
+#endif
+        this->assembleIncrementalReferenceLoadVectors(incrementalLoadVector, incrementalLoadVectorOfPrescribed, this->refLoadInputMode, d, tStep);
+
         break;
 
     default:
@@ -818,22 +856,21 @@ PdeltaNstatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *d)
 }
 
 
-void
-PdeltaNstatic :: printOutputAt(FILE *File, TimeStep *tStep)
+void PdeltaNstatic ::printOutputAt( FILE *file, TimeStep *tStep )
 {
     if ( !this->giveDomain(1)->giveOutputManager()->testTimeStepOutput(tStep) ) {
         return;                                                                      // do not print even Solution step header
     }
 
-    fprintf( File, "\n\nOutput for time %.8e, solution step number %d\n", tStep->giveTargetTime(), tStep->giveNumber() );
-    fprintf(File, "Reached load level : %20.6f in %d iterations\n\n",
+    fprintf(file, "\n\nOutput for time %.8e, solution step number %d\n", tStep->giveTargetTime(), tStep->giveNumber() );
+    fprintf(file, "Reached load level : %20.6f in %d iterations\n\n",
             cumulatedLoadLevel + loadLevel, currentIterations);
 
-    nMethod->printState(File);
+    nMethod->printState(file);
 
-    this->giveDomain(1)->giveOutputManager()->doDofManOutput(File, tStep);
-    this->giveDomain(1)->giveOutputManager()->doElementOutput(File, tStep);
-    this->printReactionForces( tStep, 1, File );
+    this->giveDomain(1)->giveOutputManager()->doDofManOutput(file, tStep);
+    this->giveDomain(1)->giveOutputManager()->doElementOutput(file, tStep);
+    this->printReactionForces(tStep, 1, file);
 }
 
 

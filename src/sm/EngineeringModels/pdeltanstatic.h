@@ -37,12 +37,14 @@
 
 #include "../sm/EngineeringModels/linearstatic.h"
 #include "sparsenonlinsystemnm.h"
+#include "function.h"
 
 ///@name Input fields for PdeltaNstatic
 //@{
 #define _IFT_PdeltaNstatic_Name "PdeltaNstatic"
 #define _IFT_PdeltaNstatic_controlmode "controlmode"
 #define _IFT_PdeltaNstatic_deltat "deltat"
+#define _IFT_PdeltaNstatic_deltatfunction "deltatfunction"
 #define _IFT_PdeltaNstatic_stiffmode "stiffmode"
 #define _IFT_PdeltaNstatic_refloadmode "refloadmode"
 #define _IFT_PdeltaNstatic_keepll "keepll"
@@ -53,7 +55,7 @@
 #define _IFT_PdeltaNstatic_forceloadBalancingFlag "forceloadbalancingflag"
 #define _IFT_PdeltaNstatic_updateElasticStiffnessFlag "updateelasticstiffnessflag"
 //#define _IFT_PdeltaNstatic_secondOrder "secorder"
-#define _IFT_PDeltaStatic_rtolv "rtolv"
+#define _IFT_PDeltaNStatic_rtolv "rtolv"
 #define _IFT_PdeltaNstatic_flexkg "flexkg"
 //@}
 
@@ -121,6 +123,10 @@ protected:
     PdeltaNstatic_controlType controlMode;
     /// Intrinsic time increment.
     double deltaT;
+    /// Associated time function for time step increment.
+    int dtFunction;
+    // second order contribution for elements
+    //bool secOrder; // use PdeltaNstatic instead
 
    /**
      * The following parameter allows to specify how the reference load vector
@@ -137,9 +143,11 @@ protected:
     InitialGuess initialGuessType;
 
 public:
-    PdeltaNstatic(int i, EngngModel * _master = NULL);
+    PdeltaNstatic( int i, EngngModel *_master = nullptr );
     virtual ~PdeltaNstatic();
 
+    Function *giveDtFunction();
+    double giveDeltaT(int n);
     void solveYourself() override;
     void solveYourselfAt(TimeStep *tStep) override;
     void terminate(TimeStep *tStep) override;
