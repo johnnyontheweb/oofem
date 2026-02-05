@@ -281,10 +281,10 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 		this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(),	EModelDefaultEquationNumbering(), this->giveDomain(1));
 		//initialStressMatrix->times(-1.0);
 
-//#ifdef DEBUG
-//	stiffnessMatrix->writeToFile("K-pds.dat");
-//	initialStressMatrix->writeToFile("KG-pds.dat");
-//#endif
+#ifdef DEBUG
+	stiffnessMatrix->writeToFile("K-pds.dat");
+	initialStressMatrix->writeToFile("KG-pds.dat");
+#endif
 
 		//int numEigv = 1;
 		//FloatMatrix eigVec; eigVec.resize(this->giveNumberOfDomainEquations(1, EModelDefaultEquationNumbering()), numEigv);
