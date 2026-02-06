@@ -490,7 +490,7 @@ NonLinearDynamic :: proceedStep(int di, TimeStep *tStep)
 	incrementOfDisplacement.zero();
     }
     ConvergedReason numMetStatus;
-
+#if 0
     if ( secOrder ) {
         //if ( true ) {
         // NLGEOM pdelta approx solution with iterations
@@ -558,10 +558,10 @@ NonLinearDynamic :: proceedStep(int di, TimeStep *tStep)
                                     totalDisplacement, incrementOfDisplacement, forcesVector,
                                     internalForcesEBENorm, loadLevel, SparseNonLinearSystemNM :: rlm_total, currentIterations, tStep);
     }
-
-    //numMetStatus = nMethod->solve(*effectiveStiffnessMatrix, rhs, NULL,
-    //                                        totalDisplacement, incrementOfDisplacement, forcesVector,
-    //                                        internalForcesEBENorm, loadLevel, SparseNonLinearSystemNM :: rlm_total, currentIterations, tStep);
+#endif
+    numMetStatus = nMethod->solve(*effectiveStiffnessMatrix, rhs, NULL,
+                                totalDisplacement, incrementOfDisplacement, forcesVector,
+                                internalForcesEBENorm, loadLevel, SparseNonLinearSystemNM :: rlm_total, currentIterations, tStep);
     if ( numMetStatus != CR_CONVERGED ) {
         OOFEM_ERROR("NRSolver failed to solve problem");
     }
@@ -746,21 +746,41 @@ void NonLinearDynamic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Do
             this->assemble(*effectiveStiffnessMatrix, tStep, EffectiveTangentAssembler(TangentStiffness, false, 1 + this->delta * a1,  this->a0 + this->eta * this->a1),
                            EModelDefaultEquationNumbering(), d);
 	    if (secOrder) {
-		// update internal state - nodes ...
-		for (auto &dman : d->giveDofManagers()) {
-		    dman->updateYourself(tStep);
-		}
-		// ... and elements
-		for (auto &elem : d->giveElements()) {
-		    elem->updateInternalState(tStep);
-		    elem->updateYourself(tStep);
-		}
-//#ifdef VERBOSE
-//		OOFEM_LOG_INFO("Assembling initial stress matrix\n");
+
+                SparseLinearSystemNM *linSolver = nMethod->giveLinearSolver();
+                linSolver->solve( *effectiveStiffnessMatrix, rhs, incrementOfDisplacement );
+                totalDisplacement.add( incrementOfDisplacement ); // needed to update internal forces for initial stress matrix
+		        //// update internal state - nodes ...
+		        //for (auto &dman : d->giveDofManagers()) {
+		        //    dman->updateYourself(tStep);
+		        //}
+		        //// ... and elements
+		        //for (auto &elem : d->giveElements()) {
+		        //    elem->updateInternalState(tStep);
+		        //    elem->updateYourself(tStep);
+		        //}
+#ifdef VERBOSE
+                OOFEM_LOG_INFO( "Assembling initial stress matrix\n" );
+#endif
+                initialStressMatrix->zero();
+                this->assemble( *initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), d );
+//#ifdef DEBUG
+//                effectiveStiffnessMatrix->writeToFile( "preKe2.dat" );
 //#endif
-//		initialStressMatrix->zero();
-//		this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), d);
-//		effectiveStiffnessMatrix->add(1, *initialStressMatrix); // in 1st step this would be zero
+                effectiveStiffnessMatrix->add( 1, *initialStressMatrix ); // 0 in 1st step
+
+//#ifdef DEBUG
+//                effectiveStiffnessMatrix->writeToFile( "Ke.dat" );
+//                initialStressMatrix->writeToFile( "KG.dat" );
+//                // Kiter->writeToFile("Kiter.dat");
+//#endif
+                //// p-delta forces as alternative to p-delta stiffness matrix
+                // FloatArray feq( totalDisplacement.giveSize() );
+                // this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ), VM_Total, EModelDefaultEquationNumbering(), d );
+                // rhs.subtract( feq );
+
+                totalDisplacement.subtract( incrementOfDisplacement ); // restore
+
 	    }
 #else
             this->assemble(effectiveStiffnessMatrix, tStep, TangentStiffnessMatrix,

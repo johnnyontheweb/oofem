@@ -106,7 +106,7 @@ protected:
     FloatArray initialLoadVectorOfPrescribed;
     /// Incremental Load Vector for prescribed DOFs.
     FloatArray incrementalLoadVectorOfPrescribed;
-	double rtolv;
+	//double rtolv;
     double loadLevel, cumulatedLoadLevel;
     bool mstepCumulateLoadLevelFlag;
     int currentIterations;

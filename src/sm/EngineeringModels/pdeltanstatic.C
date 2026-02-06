@@ -205,8 +205,8 @@ PdeltaNstatic :: initializeFrom(InputRecord &ir)
 	solverType = ST_EigenLib;
 	//}
 
-    rtolv = 0.0001;
-	IR_GIVE_OPTIONAL_FIELD( ir, rtolv, _IFT_PDeltaStatic_rtolv );
+ //   rtolv = 0.0001;
+	//IR_GIVE_OPTIONAL_FIELD( ir, rtolv, _IFT_PDeltaStatic_rtolv );
     
 #ifdef __PARALLEL_MODE
     if ( isParallel() ) {
@@ -776,7 +776,9 @@ PdeltaNstatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *d)
 				//	elem->updateInternalState(tStep);
 				//	elem->updateYourself(tStep);
 				//}
-                
+#ifdef VERBOSE
+                OOFEM_LOG_INFO( "Assembling initial stress matrix\n" );
+#endif
                 initialStressMatrix->zero();
                 this->assemble( *initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), d );
 #ifdef DEBUG
@@ -789,6 +791,12 @@ PdeltaNstatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *d)
                 initialStressMatrix->writeToFile( "KG.dat" );
                 // Kiter->writeToFile("Kiter.dat");
 #endif
+                //// p-delta forces as alternative to p-delta stiffness matrix
+                //FloatArray feq( totalDisplacement.giveSize() );
+                //this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ), VM_Total, EModelDefaultEquationNumbering(), d );
+                //incrementalLoadVector.subtract( feq );
+
+                totalDisplacement.subtract( incrementOfDisplacement ); // restore
 			}
 #endif
         } else if ( ( stiffMode == nls_secantStiffness ) || ( stiffMode == nls_secantInitialStiffness && initFlag ) ) {
