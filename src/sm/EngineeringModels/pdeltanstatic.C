@@ -733,8 +733,7 @@ PdeltaNstatic ::updateMatrix( SparseMtrx &mat, TimeStep *tStep, Domain *d )
         OOFEM_LOG_DEBUG( "Assembling elastic stiffness matrix\n" );
 #endif
         mat.zero(); // zero stiffness matrix
-        this->assemble( mat, tStep, TangentAssembler( ElasticStiffness ),
-            EModelDefaultEquationNumbering(), d );
+        this->assemble( mat, tStep, TangentAssembler( ElasticStiffness ), EModelDefaultEquationNumbering(), d );
         initFlag = 0;
     } else {
         // currently no action , this method is mainly intended to
@@ -764,7 +763,7 @@ PdeltaNstatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *d)
                            EModelDefaultEquationNumbering(), d);
 #if 1
 
-            if ( this->initialGuessType == IG_Tangent && incrementalLoadVector.computeNorm() > 0.0 ) {
+            if ( incrementalLoadVector.computeNorm() > 0.0 ) { // this->initialGuessType == IG_Tangent &&
                 SparseLinearSystemNM *linSolver = nMethod->giveLinearSolver();
                 linSolver->solve( *stiffnessMatrix, incrementalLoadVector, incrementOfDisplacement );
                 totalDisplacement.add( incrementOfDisplacement ); // needed to update internal forces for initial stress matrix
@@ -781,14 +780,14 @@ PdeltaNstatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *d)
                 initialStressMatrix->zero();
                 this->assemble( *initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), d );
 #ifdef DEBUG
-                                stiffnessMatrix->writeToFile( "preKe2.dat" );
+                stiffnessMatrix->writeToFile( "preKe2.dat" );
 #endif
-                                stiffnessMatrix->add( 1, *initialStressMatrix ); // 0 in 1st step
+                stiffnessMatrix->add( 1, *initialStressMatrix ); // 0 in 1st step
 
 #ifdef DEBUG
-                                stiffnessMatrix->writeToFile( "Ke.dat" );
-                                initialStressMatrix->writeToFile( "KG.dat" );
-                                // Kiter->writeToFile("Kiter.dat");
+                stiffnessMatrix->writeToFile( "Ke.dat" );
+                initialStressMatrix->writeToFile( "KG.dat" );
+                // Kiter->writeToFile("Kiter.dat");
 #endif
 			}
 #endif
@@ -857,7 +856,7 @@ PdeltaNstatic :: saveContext(DataStream &stream, ContextMode mode)
 //
 {
     contextIOResultType iores;
-    FILE *file = NULL;
+    //FILE *file = NULL;
 
     EngngModel::saveContext(stream, mode);
 
@@ -1215,7 +1214,7 @@ PdeltaNstatic :: unpackMigratingData(TimeStep *tStep)
         this->giveDomainErrorEstimator(1)->reinitialize();
     }
 
-    initFlag = true;
+    initFlag = 1;
 }
 
 } // end namespace oofem
