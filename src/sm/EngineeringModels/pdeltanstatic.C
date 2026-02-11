@@ -752,6 +752,8 @@ PdeltaNstatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *d)
 // of new equilibrium stage.
 //
 {
+    FloatArray feq;
+
     switch ( cmpn ) {
     case NonLinearLhs:
         if ( stiffMode == nls_tangentStiffness ) {
@@ -763,10 +765,11 @@ PdeltaNstatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *d)
                            EModelDefaultEquationNumbering(), d);
 #if 1
 
-            if ( incrementalLoadVector.computeNorm() > 0.0 ) { // this->initialGuessType == IG_Tangent &&
-                SparseLinearSystemNM *linSolver = nMethod->giveLinearSolver();
-                linSolver->solve( *stiffnessMatrix, incrementalLoadVector, incrementOfDisplacement );
-                totalDisplacement.add( incrementOfDisplacement ); // needed to update internal forces for initial stress matrix
+            //if ( incrementalLoadVector.computeNorm() > 0.0 ) { // this->initialGuessType == IG_Tangent &&
+                //SparseLinearSystemNM *linSolver = nMethod->giveLinearSolver();
+                //linSolver->solve( *stiffnessMatrix, incrementalLoadVector, incrementOfDisplacement );
+                //totalDisplacement.add( incrementOfDisplacement ); // needed to update internal forces for initial stress matrix
+
 				//// update internal state - nodes ... not necessary
 				//for (auto &dman : d->giveDofManagers()) {
 				//	dman->updateYourself(tStep);
@@ -776,29 +779,67 @@ PdeltaNstatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *d)
 				//	elem->updateInternalState(tStep);
 				//	elem->updateYourself(tStep);
 				//}
-#ifdef VERBOSE
-                OOFEM_LOG_INFO( "Assembling initial stress matrix\n" );
-#endif
-                initialStressMatrix->zero();
-                this->assemble( *initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), d );
-#ifdef DEBUG
-                stiffnessMatrix->writeToFile( "preKe2.dat" );
-#endif
-                stiffnessMatrix->add( 1, *initialStressMatrix ); // 0 in 1st step
-
-#ifdef DEBUG
-                stiffnessMatrix->writeToFile( "Ke.dat" );
-                initialStressMatrix->writeToFile( "KG.dat" );
-                // Kiter->writeToFile("Kiter.dat");
-#endif
+//#ifdef VERBOSE
+//                OOFEM_LOG_INFO( "Assembling initial stress matrix\n" );
+//#endif
+//                initialStressMatrix->zero();
+//                this->assemble( *initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), d );
+//#ifdef DEBUG
+//                stiffnessMatrix->writeToFile( "preKe2.dat" );
+//#endif
+//                stiffnessMatrix->add( 1, *initialStressMatrix ); // 0 in 1st step
+//
+//#ifdef DEBUG
+//                stiffnessMatrix->writeToFile( "Ke.dat" );
+//                initialStressMatrix->writeToFile( "KG.dat" );
+//                // Kiter->writeToFile("Kiter.dat");
+//#endif
                 //// p-delta forces as alternative to p-delta stiffness matrix
-                //FloatArray feq( totalDisplacement.giveSize() );
+                //feq.resize( incrementalLoadVector.giveSize() );
                 //this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ), VM_Total, EModelDefaultEquationNumbering(), d );
                 //incrementalLoadVector.subtract( feq );
 
-                totalDisplacement.subtract( incrementOfDisplacement ); // restore
-			}
+                //totalDisplacement.subtract( incrementOfDisplacement ); // restore
+			//}
 #endif
+            // test with internal iterations ----------------------
+//            int iter = 0, maxiter=20;
+//            double error, rtolv=0.0001;
+//            FloatArray feq( incrementOfDisplacement.giveSize() ), previousDisplacementVector( incrementOfDisplacement.giveSize() ), rhs( incrementalLoadVector.giveSize() );
+//            SparseLinearSystemNM *linSolver = nMethod->giveLinearSolver();
+//            do {
+//                previousDisplacementVector = incrementOfDisplacement;
+//                rhs                        = incrementalLoadVector;
+//                if ( iter ) {
+//                    feq.zero();
+//                    //if ( this->lumpedInitialStressMatrix ) {
+//                    //    this->assembleVector( feq, tStep, MatrixProductAssembler( LumpedInitialStressMatrixAssembler() ),
+//                    //        VM_Total, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
+//                    //} else {
+//                        this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ),
+//                            VM_Total, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
+//                    //}
+//                    rhs.subtract( feq );
+//                    // this->assembleVector(rhs, tStep, EquivalentLateralLoadAssembler(), VM_Total,
+//                    //                      this->giveEquationNumbering(), this->giveDomain(1) );
+//                }
+//                ConvergedReason s = linSolver->solve( *stiffnessMatrix, rhs, incrementOfDisplacement );
+//
+//                if ( s != CR_CONVERGED ) {
+//                    OOFEM_ERROR( "No success in solving system." );
+//                }
+//                //tStep->convergedReason = s;
+//                //tStep->incrementStateCounter(); // update solution state counter
+//                previousDisplacementVector.subtract( incrementOfDisplacement );
+//                error = previousDisplacementVector.computeNorm() / incrementOfDisplacement.computeNorm();
+//#ifdef VERBOSE
+//                OOFEM_LOG_INFO( " -> iteration(s) (err = %le)\n", iter-1, error );
+//#endif
+//                iter++;
+//            } while ( ( error > rtolv ) && ( iter <= maxiter ) );
+
+
+
         } else if ( ( stiffMode == nls_secantStiffness ) || ( stiffMode == nls_secantInitialStiffness && initFlag ) ) {
 #ifdef VERBOSE
             OOFEM_LOG_DEBUG("Assembling secant stiffness matrix\n");
@@ -830,6 +871,12 @@ PdeltaNstatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *d)
 #endif
         // update internalForces and internalForcesEBENorm concurrently
         this->updateInternalRHS(internalForces, tStep, d, &this->internalForcesEBENorm );
+
+        // p-delta forces as alternative to p-delta stiffness matrix
+        feq.resize( internalForces.giveSize() );
+        this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ), VM_Total, EModelDefaultEquationNumbering(), d );
+        internalForces.add( feq );
+
         break;
 
     default:

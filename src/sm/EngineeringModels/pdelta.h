@@ -51,6 +51,7 @@
 #define _IFT_Pdelta_stype "stype"
 #define _IFT_Pdelta_maxiter "maxiter"
 #define _IFT_Pdelta_lumpedInitialStressMatrix "lumped"
+#define _IFT_Pdelta_flexkg "flexkg"
 //@}
 
 namespace oofem {
@@ -68,7 +69,9 @@ private:
     std :: unique_ptr< SparseMtrx > initialStressMatrix;
     double rtolv;
     int maxiter;
-    bool lumpedInitialStressMatrix; 
+    bool lumpedInitialStressMatrix;
+    /// Flag to use modified initial stress matrix computation
+    bool flexkg = false;
 
 public:
     Pdelta(int i, EngngModel *master=nullptr);

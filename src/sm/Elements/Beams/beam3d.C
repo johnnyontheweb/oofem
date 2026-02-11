@@ -1013,9 +1013,9 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
     answer.at(1, 7) = 0.;
     answer.at(7, 7) = 0.;
 
-    answer.at(4, 4) = d.at(4, 4) / G / area;
+    answer.at(4, 4) = d.at(4, 4) / G / area; // Jt/A
     answer.at(4, 10) = -d.at(4, 4) / G / area;
-    answer.at(10, 10) = d.at(4, 4) / G / area;;
+    answer.at(10, 10) = d.at(4, 4) / G / area;
 
     answer.symmetrized();
     // ask end forces in g.c.s

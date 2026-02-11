@@ -74,6 +74,7 @@ Pdelta :: initializeFrom(InputRecord &ir)
     this->maxiter = 50;
     IR_GIVE_OPTIONAL_FIELD(ir, maxiter, _IFT_Pdelta_maxiter);
     IR_GIVE_OPTIONAL_FIELD(ir, lumpedInitialStressMatrix, _IFT_Pdelta_lumpedInitialStressMatrix);
+    IR_GIVE_OPTIONAL_FIELD( ir, flexkg, _IFT_Pdelta_flexkg );
 }
 
 void Pdelta :: solveYourselfAt(TimeStep *tStep)

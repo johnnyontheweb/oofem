@@ -316,14 +316,14 @@ void PDeltaStatic :: solveYourselfAt(TimeStep *tStep)
 
         } else {
 
-        FloatArray feq( displacementVector.giveSize() );
-        this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ),
-            VM_Total, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
-        rhs.subtract( feq );
+            FloatArray feq( displacementVector.giveSize() );
+            this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ),
+                VM_Total, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
+            rhs.subtract( feq );
 #ifdef VERBOSE
         OOFEM_LOG_INFO( "\nSolving iteration %d ...\n", maxIter );
 #endif
-        nMethod->solve( *stiffnessMatrix, rhs, displacementVector );
+            nMethod->solve( *stiffnessMatrix, rhs, displacementVector );
         }
 
 		// check convergence on DISPLACEMENTS: ( u(i)^2 - u(i-1)^2 ) / u(i)^2

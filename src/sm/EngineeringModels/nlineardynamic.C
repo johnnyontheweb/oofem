@@ -729,7 +729,7 @@ void NonLinearDynamic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Do
 #ifdef TIME_REPORT
     Timer timer;
 #endif
-
+    FloatArray feq;
     switch ( cmpn ) {
     case NonLinearLhs:
         // Prevent assembly if already assembled ( totIterations > 0 )
@@ -745,11 +745,12 @@ void NonLinearDynamic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Do
             effectiveStiffnessMatrix->zero();
             this->assemble(*effectiveStiffnessMatrix, tStep, EffectiveTangentAssembler(TangentStiffness, false, 1 + this->delta * a1,  this->a0 + this->eta * this->a1),
                            EModelDefaultEquationNumbering(), d);
-	    if (secOrder) {
+	    //if (secOrder) {
 
-                SparseLinearSystemNM *linSolver = nMethod->giveLinearSolver();
-                linSolver->solve( *effectiveStiffnessMatrix, rhs, incrementOfDisplacement );
-                totalDisplacement.add( incrementOfDisplacement ); // needed to update internal forces for initial stress matrix
+                //SparseLinearSystemNM *linSolver = nMethod->giveLinearSolver();
+                //linSolver->solve( *effectiveStiffnessMatrix, rhs, incrementOfDisplacement );
+                //totalDisplacement.add( incrementOfDisplacement ); // needed to update internal forces for initial stress matrix
+
 		        //// update internal state - nodes ...
 		        //for (auto &dman : d->giveDofManagers()) {
 		        //    dman->updateYourself(tStep);
@@ -759,15 +760,15 @@ void NonLinearDynamic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Do
 		        //    elem->updateInternalState(tStep);
 		        //    elem->updateYourself(tStep);
 		        //}
-#ifdef VERBOSE
-                OOFEM_LOG_INFO( "Assembling initial stress matrix\n" );
-#endif
-                initialStressMatrix->zero();
-                this->assemble( *initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), d );
+//#ifdef VERBOSE
+//                OOFEM_LOG_INFO( "Assembling initial stress matrix\n" );
+//#endif
+//                initialStressMatrix->zero();
+//                this->assemble( *initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), d );
 //#ifdef DEBUG
 //                effectiveStiffnessMatrix->writeToFile( "preKe2.dat" );
 //#endif
-                effectiveStiffnessMatrix->add( 1, *initialStressMatrix ); // 0 in 1st step
+                //effectiveStiffnessMatrix->add( 1, *initialStressMatrix ); // 0 in 1st step
 
 //#ifdef DEBUG
 //                effectiveStiffnessMatrix->writeToFile( "Ke.dat" );
@@ -775,13 +776,12 @@ void NonLinearDynamic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Do
 //                // Kiter->writeToFile("Kiter.dat");
 //#endif
                 //// p-delta forces as alternative to p-delta stiffness matrix
-                // FloatArray feq( totalDisplacement.giveSize() );
+                // feq.resize( totalDisplacement.giveSize() );
                 // this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ), VM_Total, EModelDefaultEquationNumbering(), d );
                 // rhs.subtract( feq );
 
-                totalDisplacement.subtract( incrementOfDisplacement ); // restore
-
-	    }
+                //totalDisplacement.subtract( incrementOfDisplacement ); // restore
+	    //}
 #else
             this->assemble(effectiveStiffnessMatrix, tStep, TangentStiffnessMatrix,
                            EModelDefaultEquationNumbering(), d);
@@ -804,7 +804,12 @@ void NonLinearDynamic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Do
 #endif
             if ( ( currentIterations != 0 ) || ( totIterations == 0 ) ) {
                 StructuralEngngModel::updateInternalRHS(internalForces, tStep, d, &this->internalForcesEBENorm);
-
+                if ( secOrder ) {
+                    // p-delta forces as alternative to p-delta stiffness matrix
+                    feq.resize( internalForces.giveSize() );
+                    this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ), VM_Total, EModelDefaultEquationNumbering(), d );
+                    internalForces.add( feq );
+                }
                 // Updating the residual vector @ NR-solver
                 help.beScaled(a0 + eta * a1, incrementOfDisplacement);
 
