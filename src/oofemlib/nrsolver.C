@@ -303,9 +303,9 @@ NRSolver :: solve(SparseMtrx &k, FloatArray &R, FloatArray *R0,
             //            if ( engngModel->giveProblemScale() == macroScale ) {
             //              k.writeToFile("k.txt");
             //            }
-#ifdef DEBUG
-            k.writeToFile( "incrKe.dat" );
-#endif
+//#ifdef DEBUG
+//            k.writeToFile( "incrKe.dat" );
+//#endif
 
             linSolver->solve(k, rhs, ddX);
         }

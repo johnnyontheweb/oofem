@@ -63,6 +63,7 @@ MisesMat::initializeFrom(InputRecord &ir)
     linearElasticMaterial.initializeFrom(ir); // takes care of elastic constants
 
     G = linearElasticMaterial.giveShearModulus();
+    propertyDictionary.add( 'G', G );
     K = linearElasticMaterial.giveBulkModulus();
 
 
