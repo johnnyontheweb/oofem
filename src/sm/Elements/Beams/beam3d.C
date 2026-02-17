@@ -1037,49 +1037,127 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
         Kg_M.zero();
         //  coeff
         double E  = mat->give( 'E', gp );
-        double S2 = this->giveCrossSection()->give( CS_InertiaMomentZ, gp ) * E / ( l * l );
-        double S3 = this->giveCrossSection()->give( CS_InertiaMomentY, gp ) * E / ( l * l );
 
-        Kg_M.at( 2, 3 )  = 6 * ( -S2 + S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
-        Kg_M.at( 2, 4 )  = 2 * S3 * ( rl.at( 5 ) - rl.at( 11 ) );
-        Kg_M.at( 2, 5 )  = 2 * S2 * ( 2 * rl.at( 4 ) + rl.at( 10 ) ) + 2 * S3 * ( rl.at( 4 ) - rl.at( 10 ) );
-        Kg_M.at( 2, 9 )  = 6 * ( S2 - S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
-        Kg_M.at( 2, 10 ) = 2 * S3 * ( rl.at( 11 ) - rl.at( 5 ) );
-        Kg_M.at( 2, 11 ) = 2 * S2 * ( rl.at( 4 ) + 2 * rl.at( 10 ) ) + 2 * S3 * ( rl.at( 10 ) - rl.at( 4 ) );
 
-        Kg_M.at( 3, 4 )  = 2 * S2 * ( rl.at( 6 ) - rl.at( 12 ) );
-        Kg_M.at( 3, 6 )  = 2 * S2 * ( rl.at( 4 ) - rl.at( 10 ) ) + 2 * S3 * (2* rl.at( 4 ) + rl.at( 10 ) );
-        Kg_M.at( 3, 8 )  = 6 * ( S2 - S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
-        Kg_M.at( 3, 10 ) = 2 * S2 * ( rl.at( 12 ) - rl.at( 6 ) );
-        Kg_M.at( 3, 12 ) = 2 * S2 * ( rl.at( 10 ) - rl.at( 4 ) ) + 2 * S3 * ( rl.at( 4 ) + 2 * rl.at( 10 ) );
+        double S2 = this->giveCrossSection()->give( CS_InertiaMomentY, gp ) * E / ( l * l );
+        double S3 = this->giveCrossSection()->give( CS_InertiaMomentZ, gp ) * E / ( l * l );    
 
-        Kg_M.at( 4, 5 )  = -S2 * l * ( rl.at( 6 ) - rl.at( 12 ) );
-        Kg_M.at( 4, 6 )  = -S2 * l * ( rl.at( 5 ) - rl.at( 11 ) );
-        Kg_M.at( 4, 8 )  = -2 * S3 * ( rl.at( 5 ) + rl.at( 11 ) );
-        Kg_M.at( 4, 9 )  = -2 * S2 * ( rl.at( 6 ) - rl.at( 12 ) );
-        Kg_M.at( 4, 11 ) = -S2 * l * ( rl.at( 6 ) + rl.at( 12 ) );
-        Kg_M.at( 4, 12 ) = S3 * l * ( rl.at( 5 ) + rl.at( 11 ) );
+        // (59) KM(2,3)
+        Kg_M.at( 2, 3 ) = 6. * ( -S2 + S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
+        // (60) KM(2,4)
+        Kg_M.at( 2, 4 ) = 2. * S3 * ( rl.at( 5 ) - rl.at( 11 ) );
+        // (61) KM(2,5)
+        Kg_M.at( 2, 5 ) = 2. * S2 * ( 2. * rl.at( 4 ) + rl.at( 10 ) ) + 2. * S3 * ( rl.at( 4 ) - rl.at( 10 ) );
+        // (62) KM(2,9)
+        Kg_M.at( 2, 9 ) = 6. * ( S2 - S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
+        // (63) KM(2,10)
+        Kg_M.at( 2, 10 ) = -2. * S3 * ( rl.at( 5 ) - rl.at( 11 ) );
+        // (64) KM(2,11)
+        Kg_M.at( 2, 11 ) = 2. * S2 * ( rl.at( 4 ) + 2. * rl.at( 10 ) ) - 2. * S3 * ( rl.at( 4 ) - rl.at( 10 ) );
 
-        Kg_M.at( 5, 6 )  = ( -S2 * l + S3 * l ) * ( rl.at( 4 ) - rl.at( 10 ) );
-        Kg_M.at( 5, 8 )  = -2 * S2 * ( 2 * rl.at( 4 ) + rl.at( 10 ) ) - 2 * S3 * ( rl.at( 4 ) - rl.at( 10 ) );
+        // (65) KM(3,4)
+        Kg_M.at( 3, 4 ) = 2. * S2 * ( rl.at( 6 ) - rl.at( 12 ) );
+        // (66) KM(3,6)
+        Kg_M.at( 3, 6 ) = 2. * S2 * ( rl.at( 4 ) - rl.at( 10 ) ) + 2. * S3 * ( 2. * rl.at( 4 ) + rl.at( 10 ) );
+        // (67) KM(3,8)
+        Kg_M.at( 3, 8 ) = 6. * ( S2 - S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
+        // (68) KM(3,10)
+        Kg_M.at( 3, 10 ) = -2. * S2 * ( rl.at( 6 ) - rl.at( 12 ) );
+        // (69) KM(3,12)
+        Kg_M.at( 3, 12 ) = -2. * S2 * ( rl.at( 4 ) - rl.at( 10 ) ) + 2. * S3 * ( rl.at( 4 ) + 2. * rl.at( 10 ) );
+
+        // (70) KM(4,5) -- Img: -S2*L*(th_z1 - th_z2)
+        Kg_M.at( 4, 5 ) = -S2 * l * ( rl.at( 6 ) - rl.at( 12 ) );
+        // (71) KM(4,6) -- Img: S3*L*(th_y1 - th_y2)
+        Kg_M.at( 4, 6 ) = S3 * l * ( rl.at( 5 ) - rl.at( 11 ) );
+        // (72) KM(4,8)
+        Kg_M.at( 4, 8 ) = -2. * S3 * ( rl.at( 5 ) - rl.at( 11 ) );
+        // (73) KM(4,9)
+        Kg_M.at( 4, 9 ) = -2. * S2 * ( rl.at( 6 ) - rl.at( 12 ) );
+        // (74) KM(4,11) -- Img: -S2*L*(th_z1 - th_z2)
+        Kg_M.at( 4, 11 ) = -S2 * l * ( rl.at( 6 ) - rl.at( 12 ) );
+        // (75) KM(4,12) -- Img: S3*L*(th_y1 - th_y2)
+        Kg_M.at( 4, 12 ) = S3 * l * ( rl.at( 5 ) - rl.at( 11 ) );
+
+        // (76) KM(5,6)
+        Kg_M.at( 5, 6 ) = ( -S2 * l + S3 * l ) * ( rl.at( 4 ) - rl.at( 10 ) );
+        // (77) KM(5,8)
+        Kg_M.at( 5, 8 ) = -2. * S2 * ( 2. * rl.at( 4 ) + rl.at( 10 ) ) - 2. * S3 * ( rl.at( 4 ) - rl.at( 10 ) );
+        // (78) KM(5,10)
         Kg_M.at( 5, 10 ) = S2 * l * ( rl.at( 6 ) - rl.at( 12 ) );
+        // (79) KM(5,12)
         Kg_M.at( 5, 12 ) = ( S2 * l + S3 * l ) * ( rl.at( 4 ) - rl.at( 10 ) );
 
-        Kg_M.at( 6, 9 )  = -2 * S2 * ( rl.at( 4 ) - rl.at( 10 ) ) - 2 * S3 * ( 2 * rl.at( 4 ) + rl.at( 10 ) );
+        // (80) KM(6,9)
+        Kg_M.at( 6, 9 ) = -2. * S2 * ( rl.at( 4 ) - rl.at( 10 ) ) - 2. * S3 * ( 2. * rl.at( 4 ) + rl.at( 10 ) );
+        // (81) KM(6,10)
         Kg_M.at( 6, 10 ) = -S3 * l * ( rl.at( 5 ) - rl.at( 11 ) );
-        Kg_M.at( 6, 11 ) = ( S2 * l + S3 * l ) * ( rl.at( 10 ) - rl.at( 4 ) );
+        // (82) KM(6,11)
+        Kg_M.at( 6, 11 ) = -( S2 * l + S3 * l ) * ( rl.at( 4 ) - rl.at( 10 ) );
 
-        Kg_M.at( 8, 9 )  = 6 * ( -S2 + S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
-        Kg_M.at( 8, 10 ) = 2 * S3 * ( rl.at( 5 ) + rl.at( 11 ) );
-        Kg_M.at( 8, 11 ) = -2 * S2 * ( rl.at( 4 ) + 2 * rl.at( 10 ) ) + 2 * S3 * ( rl.at( 4 ) - rl.at( 10 ) );
+        // (83) KM(8,9)
+        Kg_M.at( 8, 9 ) = 6. * ( -S2 + S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
+        // (84) KM(8,10)
+        Kg_M.at( 8, 10 ) = 2. * S3 * ( rl.at( 5 ) - rl.at( 11 ) );
+        // (85) KM(8,11)
+        Kg_M.at( 8, 11 ) = -2. * S2 * ( rl.at( 4 ) + 2. * rl.at( 10 ) ) + 2. * S3 * ( rl.at( 4 ) - rl.at( 10 ) );
 
-        Kg_M.at( 9, 10 ) = 2 * S2 * ( rl.at( 6 ) - rl.at( 12 ) );
-        Kg_M.at( 9, 12 ) = 2 * S2 * ( rl.at( 4 ) - rl.at( 10 ) ) - 2 * S3 * ( rl.at( 4 ) + 2 * rl.at( 10 ) );
+        // (86) KM(9,10)
+        Kg_M.at( 9, 10 ) = 2. * S2 * ( rl.at( 6 ) - rl.at( 12 ) );
+        // (87) KM(9,12)
+        Kg_M.at( 9, 12 ) = 2. * S2 * ( rl.at( 4 ) - rl.at( 10 ) ) - 2. * S3 * ( rl.at( 4 ) + 2. * rl.at( 10 ) );
 
+        // (88) KM(10,11)
         Kg_M.at( 10, 11 ) = S2 * l * ( rl.at( 6 ) - rl.at( 12 ) );
+        // (89) KM(10,12)
         Kg_M.at( 10, 12 ) = -S3 * l * ( rl.at( 5 ) - rl.at( 11 ) );
 
+        // (90) KM(11,12)
         Kg_M.at( 11, 12 ) = ( S2 * l - S3 * l ) * ( rl.at( 4 ) - rl.at( 10 ) );
+
+        //double S2 = this->giveCrossSection()->give( CS_InertiaMomentZ, gp ) * E / ( l * l );
+        //double S3 = this->giveCrossSection()->give( CS_InertiaMomentY, gp ) * E / ( l * l );
+
+        //Kg_M.at( 2, 3 )  = 6 * ( -S2 + S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
+        //Kg_M.at( 2, 4 )  = 2 * S3 * ( rl.at( 5 ) - rl.at( 11 ) );
+        //Kg_M.at( 2, 5 )  = 2 * S2 * ( 2 * rl.at( 4 ) + rl.at( 10 ) ) + 2 * S3 * ( rl.at( 4 ) - rl.at( 10 ) );
+        //Kg_M.at( 2, 9 )  = 6 * ( S2 - S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
+        //Kg_M.at( 2, 10 ) = 2 * S3 * ( rl.at( 11 ) - rl.at( 5 ) );
+        //Kg_M.at( 2, 11 ) = 2 * S2 * ( rl.at( 4 ) + 2 * rl.at( 10 ) ) + 2 * S3 * ( rl.at( 10 ) - rl.at( 4 ) );
+
+        //Kg_M.at( 3, 4 )  = 2 * S2 * ( rl.at( 6 ) - rl.at( 12 ) );
+        //Kg_M.at( 3, 6 )  = 2 * S2 * ( rl.at( 4 ) - rl.at( 10 ) ) + 2 * S3 * (2* rl.at( 4 ) + rl.at( 10 ) );
+        //Kg_M.at( 3, 8 )  = 6 * ( S2 - S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
+        //Kg_M.at( 3, 10 ) = 2 * S2 * ( rl.at( 12 ) - rl.at( 6 ) );
+        //Kg_M.at( 3, 12 ) = 2 * S2 * ( rl.at( 10 ) - rl.at( 4 ) ) + 2 * S3 * ( rl.at( 4 ) + 2 * rl.at( 10 ) );
+
+        //Kg_M.at( 4, 5 )  = -S2 * l * ( rl.at( 6 ) - rl.at( 12 ) );
+        //Kg_M.at( 4, 6 )  = -S2 * l * ( rl.at( 5 ) - rl.at( 11 ) );
+        //Kg_M.at( 4, 8 )  = -2 * S3 * ( rl.at( 5 ) + rl.at( 11 ) );
+        //Kg_M.at( 4, 9 )  = -2 * S2 * ( rl.at( 6 ) - rl.at( 12 ) );
+        //Kg_M.at( 4, 11 ) = -S2 * l * ( rl.at( 6 ) + rl.at( 12 ) );
+        //Kg_M.at( 4, 12 ) = S3 * l * ( rl.at( 5 ) + rl.at( 11 ) );
+
+        //Kg_M.at( 5, 6 )  = ( -S2 * l + S3 * l ) * ( rl.at( 4 ) - rl.at( 10 ) );
+        //Kg_M.at( 5, 8 )  = -2 * S2 * ( 2 * rl.at( 4 ) + rl.at( 10 ) ) - 2 * S3 * ( rl.at( 4 ) - rl.at( 10 ) );
+        //Kg_M.at( 5, 10 ) = S2 * l * ( rl.at( 6 ) - rl.at( 12 ) );
+        //Kg_M.at( 5, 12 ) = ( S2 * l + S3 * l ) * ( rl.at( 4 ) - rl.at( 10 ) );
+
+        //Kg_M.at( 6, 9 )  = -2 * S2 * ( rl.at( 4 ) - rl.at( 10 ) ) - 2 * S3 * ( 2 * rl.at( 4 ) + rl.at( 10 ) );
+        //Kg_M.at( 6, 10 ) = -S3 * l * ( rl.at( 5 ) - rl.at( 11 ) );
+        //Kg_M.at( 6, 11 ) = ( S2 * l + S3 * l ) * ( rl.at( 10 ) - rl.at( 4 ) );
+
+        //Kg_M.at( 8, 9 )  = 6 * ( -S2 + S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
+        //Kg_M.at( 8, 10 ) = 2 * S3 * ( rl.at( 5 ) + rl.at( 11 ) );
+        //Kg_M.at( 8, 11 ) = -2 * S2 * ( rl.at( 4 ) + 2 * rl.at( 10 ) ) + 2 * S3 * ( rl.at( 4 ) - rl.at( 10 ) );
+
+        //Kg_M.at( 9, 10 ) = 2 * S2 * ( rl.at( 6 ) - rl.at( 12 ) );
+        //Kg_M.at( 9, 12 ) = 2 * S2 * ( rl.at( 4 ) - rl.at( 10 ) ) - 2 * S3 * ( rl.at( 4 ) + 2 * rl.at( 10 ) );
+
+        //Kg_M.at( 10, 11 ) = S2 * l * ( rl.at( 6 ) - rl.at( 12 ) );
+        //Kg_M.at( 10, 12 ) = -S3 * l * ( rl.at( 5 ) - rl.at( 11 ) );
+
+        //Kg_M.at( 11, 12 ) = ( S2 * l - S3 * l ) * ( rl.at( 4 ) - rl.at( 10 ) );
 
 
        //FloatMatrix K_IM;
