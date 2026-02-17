@@ -245,7 +245,7 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
     // create the actual initial stiffness matrix using only time = 1
     TimeStep tStep1( *tStep );
     tStep1.setNumber( 1 );
-    tStep1.setTime( 1.0 ); // constant loading a t=1
+    tStep1.setTime( 1.0 ); // constant loading at t=1
     TimeStep *tStep1Ptr = &tStep1;
 
     //  Internal forces first, negated;
@@ -270,8 +270,7 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
 
         initialStressMatrix->zero(); // rewrite initialStressMatrix
         OOFEM_LOG_INFO( "Assembling initial stress matrix for constant loading\n" );
-        this->assemble( *initialStressMatrix, tStep1Ptr, InitialStressMatrixAssembler(),
-            EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
+        this->assemble( *initialStressMatrix, tStep1Ptr, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
         // add constant loads to update the stiffness matrix
         stiffnessMatrix->add( 1.0, *initialStressMatrix );
         displacementVector.zero(); // don't consider deformed shape for multipliers of variable loading, otherwise it will add constant loads again
