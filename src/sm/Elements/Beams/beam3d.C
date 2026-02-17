@@ -1159,6 +1159,149 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
     }
 }
 
+#if 0
+void Beam3d ::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
+{
+    // Calcola la matrice di rigidezza geometrica locale considerando la teoria di Timoshenko.
+    // Riferimento: M. A. C. Rodrigues (2019).
+
+    double l      = this->computeLength();
+    double kappay = this->giveKappayCoeff( tStep );
+    double kappaz = this->giveKappazCoeff( tStep );
+
+    StructuralMaterial *mat = static_cast<StructuralMaterial *>( this->giveMaterial() );
+    GaussPoint *gp          = integrationRulesArray[0]->getIntegrationPoint( 0 );
+
+    double E    = mat->give( 'E', gp );
+    double G    = mat->give( 'G', gp );
+    double area = this->giveStructuralCrossSection()->give( CS_Area, gp );
+    double Iy   = this->giveCrossSection()->give( CS_InertiaMomentY, gp );
+    double Iz   = this->giveCrossSection()->give( CS_InertiaMomentZ, gp );
+    double Ix   = this->giveCrossSection()->give( CS_TorsionConstantX, gp ); // Momento d'inerzia polare/torsionale
+
+    // In OOFEM kappay = (6*E*Iy)/(G*Ay*l^2). Nel riferimento MATLAB Oy = (E*Iz)/(G*Ay*L^2).
+    // Quindi: Oy_matlab = kappay_oofem / 6.0 e Oz_matlab = kappaz_oofem / 6.0
+    double Oy   = kappay / 6.0;
+    double Oz   = kappaz / 6.0;
+    double niy  = 1.0 + 12.0 * Oy;
+    double niz  = 1.0 + 12.0 * Oz;
+    double niy2 = niy * niy;
+    double niz2 = niz * niz;
+    double L2   = l * l;
+    double L3   = L2 * l;
+
+    // Forze di estremità in coordinate globali
+    //FloatArray endForcesGlobal;
+    FloatArray localEndForces;
+    this->giveEndForcesVector( localEndForces, tStep );
+
+    //// Ruota le forze globali nel sistema locale dell'elemento
+    //FloatMatrix T;
+    //this->computeGtoLRotationMatrix( T );
+    //localEndForces.beProductOf( T, endForcesGlobal );
+
+    // Mapping delle forze locali (OOFEM 1-based index)
+    // Nodo A: 1:Fx, 2:Fy, 3:Fz, 4:Mx, 5:My, 6:Mz
+    // Nodo B: 7:Fx, 8:Fy, 9:Fz, 10:Mx, 11:My, 12:Mz
+    double Fxa = localEndForces.at( 1 );
+    double Fya = localEndForces.at( 2 );
+    double Fza = localEndForces.at( 3 );
+    double Mxa = localEndForces.at( 4 );
+    double Mya = localEndForces.at( 5 );
+    double Mza = localEndForces.at( 6 );
+
+    double Fxb = localEndForces.at( 7 );
+    double Fyb = localEndForces.at( 8 );
+    double Fzb = localEndForces.at( 9 );
+    double Mxb = localEndForces.at( 10 );
+    double Myb = localEndForces.at( 11 );
+    double Mzb = localEndForces.at( 12 );
+
+    // Carico assiale P (convenzione: positivo se trazione)
+    // Nel riferimento MATLAB Fxb è il carico assiale al nodo finale.
+    double P = Fxb;
+    double K = P * ( Iy + Iz ) / area;
+
+    answer.resize( 12, 12 );
+    answer.zero();
+
+    // Diagonale e termini principali perOrder 2 (Timoshenko)
+    answer.at( 1, 1 ) = answer.at( 7, 7 ) = P / l;
+    answer.at( 2, 2 ) = answer.at( 8, 8 ) = 6.0 * P * ( 120.0 * Oy * Oy + 20.0 * Oy + 1.0 ) / ( 5.0 * niy2 * l ) + 12.0 * P * Iz / ( area * L3 * niy2 );
+    answer.at( 3, 3 ) = answer.at( 9, 9 ) = 6.0 * P * ( 120.0 * Oz * Oz + 20.0 * Oz + 1.0 ) / ( 5.0 * niz2 * l ) + 12.0 * P * Iy / ( area * L3 * niz2 );
+    answer.at( 4, 4 ) = answer.at( 10, 10 ) = K / l;
+    answer.at( 5, 5 ) = answer.at( 11, 11 ) = 2.0 * P * l * ( 90.0 * Oz * Oz + 15.0 * Oz + 1.0 ) / ( 15.0 * niz2 ) + 4.0 * P * Iy * ( 36.0 * Oz * Oz + 6.0 * Oz + 1.0 ) / ( area * l * niz2 );
+    answer.at( 6, 6 ) = answer.at( 12, 12 ) = 2.0 * P * l * ( 90.0 * Oy * Oy + 15.0 * Oy + 1.0 ) / ( 15.0 * niy2 ) + 4.0 * P * Iz * ( 36.0 * Oy * Oy + 6.0 * Oy + 1.0 ) / ( area * l * niy2 );
+
+    // Termini combinati (Momenti e Forze)
+    answer.at( 3, 4 ) = answer.at( 4, 3 ) = Mza / l;
+    answer.at( 4, 5 ) = answer.at( 5, 4 ) = -Mza / 3.0 + Mzb / 6.0;
+    answer.at( 6, 7 ) = answer.at( 7, 6 ) = Mza / l;
+    answer.at( 9, 10 ) = answer.at( 10, 9 ) = -Mzb / l;
+    answer.at( 10, 11 ) = answer.at( 11, 10 ) = Mza / 6.0 - Mzb / 3.0;
+
+    answer.at( 2, 4 ) = answer.at( 4, 2 ) = Mya / l;
+    answer.at( 3, 5 ) = answer.at( 5, 3 ) = -P / ( 10.0 * niz2 ) - 6.0 * P * Iy / ( area * L2 * niz2 );
+    answer.at( 4, 6 ) = answer.at( 6, 4 ) = Mya / 3.0 - Myb / 6.0;
+    answer.at( 5, 7 ) = answer.at( 7, 5 ) = Mya / l;
+    answer.at( 6, 8 ) = answer.at( 8, 6 ) = -P / ( 10.0 * niy2 ) - 6.0 * P * Iz / ( area * L2 * niy2 );
+    answer.at( 8, 10 ) = answer.at( 10, 8 ) = -Myb / l;
+    answer.at( 9, 11 ) = answer.at( 11, 9 ) = P / ( 10.0 * niz2 ) + 6.0 * P * Iy / ( area * L2 * niz2 );
+    answer.at( 10, 12 ) = answer.at( 12, 10 ) = -Mya / 6.0 + Myb / 3.0;
+
+    // Effetti Torsionali (Mxb)
+    answer.at( 2, 5 ) = answer.at( 5, 2 ) = ( Mxb / l ) * ( 1.0 / niz );
+    answer.at( 3, 6 ) = answer.at( 6, 3 ) = ( Mxb / l ) * ( 1.0 / niy );
+    answer.at( 5, 8 ) = answer.at( 8, 5 ) = ( -Mxb / l ) * ( 1.0 / niz );
+    answer.at( 6, 9 ) = answer.at( 9, 6 ) = ( -Mxb / l ) * ( 1.0 / niy );
+    answer.at( 8, 11 ) = answer.at( 11, 8 ) = ( Mxb / l ) * ( 1.0 / niz );
+    answer.at( 9, 12 ) = answer.at( 12, 9 ) = ( Mxb / l ) * ( 1.0 / niy );
+
+    // Altri termini extra (Mya, Mza, ecc)
+    answer.at( 1, 5 ) = answer.at( 5, 1 ) = -Mya / l;
+    answer.at( 2, 6 ) = answer.at( 6, 2 ) = P / ( 10.0 * niy2 ) + 6.0 * P * Iz / ( area * L2 * niy2 );
+    answer.at( 4, 8 ) = answer.at( 8, 4 ) = -Mya / l;
+    answer.at( 5, 9 ) = answer.at( 9, 5 ) = P / ( 10.0 * niz2 ) + 6.0 * P * Iy / ( area * L2 * niz2 );
+    answer.at( 6, 10 ) = answer.at( 10, 6 ) = Mya / 6.0 + Myb / 6.0;
+    answer.at( 7, 11 ) = answer.at( 11, 7 ) = Myb / l;
+    answer.at( 8, 12 ) = answer.at( 12, 8 ) = -P / ( 10.0 * niy2 ) - 6.0 * P * Iz / ( area * L2 * niy2 );
+
+    answer.at( 1, 6 ) = answer.at( 6, 1 ) = -Mza / l;
+    answer.at( 4, 9 ) = answer.at( 9, 4 ) = -Mza / l;
+    answer.at( 5, 10 ) = answer.at( 10, 5 ) = -Mza / 6.0 - Mzb / 6.0;
+    answer.at( 6, 11 ) = answer.at( 11, 6 ) = ( -Mxb / 2.0 ) * ( ( 1.0 - 144.0 * Oy * Oz ) / ( niy * niz ) );
+    answer.at( 7, 12 ) = answer.at( 12, 7 ) = Mzb / l;
+
+    // Termini di accoppiamento Nodo A - Nodo B
+    answer.at( 1, 7 ) = answer.at( 7, 1 ) = -P / l;
+    answer.at( 2, 8 ) = answer.at( 8, 2 ) = -6.0 * P * ( 120.0 * Oy * Oy + 20.0 * Oy + 1.0 ) / ( 5.0 * niy2 * l ) - 12.0 * P * Iz / ( area * L3 * niy2 );
+    answer.at( 3, 9 ) = answer.at( 9, 3 ) = -6.0 * P * ( 120.0 * Oz * Oz + 20.0 * Oz + 1.0 ) / ( 5.0 * niz2 * l ) - 12.0 * P * Iy / ( area * L3 * niz2 );
+    answer.at( 4, 10 ) = answer.at( 10, 4 ) = -K / l;
+    answer.at( 5, 11 ) = answer.at( 11, 5 ) = -P * l * ( 360.0 * Oz * Oz + 60.0 * Oz + 1.0 ) / ( 30.0 * niz2 ) - 2.0 * P * Iy * ( 72.0 * Oz * Oz + 12.0 * Oz - 1.0 ) / ( area * l * niz2 );
+    answer.at( 6, 12 ) = answer.at( 12, 6 ) = -P * l * ( 360.0 * Oy * Oy + 60.0 * Oy + 1.0 ) / ( 30.0 * niy2 ) - 2.0 * P * Iz * ( 72.0 * Oy * Oy + 12.0 * Oy - 1.0 ) / ( area * l * niy2 );
+
+    answer.at( 3, 10 ) = answer.at( 10, 3 ) = Mzb / l;
+    answer.at( 4, 11 ) = answer.at( 11, 4 ) = -Mza / 6.0 - Mzb / 6.0;
+    answer.at( 5, 12 ) = answer.at( 12, 5 ) = ( Mxb / 2.0 ) * ( ( 1.0 - 144.0 * Oy * Oz ) / ( niy * niz ) );
+
+    answer.at( 2, 10 ) = answer.at( 10, 2 ) = Myb / l;
+    answer.at( 3, 11 ) = answer.at( 11, 3 ) = -P / ( 10.0 * niz2 ) - 6.0 * P * Iy / ( area * L2 * niz2 );
+    answer.at( 4, 12 ) = answer.at( 12, 4 ) = Mya / 6.0 + Myb / 6.0;
+
+    answer.at( 2, 11 ) = answer.at( 11, 2 ) = ( -Mxb / l ) * ( 1.0 / niz );
+    answer.at( 3, 12 ) = answer.at( 12, 3 ) = ( -Mxb / l ) * ( 1.0 / niy );
+
+    answer.at( 1, 11 ) = answer.at( 11, 1 ) = -Myb / l;
+    answer.at( 2, 12 ) = answer.at( 12, 2 ) = P / ( 10.0 * niy2 ) + 6.0 * P * Iz / ( area * L2 * niy2 );
+
+    answer.at( 1, 12 ) = answer.at( 12, 1 ) = -Mzb / l;
+
+    answer.at( 5, 6 ) = answer.at( 6, 5 ) = -6.0 * Mxb * ( Oy - Oz ) / ( niy * niz );
+    answer.at( 11, 12 ) = answer.at( 12, 11 ) = 6.0 * Mxb * ( Oy - Oz ) / ( niy * niz );
+
+    //answer.symmetrized();
+}
+#endif
 
 void
 Beam3d :: computeLumpedInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
