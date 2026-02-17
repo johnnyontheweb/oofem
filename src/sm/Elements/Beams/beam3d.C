@@ -1115,93 +1115,46 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
         // (90) KM(11,12)
         Kg_M.at( 11, 12 ) = ( S2 * l - S3 * l ) * ( rl.at( 4 ) - rl.at( 10 ) );
 
-        //double S2 = this->giveCrossSection()->give( CS_InertiaMomentZ, gp ) * E / ( l * l );
-        //double S3 = this->giveCrossSection()->give( CS_InertiaMomentY, gp ) * E / ( l * l );
-
-        //Kg_M.at( 2, 3 )  = 6 * ( -S2 + S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
-        //Kg_M.at( 2, 4 )  = 2 * S3 * ( rl.at( 5 ) - rl.at( 11 ) );
-        //Kg_M.at( 2, 5 )  = 2 * S2 * ( 2 * rl.at( 4 ) + rl.at( 10 ) ) + 2 * S3 * ( rl.at( 4 ) - rl.at( 10 ) );
-        //Kg_M.at( 2, 9 )  = 6 * ( S2 - S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
-        //Kg_M.at( 2, 10 ) = 2 * S3 * ( rl.at( 11 ) - rl.at( 5 ) );
-        //Kg_M.at( 2, 11 ) = 2 * S2 * ( rl.at( 4 ) + 2 * rl.at( 10 ) ) + 2 * S3 * ( rl.at( 10 ) - rl.at( 4 ) );
-
-        //Kg_M.at( 3, 4 )  = 2 * S2 * ( rl.at( 6 ) - rl.at( 12 ) );
-        //Kg_M.at( 3, 6 )  = 2 * S2 * ( rl.at( 4 ) - rl.at( 10 ) ) + 2 * S3 * (2* rl.at( 4 ) + rl.at( 10 ) );
-        //Kg_M.at( 3, 8 )  = 6 * ( S2 - S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
-        //Kg_M.at( 3, 10 ) = 2 * S2 * ( rl.at( 12 ) - rl.at( 6 ) );
-        //Kg_M.at( 3, 12 ) = 2 * S2 * ( rl.at( 10 ) - rl.at( 4 ) ) + 2 * S3 * ( rl.at( 4 ) + 2 * rl.at( 10 ) );
-
-        //Kg_M.at( 4, 5 )  = -S2 * l * ( rl.at( 6 ) - rl.at( 12 ) );
-        //Kg_M.at( 4, 6 )  = -S2 * l * ( rl.at( 5 ) - rl.at( 11 ) );
-        //Kg_M.at( 4, 8 )  = -2 * S3 * ( rl.at( 5 ) + rl.at( 11 ) );
-        //Kg_M.at( 4, 9 )  = -2 * S2 * ( rl.at( 6 ) - rl.at( 12 ) );
-        //Kg_M.at( 4, 11 ) = -S2 * l * ( rl.at( 6 ) + rl.at( 12 ) );
-        //Kg_M.at( 4, 12 ) = S3 * l * ( rl.at( 5 ) + rl.at( 11 ) );
-
-        //Kg_M.at( 5, 6 )  = ( -S2 * l + S3 * l ) * ( rl.at( 4 ) - rl.at( 10 ) );
-        //Kg_M.at( 5, 8 )  = -2 * S2 * ( 2 * rl.at( 4 ) + rl.at( 10 ) ) - 2 * S3 * ( rl.at( 4 ) - rl.at( 10 ) );
-        //Kg_M.at( 5, 10 ) = S2 * l * ( rl.at( 6 ) - rl.at( 12 ) );
-        //Kg_M.at( 5, 12 ) = ( S2 * l + S3 * l ) * ( rl.at( 4 ) - rl.at( 10 ) );
-
-        //Kg_M.at( 6, 9 )  = -2 * S2 * ( rl.at( 4 ) - rl.at( 10 ) ) - 2 * S3 * ( 2 * rl.at( 4 ) + rl.at( 10 ) );
-        //Kg_M.at( 6, 10 ) = -S3 * l * ( rl.at( 5 ) - rl.at( 11 ) );
-        //Kg_M.at( 6, 11 ) = ( S2 * l + S3 * l ) * ( rl.at( 10 ) - rl.at( 4 ) );
-
-        //Kg_M.at( 8, 9 )  = 6 * ( -S2 + S3 ) / l * ( rl.at( 4 ) + rl.at( 10 ) );
-        //Kg_M.at( 8, 10 ) = 2 * S3 * ( rl.at( 5 ) + rl.at( 11 ) );
-        //Kg_M.at( 8, 11 ) = -2 * S2 * ( rl.at( 4 ) + 2 * rl.at( 10 ) ) + 2 * S3 * ( rl.at( 4 ) - rl.at( 10 ) );
-
-        //Kg_M.at( 9, 10 ) = 2 * S2 * ( rl.at( 6 ) - rl.at( 12 ) );
-        //Kg_M.at( 9, 12 ) = 2 * S2 * ( rl.at( 4 ) - rl.at( 10 ) ) - 2 * S3 * ( rl.at( 4 ) + 2 * rl.at( 10 ) );
-
-        //Kg_M.at( 10, 11 ) = S2 * l * ( rl.at( 6 ) - rl.at( 12 ) );
-        //Kg_M.at( 10, 12 ) = -S3 * l * ( rl.at( 5 ) - rl.at( 11 ) );
-
-        //Kg_M.at( 11, 12 ) = ( S2 * l - S3 * l ) * ( rl.at( 4 ) - rl.at( 10 ) );
-
-
-       //FloatMatrix K_IM;
-       //K_IM.resize( 12, 12 );
-       //K_IM.zero();
-       // // Componenti della matrice K_IM da momento esterno
-       ////  (91): K_IM(5,2) = -6S3θx1
-       //K_IM.at( 5, 2 ) = -6 * S3 * rl.at( 4 );
-       ////  (92): K_IM(5,6) = -4S2Lθx1
-       //K_IM.at( 5, 6 ) = -4 * S2 * l * rl.at( 4 );
-       ////  (93): K_IM(5,8) = 6S3θx1
-       //K_IM.at( 5, 8 ) = 6 * S3 * rl.at( 4 );
-       ////  (94): K_IM(5,12) = -2S2Lθx1
-       //K_IM.at( 5, 12 ) = -2 * S2 * l * rl.at( 4 );
-       ////  (95): K_IM(6,3) = -6S2θx1
-       //K_IM.at( 6, 3 ) = -6 * S2 * rl.at( 4 );
-       ////  (96): K_IM(6,5) = 4S2Lθx1
-       //K_IM.at( 6, 5 ) = 4 * S2 * l * rl.at( 4 );
-       ////  (97): K_IM(6,9) = 6S2θx1
-       //K_IM.at( 6, 9 ) = 6 * S2 * rl.at( 4 );
-       ////  (98): K_IM(6,11) = 2S2Lθx1
-       //K_IM.at( 6, 11 ) = 2 * S2 * l * rl.at( 4 );
-       ////  (99): K_IM(11,2) = -6S3θx2
-       //K_IM.at( 11, 2 ) = -6 * S3 * rl.at( 10 );
-       ////  (100): K_IM(11,6) = -2S2Lθx2
-       //K_IM.at( 11, 6 ) = -2 * S2 * l * rl.at( 10 );
-       ////  (101): K_IM(11,8) = 6S3θx2
-       //K_IM.at( 11, 8 ) = 6 * S3 * rl.at( 10 );
-       ////  (102): K_IM(11,12) = -4S2Lθx2
-       //K_IM.at( 11, 12 ) = -4 * S2 * l * rl.at( 10 );
-       ////  (103): K_IM(12,3) = -6S2θx2
-       //K_IM.at( 12, 3 ) = -6 * S2 * rl.at( 10 );
-       ////  (104): K_IM(12,5) = 2S2Lθx2
-       //K_IM.at( 12, 5 ) = 2 * S2 * l * rl.at( 10 );
-       ////  (105): K_IM(12,9) = 6S2θx2
-       //K_IM.at( 12, 9 ) = 6 * S2 * rl.at( 10 );
-       ////  (106): K_IM(12,11) = 4S2Lθx2
-       //K_IM.at( 12, 11 ) = 4 * S2 * l * rl.at( 10 );
-       //// K_IM è una matrice asimmetrica, quindi NON chiamare symmetrized()
-       //// K_IM.symmetrized();
-       //// Aggiungi K_IM alla matrice di risposta
-       //answer.add( K_IM );
-
         Kg_M.symmetrized();
+
+       FloatMatrix K_IM;
+       K_IM.resize( 12, 12 );
+       K_IM.zero();
+        // Component of K_IM
+       //  (91): K_IM(5,2) = -6S3θx1
+       K_IM.at( 5, 2 ) = -6 * S3 * rl.at( 4 );
+       //  (92): K_IM(5,6) = -4S2Lθx1
+       K_IM.at( 5, 6 ) = -4 * S2 * l * rl.at( 4 );
+       //  (93): K_IM(5,8) = 6S3θx1
+       K_IM.at( 5, 8 ) = 6 * S3 * rl.at( 4 );
+       //  (94): K_IM(5,12) = -2S2Lθx1
+       K_IM.at( 5, 12 ) = -2 * S2 * l * rl.at( 4 );
+       //  (95): K_IM(6,3) = -6S2θx1
+       K_IM.at( 6, 3 ) = -6 * S2 * rl.at( 4 );
+       //  (96): K_IM(6,5) = 4S2Lθx1
+       K_IM.at( 6, 5 ) = 4 * S2 * l * rl.at( 4 );
+       //  (97): K_IM(6,9) = 6S2θx1
+       K_IM.at( 6, 9 ) = 6 * S2 * rl.at( 4 );
+       //  (98): K_IM(6,11) = 2S2Lθx1
+       K_IM.at( 6, 11 ) = 2 * S2 * l * rl.at( 4 );
+       //  (99): K_IM(11,2) = -6S3θx2
+       K_IM.at( 11, 2 ) = -6 * S3 * rl.at( 10 );
+       //  (100): K_IM(11,6) = -2S2Lθx2
+       K_IM.at( 11, 6 ) = -2 * S2 * l * rl.at( 10 );
+       //  (101): K_IM(11,8) = 6S3θx2
+       K_IM.at( 11, 8 ) = 6 * S3 * rl.at( 10 );
+       //  (102): K_IM(11,12) = -4S2Lθx2
+       K_IM.at( 11, 12 ) = -4 * S2 * l * rl.at( 10 );
+       //  (103): K_IM(12,3) = -6S2θx2
+       K_IM.at( 12, 3 ) = -6 * S2 * rl.at( 10 );
+       //  (104): K_IM(12,5) = 2S2Lθx2
+       K_IM.at( 12, 5 ) = 2 * S2 * l * rl.at( 10 );
+       //  (105): K_IM(12,9) = 6S2θx2
+       K_IM.at( 12, 9 ) = 6 * S2 * rl.at( 10 );
+       //  (106): K_IM(12,11) = 4S2Lθx2
+       K_IM.at( 12, 11 ) = 4 * S2 * l * rl.at( 10 );
+
+        answer.add( K_IM );
         answer.add( Kg_M );
     }
 }
