@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -108,7 +108,7 @@ public:
     const char *giveClassName() const override { return "TrPlaneStrain"; }
     Element_Geometry_Type giveGeometryType() const override {return EGT_triangle_1;}
 
-    void initializeFrom(InputRecord &ir) override;
+    void postInitialize() override;
 
 protected:
     int giveNumberOfIPForMassMtrxIntegration() override { return 1; }

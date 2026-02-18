@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -75,7 +75,7 @@ public:
      */
     virtual ~PFEMParticle(void) { }
 
-    void initializeFrom(InputRecord &ir) override;
+    //void initializeFrom(InputRecord &ir, int priority) override;
     int checkConsistency() override;
 
     void updateYourself(TimeStep *tStep) override;
@@ -94,8 +94,6 @@ public:
     virtual bool isActive() { return activeFlag; }
     /// Sets the activeFlag to false
     virtual void deactivate() { activeFlag = false; }
-
-    void printOutputAt(FILE *stream, TimeStep *stepN) override;
 
     const char *giveClassName() const override { return "PFEMParticle"; }
     const char *giveInputRecordName() const override { return _IFT_PFEMParticle_Name; }

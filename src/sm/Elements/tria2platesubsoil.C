@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2014   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -98,13 +98,6 @@ Tria2PlateSubSoil :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int l
     }
 }
 
-
-
-void
-Tria2PlateSubSoil :: initializeFrom(InputRecord &ir)
-{
-    StructuralElement :: initializeFrom(ir);
-}
 
 //TODO ZZNodalRecoveryModel can not determine some values.  This is caused by sum of row entries is zero for (N^T)N matrix for vertices, yielding zero entries in the lumped form.
 

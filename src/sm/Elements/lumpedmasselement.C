@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -39,6 +39,8 @@
 #include "floatarray.h"
 #include "intarray.h"
 #include "classfactory.h"
+#include "parametermanager.h"
+#include "paramkey.h"
 
 #ifdef __OOFEG
  #include "oofeggraphiccontext.h"
@@ -47,6 +49,9 @@
 
 namespace oofem {
 REGISTER_Element(LumpedMassElement);
+
+ParamKey LumpedMassElement::IPK_LumpedMassElement_dofs("dofs");
+ParamKey LumpedMassElement::IPK_LumpedMassElement_components("components");
 
 LumpedMassElement :: LumpedMassElement(int n, Domain *aDomain) : StructuralElement(n, aDomain)
 {
@@ -69,20 +74,23 @@ void LumpedMassElement ::computeInitialStressMatrix( FloatMatrix &answer, TimeSt
 }
 
 void
-LumpedMassElement :: initializeFrom(InputRecord &ir)
+LumpedMassElement :: initializeFrom(InputRecord &ir, int priority)
 {
-    StructuralElement :: initializeFrom(ir);
+    ParameterManager &ppm =  this->giveDomain()->elementPPM;
+    StructuralElement :: initializeFrom(ir, priority);
+    PM_UPDATE_PARAMETER(dofs, ppm, ir, this->number, IPK_LumpedMassElement_dofs, priority) ;
+    PM_UPDATE_PARAMETER(components, ppm, ir, this->number, IPK_LumpedMassElement_components, priority) ;
 
-    IR_GIVE_FIELD(ir, components, _IFT_LumpedMassElement_components);
-    IR_GIVE_OPTIONAL_FIELD( ir, dofs, _IFT_LumpedMassElement_dofs );
-    if ( dofs.isEmpty() ) {
-        int Ndofs = components.giveSize();
-        dofs.resize( Ndofs );
-        for ( int i = 1; i <= Ndofs; i++ )
-            dofs.at( i ) = i;
-    }
 }
 
+void
+LumpedMassElement :: postInitialize()
+{
+    ParameterManager &ppm =  this->giveDomain()->elementPPM;
+    StructuralElement :: postInitialize();
+    PM_ELEMENT_ERROR_IFNOTSET(ppm, this->number, IPK_LumpedMassElement_dofs) ;
+    PM_ELEMENT_ERROR_IFNOTSET(ppm, this->number, IPK_LumpedMassElement_components) ;
+}
 
 int
 LumpedMassElement :: checkConsistency()

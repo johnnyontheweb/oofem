@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -72,7 +72,7 @@ public:
     int giveSizeOfReducedHardeningVarsVector(GaussPoint *gp) const override;
     bool isCharacteristicMtrxSymmetric(MatResponseMode rMode) const override { return false; }
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override;
 
 protected:
     int giveMaxNumberOfActiveYieldConds(GaussPoint *gp) const override { return 2; }

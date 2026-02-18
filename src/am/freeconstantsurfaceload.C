@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -113,7 +113,7 @@ bool FreeConstantSurfaceLoad :: isImposed(TimeStep *tStep)
     IntArray surfNodes = el->giveBoundarySurfaceNodes(boundaries.at(2));
     int nSurfNodes = surfNodes.giveSize();
 
-    int nElements = domain->giveNumberOfElements();
+    //int nElements = domain->giveNumberOfElements();
     
     // map of node occurance
     std::map<int, int> connmap;

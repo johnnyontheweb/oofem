@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -204,11 +204,8 @@ Quad1PlaneStrain :: computeBHmatrixAt(GaussPoint *gp, FloatMatrix &answer)
 
 
 void
-Quad1PlaneStrain :: initializeFrom(InputRecord &ir)
+Quad1PlaneStrain :: postInitialize()
 {
-    numberOfGaussPoints = 4;
-    PlaneStrainElement :: initializeFrom(ir);
-
     if ( !( ( numberOfGaussPoints == 4 ) ||
             ( numberOfGaussPoints == 1 ) ||
             ( numberOfGaussPoints == 9 ) ||
@@ -220,6 +217,7 @@ Quad1PlaneStrain :: initializeFrom(InputRecord &ir)
     la1.resize(3);
     la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_Quad1PlaneStrain_FirstLocalAxis);
+    PlaneStrainElement :: postInitialize();
 }
 
 

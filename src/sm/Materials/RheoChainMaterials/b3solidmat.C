@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -750,18 +750,18 @@ B3SolidMaterial :: giveHumidityIncrement(GaussPoint *gp, TimeStep *tStep) const 
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 B3SolidMaterial :: CreateStatus(GaussPoint *gp) const
 /*
  * creates a new material status corresponding to this class
  */
 {
-    return new B3SolidMaterialStatus(gp, nUnits);
+    return std::make_unique<B3SolidMaterialStatus>(gp, nUnits);
 }
 
 
 void
-B3SolidMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep)
+B3SolidMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep) const
 {
     KelvinChainMaterial :: giveRealStressVector(answer, gp, reducedStrain, tStep);
 

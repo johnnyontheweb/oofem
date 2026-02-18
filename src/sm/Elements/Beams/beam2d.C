@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -52,6 +52,8 @@
 #include "dynamicinputrecord.h"
 #include "elementinternaldofman.h"
 #include "masterdof.h"
+#include "parametermanager.h"
+#include "paramkey.h"
 
 #ifdef __OOFEG
  #include "oofeggraphiccontext.h"
@@ -59,6 +61,7 @@
 
 namespace oofem {
 REGISTER_Element(Beam2d);
+ParamKey Beam2d::IPK_Beam2d_dofsToCondense("dofstocondense");
 
 // Set up interpolation coordinates
 FEI2dLineLin Beam2d :: interp_geom(1, 3);
@@ -404,16 +407,25 @@ Beam2d :: giveLocalCoordinateSystem(FloatMatrix &answer)
 
 
 void
-Beam2d :: initializeFrom(InputRecord &ir)
+Beam2d :: initializeFrom(InputRecord &ir, int priority)
 {
     // first call parent
-    BeamBaseElement :: initializeFrom(ir);
+    BeamBaseElement :: initializeFrom(ir, priority);
+    ParameterManager &ppm = giveDomain()->elementPPM;
+    PM_UPDATE_TEMP_PARAMETER(IntArray, ppm, ir, this->number, IPK_Beam2d_dofsToCondense, priority) ;
+}
 
-    if ( ir.hasField(_IFT_Beam2d_dofstocondense) ) {
-        IntArray val;
-        IR_GIVE_FIELD(ir, val, _IFT_Beam2d_dofstocondense);
+void
+Beam2d :: postInitialize()
+{
+    BeamBaseElement :: postInitialize();
+    ParameterManager &ppm = giveDomain()->elementPPM;
+    if (ppm.checkIfSet(this->number, IPK_Beam2d_dofsToCondense.getIndex())) {
+        auto _val = ppm.getTempParam(this->number, IPK_Beam2d_dofsToCondense.getIndex());
+        IntArray val (std::get<IntArray>(*_val)); 
+        
         if ( val.giveSize() >= 6 ) {
-            throw ValueInputException(ir, _IFT_Beam2d_dofstocondense, "wrong input data for condensed dofs");
+            throw ComponentInputException(IPK_Beam2d_dofsToCondense.getName(), ComponentInputException::ComponentType::ctElement, this->number, "wrong input data for condensed dofs");
         }
 
         DofIDItem mask[] = {
@@ -435,41 +447,6 @@ Beam2d :: initializeFrom(InputRecord &ir)
         }
     }
 }
-
-
-void
-Beam2d::giveInputRecord(DynamicInputRecord &input)
-{
-	Element::giveInputRecord(input);
-
-	// now let's add what's left, that is the bunch of custom properties
-	IntArray dofsTC;
-	// now rebuild the dofstocondense list
-	if (numberOfCondensedDofs){
-
-		if (ghostNodes[0] != NULL)
-		{
-			IntArray tempArray;
-			ghostNodes[0]->giveCompleteMasterDofIDArray(tempArray);
-			dofsTC.followedBy(tempArray);
-		}
-
-		if (ghostNodes[1] != NULL)
-		{
-			IntArray tempArray;
-			ghostNodes[1]->giveCompleteMasterDofIDArray(tempArray);
-			for (int dID = 1; dID <= tempArray.giveSize(); dID++)
-			{
-				tempArray.at(dID) += 3;
-			}
-			dofsTC.followedBy(tempArray);
-		}
-
-		input.setField(dofsTC, _IFT_Beam2d_dofstocondense);
-	}
-
-}
-
 
 void
 Beam2d :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord)

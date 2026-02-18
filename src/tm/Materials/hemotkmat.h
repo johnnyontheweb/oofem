@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -112,7 +112,7 @@ public:
     double inverse_sorption_isotherm(double w) const;
     double give_dphi_dw(double w) const;
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new HeMoTransportMaterialStatus(gp); }
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override { return std::make_unique<HeMoTransportMaterialStatus>(gp); }
 
 protected:
     double computeCapacityCoeff(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const;

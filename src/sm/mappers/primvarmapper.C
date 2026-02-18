@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -185,7 +185,7 @@ void LSPrimaryVariableMapper :: mapPrimaryVariables(FloatArray &oU, Domain &iOld
 
 
                     // Fetch nodal displacements for the old element
-                    FloatArray nodeDispOld;
+                    std::vector<double> nodeDispOld_;
                     dofsPassed = 1;
                     IntArray elDofsGlobOld;
                     elOld->giveLocationArray( elDofsGlobOld, num );
@@ -203,19 +203,19 @@ void LSPrimaryVariableMapper :: mapPrimaryVariables(FloatArray &oU, Domain &iOld
                                     dof->giveUnknowns(dofUnknowns, iMode, &iTStep);
 
 #ifdef DEBUG
-                                    if(!dofUnknowns.isFinite()) {
-                                        OOFEM_ERROR("!dofUnknowns.isFinite()")
+                                    if(!dofUnknowns.isAllFinite()) {
+                                        OOFEM_ERROR("!dofUnknowns.isAllFinite()")
                                     }
 
                                     if(dofUnknowns.giveSize() < 1) {
                                         OOFEM_ERROR("dofUnknowns.giveSize() < 1")
                                     }
 #endif
-                                    nodeDispOld.push_back(dofUnknowns.at(1));
+                                    nodeDispOld_.push_back(dofUnknowns.at(1));
                                 }
                                 else {
                                     // TODO: Why does this case occur?
-                                    nodeDispOld.push_back(0.0);
+                                    nodeDispOld_.push_back(0.0);
                                 }
                             } else {
                                 if ( dof->hasBc(& iTStep) ) {
@@ -225,11 +225,11 @@ void LSPrimaryVariableMapper :: mapPrimaryVariables(FloatArray &oU, Domain &iOld
                                         OOFEM_ERROR("!std::isfinite(dof->giveBcValue(iMode, & iTStep))")
                                     }
 #endif
-                                    nodeDispOld.push_back( dof->giveBcValue(iMode, & iTStep) );
+                                    nodeDispOld_.push_back( dof->giveBcValue(iMode, & iTStep) );
                                 }
                                 else {
 //                                    printf("Unhandled case in LSPrimaryVariableMapper :: mapPrimaryVariables().\n");
-                                    nodeDispOld.push_back( 0.0 );
+                                    nodeDispOld_.push_back( 0.0 );
                                 }
                             }
 
@@ -240,17 +240,18 @@ void LSPrimaryVariableMapper :: mapPrimaryVariables(FloatArray &oU, Domain &iOld
 
 
                     FloatArray oldDisp;
+                    FloatArray nodeDispOld=FloatArray::fromVector(nodeDispOld_);
                     oldDisp.beProductOf(NOld, nodeDispOld);
 
                     FloatArray temp, duu;
 
 #ifdef DEBUG
-                    if(!oldDisp.isFinite()) {
-                        OOFEM_ERROR("!oldDisp.isFinite()")
+                    if(!oldDisp.isAllFinite()) {
+                        OOFEM_ERROR("!oldDisp.isAllFinite()")
                     }
 
-                    if(!newDisp.isFinite()) {
-                        OOFEM_ERROR("!newDisp.isFinite()")
+                    if(!newDisp.isAllFinite()) {
+                        OOFEM_ERROR("!newDisp.isAllFinite()")
                     }
 #endif
 
@@ -271,8 +272,8 @@ void LSPrimaryVariableMapper :: mapPrimaryVariables(FloatArray &oU, Domain &iOld
             elNew->computeConsistentMassMatrix(me, & iTStep, mass, & density);
 
 #ifdef DEBUG
-            if(!me.isFinite()) {
-                OOFEM_ERROR("!me.isFinite()")
+            if(!me.isAllFinite()) {
+                OOFEM_ERROR("!me.isAllFinite()")
             }
 #endif
 
@@ -318,8 +319,8 @@ void LSPrimaryVariableMapper :: mapPrimaryVariables(FloatArray &oU, Domain &iOld
         }
 
 #ifdef DEBUG
-        if(!res.isFinite()) {
-            OOFEM_ERROR("!res.isFinite()")
+        if(!res.isAllFinite()) {
+            OOFEM_ERROR("!res.isAllFinite()")
         }
 #endif
 
@@ -332,8 +333,8 @@ void LSPrimaryVariableMapper :: mapPrimaryVariables(FloatArray &oU, Domain &iOld
         solver->solve(*K, res, du);
 
 #ifdef DEBUG
-        if(!du.isFinite()) {
-            OOFEM_ERROR("!du.isFinite()")
+        if(!du.isAllFinite()) {
+            OOFEM_ERROR("!du.isAllFinite()")
         }
 #endif
 

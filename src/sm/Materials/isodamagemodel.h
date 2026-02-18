@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -189,12 +189,12 @@ public:
     const char *giveClassName() const override { return "IsotropicDamageMaterial"; }
 
     /// Returns reference to undamaged (bulk) material
-    LinearElasticMaterial *giveLinearElasticMaterial() { return linearElasticMaterial; }
+    LinearElasticMaterial *giveLinearElasticMaterial() const { return linearElasticMaterial; }
 
     FloatMatrixF<6,6> give3dMaterialStiffnessMatrix(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
 
     void giveRealStressVector(FloatArray &answer, GaussPoint *gp,
-                              const FloatArray &reducedStrain, TimeStep *tStep) override;
+                              const FloatArray &reducedStrain, TimeStep *tStep) const override;
 
     FloatArrayF<6> giveRealStressVector_3d(const FloatArrayF<6> &strain, GaussPoint *gp, TimeStep *tStep) const override
     {
@@ -268,7 +268,7 @@ public:
     void initializeFrom(InputRecord &ir) override;
     void giveInputRecord(DynamicInputRecord &input) override;
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new IsotropicDamageMaterialStatus(gp); }
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override { return std::make_unique<IsotropicDamageMaterialStatus>(gp); }
 
     FloatMatrixF<1,1> give1dStressStiffMtrx(MatResponseMode mmode, GaussPoint *gp,
                                             TimeStep *tStep) const override;

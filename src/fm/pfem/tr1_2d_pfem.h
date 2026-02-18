@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -113,7 +113,7 @@ public:
 
     void giveDofManDofIDMask(int inode, IntArray &answer) const override;
     int computeNumberOfDofs() override;
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
     int checkConsistency() override;
 
     double computeVolumeAround(GaussPoint *gp) override;
@@ -157,7 +157,7 @@ protected:
     void computeDeviatoricStressDivergence(FloatArray &answer, TimeStep *tStep) override;
 
     void computeBodyLoadVectorAt(FloatArray &answer, BodyLoad *load, TimeStep *tStep, ValueModeType mode) override;
-    void computeEdgeBCSubVectorAt(FloatArray &answer, Load *load, int iEdge, TimeStep *tStep) override;
+    void computeEdgeBCSubVectorAt(FloatArray &answer, Load *load, int iEdge, TimeStep *tStep) ;
 };
 } // end namespace oofem
 #endif // tr1_2d_pfem_h

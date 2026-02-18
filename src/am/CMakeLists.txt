@@ -1,6 +1,7 @@
 set (am_sources
     additivemanufacturingproblem.C
     freeconstantsurfaceload.C
+    depositedheatsource.C
     )
 
 set (tm 
@@ -12,4 +13,3 @@ add_library (am
     ${tm}
     )
 
-add_dependencies(am version)

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -63,9 +63,9 @@ Shell7BasePhFi :: Shell7BasePhFi(int n, Domain *aDomain) : Shell7Base(n, aDomain
 	this->numberOfLayers = nLayers;
 }
 
-void Shell7BasePhFi :: initializeFrom(InputRecord &ir)
+void Shell7BasePhFi :: initializeFrom(InputRecord &ir, int priority)
 {
-    Shell7Base :: initializeFrom(ir);
+    Shell7Base :: initializeFrom(ir, priority);
 }
 
 
@@ -73,9 +73,7 @@ void Shell7BasePhFi :: initializeFrom(InputRecord &ir)
 void
 Shell7BasePhFi :: postInitialize()
 {
-    
     Shell7Base :: postInitialize();
-
 }
 
 

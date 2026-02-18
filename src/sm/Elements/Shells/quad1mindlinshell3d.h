@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -50,7 +50,7 @@
 
 namespace oofem {
 class FEI2dQuadLin;
-
+class ParamKey;
 /**
  * This class implements an quadrilateral four-node shell element, using Mindlin plate theory.
  * Each node has 3 degrees of freedom (out-of-plane displacement, in-plane rotations).
@@ -90,6 +90,8 @@ protected:
     /// Ordering for the drilling dofs (the out-of-plane rotations)
     static IntArray drillOrdering;
 
+    static ParamKey IPK_Quad1MindlinShell3D_reducedIntegration;
+
 public:
     Quad1MindlinShell3D(int n, Domain * d);
     FloatArray la1;
@@ -105,7 +107,7 @@ public:
     // definition & identification
     const char *giveInputRecordName() const override { return _IFT_Quad1MindlinShell3D_Name; }
     const char *giveClassName() const override { return "Quad1MindlinShell3D"; }
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
 
     int computeNumberOfDofs() override { return 24; }
     int computeNumberOfGlobalDofs() override { return 24; }

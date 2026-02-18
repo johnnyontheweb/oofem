@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -51,6 +51,8 @@
 #include "elementinternaldofman.h"
 #include "masterdof.h"
 #include "bctracker.h"
+#include "parametermanager.h"
+#include "paramkey.h"
 
 #include "bodyload.h"
 #include "boundaryload.h"
@@ -61,6 +63,12 @@
 
 namespace oofem {
 REGISTER_Element(Beam3d);
+ParamKey Beam3d::IPK_Beam3d_refnode("refnode");
+ParamKey Beam3d::IPK_Beam3d_refangle("refangle");
+ParamKey Beam3d::IPK_Beam3d_yaxis("yaxis");
+ParamKey Beam3d::IPK_Beam3d_zaxis("zaxis");
+ParamKey Beam3d::IPK_Beam3d_subsoilmat("subsoilmat");
+ParamKey Beam3d::IPK_Beam3d_dofsToCondense("dofstocondense");
 
 FEI3dLineLin Beam3d :: interp;
 
@@ -68,6 +76,7 @@ Beam3d :: Beam3d(int n, Domain *aDomain) : BeamBaseElement(n, aDomain)
 {
     numberOfDofMans = 2;
     referenceNode = 0;
+    referenceAngle = 0.;
 
     numberOfGaussPoints = 3;
     length = 0.;
@@ -560,35 +569,43 @@ Beam3d :: giveLocalCoordinateSystem(FloatMatrix &answer)
 
 
 void
-Beam3d :: initializeFrom(InputRecord &ir)
+Beam3d :: initializeFrom(InputRecord &ir, int priority)
 {
-    BeamBaseElement :: initializeFrom(ir);
+    BeamBaseElement :: initializeFrom(ir, priority);
+    ParameterManager &ppm = domain->elementPPM;
+    PM_UPDATE_PARAMETER(yaxis, ppm, ir, this->number, IPK_Beam3d_yaxis, priority) ;
+    PM_UPDATE_PARAMETER(zaxis, ppm, ir, this->number, IPK_Beam3d_zaxis, priority) ;
+    PM_UPDATE_PARAMETER(referenceNode, ppm, ir, this->number, IPK_Beam3d_refnode, priority) ;
+    PM_UPDATE_PARAMETER(referenceAngle, ppm, ir, this->number, IPK_Beam3d_refangle, priority) ;
+    PM_UPDATE_PARAMETER(subsoilMat, ppm, ir, this->number, IPK_Beam3d_subsoilmat, priority) ;
+    PM_UPDATE_TEMP_PARAMETER(IntArray, ppm, ir, this->number, IPK_Beam3d_dofsToCondense, priority) ;
 
-    referenceNode = 0;
-    referenceAngle = 0;
-    this->yaxis.clear();
-    this->zaxis.clear();
-    
-    if ( ir.hasField(_IFT_Beam3d_yaxis) ) {
-        IR_GIVE_FIELD(ir, this->yaxis, _IFT_Beam3d_yaxis);
-    } else if ( ir.hasField(_IFT_Beam3d_zaxis) ) {
-        IR_GIVE_FIELD(ir, this->zaxis, _IFT_Beam3d_zaxis);
-    } else if ( ir.hasField(_IFT_Beam3d_refnode) ) {
-        IR_GIVE_FIELD(ir, referenceNode, _IFT_Beam3d_refnode);
+}
+
+void
+Beam3d :: postInitialize()
+{
+    BeamBaseElement :: postInitialize();
+    ParameterManager &ppm = domain->elementPPM;
+    if ( ppm.checkIfSet(this->number, IPK_Beam3d_refnode.getIndex())) {
         if ( referenceNode == 0 ) {
             OOFEM_WARNING("wrong reference node specified. Using default orientation.");
         }
-    } else if ( ir.hasField(_IFT_Beam3d_refangle) ) {
-        IR_GIVE_FIELD(ir, referenceAngle, _IFT_Beam3d_refangle);
-    } else {
-        throw ValueInputException(ir, _IFT_Beam3d_zaxis, "axis, reference node, or angle not set");
+    }
+    bool yaxis = ppm.checkIfSet(this->number, IPK_Beam3d_yaxis.getIndex());
+    bool zaxis = ppm.checkIfSet(this->number, IPK_Beam3d_zaxis.getIndex());
+    bool refnode = ppm.checkIfSet(this->number, IPK_Beam3d_refnode.getIndex());
+    bool refangle = ppm.checkIfSet(this->number, IPK_Beam3d_refangle.getIndex());
+
+    if (!(yaxis || zaxis || refnode || refangle)) {
+        throw ComponentInputException(ComponentInputException::ComponentType::ctElement, this->number, "Beam3d: axis, reference node, or angle not set");
     }
 
-    if ( ir.hasField(_IFT_Beam3d_dofstocondense) ) {
-        IntArray val;
-        IR_GIVE_FIELD(ir, val, _IFT_Beam3d_dofstocondense);
+    if ( ppm.checkIfSet(this->number, IPK_Beam3d_dofsToCondense.getIndex()) ) {
+        auto _val = ppm.getTempParam(this->number, IPK_Beam3d_dofsToCondense.getIndex());
+        IntArray val (std::get<IntArray>(*_val)); 
         if ( val.giveSize() >= 12 ) {
-            throw ValueInputException(ir, _IFT_Beam3d_dofstocondense, "wrong input data for condensed dofs");
+            throw ComponentInputException(IPK_Beam3d_dofsToCondense.getName(), ComponentInputException::ComponentType::ctElement, this->number, "wrong input data for condensed dofs");
         }
 
         //dofsToCondense = new IntArray(val);

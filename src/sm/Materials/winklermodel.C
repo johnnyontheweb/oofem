@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2014   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -136,10 +136,10 @@ WinklerMaterial::give3dBeamSubSoilStiffMtrx(MatResponseMode mmode, GaussPoint *g
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 WinklerMaterial :: CreateStatus(GaussPoint *gp) const
 {
-    return new StructuralMaterialStatus(gp);
+    return std::make_unique<StructuralMaterialStatus>(gp);
 }
 
 

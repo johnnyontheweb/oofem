@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -86,10 +86,10 @@ J2MPlasticMaterial :: initializeFrom(InputRecord &ir)
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 J2MPlasticMaterial :: CreateStatus(GaussPoint *gp) const
 {
-    return new MPlasticMaterialStatus(gp, this->giveSizeOfReducedHardeningVarsVector(gp));
+    return std::make_unique<MPlasticMaterialStatus>(gp, this->giveSizeOfReducedHardeningVarsVector(gp));
 }
 
 void

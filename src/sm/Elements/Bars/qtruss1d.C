@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -56,13 +56,6 @@ FEI1dQuad QTruss1d::interpolation(1);
 QTruss1d::QTruss1d(int n, Domain *aDomain) : NLStructuralElement(n, aDomain)
 {
     numberOfDofMans = 3;
-}
-
-
-void
-QTruss1d::initializeFrom(InputRecord &ir)
-{
-    StructuralElement::initializeFrom(ir);
 }
 
 void

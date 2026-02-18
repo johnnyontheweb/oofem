@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -120,7 +120,7 @@ public:
     void initializeFrom(InputRecord &ir) override;
 
     void giveRealStressVector(FloatArray &answer, GaussPoint *gp,
-                              const FloatArray &, TimeStep *tStep) override;
+                              const FloatArray &, TimeStep *tStep) const override;
 
     /**
      * Implements the service updating local variables in given integration points,
@@ -145,12 +145,12 @@ public:
     int unpackAndUpdateUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *ip) override;
     int estimatePackSize(DataStream &buff, GaussPoint *ip) override;
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new RCSDNLMaterialStatus(gp); }
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override { return std::make_unique<RCSDNLMaterialStatus>(gp); }
 
 protected:
-    double giveCharacteristicElementLength(GaussPoint *gp, const FloatArray &) override { return 1.0; }
-    double giveMinCrackStrainsForFullyOpenCrack(GaussPoint *gp, int i) override;
-    double computeStrength(GaussPoint *, double) override { return this->Ft; }
+    double giveCharacteristicElementLength(GaussPoint *gp, const FloatArray &) const override { return 1.0; }
+    double giveMinCrackStrainsForFullyOpenCrack(GaussPoint *gp, int i) const override;
+    double computeStrength(GaussPoint *, double) const override { return this->Ft; }
 };
 } // end namespace oofem
 #endif // rcsdnl_h

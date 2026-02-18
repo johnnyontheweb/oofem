@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -54,6 +54,7 @@
 
 namespace oofem {
 class FEI2dQuadLin;
+class ParamKey;
 #ifndef __CHARTENSOR
  #define __CHARTENSOR
 enum CharTensor {
@@ -127,6 +128,9 @@ private:
     std::unordered_map<Float3Tuple, FloatArray, key_hash> GlobalCoords;
     std::unique_ptr<FloatMatrix> FullGtoLRotationMatrix;
 
+    static ParamKey IPK_MITC4Shell_nipZ;
+    static ParamKey IPK_MITC4Shell_directorType;
+
 public:
     MITC4Shell(int n, Domain *d);
 
@@ -142,7 +146,7 @@ public:
     const char *giveInputRecordName() const override { return _IFT_MITC4Shell_Name; }
     integrationDomain giveIntegrationDomain() const override { return _3dDegShell; }
     MaterialMode giveMaterialMode() override { return _3dDegeneratedShell; }
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
     void postInitialize() override;
     int computeNumberOfDofs() override { return 24; }
     int computeNumberOfGlobalDofs() override { return 24; }

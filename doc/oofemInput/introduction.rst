@@ -27,6 +27,7 @@ Running the code
 -c          Forces the creation of context file for each solution step.
 -t int      Determines the number of threads to use (requires OpenMP support compiled)
 -p          Runs in parallel mode using MPI (requires MPI support compiled)
+-m          Shows solution status monitor output, redirecting standard output to files (oofem.stdout, oofem.stderr by default, use `-qo` and `-qe` options to override)
 =========== ================================================================================================================================================================================================================================================================================================================================================
 
 | To execute OOFEM program in parallel MPI mode (indicated by the -p flag), users must know the procedure for executing/scheduling MPI jobs on the particular system(s). For instance, when using the MPICH implementation of MPI and many others, the following command initiates a program that uses eight processors:
@@ -203,10 +204,10 @@ attribute values are following:
 
    ::
 
-      string1 ``string example''
+      string1 "string example"
 
 -  **expr** - function expression. The expression have to be enclosed in
-   quotes (""). The expression is evaluated by internal parser and
+   quotes (""). The expression can be a value, simple expression (enclosed by $ characters) or reference to function record (starting with @ character followed by function record id). The simple expression is evaluated by internal parser and
    represent mathematical expressions as a function of certain
    variables. The variable names and meaning are described in specific
    sections. The usual arithmetic operators like -,+,*,/ are supported
@@ -218,14 +219,16 @@ attribute values are following:
 
    ::
 
-      expr1 ``2.0*sin(t)/3.0''
+      expr1 "2.0"
+      expr2 "$2.0*sin(t)/3.0$"
+      expr3 "@2"
 
 | The general format of record is
 | [``attribute1_keyword #(type)``] ``...``
   [``attributeXX_keyword #(type)``] <``ver. 1.6``>
 
 The keywords and their values are separated by one or more spaces.
-Please note, that a single record cooresponds to one input line in input
+Please note, that a single record corresponds to one input line in input
 file.
 
 When some attribute is enclosed in brackets [ ], then it’s use is

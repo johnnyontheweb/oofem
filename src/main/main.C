@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -45,11 +45,17 @@
 
 #include "oofemtxtdatareader.h"
 #include "datastream.h"
+#include "dynamicinputrecord.h"
 #include "util.h"
 #include "error.h"
 #include "logger.h"
 #include "contextioerr.h"
 #include "oofem_terminate.h"
+
+#ifdef _USE_XML
+  #include "xmldatareader.h"
+#endif
+
 
 #ifdef __MPI_PARALLEL_MODE
  #include "dyncombuff.h"
@@ -78,9 +84,12 @@
 #include <sstream>
 // For passing PETSc/SLEPc arguments.
 #include <fstream>
+#include <iostream>
 #include <iterator>
+#include <memory>
 
 #include "classfactory.h"
+#include "solutionstatusexportmodule.h"
 
 #ifdef MEMSTR
 #include <signal.h> 
@@ -159,7 +168,7 @@ int main(int argc, char *argv[])
 
     int adaptiveRestartFlag = 0, restartStep = 0;
     bool parallelFlag = false, renumberFlag = false, debugFlag = false, contextFlag = false, restartFlag = false,
-         inputFileFlag = false, outputFileFlag = false, errOutputFileFlag = false;
+         inputFileFlag = false, outputFileFlag = false, errOutputFileFlag = false, monitorOutput = false;
     std :: stringstream inputFileName, outputFileName, errOutputFileName;
     std :: vector< const char * >modulesArgs;
 
@@ -174,8 +183,7 @@ int main(int argc, char *argv[])
 #endif
 
     // print header to redirected output
-    OOFEM_LOG_FORCED(PRG_HEADER_SM);
-
+    OOFEM_LOG_FORCED("%s",PRG_HEADER_SM);
 
     //
     // check for options
@@ -235,6 +243,8 @@ int main(int argc, char *argv[])
                     outputFileFlag = true;
                     outputFileName << argv [ i ];
                 }
+            } else if (strcmp(argv [ i ], "-m") == 0) {
+                monitorOutput = true;
             } else if ( strcmp(argv [ i ], "-d") == 0 ) {
                 debugFlag = true;
             } else if ( strcmp(argv [ i ], "-p") == 0 ) {
@@ -255,6 +265,8 @@ int main(int argc, char *argv[])
                 fprintf(stderr, "\nCan't use -t, not compiled with OpenMP support\a\n\n");
                 exit(EXIT_FAILURE);
 #endif
+            } else if ( strcmp(argv [ i ],"-Werror") == 0 ) {
+                oofem::warningIsError = true;
             } else { // Arguments not handled by OOFEM is to be passed to PETSc
                 modulesArgs.push_back(argv [ i ]);
             }
@@ -309,22 +321,63 @@ int main(int argc, char *argv[])
         errOutputFileName << "." << rank;
     }
 #endif
-    if ( outputFileFlag ) {
-        oofem_logger.appendLogTo( outputFileName.str() );
+    if (monitorOutput && !outputFileFlag) {
+        outputFileName << "oofem.stdout";
+        outputFileFlag = true;
     }
-    if ( errOutputFileFlag ) {
-        oofem_logger.appendErrorTo( errOutputFileName.str() );
+    if (monitorOutput && !errOutputFileFlag) {
+        errOutputFileName << "oofem.stderr";
+        errOutputFileFlag = true;
     }
 
-    OOFEMTXTDataReader dr( inputFileName.str() );
-    auto problem = :: InstanciateProblem(dr, _processor, contextFlag, NULL, parallelFlag);
-    dr.finish();
+    if ( outputFileFlag ) {
+        oofem_logger.appendLogTo( outputFileName.str() );
+        OOFEM_LOG_FORCED("%s", PRG_HEADER_SM);
+    } 
+    if ( errOutputFileFlag ) {
+        oofem_logger.appendErrorTo( errOutputFileName.str() );
+    } 
+    OOFEM_LOG_FORCED("Job: %s\n", inputFileName.str().c_str());
+
+    std::unique_ptr<DataReader> dr;
+    #ifdef _USE_XML
+        if(XMLDataReader::canRead(inputFileName.str())){
+            dr=std::make_unique<XMLDataReader>(inputFileName.str());
+        } else
+    #endif
+    {
+        dr=std::make_unique<OOFEMTXTDataReader>(inputFileName.str());
+        if(const char* csv=getenv("OOFEM_TRACE_FIELDS_CSV")){
+            #ifdef _USE_TRACE_FIELDS
+                InputRecord::TraceFields::active=true;
+                InputRecord::TraceFields::out.open(csv,std::ios::app);
+                if(!InputRecord::TraceFields::out.good()) OOFEM_ERROR("Unable to open '%s' (passed via OOFEM_TRACE_FIELDS_CSV)",csv);
+                OOFEM_LOG_FORCED("Tracing field access (OOFEM_TRACE_FIELDS_CSV=%s)\n.",csv);
+            #else
+                OOFEM_ERROR("Oofem must be compiled with -DUSE_TRACE_FIELDS so that OOFEM_TRACE_FIELDS_CSV='%s' passed is effective.",csv);
+            #endif
+
+        }
+    }
+
+    auto problem = :: InstanciateProblem(*dr, _processor, contextFlag, NULL, parallelFlag);
+    dr->finish();
+
     if ( !problem ) {
         OOFEM_LOG_ERROR("Couldn't instanciate problem, exiting");
         exit(EXIT_FAILURE);
     }
 
-    //problem->checkProblemConsistency(); // @todo check if this still needs to be commented
+    if ( monitorOutput ) {
+         // create solution status monitor (and redirect its output to stdout)
+        std :: unique_ptr<ExportModule> module = std :: make_unique< SolutionStatusExportModule >(0, problem.get(), stdout);
+        DynamicInputRecord ir;
+        module->initializeFrom(ir);
+        module->initialize();
+        problem->giveExportModuleManager()->registerModule(module);
+    }
+
+    problem->checkProblemConsistency();
     problem->init();
 
     if ( renumberFlag ) {
@@ -391,6 +444,12 @@ void oofem_print_help()
     printf("  -qo (string) redirects the standard output stream to given file\n");
     printf("  -qe (string) redirects the standard error stream to given file\n");
     printf("  -c  creates context file for each solution step\n");
+    printf("  -p  runs in parallel mode (MPI)\n");
+    printf("  -t  (int) sets number of threads for OpenMP parallelization\n");
+    printf("  -m  shows solution status monitor output,\n");
+    printf("      redirecting standard output to files,\n");
+    printf("      oofem.stdout, oofem.stderr by default, use -qo -qe to override\n");
+    printf("  -Werror  promote warnings to errors\n");
     printf("\n");
     oofem_print_epilog();
 }

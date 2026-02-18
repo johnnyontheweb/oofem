@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -295,12 +295,6 @@ StructuralInterfaceElement :: giveIPValue(FloatArray &answer, IntegrationPoint *
     return Element :: giveIPValue(answer, aIntegrationPoint, type, tStep);
 }
 
-
-void
-StructuralInterfaceElement :: initializeFrom(InputRecord &ir)
-{
-    Element :: initializeFrom(ir);
-}
 
 void StructuralInterfaceElement :: giveInputRecord(DynamicInputRecord &input)
 {

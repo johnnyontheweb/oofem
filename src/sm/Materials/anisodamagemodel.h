@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -236,7 +236,7 @@ public:
     FloatMatrixF<6,6> give3dMaterialStiffnessMatrix(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
 
     void giveRealStressVector(FloatArray &answer,  GaussPoint *gp,
-                              const FloatArray &reducedStrain, TimeStep *tStep) override;
+                              const FloatArray &reducedStrain, TimeStep *tStep) const override;
 
     FloatArrayF<6> giveRealStressVector_3d(const FloatArrayF<6> &strain, GaussPoint *gp, TimeStep *tStep) const override
     {
@@ -279,9 +279,9 @@ public:
 
     void initializeFrom(InputRecord &ir) override;
     void giveInputRecord(DynamicInputRecord &input) override;
-    void computeDamageTensor(FloatMatrix &answer, GaussPoint *gp, const FloatArray &totalStrain, double equivStrain, TimeStep *atTime);
+    void computeDamageTensor(FloatMatrix &answer, GaussPoint *gp, const FloatArray &totalStrain, double equivStrain, TimeStep *atTime) const;
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new AnisotropicDamageMaterialStatus(gp); }
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override { return std::make_unique<AnisotropicDamageMaterialStatus>(gp); }
 
 protected:
 
@@ -304,7 +304,7 @@ protected:
 
     double computeK(GaussPoint *gp);
 
-    double computeKappa(FloatMatrix damageTensor);
+    double computeKappa(FloatMatrix damageTensor) const;
 };
 } // end namespace oofem
 #endif // anisodamagemodel_h

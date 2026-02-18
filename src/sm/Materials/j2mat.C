@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -85,10 +85,10 @@ J2Mat :: initializeFrom(InputRecord &ir)
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 J2Mat :: CreateStatus(GaussPoint *gp) const
 {
-    return new MPlasticMaterial2Status(gp, this->giveSizeOfReducedHardeningVarsVector(gp));
+    return std::make_unique<MPlasticMaterial2Status>(gp, this->giveSizeOfReducedHardeningVarsVector(gp));
 }
 
 int

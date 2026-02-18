@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -55,17 +55,15 @@ Truss3dnl2 :: Truss3dnl2(int n, Domain *aDomain) : Truss3d(n, aDomain)
   cellGeometryWrapper = NULL;
 }
 
-
 void
-Truss3dnl2 :: initializeFrom(InputRecord &ir)
+Truss3dnl2 :: postInitialize()
 {
-  Truss3d :: initializeFrom(ir);
-  X = this-> giveCellGeometryWrapper()->giveVertexCoordinates( 1 );
-  X.append(this-> giveCellGeometryWrapper()->giveVertexCoordinates( 2 ));
-  L = this->computeLength();    
-  numberOfGaussPoints = 1;
+  Truss3d :: postInitialize();
+  FloatArray vc1 = this-> giveCellGeometryWrapper()->giveVertexCoordinates( 1 );
+  FloatArray vc2 = this-> giveCellGeometryWrapper()->giveVertexCoordinates( 2 );
+  X=FloatArray::fromConcatenated({vc1,vc2});
+  L = this->computeLength();
 }
-
   
 void
 Truss3dnl2 :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord)
@@ -217,7 +215,7 @@ Truss3dnl2 :: _computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, TimeStep *t
   FloatMatrixF<6,6> A = this->giveAmatrix();
   FloatArray x(X);
   x.add(d); 
-  answer.beTProductOf(x,A);
+  answer.beTProductOf(FloatMatrix::fromArray(x),A);
   answer.times(1./l/L);
 }
 
@@ -226,7 +224,7 @@ FloatMatrixF<6,6>
 Truss3dnl2 :: giveAmatrix()
 {
   FloatMatrix A;
-  A = {{1, 0, 0, -1, 0, 0}, {0, 1, 0, 0, -1, 0}, {0, 0, 1, 0, 0, -1}, {-1, 0, 0, 1, 0, 0}, {0, -1, 0, 0, 1, 0}, {0, 0, -1, 0, 0, 1}};
+  A = FloatMatrix({{1, 0, 0, -1, 0, 0}, {0, 1, 0, 0, -1, 0}, {0, 0, 1, 0, 0, -1}, {-1, 0, 0, 1, 0, 0}, {0, -1, 0, 0, 1, 0}, {0, 0, -1, 0, 0, 1}});
   return A;
 }
 
@@ -234,7 +232,7 @@ FloatMatrixF<3,6>
 Truss3dnl2 :: givePmatrix()
 {
   FloatMatrix P;
-  P = {{1,0,0},{0,1,0},{0,0,1},{-1,0,0},{0,-1,0},{0,0,-1}};
+  P = FloatMatrix({{1,0,0},{0,1,0},{0,0,1},{-1,0,0},{0,-1,0},{0,0,-1}});
   return P;
 }
 
@@ -254,7 +252,7 @@ Truss3dnl2 :: computeInitialStressStiffness(FloatMatrix &answer, MatResponseMode
   FloatMatrix xx, Axx, AxxA;
   x.add(d); 
 
-  xx.beProductTOf(x,x);
+  xx.beProductTOf(FloatMatrix::fromArray(x),FloatMatrix::fromArray(x));
   Axx.beProductOf(A,xx);
   AxxA.beProductOf(Axx,A);
   AxxA.times(1./l/l);

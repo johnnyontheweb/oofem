@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -40,9 +40,4 @@ LatticeTransportElement :: LatticeTransportElement(int n, Domain *aDomain, Eleme
 { }
 
 
-void
-LatticeTransportElement :: initializeFrom(InputRecord &ir)
-{
-    TransportElement :: initializeFrom(ir);
-}
 } // end namespace oofem

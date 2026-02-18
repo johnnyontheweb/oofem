@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -184,7 +184,7 @@ public:
 
     FloatArray giveInterfaceStrength() override { return {this->sigf*this->gamma,this->sigf*this->gamma,this->sigf}; }
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new IntMatBilinearCZJanssonStatus(gp); }
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override { return std::make_unique<IntMatBilinearCZJanssonStatus>(gp); }
     void printYourself() override;
 };
 } // end namespace oofem

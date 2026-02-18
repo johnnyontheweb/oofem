@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2024   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -56,6 +56,7 @@
 #include <thread>
 
 #include "engngm.h"
+#include "fieldmanager.h"
 #include "timestep.h"
 #include "function.h"
 #include "metastep.h"
@@ -66,6 +67,9 @@
 #include "verbose.h"
 #include "classfactory.h"
 #include "domain.h"
+#include "stepfunction.h"
+#include "depositedheatsource.h"
+#include "voxelvoffield.h"
 
 #include <stdlib.h>
 
@@ -79,7 +83,7 @@
 namespace oofem {
 REGISTER_EngngModel( AdditiveManufacturingProblem );
 
-bool add_node_if_not_exists2( EngngModel *emodel, const VoxelNode &cn )
+bool AdditiveManufacturingProblem::add_node_if_not_exists2( EngngModel *emodel, const VoxelNode &cn )
 {
     Domain *d  = emodel->giveDomain( 1 );
     int nodeId = cn.id;
@@ -89,6 +93,7 @@ bool add_node_if_not_exists2( EngngModel *emodel, const VoxelNode &cn )
         OOFEM_ERROR( "Couldn't create node %d\n", nodeId );
     }
 
+    // Convert voxelGrid coordinates (in mm) to node coordinates (in m)
     FloatArray coords = { cn.coords[0] / 1000, cn.coords[1] / 1000, cn.coords[2] / 1000 };
 
     dman->setCoordinates( coords );
@@ -117,7 +122,7 @@ bool add_node_if_not_exists2( EngngModel *emodel, const VoxelNode &cn )
     DynamicInputRecord icInput           = DynamicInputRecord( _IFT_InitialCondition_Name, ICId );
 
     Dictionary props = Dictionary();
-    props.add( 'u', 235. );
+    props.add( 'u', this->printer.depositionTemperature );
 
     icInput.setField( props, _IFT_InitialCondition_conditions );
     IntArray dofIds = { T_f };
@@ -138,7 +143,7 @@ bool add_node_if_not_exists2( EngngModel *emodel, const VoxelNode &cn )
         DynamicInputRecord myInput = DynamicInputRecord( _IFT_BoundaryCondition_Name, bcId );
         myInput.setField( 1, _IFT_GeneralBoundaryCondition_timeFunct );
 
-        FloatArray vals = { 60.0 };
+        FloatArray vals = { this->printer.heatBedTemperature };
         IntArray dofs   = { T_f };
         myInput.setField( dofs, _IFT_GeneralBoundaryCondition_dofs );
         myInput.setField( vals, _IFT_BoundaryCondition_values );
@@ -169,13 +174,14 @@ bool add_node_if_not_exists2( EngngModel *emodel, const VoxelNode &cn )
         d->resizeBoundaryConditions( nBCBefore + 1 );
         int bcId = nBCBefore + 1;
 
+        // add Dirichlet bc for newly added DOFs to restrict them before activation.
         std::unique_ptr<GeneralBoundaryCondition> bc( classFactory.createBoundaryCondition( "BoundaryCondition", bcId, d ) );
 
         DynamicInputRecord myInput2 = DynamicInputRecord( _IFT_BoundaryCondition_Name, bcId );
         myInput2.setField( 1, _IFT_GeneralBoundaryCondition_timeFunct );
         myInput2.setField( nTFBefore + 1, _IFT_GeneralBoundaryCondition_isImposedTimeFunct );
 
-        FloatArray vals = { 235.0 };
+        FloatArray vals = { 235.0 }; // a dummy value
         IntArray dofs   = { T_f };
         myInput2.setField( dofs, _IFT_GeneralBoundaryCondition_dofs );
         myInput2.setField( vals, _IFT_BoundaryCondition_values );
@@ -199,8 +205,9 @@ bool add_node_if_not_exists2( EngngModel *emodel, const VoxelNode &cn )
     return true;
 }
 
-void add_element_if_not_exists2( EngngModel *emodel, Voxel &cn )
+void AdditiveManufacturingProblem::add_element_if_not_exists2( EngngModel *emodel, Voxel &cn )
 {
+    try {
     Domain *d = emodel->giveDomain( 1 );
 
     // Add new element
@@ -261,11 +268,11 @@ void add_element_if_not_exists2( EngngModel *emodel, Voxel &cn )
         myInput.setField( 1, _IFT_GeneralBoundaryCondition_timeFunct );
         myInput.setField( 3, _IFT_BoundaryLoad_loadtype );
         Dictionary props = Dictionary();
-        props.add( 'a', 10. ); // 97 == 'a'
+        props.add( 'a', this->printer.heatTransferFilmCoefficient ); // 97 == 'a'
         myInput.setField( props, _IFT_BoundaryLoad_properties );
 
         // todo: UNCOMMENT
-        FloatArray comps = { 30. }; // ambient temp
+        FloatArray comps = { this->printer.chamberTemperature }; // ambient temp
         myInput.setField( comps, _IFT_Load_components );
         myInput.setField( setId, _IFT_GeneralBoundaryCondition_set );
 
@@ -276,9 +283,36 @@ void add_element_if_not_exists2( EngngModel *emodel, Voxel &cn )
 
         d->setBoundaryCondition( bcid, std::move( bc ) );
     }
+
+#if 1
+    // add internal heat source to the element to account for deposited material temperature
+
+    
+    nTFBefore = d->giveNumberOfFunctions();
+    std::unique_ptr<StepFunction> tf2 = std::make_unique<StepFunction>( nTFBefore + 1, d, cn.vofHistory );
+    //printf("Element %d: size of vof history: %d\n", elId, (int) cn.vofHistory.size());
+    d->resizeFunctions( nTFBefore + 1 );
+    d->setFunction( nTFBefore + 1, std::move( tf2 ) );
+
+
+    nBCBefore = d->giveNumberOfBoundaryConditions();
+    std::unique_ptr<DepositedHeatSource> load = std::make_unique<DepositedHeatSource>( nBCBefore+1, d, 0,
+        this->printer.depositedMaterialHeatPower, // power = specificHeat * density // @TODO: this should depend on material
+        this->printer.depositionTemperature, // deposition temperature
+        nTFBefore + 1 // deposited mass fraction function
+    );
+
+
+    d->resizeBoundaryConditions( nBCBefore + 1 );
+    d->setBoundaryCondition( nBCBefore+1, std::move( load ) );
+    d->giveElement( elId )->setBodyLoads({nBCBefore+1});
+#endif
+    } catch (...) {
+        OOFEM_ERROR( "Error when adding element %d\n", cn.id );
+    }
 }
 
-bool add_sm_node_if_not_exists2( EngngModel *emodel, const VoxelNode &cn )
+bool AdditiveManufacturingProblem::add_sm_node_if_not_exists2( EngngModel *emodel, const VoxelNode &cn )
 {
     Domain *d = emodel->giveDomain( 1 );
 
@@ -431,7 +465,7 @@ bool add_sm_node_if_not_exists2( EngngModel *emodel, const VoxelNode &cn )
 }
 
 
-void add_sm_element_if_not_exists2( EngngModel *emodel, Voxel &cn )
+void AdditiveManufacturingProblem::add_sm_element_if_not_exists2( EngngModel *emodel, Voxel &cn )
 {
     Domain *d = emodel->giveDomain( 1 );
 
@@ -562,16 +596,22 @@ void AdditiveManufacturingProblem ::initializeFrom( InputRecord &ir )
     IR_GIVE_OPTIONAL_FIELD( ir, this->minVOF, _IFT_AdditiveManufacturingProblem_minvof );
 
     IR_GIVE_OPTIONAL_FIELD( ir, this->skipSM, _IFT_AdditiveManufacturingProblem_skipsm );
+    IR_GIVE_OPTIONAL_FIELD( ir, this->maxPrinterCommands, _IFT_AdditiveManufacturingProblem_maxprintercommands); 
 
     PrinterOptions po;
     po.steps            = { this->stepX, this->stepY, this->stepZ };
     po.sizes            = { (int)std::ceil( 250.0 / po.steps[0] ),
                    (int)std::ceil( 250.0 / po.steps[1] ),
                    (int)std::ceil( 250.0 / po.steps[2] ) };
-    po.filamentDiameter = 1.75;
     po.layerHeightModel = LayerHeightModel::Constant;
-    po.layerHeight      = 0.2;
-
+    IR_GIVE_OPTIONAL_FIELD( ir, po.layerHeight, _IFT_AdditiveManufacturingProblem_Printer_layerheight );
+    IR_GIVE_OPTIONAL_FIELD( ir, po.extrusionWidth, _IFT_AdditiveManufacturingProblem_Printer_extrusionwidth );
+    IR_GIVE_OPTIONAL_FIELD( ir, po.chamberTemperature, _IFT_AdditiveManufacturingProblem_Printer_chambertemperature );
+    IR_GIVE_OPTIONAL_FIELD( ir, po.depositionTemperature, _IFT_AdditiveManufacturingProblem_Printer_depositiontemperature );
+    IR_GIVE_OPTIONAL_FIELD( ir, po.heatBedTemperature, _IFT_AdditiveManufacturingProblem_Printer_heatbedtemperature );
+    IR_GIVE_OPTIONAL_FIELD( ir, po.heatTransferFilmCoefficient, _IFT_AdditiveManufacturingProblem_Printer_heattransferfilmcoefficient );
+    IR_GIVE_OPTIONAL_FIELD( ir, po.depositedMaterialHeatPower, _IFT_AdditiveManufacturingProblem_Printer_depositedmaterialheatpower );
+    
     auto pr = Printer( po );
 
     OOFEM_LOG_INFO( "\n\nG-code file: %s\n", this->gCodeFilePath.c_str() );
@@ -585,7 +625,19 @@ void AdditiveManufacturingProblem ::initializeFrom( InputRecord &ir )
         pr.addCommandToQueue( commands[i] );
     }
 
-    for ( size_t i = 0; i < commands.size(); i++ ) {
+    std::size_t csize = commands.size();
+    if ( this->maxPrinterCommands > 0 && csize > (std::size_t)this->maxPrinterCommands ) {
+        csize = this->maxPrinterCommands;
+        OOFEM_LOG_INFO( "Limiting number of processed commands to %d\n", this->maxPrinterCommands );
+    }
+#ifdef DEBUG
+    //csize = 500;
+#endif
+    OOFEM_LOG_RELEVANT( "Processing g-code file\n");
+
+    double progress = 0;
+    printProgress(0);
+    for ( size_t i = 0; i < csize; i++ ) {
         size_t j = i + queue_size;
 
         pr.processCommand( commands[i] );
@@ -594,11 +646,26 @@ void AdditiveManufacturingProblem ::initializeFrom( InputRecord &ir )
             pr.addCommandToQueue( commands[j] );
 
         pr.popCommandFromQueue();
+
+        double p = (double)(i+1) / (double)csize;
+        if ( int(100*p) > int(100*progress) ) {
+            progress = p;
+            printProgress(p);
+        }
     }
 
     this->printer = pr;
+    this->voxelVofField = std::make_shared<VoxelVOFField>();
+    this->voxelVofField->setGrid( &this->printer.getGrid() );
+    this->giveContext()->giveFieldManager()->registerField( voxelVofField, FieldType::FT_VOF );
 
     OOFEM_LOG_INFO( "\nFinished G-code parsing\n\n" );
+    PrintStatistics ps = this->printer.getStatistics();
+    OOFEM_LOG_INFO("Total distance moved: %.2f mm\n", ps.distance_moved);
+    OOFEM_LOG_INFO("Total fillament extruded: %.2f mm\n", ps.filament_extruded);
+    OOFEM_LOG_INFO("Total print time (without cooling): %.2f s\n", ps.time);
+
+    pr.getGrid().writeVTK( "voxel_vof.vtk");
 
     IR_GIVE_FIELD( ir, numberOfSteps, _IFT_EngngModel_nsteps );
     if ( numberOfSteps <= 0 ) {

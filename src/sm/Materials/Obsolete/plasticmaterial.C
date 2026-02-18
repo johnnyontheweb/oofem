@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -71,10 +71,10 @@ PlasticMaterial :: hasMaterialModeCapability(MaterialMode mode) const
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 PlasticMaterial :: CreateStatus(GaussPoint *gp) const
 {
-    return new PlasticMaterialStatus(gp, this->giveSizeOfReducedHardeningVarsVector(gp));
+    return std::make_unique<PlasticMaterialStatus>(gp, this->giveSizeOfReducedHardeningVarsVector(gp));
 }
 
 
@@ -82,7 +82,7 @@ void
 PlasticMaterial :: giveRealStressVector(FloatArray &answer,
                                         GaussPoint *gp,
                                         const FloatArray &totalStrain,
-                                        TimeStep *tStep)
+                                        TimeStep *tStep) const
 //
 // returns real stress vector in 3d stress space of receiver according to
 // previous level of stress and current
@@ -157,7 +157,7 @@ PlasticMaterial :: giveRealStressVector(FloatArray &answer,
                                       fullStressVector, * fullStressSpaceHardeningVars);
 
         // obtain increment to consistency parameter
-        helpMtrx.initFromVector(* gradientVectorR, 1);
+        helpMtrx=FloatMatrix::fromArray(* gradientVectorR, 1);
         helpMtrx2.beProductOf(helpMtrx, consistentModuli);
         helpVec.beProductOf(helpMtrx2, * gradientVectorR);
         helpVal1 = helpVec.at(1);

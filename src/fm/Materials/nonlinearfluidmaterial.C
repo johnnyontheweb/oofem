@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -87,10 +87,10 @@ NonlinearFluidMaterial :: give(int aProperty, GaussPoint *gp) const
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 NonlinearFluidMaterial :: CreateStatus(GaussPoint *gp) const
 {
-    return new NonlinearFluidMaterialStatus(gp);
+    return std::make_unique<NonlinearFluidMaterialStatus>(gp);
 }
 
 

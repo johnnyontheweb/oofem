@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2021   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -56,13 +56,6 @@ QPlaneStress2dSlip :: QPlaneStress2dSlip(int n, Domain *aDomain) : QPlaneStress2
     // Constructor.
 {
 }
-
-
-void QPlaneStress2dSlip::initializeFrom( InputRecord &ir )
-{
-    QPlaneStress2d::initializeFrom(ir);
-}
-
 
 void QPlaneStress2dSlip :: giveDofManDofIDMask(int inode, IntArray &answer) const
 {

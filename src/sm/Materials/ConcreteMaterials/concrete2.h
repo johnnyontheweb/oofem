@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -181,7 +181,7 @@ public:
 
     FloatMatrixF<5,5> givePlateLayerStiffMtrx(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override;
 
     double give(int, GaussPoint *gp) const override;
 

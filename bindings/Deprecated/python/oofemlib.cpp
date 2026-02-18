@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -886,7 +886,7 @@ void pyclass_Material()
 struct PyStructuralMaterial : StructuralMaterial , wrapper<StructuralMaterial>
 {
     PyStructuralMaterial(int i, Domain *d) : StructuralMaterial(i,d) {}
-    void giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep) override {
+    void giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep) const override {
         if (override f = this->get_override("giveRealStressVector")) { f(answer,gp,reducedStrain,tStep); }
         this->get_override("giveRealStressVector")(answer,gp,reducedStrain,tStep);
     }

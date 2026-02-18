@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -70,8 +70,8 @@ public:
     MaxwellChainMaterial(int n, Domain *d);
 
     // overload thesse function such that computation of hidden vars can be done after the computation of stress
-    void giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep) override;
-    void computeHiddenVars(GaussPoint *gp, TimeStep *tStep);
+    void giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep) const override;
+    void computeHiddenVars(GaussPoint *gp, TimeStep *tStep) const;
 
     // identification and auxiliary functions
     const char *giveClassName() const override { return "MaxwellChainMaterial"; }
@@ -86,7 +86,7 @@ public:
     void giveEigenStrainVector(FloatArray &answer,
                                GaussPoint *gp, TimeStep *tStep, ValueModeType mode) const override;
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override;
 
 protected:
     bool hasIncrementalShrinkageFormulation() const override { return false; }

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -48,7 +48,7 @@
 namespace oofem {
 class FEI2dLineLin;
 class FEI2dLineHermite;
-
+class ParamKey;
 /**
  * This class implements a 2-dimensional beam element
  * with cubic lateral displacement, quadratic rotations,
@@ -75,6 +75,8 @@ protected:
 
     static FEI2dLineLin interp_geom;
     static FEI2dLineHermite interp_beam;
+
+    static ParamKey IPK_Beam2d_dofsToCondense; ///< [optional] DOFs to condense
 
 public:
     Beam2d(int n, Domain *aDomain);
@@ -138,8 +140,8 @@ public:
 
     const char *giveClassName() const override { return "Beam2d"; }
     const char *giveInputRecordName() const override { return _IFT_Beam2d_Name; }
-    void giveInputRecord(DynamicInputRecord &input) override;
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
+    void postInitialize() override;
 
 #ifdef __OOFEG
     void drawRawGeometry(oofegGraphicContext &gc, TimeStep *tStep) override;

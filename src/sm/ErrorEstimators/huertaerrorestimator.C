@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -1174,15 +1174,15 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem1D(Element *element, 
                     y = yc * ( 1.0 - u ) + ym * u;
                     z = zc * ( 1.0 - u ) + zm * u;
 
-                    FloatArray coord = {x, y, z};
+                    FloatArray coord = Vec3(x, y, z);
                     newNodes.push_back(coord);
 
                     ir->setRecordKeywordField(_IFT_Node_Name, localNodeId);
                     ir->setField(coord, _IFT_Node_coords);
 
                     if ( ( lcs = node->giveLocalCoordinateTriplet() ) != NULL ) {
-                        FloatArray lcs_vec = {lcs->at(1, 1), lcs->at(1, 2), lcs->at(1, 3),
-                                              lcs->at(2, 1), lcs->at(2, 2), lcs->at(2, 3)};
+                        FloatArray lcs_vec = Vec6(lcs->at(1, 1), lcs->at(1, 2), lcs->at(1, 3),
+                                              lcs->at(2, 1), lcs->at(2, 2), lcs->at(2, 3));
                         ir->setField(lcs_vec, _IFT_Node_lcs);
                     }
 
@@ -1215,8 +1215,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem1D(Element *element, 
                                 bcs.followedBy(++localBcId);
                                 dofids.followedBy(dof->giveDofID());
                             }
-                            ir->setField(bcs, _IFT_DofManager_bc);
-                            ir->setField(dofids, _IFT_DofManager_dofidmask);
+                            ir->setField(dofids, DofManager::IPK_DofManager_dofidmask.getNameCStr());
                         }
                     } else {
                         if ( hasBc == true ) {
@@ -1232,12 +1231,12 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem1D(Element *element, 
                                     bcs.followedBy(bcDofId);
                                     dofids.followedBy(nodeDof->giveDofID());
                                 }
-                                ir->setField(bcs, _IFT_DofManager_bc);
-                                ir->setField(dofids, _IFT_DofManager_dofidmask);
+                                ir->setField(bcs, DofManager::IPK_DofManager_bc.getNameCStr());
+                                ir->setField(dofids, DofManager::IPK_DofManager_dofidmask.getNameCStr());
 
                                 // copy node load
                                 if ( ( loadArray = node->giveLoadArray() )->giveSize() != 0 ) {
-                                    ir->setField(* loadArray, _IFT_DofManager_load);
+                                    ir->setField(* loadArray, DofManager::IPK_DofManager_load.getNameCStr());
                                 }
                             } else {
                                 if ( sideNumBc != 0 ) {
@@ -1258,7 +1257,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem1D(Element *element, 
 
                                         bcs.at(idof) = bcDofId;
                                     }
-                                    ir->setField(bcs, _IFT_DofManager_bc);
+                                    ir->setField(bcs, DofManager::IPK_DofManager_bc.getNameCStr());
                                     //ir->setField(dofids, _IFT_DofManager_dofidmask);
                                 }
                             }
@@ -1267,7 +1266,7 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem1D(Element *element, 
 
                             if ( m == 0 ) {
                                 if ( ( loadArray = node->giveLoadArray() )->giveSize() != 0 ) {
-                                    ir->setField(* loadArray, _IFT_DofManager_load);
+                                    ir->setField(* loadArray, DofManager::IPK_DofManager_load.getNameCStr());
                                 }
                             }
                         }
@@ -1622,11 +1621,11 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem2D(Element *element, 
                         y = ( yc * ( 1.0 - u ) + ys1 * u ) * ( 1.0 - v ) + ( ys2 * ( 1.0 - u ) + ym * u ) * v;
                         z = ( zc * ( 1.0 - u ) + zs1 * u ) * ( 1.0 - v ) + ( zs2 * ( 1.0 - u ) + zm * u ) * v;
 
-                        ir->setField(FloatArray{x, y, z}, "coords");
+                        ir->setField(Vec3(x, y, z), "coords");
 
                         if ( ( lcs = node->giveLocalCoordinateTriplet() ) != NULL ) {
-                            FloatArray lcs_vec = {lcs->at(1, 1), lcs->at(1, 2), lcs->at(1, 3),
-                                                  lcs->at(2, 1), lcs->at(2, 2), lcs->at(2, 3)};
+                            FloatArray lcs_vec = Vec6(lcs->at(1, 1), lcs->at(1, 2), lcs->at(1, 3),
+                                                  lcs->at(2, 1), lcs->at(2, 2), lcs->at(2, 3));
                             ir->setField(lcs_vec, _IFT_Node_lcs);
                         }
 
@@ -1693,8 +1692,8 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem2D(Element *element, 
                                         bcs.followedBy(bcDofId);
                                         dofids.followedBy(nodeDof->giveDofID());
                                     }
-                                    ir->setField(bcs, _IFT_DofManager_bc);
-                                    ir->setField(dofids, _IFT_DofManager_dofidmask);
+                                    ir->setField(bcs, DofManager::IPK_DofManager_bc.getNameCStr());
+                                    ir->setField(dofids, DofManager::IPK_DofManager_dofidmask.getNameCStr());
 
                                     // copy node load
 
@@ -2219,11 +2218,11 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem3D(Element *element, 
                             z = ( ( zc * ( 1.0 - u ) + zs1 * u ) * ( 1.0 - v ) + ( zs2 * ( 1.0 - u ) + zf1 * u ) * v ) * ( 1.0 - w )
                                 + ( ( zs3 * ( 1.0 - u ) + zf2 * u ) * ( 1.0 - v ) + ( zf3 * ( 1.0 - u ) + zm * u ) * v ) * w;
 
-                            ir->setField(FloatArray{x, y, z}, "coords");
+                            ir->setField(Vec3(x, y, z), "coords");
 
                             if ( ( lcs = node->giveLocalCoordinateTriplet() ) != NULL ) {
-                                FloatArray lcs_vec = {lcs->at(1, 1), lcs->at(1, 2), lcs->at(1, 3),
-                                                      lcs->at(2, 1), lcs->at(2, 2), lcs->at(2, 3)};
+                                FloatArray lcs_vec = Vec6(lcs->at(1, 1), lcs->at(1, 2), lcs->at(1, 3),
+                                                      lcs->at(2, 1), lcs->at(2, 2), lcs->at(2, 3));
                                 ir->setField(lcs_vec, _IFT_Node_lcs);
                             }
 
@@ -2298,8 +2297,8 @@ HuertaErrorEstimatorInterface :: setupRefinedElementProblem3D(Element *element, 
                                             bcs.followedBy(bcDofId);
                                             dofids.followedBy(nodeDof->giveDofID());
                                         }
-                                        ir->setField(bcs, _IFT_DofManager_bc);
-                                        ir->setField(dofids, _IFT_DofManager_dofidmask);
+                                        ir->setField(bcs, DofManager::IPK_DofManager_bc.getNameCStr());
+                                        ir->setField(dofids, DofManager::IPK_DofManager_dofidmask.getNameCStr());
 
                                         // copy node load
 

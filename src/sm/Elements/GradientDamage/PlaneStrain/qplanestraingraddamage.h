@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -52,7 +52,7 @@ public:
     QPlaneStrainGradDamage(int n, Domain * d);
     virtual ~QPlaneStrainGradDamage() { }
 
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
 
     const char *giveInputRecordName() const override { return _IFT_QPlaneStrainGradDamage_Name; }
     const char *giveClassName() const override { return "QPlaneStrainGradDamage"; }

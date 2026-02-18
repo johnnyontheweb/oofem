@@ -1,9 +1,9 @@
 FCSimpleColumn04.out
 Test of mpm upbrick11 element and distributed pressure boundary condition 
 # final time 500, initial time step 1 
-mpmproblem nsteps 500 deltat 1.0 alpha 0.5 nmodules 1 manrmsteps 0 keeptangent 0
+mpmproblem nsteps 500 deltat 1.0 alpha 0.5 nmodules 0 manrmsteps 0 keeptangent
 #vtkxml tstep_all domain_all primvars 2 1 5
-errorcheck
+# errorcheck
 domain HeatTransfer
 outputmanager tstep_all dofman_all element_all
 ndofman 20 nelem 4 nbc 5 ncrosssect 1 nic 0 nltf 2 nmat 1 nset 6
@@ -28,10 +28,10 @@ node 18 coords 3 -0.0198999997 0.0401000008 0.000250000012
 node 19 coords 3 -0.0198999997 0.0399999991           0.
 node 20 coords 3 -0.0198999997 0.0401000008           0.
 #
-upbrick11 1 nodes 8 11 12 14 13  1  2  4  3 crosssect 0 mat 1
-upbrick11 2 nodes 8 13 14 16 15  3  4  6  5 crosssect 0 mat 1
-upbrick11 3 nodes 8 15 16 18 17  5  6  8  7 crosssect 0 mat 1
-upbrick11 4 nodes 8 17 18 20 19  7  8 10  9 crosssect 0 mat 1
+upbrick11 1 nodes 8 11 12 14 13  1  2  4  3 
+upbrick11 2 nodes 8 13 14 16 15  3  4  6  5 
+upbrick11 3 nodes 8 15 16 18 17  5  6  8  7 
+upbrick11 4 nodes 8 17 18 20 19  7  8 10  9 
 #
 dummycs 1 mat 1 set 1
 # ks = inifinity, kw=1e+09
@@ -64,5 +64,5 @@ set 4 nodes 4 9 10 19 20
 set 5 nodes 4 11 12 1 2 
 # bottom surface (load + )
 set 6 elementboundaries 2 4 5
-#%BEGIN_CHECK%
-#%END_CHECK%
+##%BEGIN_CHECK%
+##%END_CHECK%

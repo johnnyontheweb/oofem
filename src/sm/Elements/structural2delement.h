@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -38,9 +38,8 @@
 #include "sm/Elements/nlstructuralelement.h"
 #include "feinterpol2d.h"
 
-#define _IFT_Structural2DElement_materialCoordinateSystem "matcs" ///< [optional] Support for material directions based on element orientation.
-
 namespace oofem {
+class ParamKey;
 /**
  * Base class for planar 2D elements.
  *
@@ -61,6 +60,7 @@ protected:
 
     bool matRotation;
 
+    static ParamKey IPK_Structural2DElement_materialCoordinateSystem; ///< [optional] Material coordinate system (local) for the element.
 public:
     /**
      * Constructor. Creates element with given number, belonging to given domain.
@@ -81,7 +81,7 @@ public:
     void giveDofManDofIDMask(int inode, IntArray &answer) const override;
     double computeVolumeAround(GaussPoint *gp) override;
 
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
 
     double giveCharacteristicLength(const FloatArray &normalToCrackPlane) override;
 
@@ -97,6 +97,7 @@ protected:
     double computeEdgeVolumeAround(GaussPoint *gp, int iEdge) override;
     int computeLoadLEToLRotationMatrix(FloatMatrix &answer, int iEdge, GaussPoint *gp) override;
     int testElementExtension(ElementExtension ext) override { return ( ( ext == Element_EdgeLoadSupport ) ? 1 : 0 ); }
+    
 };
 
 
@@ -109,7 +110,7 @@ public:
     void computeStressVector(FloatArray &answer, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep) override;
     void computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) override;
     void computeConstitutiveMatrix_dPdF_At(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep) override;
-
+    
 protected:
     void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int lowerIndx = 1, int upperIndx = ALL_STRAINS) override;
     void computeBHmatrixAt(GaussPoint *gp, FloatMatrix &answer) override;

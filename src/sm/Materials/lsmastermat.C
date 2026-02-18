@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -61,10 +61,10 @@ LargeStrainMasterMaterial :: initializeFrom(InputRecord &ir)
     IR_GIVE_OPTIONAL_FIELD(ir, m, _IFT_LargeStrainMasterMaterial_m); // type of Set-Hill strain tensor
 }
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 LargeStrainMasterMaterial :: CreateStatus(GaussPoint *gp) const
 {
-    return new LargeStrainMasterMaterialStatus(gp, domain, slaveMat);
+    return std::make_unique<LargeStrainMasterMaterialStatus>(gp, domain, slaveMat);
 }
 
 
@@ -77,7 +77,7 @@ LargeStrainMasterMaterial :: giveFirstPKStressVector_3d(const FloatArrayF<9> &vF
     auto sMat = static_cast< StructuralMaterial * >( domain->giveMaterial(slaveMat) );
 
     //store of deformation gradient into 3x3 matrix
-    auto F = from_voigt_form(vF);
+    auto F = from_voigt_form_9(vF);
     //compute right Cauchy-Green tensor(C), its eigenvalues and eigenvectors
     auto C = Tdot(F, F);
     // compute eigen values and eigen vectors of C
@@ -107,7 +107,7 @@ LargeStrainMasterMaterial :: giveFirstPKStressVector_3d(const FloatArrayF<9> &vF
         }
     }
 
-    auto SethHillStrainVector = to_voigt_strain(SethHillStrain);
+    auto SethHillStrainVector = to_voigt_strain_33(SethHillStrain);
     auto stressVector = sMat->giveRealStressVector_3d(SethHillStrainVector, gp, tStep);
 
     auto T = this->constructTransformationMatrix(eVecs);
@@ -133,8 +133,8 @@ LargeStrainMasterMaterial :: giveFirstPKStressVector_3d(const FloatArrayF<9> &vF
     stressVector.at(6) *= 0.5;
     auto secondPK = dot(P, FloatArrayF<6>(stressVector));
 
-    auto firstPK = dot(F, from_voigt_stress(secondPK)); // P = F*S
-    auto firstPKv = to_voigt_form(firstPK);
+    auto firstPK = dot(F, from_voigt_stress_6(secondPK)); // P = F*S
+    auto firstPKv = to_voigt_form_33(firstPK);
     auto TL = Tdot(T, dot(L2, T));
     status->setPmatrix(P);
     status->setTLmatrix(TL);

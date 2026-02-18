@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -76,7 +76,6 @@ public:
     // definition & identification
     const char *giveInputRecordName() const override { return _IFT_InterfaceElement3dTrLin_Name; }
     const char *giveClassName() const override { return "InterfaceElement3dTrLin"; }
-    void initializeFrom(InputRecord &ir) override;
     Element_Geometry_Type giveGeometryType() const override { return EGT_wedge_1; }
     integrationDomain giveIntegrationDomain() const override { return _Triangle; }
 

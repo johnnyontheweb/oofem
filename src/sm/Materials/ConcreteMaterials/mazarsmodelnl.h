@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -132,7 +132,7 @@ public:
     int unpackAndUpdateUnknowns(DataStream &buff, TimeStep *tStep, GaussPoint *ip) override;
     int estimatePackSize(DataStream &buff, GaussPoint *ip) override;
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new MazarsNLMaterialStatus(gp); }
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override { return std::make_unique<MazarsNLMaterialStatus>(gp); }
 
 protected:
     void initDamaged(double kappa, FloatArray &totalStrainVector, GaussPoint *gp) const override;

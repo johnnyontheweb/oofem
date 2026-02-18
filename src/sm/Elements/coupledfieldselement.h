@@ -11,7 +11,7 @@
  *             OOFEM : Object Oriented Finite Element Code
  *
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -52,8 +52,6 @@ protected:
 public:
     CoupledFieldsElement(int i, Domain *aDomain);
     virtual ~CoupledFieldsElement() {}
-
-    void initializeFrom(InputRecord &ir) override;
 
 protected:
     virtual void computeNStressAt(GaussPoint *, FloatArray &) = 0;

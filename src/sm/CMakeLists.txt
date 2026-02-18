@@ -90,6 +90,13 @@ set (sm_xfem
     EngineeringModels/xfemsolverinterface.C
     )
 
+
+set (sm_contact
+  Contact/ContactElement/structuralcontactelement.C
+  Contact/structuralpenaltycontactbc.C
+  Contact/ContactSurface/structuralfecontactsurface.C
+  )
+
 set (sm_unsorted
     particle.C
     refinedelement.C
@@ -97,10 +104,6 @@ set (sm_unsorted
     gpinitmodule.C
     stressstrainbasevector.C stressvector.C strainvector.C
     mappers/primvarmapper.C
-    Contact/cdefnode2node.C
-    Contact/celnode2node.C
-    Contact/ActiveBc/node2nodepenaltycontact.C
-    Contact/ActiveBc/node2nodelagrangianmultipliercontact.C
     )
 
 set (sm_parallel
@@ -128,7 +131,8 @@ set (sm
     ${sm_unsorted}
     ${sm_new}
     ${sm_boundary_conditions}
-    ${sm_quasicontinuum} 
+    ${sm_quasicontinuum}
+    ${sm_contact} 
     )
 
 if (USE_MPI_PARALLEL)

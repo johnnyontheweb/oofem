@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -84,10 +84,10 @@ MPlasticMaterial2 :: hasMaterialModeCapability(MaterialMode mode) const
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 MPlasticMaterial2 :: CreateStatus(GaussPoint *gp) const
 {
-    return new MPlasticMaterial2Status(gp, this->giveSizeOfReducedHardeningVarsVector(gp));
+    return std::make_unique<MPlasticMaterial2Status>(gp, this->giveSizeOfReducedHardeningVarsVector(gp));
 }
 
 
@@ -95,7 +95,7 @@ void
 MPlasticMaterial2 :: giveRealStressVector(FloatArray &answer,
                                           GaussPoint *gp,
                                           const FloatArray &totalStrain,
-                                          TimeStep *tStep)
+                                          TimeStep *tStep) const
 //
 // returns real stress vector in 3d stress space of receiver according to
 // previous level of stress and current
@@ -175,7 +175,7 @@ MPlasticMaterial2 :: giveRealStressVector(FloatArray &answer,
 }
 
 double
-MPlasticMaterial2 :: computeDamage(GaussPoint *gp, const FloatArray &strainSpaceHardeningVariables, TimeStep *tStep) {
+MPlasticMaterial2 :: computeDamage(GaussPoint *gp, const FloatArray &strainSpaceHardeningVariables, TimeStep *tStep) const {
     return 0.;
 }
 

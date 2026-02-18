@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -87,10 +87,9 @@ Quad1_ht :: computeGaussPoints()
 
 
 void
-Quad1_ht :: initializeFrom(InputRecord &ir)
+Quad1_ht :: initializeFrom(InputRecord &ir, int priority)
 {
-    numberOfGaussPoints = 4;
-    TransportElement :: initializeFrom(ir);
+    TransportElement :: initializeFrom(ir, priority);
 }
 
 

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -292,10 +292,9 @@ Truss3d :: giveLocalCoordinateSystem(FloatMatrix &answer)
 }
 
 
-void
-Truss3d :: initializeFrom(InputRecord &ir)
+void Truss3d ::initializeFrom( InputRecord &ir, int priority )
 {
-    NLStructuralElement :: initializeFrom(ir);
+    NLStructuralElement :: initializeFrom(ir,priority);
 
     this->macroElem = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_Truss3d_macroElem);
@@ -307,6 +306,24 @@ Truss3d :: computeStressVector(FloatArray &answer, const FloatArray &strain, Gau
 {
     answer = this->giveStructuralCrossSection()->giveRealStress_1d(strain, gp, tStep);
 }
+
+int
+Truss3d::giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep)
+{
+    if ( type == IST_BeamForceMomentTensor ) {
+        FloatArray stress, strain;
+        double area;
+        this->computeStrainVector(strain, gp, tStep);
+        this->computeStressVector(stress, strain, gp, tStep);
+        area = this->giveCrossSection()->give(CS_Area, gp);
+        answer.resize(6);
+        answer.at(1) = stress.at(1)*area;
+        return 1;
+    } else {
+        return NLStructuralElement :: giveIPValue(answer, gp, type, tStep);
+    }
+}
+
 
 void
 Truss3d :: computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep)

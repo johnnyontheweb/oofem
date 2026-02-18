@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -70,10 +70,10 @@ MMALeastSquareProjection MDM :: mapperLST;
 
 MMAClosestIPTransfer MDM :: mapper2;
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 MDM :: CreateStatus(GaussPoint *gp) const
 {
-    return new MDMStatus(gp, this->nsd, this->numberOfMicroplanes);
+    return std::make_unique<MDMStatus>(gp, this->nsd, this->numberOfMicroplanes);
 }
 
 
@@ -85,7 +85,7 @@ MDM :: hasMaterialModeCapability(MaterialMode mode) const
 
 void
 MDM :: giveRealStressVector(FloatArray &answer, GaussPoint *gp,
-                            const FloatArray &totalStrain, TimeStep *tStep)
+                            const FloatArray &totalStrain, TimeStep *tStep) const
 {
     FloatArray reducedStrain, strainPDC, stressPDC, stress;
     FloatArray tempDamageTensorEigenVals;
@@ -449,7 +449,7 @@ MDM :: applyDamageTranformation(FloatArray &strainPDC, const FloatArray &tempDam
 
 
 void
-MDM :: computeEffectiveStress(FloatArray &stressPDC, const FloatArray &strainPDC, GaussPoint *gp, TimeStep *tStep)
+MDM :: computeEffectiveStress(FloatArray &stressPDC, const FloatArray &strainPDC, GaussPoint *gp, TimeStep *tStep) const
 {
     //FloatMatrixF<6,6> de;
     FloatMatrix de;

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2015   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -72,7 +72,7 @@ void
 RheoChainMaterial :: giveRealStressVector(FloatArray &answer,
                                           GaussPoint *gp,
                                           const FloatArray &totalStrain,
-                                          TimeStep *tStep)
+                                          TimeStep *tStep) const
 //
 // returns the total stress vector (in full or reduced form - form parameter)
 // of the receiver according to
@@ -554,10 +554,10 @@ RheoChainMaterial :: give1dStressStiffMtrx(MatResponseMode mode,
     }
 }
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 RheoChainMaterial :: CreateStatus(GaussPoint *gp) const
 {
-    return new RheoChainMaterialStatus(gp, nUnits);
+    return std::make_unique<RheoChainMaterialStatus>(gp, nUnits);
 }
 
 

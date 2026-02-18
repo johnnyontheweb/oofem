@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2021   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -55,14 +55,7 @@ REGISTER_Element(QTrPlaneStress2dSlip);
 QTrPlaneStress2dSlip :: QTrPlaneStress2dSlip(int n, Domain *aDomain) :
     QTrPlaneStress2d(n, aDomain)
 {
-}
-
-
-void
-QTrPlaneStress2dSlip :: initializeFrom(InputRecord &ir)
-{
     numberOfGaussPoints = 4;
-    QTrPlaneStress2d :: initializeFrom(ir);
 }
 
 

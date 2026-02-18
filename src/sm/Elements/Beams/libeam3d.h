@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -47,6 +47,7 @@
 //@}
 
 namespace oofem {
+class ParamKey;
 /**
  * This class implements a 3-dimensional mindlin theory Linear Isoparametric
  * beam element, with reduced integration.
@@ -57,11 +58,14 @@ private:
     double length;
     int referenceNode;
 
+    static ParamKey IPK_LIBeam3d_refnode;
+
 public:
     LIBeam3d(int n, Domain * d);
     virtual ~LIBeam3d() { }
 
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int prio) override;
+    void postInitialize() override;
 
     void computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep) override;
     void computeMassMatrix(FloatMatrix &answer, TimeStep *tStep) override

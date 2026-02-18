@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -45,6 +45,7 @@
 //@}
 
 namespace oofem {
+class ParamKey;
 /**
  * This class implements a 3-dimensional Linear Isoparametric
  * Mindlin theory beam element, with reduced integration.
@@ -69,12 +70,13 @@ private:
     FloatMatrix tempTc;
     /// Time stamp of temporary centre triad.
     StateCounterType tempTcCounter;
-
+    static ParamKey IPK_LIBeam3d2_refnode;
 public:
     LIBeam3d2(int n, Domain *d);
     virtual ~LIBeam3d2() { }
 
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int prio) override;
+    void postInitialize() override;
 
     void updateYourself(TimeStep *tStep) override;
 

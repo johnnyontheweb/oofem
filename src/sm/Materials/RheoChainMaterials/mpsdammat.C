@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -274,7 +274,7 @@ MPSDamMaterial :: initializeFrom(InputRecord &ir)
 
 
 void
-MPSDamMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &totalStrain, TimeStep *tStep)
+MPSDamMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &totalStrain, TimeStep *tStep) const
 {
     if ( this->E < 0. ) {   // initialize dummy elastic modulus E
         this->E = 1. / MPSMaterial :: computeCreepFunction(28.01*this->lambda0, 28.*this->lambda0, gp, tStep);
@@ -463,7 +463,7 @@ MPSDamMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint *gp, const
 
 
 void
-MPSDamMaterial :: initDamagedFib(GaussPoint *gp, TimeStep *tStep)
+MPSDamMaterial :: initDamagedFib(GaussPoint *gp, TimeStep *tStep) const
 {
     auto status = static_cast< MPSDamMaterialStatus * >( this->giveStatus(gp) );
 
@@ -627,7 +627,7 @@ MPSDamMaterial :: computeDamageForCohesiveCrack(double kappa, GaussPoint *gp) co
 
             OOFEM_WARNING("Material number %d, decrease e0, or increase Gf from %f to Gf=%f", this->giveNumber(), gf, minGf);
             if ( checkSnapBack ) {
-                OOFEM_ERROR("");
+                OOFEM_ERROR("x");
             }
         }
 
@@ -667,7 +667,7 @@ MPSDamMaterial :: computeDamageForCohesiveCrack(double kappa, GaussPoint *gp) co
             OOFEM_WARNING("damage parameter is %f, which is smaller than 0, snap-back problems", omega);
             omega = 1.;
             if ( checkSnapBack ) {
-                OOFEM_ERROR("");
+                OOFEM_ERROR("x");
             }
 
         }
@@ -695,7 +695,7 @@ MPSDamMaterial :: computeDamageForCohesiveCrack(double kappa, GaussPoint *gp) co
 }
 
 void
-MPSDamMaterial :: initDamaged(double kappa, FloatArray &principalDirection, GaussPoint *gp, TimeStep *tStep)
+MPSDamMaterial :: initDamaged(double kappa, FloatArray &principalDirection, GaussPoint *gp, TimeStep *tStep) const
 {
     auto status = static_cast< MPSDamMaterialStatus * >( this->giveStatus(gp) );
 
@@ -726,7 +726,7 @@ MPSDamMaterial :: initDamaged(double kappa, FloatArray &principalDirection, Gaus
         if ( gf != 0. && e0 >= ( wf / le ) ) { // case for a given fracture energy
             OOFEM_WARNING("Fracturing strain %e is lower than the elastic strain e0=%e, possible snap-back. Element number %d, wf %e, le %e. Increase fracturing strain or decrease element size by at least %f", wf / le, e0, gp->giveElement()->giveLabel(), wf, le, e0/(wf/le) );
             if ( checkSnapBack ) {
-                OOFEM_ERROR("");
+                OOFEM_ERROR("x");
             }
         }
     }
@@ -734,13 +734,13 @@ MPSDamMaterial :: initDamaged(double kappa, FloatArray &principalDirection, Gaus
 
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus>
 MPSDamMaterial :: CreateStatus(GaussPoint *gp) const
 /*
  * creates a new material status corresponding to this class
  */
 {
-    return new MPSDamMaterialStatus(gp, nUnits);
+    return std::make_unique<MPSDamMaterialStatus>(gp, nUnits);
 }
 
 

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -96,7 +96,7 @@ PlaneStress2d :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, i
     }
 
 #ifdef  PlaneStress2d_reducedShearIntegration
-    this->interpolation.evaldNdx( dnx, {0., 0.}, *this->giveCellGeometryWrapper() );
+    this->interpolation.evaldNdx( dnx, Vec2(0., 0.), *this->giveCellGeometryWrapper() );
 #endif
 
     for ( int i = 1; i <= 4; i++ ) {
@@ -125,7 +125,7 @@ PlaneStress2d :: computeBHmatrixAt(GaussPoint *gp, FloatMatrix &answer)
     }
 
 #ifdef  PlaneStress2d_reducedShearIntegration
-    this->interpolation.evaldNdx( dnx, {0., 0.}, *this->giveCellGeometryWrapper() );
+    this->interpolation.evaldNdx( dnx, Vec2(0., 0.), *this->giveCellGeometryWrapper() );
 #endif
 
     for ( int i = 1; i <= 4; i++ ) {
@@ -137,11 +137,15 @@ PlaneStress2d :: computeBHmatrixAt(GaussPoint *gp, FloatMatrix &answer)
 
 
 void
-PlaneStress2d :: initializeFrom(InputRecord &ir)
+PlaneStress2d :: initializeFrom(InputRecord &ir, int priority)
 {
-    numberOfGaussPoints = 4;
-    PlaneStressElement :: initializeFrom(ir);
+    PlaneStressElement :: initializeFrom(ir, priority);
+}
 
+void 
+PlaneStress2d :: postInitialize()
+{
+    PlaneStressElement :: postInitialize();
 	// optional record for 1st local axes
 	la1.resize(3);
 	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
@@ -151,9 +155,8 @@ PlaneStress2d :: initializeFrom(InputRecord &ir)
         numberOfGaussPoints = 4;
         OOFEM_WARNING("Number of Gauss points enforced to 4");
     }
+    
 }
-
-
 
 
 double

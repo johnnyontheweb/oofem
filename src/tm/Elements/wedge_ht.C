@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -69,10 +69,10 @@ Wedge_mt :: Wedge_mt(int n, Domain *aDomain) : Wedge_ht(n, aDomain)
 
 
 void
-Wedge_ht :: initializeFrom(InputRecord &ir)
+Wedge_ht :: initializeFrom(InputRecord &ir, int priority)
 {
     numberOfGaussPoints = 6;
-    TransportElement :: initializeFrom(ir);
+    TransportElement :: initializeFrom(ir, priority);
 
 }
 

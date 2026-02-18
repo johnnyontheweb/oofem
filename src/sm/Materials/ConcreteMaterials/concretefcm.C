@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2015   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -211,7 +211,7 @@ ConcreteFCM :: initializeFrom(InputRecord &ir)
 
 
 double
-ConcreteFCM :: giveCrackingModulus(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep, int i)
+ConcreteFCM :: giveCrackingModulus(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep, int i) const
 //
 // returns current cracking modulus according to crackStrain for i-th
 // crackplane
@@ -235,7 +235,7 @@ ConcreteFCM :: giveCrackingModulus(MatResponseMode rMode, GaussPoint *gp, TimeSt
 
   
 double
-ConcreteFCM :: giveCrackingModulusInTension(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep, int i)
+ConcreteFCM :: giveCrackingModulusInTension(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep, int i) const
 {
 
   ConcreteFCMStatus *status = static_cast< ConcreteFCMStatus * >( this->giveStatus(gp) );
@@ -365,7 +365,7 @@ ConcreteFCM :: giveCrackingModulusInTension(MatResponseMode rMode, GaussPoint *g
 
 
 double
-ConcreteFCM :: giveNormalCrackingStress(GaussPoint *gp, TimeStep *tStep, double ec, int i)
+ConcreteFCM :: giveNormalCrackingStress(GaussPoint *gp, TimeStep *tStep, double ec, int i) const
 //
 // returns receivers Normal Stress in crack i  for given cracking strain
 //
@@ -533,7 +533,7 @@ ConcreteFCM :: giveNormalCrackingStress(GaussPoint *gp, TimeStep *tStep, double 
 }
 
 double
-ConcreteFCM :: computeEffectiveShearModulus(GaussPoint *gp, TimeStep *tStep, int shearDirection)
+ConcreteFCM :: computeEffectiveShearModulus(GaussPoint *gp, TimeStep *tStep, int shearDirection) const
 
 {
     double G, Geff, D2tot, N;
@@ -588,7 +588,7 @@ ConcreteFCM :: computeEffectiveShearModulus(GaussPoint *gp, TimeStep *tStep, int
 
 
 double
-ConcreteFCM :: computeD2ModulusForCrack(GaussPoint *gp, TimeStep *tStep, int icrack)
+ConcreteFCM :: computeD2ModulusForCrack(GaussPoint *gp, TimeStep *tStep, int icrack) const
 {
     double D2, N, G, E, w, beta_m;
 
@@ -654,7 +654,7 @@ ConcreteFCM :: computeD2ModulusForCrack(GaussPoint *gp, TimeStep *tStep, int icr
 
 
 double
-ConcreteFCM :: computeNumerD2ModulusForCrack(GaussPoint *gp, TimeStep *tStep, int icrack)
+ConcreteFCM :: computeNumerD2ModulusForCrack(GaussPoint *gp, TimeStep *tStep, int icrack) const
 {
     double D2, N, E;
 
@@ -689,7 +689,7 @@ ConcreteFCM :: computeNumerD2ModulusForCrack(GaussPoint *gp, TimeStep *tStep, in
   
 
 void
-ConcreteFCM :: checkSnapBack(GaussPoint *gp, TimeStep *tStep, int i)
+ConcreteFCM :: checkSnapBack(GaussPoint *gp, TimeStep *tStep, int i) const
 {
     ConcreteFCMStatus *status = static_cast< ConcreteFCMStatus * >( this->giveStatus(gp) );
 
@@ -748,7 +748,7 @@ ConcreteFCM :: checkSnapBack(GaussPoint *gp, TimeStep *tStep, int i)
 
 
 double
-ConcreteFCM :: maxShearStress(GaussPoint *gp, TimeStep *tStep, int i) {
+ConcreteFCM :: maxShearStress(GaussPoint *gp, TimeStep *tStep, int i) const {
     int dir_1, dir_2;
     double maxTau, crackOpening, wmax, scale;
 
@@ -796,7 +796,7 @@ ConcreteFCM :: maxShearStress(GaussPoint *gp, TimeStep *tStep, int i) {
 }
 
 double
-ConcreteFCM :: computeResidualTensileStrength(GaussPoint *gp, TimeStep *tStep) {
+ConcreteFCM :: computeResidualTensileStrength(GaussPoint *gp, TimeStep *tStep) const {
 
   ConcreteFCMStatus *status = static_cast< ConcreteFCMStatus * >( this->giveStatus(gp) );
   
@@ -867,18 +867,13 @@ ConcreteFCM :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType
 MaterialStatus *
 ConcreteFCM :: giveStatus(GaussPoint *gp) const
 {
-    MaterialStatus *status = static_cast< MaterialStatus * >( gp->giveMaterialStatus() );
-    if ( status == nullptr ) {
-        // create a new one
-        status = this->CreateStatus(gp);
-
-        if ( status ) {
-            gp->setMaterialStatus( status );
-            this->_generateStatusVariables(gp);
-        }
+    if (gp->hasMaterialStatus()) {
+        return static_cast< MaterialStatus * >( gp->giveMaterialStatus() );
+    } else {
+        MaterialStatus *status = static_cast<MaterialStatus*> (gp->setMaterialStatus (this->CreateStatus(gp)));
+        this->_generateStatusVariables(gp);
+        return status;
     }
-
-    return status;
 }
 
 

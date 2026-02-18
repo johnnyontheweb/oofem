@@ -11,7 +11,7 @@
  *             OOFEM : Object Oriented Finite Element Code
  *
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -53,7 +53,6 @@ public:
 
     virtual NLStructuralElement *giveElement( ) = 0;
 
-    virtual void initializeFrom(InputRecord &ir);
     virtual void giveDofManDofIDMask_u(IntArray &answer) = 0;
     virtual void giveDofManDofIDMask_d(IntArray &answer) = 0;
 

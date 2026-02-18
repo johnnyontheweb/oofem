@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -59,14 +59,14 @@ FEI3dTetQuad QTRSpace :: interpolation;
 QTRSpace :: QTRSpace(int n, Domain *aDomain) : Structural3DElement(n, aDomain), ZZNodalRecoveryModelInterface(this)
 {
     numberOfDofMans = 10;
+    numberOfGaussPoints = 4;
 }
 
 
 void
-QTRSpace :: initializeFrom(InputRecord &ir)
+QTRSpace :: initializeFrom(InputRecord &ir, int priority)
 {
-    numberOfGaussPoints = 4;
-    Structural3DElement :: initializeFrom(ir);
+    Structural3DElement :: initializeFrom(ir, priority);
 }
 
 

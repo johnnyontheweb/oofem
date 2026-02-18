@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -86,7 +86,7 @@ public:
     void giveInternalLength(FloatMatrix &answer, MatResponseMode mode, GaussPoint *gp, TimeStep *tStep);
     const char *giveClassName() const override { return "LargeStrainMasterMaterialGrad"; }
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override;
 
     virtual void giveFirstPKStressVectorGrad(FloatArray &answer1, double &answer2, GaussPoint *gp, const FloatArray &totalStrain, double nonlocalDamageDrivningVariable, TimeStep *tStep);
 };

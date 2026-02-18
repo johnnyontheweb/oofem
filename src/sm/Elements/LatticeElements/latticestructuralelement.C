@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -38,11 +38,6 @@ namespace oofem {
 LatticeStructuralElement :: LatticeStructuralElement(int n, Domain *aDomain) : StructuralElement(n, aDomain)
 { }
 
-void
-LatticeStructuralElement :: initializeFrom(InputRecord &ir)
-{
-    StructuralElement :: initializeFrom(ir);
-}
 
 void
 LatticeStructuralElement :: printOutputAt(FILE *file, TimeStep *tStep)

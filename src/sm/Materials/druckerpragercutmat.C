@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -86,10 +86,10 @@ DruckerPragerCutMat :: initializeFrom(InputRecord &ir)
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 DruckerPragerCutMat :: CreateStatus(GaussPoint *gp) const
 {
-    return new MPlasticMaterial2Status(gp, this->giveSizeOfReducedHardeningVarsVector(gp));
+    return std::make_unique<MPlasticMaterial2Status>(gp, this->giveSizeOfReducedHardeningVarsVector(gp));
 }
 
 double

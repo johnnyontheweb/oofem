@@ -11,7 +11,7 @@
  *             OOFEM : Object Oriented Finite Element Code
  *
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -403,13 +403,12 @@ PhaseFieldElement :: computeStiffnessMatrix_dd(FloatMatrix &answer, MatResponseM
 }
 
 
+#if 0
 void
-PhaseFieldElement :: initializeFrom(InputRecord &ir)
+PhaseFieldElement :: computeStressVectorAndLocalCumulatedStrain(FloatArray &answer, double localCumulatedStrain, GaussPoint *gp, TimeStep *stepN)
+//PhaseFieldElement :: computeStressVector(FloatArray &answer, double localCumulatedStrain, GaussPoint *gp, TimeStep *stepN)
 {
-    //nlGeo = 0;
-}
-
-
+    NLStructuralElement *elem = this->giveNLStructuralElement();
 
 //void
 //PhaseFieldElement :: computeStressVectorAndLocalCumulatedStrain(FloatArray &answer, double localCumulatedStrain, GaussPoint *gp, TimeStep *stepN)

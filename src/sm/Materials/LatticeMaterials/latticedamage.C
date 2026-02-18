@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2019   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -187,10 +187,10 @@ LatticeDamage :: computeDamageParam(double tempKappa, GaussPoint *gp) const
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 LatticeDamage :: CreateStatus(GaussPoint *gp) const
 {
-    return new LatticeDamageStatus(gp);
+    return std::make_unique<LatticeDamageStatus>(gp);
 }
 
 

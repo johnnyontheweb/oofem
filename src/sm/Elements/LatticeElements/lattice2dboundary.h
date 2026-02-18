@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2019   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -47,6 +47,7 @@
 #define TOL 1.e-8
 
 namespace oofem {
+class ParamKey;
 class Lattice2dBoundary : public Lattice2d
 {
     /*
@@ -63,6 +64,7 @@ class Lattice2dBoundary : public Lattice2d
      */
 protected:
     int location;
+    static ParamKey IPK_Lattice2dBoundary_location;
 
 public:
     Lattice2dBoundary(int, Domain *);                     // constructor
@@ -82,7 +84,8 @@ public:
     //
     const char *giveInputRecordName() const override { return _IFT_Lattice2dBoundary_Name; }
     const char *giveClassName() const override { return "Lattice2dBoundary"; }
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
+    void postInitialize() override;
 
     void saveContext(DataStream &stream, ContextMode mode) override;
     void restoreContext(DataStream &stream, ContextMode mode) override;

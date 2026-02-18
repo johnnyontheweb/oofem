@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -129,7 +129,7 @@ public:
     const char *giveClassName() const override { return "BinghamFluidMaterial2"; }
     const char *giveInputRecordName() const override { return _IFT_BinghamFluidMaterial2_Name; }
     int checkConsistency() override;
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override;
 
 protected:
     double computeActualViscosity(double tau, double shearRate) const;

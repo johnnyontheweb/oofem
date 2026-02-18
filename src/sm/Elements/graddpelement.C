@@ -11,7 +11,7 @@
  *             OOFEM : Object Oriented Finite Element Code
  *
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -735,10 +735,4 @@ GradDpElement :: computeStiffnessMatrix_uk(FloatMatrix &answer, MatResponseMode 
     }
 }
 
-
-void
-GradDpElement :: initializeFrom(InputRecord &ir)
-{
-    //nlGeo = 0;
-}
 } // end namespace oofem

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -37,9 +37,14 @@
 #include "gausspoint.h"
 #include "sm/CrossSections/structuralcrosssection.h"
 #include "gaussintegrationrule.h"
-#include <math.h>
+#include "mathfem.h"
+#include "parametermanager.h"
+#include "paramkey.h"
 
 namespace oofem {
+
+ParamKey Structural3DElement::IPK_Structural3DElement_materialCoordinateSystem("matcs");
+
 Structural3DElement::Structural3DElement(int n, Domain *aDomain) :
     NLStructuralElement(n, aDomain),
     matRotation(false)
@@ -47,10 +52,11 @@ Structural3DElement::Structural3DElement(int n, Domain *aDomain) :
 
 
 void
-Structural3DElement::initializeFrom(InputRecord &ir)
+Structural3DElement::initializeFrom(InputRecord &ir, int priority)
 {
-    NLStructuralElement::initializeFrom(ir);
-    this->matRotation = ir.hasField(_IFT_Structural3DElement_materialCoordinateSystem);
+    ParameterManager &ppm = giveDomain()->elementPPM;
+    NLStructuralElement::initializeFrom(ir, priority);
+    PM_CHECK_FLAG_AND_REPORT(ppm, ir, this->number, IPK_Structural3DElement_materialCoordinateSystem, priority, matRotation) ;
 }
 
 
@@ -229,14 +235,14 @@ Structural3DElement::computeStressVector(FloatArray &answer, const FloatArray &e
             2 * e [ 0 ] * x [ 0 ] * y [ 0 ] + e [ 4 ] * x [ 2 ] * y [ 0 ] + 2 * e [ 1 ] * x [ 1 ] * y [ 1 ] + e [ 3 ] * x [ 2 ] * y [ 1 ] + e [ 5 ] * ( x [ 1 ] * y [ 0 ] + x [ 0 ] * y [ 1 ] ) + ( e [ 4 ] * x [ 0 ] + e [ 3 ] * x [ 1 ] + 2 * e [ 2 ] * x [ 2 ] ) * y [ 2 ]
         };
         auto s = this->giveStructuralCrossSection()->giveRealStress_3d(rotStrain, gp, tStep);
-        answer = {
+        answer = Vec6(
             s [ 0 ] * x [ 0 ] * x [ 0 ] + 2 * s [ 5 ] * x [ 0 ] * y [ 0 ] + s [ 1 ] * y [ 0 ] * y [ 0 ] + 2 * ( s [ 4 ] * x [ 0 ] + s [ 3 ] * y [ 0 ] ) * z [ 0 ] + s [ 2 ] * z [ 0 ] * z [ 0 ],
             s [ 0 ] * x [ 1 ] * x [ 1 ] + 2 * s [ 5 ] * x [ 1 ] * y [ 1 ] + s [ 1 ] * y [ 1 ] * y [ 1 ] + 2 * ( s [ 4 ] * x [ 1 ] + s [ 3 ] * y [ 1 ] ) * z [ 1 ] + s [ 2 ] * z [ 1 ] * z [ 1 ],
             s [ 0 ] * x [ 2 ] * x [ 2 ] + 2 * s [ 5 ] * x [ 2 ] * y [ 2 ] + s [ 1 ] * y [ 2 ] * y [ 2 ] + 2 * ( s [ 4 ] * x [ 2 ] + s [ 3 ] * y [ 2 ] ) * z [ 2 ] + s [ 2 ] * z [ 2 ] * z [ 2 ],
             y [ 2 ] * ( s [ 5 ] * x [ 1 ] + s [ 1 ] * y [ 1 ] + s [ 3 ] * z [ 1 ] ) + x [ 2 ] * ( s [ 0 ] * x [ 1 ] + s [ 5 ] * y [ 1 ] + s [ 4 ] * z [ 1 ] ) + ( s [ 4 ] * x [ 1 ] + s [ 3 ] * y [ 1 ] + s [ 2 ] * z [ 1 ] ) * z [ 2 ],
             y [ 2 ] * ( s [ 5 ] * x [ 0 ] + s [ 1 ] * y [ 0 ] + s [ 3 ] * z [ 0 ] ) + x [ 2 ] * ( s [ 0 ] * x [ 0 ] + s [ 5 ] * y [ 0 ] + s [ 4 ] * z [ 0 ] ) + ( s [ 4 ] * x [ 0 ] + s [ 3 ] * y [ 0 ] + s [ 2 ] * z [ 0 ] ) * z [ 2 ],
             y [ 1 ] * ( s [ 5 ] * x [ 0 ] + s [ 1 ] * y [ 0 ] + s [ 3 ] * z [ 0 ] ) + x [ 1 ] * ( s [ 0 ] * x [ 0 ] + s [ 5 ] * y [ 0 ] + s [ 4 ] * z [ 0 ] ) + ( s [ 4 ] * x [ 0 ] + s [ 3 ] * y [ 0 ] + s [ 2 ] * z [ 0 ] ) * z [ 1 ]
-        };
+        );
     } else {
         answer = this->giveStructuralCrossSection()->giveRealStress_3d(e, gp, tStep);
     }
@@ -252,14 +258,14 @@ Structural3DElement::computeConstitutiveMatrixAt(FloatMatrix &answer, MatRespons
 
         this->giveMaterialOrientationAt(x, y, z, gp->giveNaturalCoordinates() );
 
-        Q = {
+        Q = FloatMatrix::fromIniList({
             { x(0) * x(0), x(1) * x(1), x(2) * x(2), x(1) * x(2), x(0) * x(2), x(0) * x(1) },
             { y(0) * y(0), y(1) * y(1), y(2) * y(2), y(1) * y(2), y(0) * y(2), y(0) * y(1) },
             { z(0) * z(0), z(1) * z(1), z(2) * z(2), z(1) * z(2), z(0) * z(2), z(0) * z(1) },
             { 2 * y(0) * z(0), 2 * y(1) * z(1), 2 * y(2) * z(2), y(2) * z(1) + y(1) * z(2), y(2) * z(0) + y(0) * z(2), y(1) * z(0) + y(0) * z(1) },
             { 2 * x(0) * z(0), 2 * x(1) * z(1), 2 * x(2) * z(2), x(2) * z(1) + x(1) * z(2), x(2) * z(0) + x(0) * z(2), x(1) * z(0) + x(0) * z(1) },
             { 2 * x(0) * y(0), 2 * x(1) * y(1), 2 * x(2) * y(2), x(2) * y(1) + x(1) * y(2), x(2) * y(0) + x(0) * y(2), x(1) * y(0) + x(0) * y(1) }
-        };
+        });
         answer.rotatedWith(Q, 't');
     }
 }
@@ -273,7 +279,7 @@ Structural3DElement::computeConstitutiveMatrix_dPdF_At(FloatMatrix &answer, MatR
         FloatArray x, y, z;
         FloatMatrix Q;
         this->giveMaterialOrientationAt(x, y, z, gp->giveNaturalCoordinates() );
-        Q = {
+        Q = FloatMatrix::fromIniList({
             { x(0) * x(0), x(1) * x(1), x(2) * x(2), x(1) * x(2), x(0) * x(2), x(0) * x(1), x(2) * x(1), x(2) * x(0), x(1) * x(0) },
             { y(0) * y(0), y(1) * y(1), y(2) * y(2), y(1) * y(2), y(0) * y(2), y(0) * y(1), y(2) * y(1), y(2) * y(0), y(1) * y(0) },
             { z(0) * z(0), z(1) * z(1), z(2) * z(2), z(1) * z(2), z(0) * z(2), z(0) * z(1), z(2) * z(1), z(2) * z(0), z(1) * z(0) },
@@ -283,7 +289,7 @@ Structural3DElement::computeConstitutiveMatrix_dPdF_At(FloatMatrix &answer, MatR
             { z(0) * y(0), z(1) * y(1), z(2) * y(2), z(1) * y(2), z(0) * y(2), z(0) * y(1), z(2) * y(1), z(2) * y(0), z(1) * y(0) },
             { z(0) * x(0), z(1) * x(1), z(2) * x(2), z(1) * x(2), z(0) * x(2), z(0) * x(1), z(2) * x(1), z(2) * x(0), z(1) * x(0) },
             { y(0) * x(0), y(1) * x(1), y(2) * x(2), y(1) * x(2), y(0) * x(2), y(0) * x(1), y(2) * x(1), y(2) * x(0), y(1) * x(0) },
-        };
+        });
         answer.rotatedWith(Q, 't');
     }
 }

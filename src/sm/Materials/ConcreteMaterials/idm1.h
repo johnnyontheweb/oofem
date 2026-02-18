@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -336,7 +336,7 @@ public:
     int MMI_update(GaussPoint *gp, TimeStep *tStep, FloatArray *estrain = nullptr) override;
     int MMI_finish(TimeStep *tStep) override;
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override;
     MaterialStatus *giveStatus(GaussPoint *gp) const override;
 
     double give(int aProperty, GaussPoint *gp) const override;

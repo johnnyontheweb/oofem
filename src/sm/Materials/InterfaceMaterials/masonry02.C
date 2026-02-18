@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -459,10 +459,10 @@ Masonry02 :: computeReducedSKGradientMatrix(FloatMatrix &gradientMatrix,  int i,
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 Masonry02 :: CreateStatus(GaussPoint *gp) const
 {
-    return new MPlasticMaterial2Status(gp, this->giveSizeOfReducedHardeningVarsVector(gp));
+    return std::make_unique<MPlasticMaterial2Status>(gp, this->giveSizeOfReducedHardeningVarsVector(gp));
     /*
      * // introduce initial pre-softening (using strainSpaceHardeningVarsVector) to
      * // avoid problems with undefined hardening moduli.

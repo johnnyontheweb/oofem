@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -52,7 +52,7 @@ StressStrainBaseVector :: StressStrainBaseVector(MaterialMode m) : FloatArray()
 StressStrainBaseVector :: StressStrainBaseVector(const FloatArray &src, MaterialMode m) : FloatArray(src)
 {
     if ( StructuralMaterial :: giveSizeOfVoigtSymVector(m) != src.giveSize() ) {
-        OOFEM_ERROR( "The source has size %d and a new MaterialMode %s has reduced size %d", src.giveSize(), __MaterialModeToString(m), StructuralMaterial :: giveSizeOfVoigtSymVector(m) );
+        OOFEM_ERROR( "The source has size %d and a new MaterialMode %s has reduced size %d", (int)src.giveSize(), __MaterialModeToString(m), (int)StructuralMaterial :: giveSizeOfVoigtSymVector(m) );
     }
 
     this->mode = m;
@@ -62,7 +62,8 @@ StressStrainBaseVector &
 StressStrainBaseVector :: operator = ( const StressStrainBaseVector & src )
 {
     if ( this != & src ) { // beware of s=s;
-        this->values = src.values;
+        this->resize(src.size()); // FIXME: useless zero-assignment
+        for(Index i=0; i<this->size(); i++) (*this)[i]=src[i];
     }
 
     this->mode = src.mode;

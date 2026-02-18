@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -208,7 +208,7 @@ public:
     double predictRelativeComputationalCost(GaussPoint *gp) override;
     double predictRelativeRedistributionCost(GaussPoint *gp) override { return 1.0; }
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new IDNLMaterialStatus(gp); }
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override { return std::make_unique<IDNLMaterialStatus>(gp); }
 
 protected:
     void initDamaged(double kappa, FloatArray &totalStrainVector, GaussPoint *gp) const override { }

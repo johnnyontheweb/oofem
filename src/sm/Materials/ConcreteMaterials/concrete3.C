@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2021   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -46,7 +46,7 @@ Concrete3 :: Concrete3(int n, Domain *d) : RCM2Material(n, d)
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 Concrete3 :: CreateStatus(GaussPoint *gp) const
 /*
  * creates new  material status  corresponding to this class
@@ -58,7 +58,7 @@ Concrete3 :: CreateStatus(GaussPoint *gp) const
 
 
 int
-Concrete3 :: checkSizeLimit(GaussPoint *gp, double charLength)
+Concrete3 :: checkSizeLimit(GaussPoint *gp, double charLength) const
 //
 // checks if element size (charLength) is too big
 // so that tension strength must be reduced followed
@@ -76,7 +76,7 @@ Concrete3 :: checkSizeLimit(GaussPoint *gp, double charLength)
 }
 
 double
-Concrete3 :: computeStrength(GaussPoint *gp, double charLength)
+Concrete3 :: computeStrength(GaussPoint *gp, double charLength) const
 //
 // computes strength for given gp,
 // which may be reduced according to length of "fracture process zone"
@@ -123,7 +123,7 @@ Concrete3 :: computeStrength(GaussPoint *gp, double charLength)
 
 
 double
-Concrete3 :: giveMinCrackStrainsForFullyOpenCrack(GaussPoint *gp, int i)
+Concrete3 :: giveMinCrackStrainsForFullyOpenCrack(GaussPoint *gp, int i) const
 //
 // computes MinCrackStrainsForFullyOpenCrack for given gp and i-th crack
 //
@@ -243,7 +243,7 @@ Concrete3 :: giveMinCrackStrainsForFullyOpenCrack(GaussPoint *gp, int i)
 
 double
 Concrete3 :: giveCrackingModulus(MatResponseMode rMode, GaussPoint *gp,
-                                 double crackStrain, int i)
+                                 double crackStrain, int i) const
 //
 // returns current cracking modulus according to crackStrain for i-th
 // crackplane
@@ -383,7 +383,7 @@ Concrete3 :: giveCrackingModulus(MatResponseMode rMode, GaussPoint *gp,
  */
 
 double
-Concrete3 :: giveNormalCrackingStress(GaussPoint *gp, double crackStrain, int i)
+Concrete3 :: giveNormalCrackingStress(GaussPoint *gp, double crackStrain, int i) const
 //
 // returns receivers Normal Stress in crack i  for given cracking strain
 //

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2015   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -90,7 +90,7 @@ ConcreteFCMViscoElastic::give(int aProperty, GaussPoint *gp) const
 void
 ConcreteFCMViscoElastic::giveRealStressVector(FloatArray &answer, GaussPoint *gp,
                                               const FloatArray &totalStrain,
-                                              TimeStep *tStep)
+                                              TimeStep *tStep) const
 {
     ConcreteFCMViscoElasticStatus *status = static_cast< ConcreteFCMViscoElasticStatus * >( gp->giveMaterialStatus() );
 
@@ -203,26 +203,21 @@ ConcreteFCMViscoElastic::giveIPValue(FloatArray &answer, GaussPoint *gp, Interna
 
 
 
-MaterialStatus *
+MaterialStatus* 
 ConcreteFCMViscoElastic::giveStatus(GaussPoint *gp) const
 {
-    MaterialStatus *status = static_cast< MaterialStatus * >( gp->giveMaterialStatus() );
-    if ( status == NULL ) {
-        // create a new one
-        status = this->CreateStatus(gp);
-
-        if ( status != NULL ) {
-            gp->setMaterialStatus(status);
-            this->_generateStatusVariables(gp);
-        }
+    if (gp->hasMaterialStatus()) {
+        return static_cast< MaterialStatus * >( gp->giveMaterialStatus() );
+    } else {
+        MaterialStatus *status = static_cast<MaterialStatus*> (gp->setMaterialStatus (this->CreateStatus(gp)));
+        this->_generateStatusVariables(gp);
+        return status;
     }
-
-    return status;
 }
 
 
 double
-ConcreteFCMViscoElastic::giveTensileStrength(GaussPoint *gp, TimeStep *tStep)
+ConcreteFCMViscoElastic::giveTensileStrength(GaussPoint *gp, TimeStep *tStep) const
 {
     // return value
     double ftm = 0.;
@@ -279,7 +274,7 @@ ConcreteFCMViscoElastic::giveTensileStrength(GaussPoint *gp, TimeStep *tStep)
 }
 
 double
-ConcreteFCMViscoElastic::giveFractureEnergy(GaussPoint *gp, TimeStep *tStep)
+ConcreteFCMViscoElastic::giveFractureEnergy(GaussPoint *gp, TimeStep *tStep) const
 {
     // return value
     double Gf = 0.;
@@ -330,7 +325,7 @@ ConcreteFCMViscoElastic::giveFractureEnergy(GaussPoint *gp, TimeStep *tStep)
 
 
 double
-ConcreteFCMViscoElastic::computeOverallElasticStiffness(GaussPoint *gp, TimeStep *tStep) {
+ConcreteFCMViscoElastic::computeOverallElasticStiffness(GaussPoint *gp, TimeStep *tStep) const {
     double stiffness;
 
     ConcreteFCMViscoElasticStatus *status = static_cast< ConcreteFCMViscoElasticStatus * >( gp->giveMaterialStatus() );
@@ -343,7 +338,7 @@ ConcreteFCMViscoElastic::computeOverallElasticStiffness(GaussPoint *gp, TimeStep
 }
 
 double
-ConcreteFCMViscoElastic::computeOverallElasticShearModulus(GaussPoint *gp, TimeStep *tStep) {
+ConcreteFCMViscoElastic::computeOverallElasticShearModulus(GaussPoint *gp, TimeStep *tStep) const {
     double Evisco;
     double Gvisco;
 
@@ -381,7 +376,7 @@ int ConcreteFCMViscoElastic::checkConsistency()
 }
 
 double
-ConcreteFCMViscoElastic::giveEquivalentTime(GaussPoint *gp, TimeStep *tStep)
+ConcreteFCMViscoElastic::giveEquivalentTime(GaussPoint *gp, TimeStep *tStep) const
 {
     RheoChainMaterial *rheoMat = static_cast< RheoChainMaterial * >( domain->giveMaterial(this->viscoMat) );
     ConcreteFCMViscoElasticStatus *status = static_cast< ConcreteFCMViscoElasticStatus * >( gp->giveMaterialStatus() );

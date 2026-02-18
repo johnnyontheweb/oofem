@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -130,7 +130,7 @@ public:
     double computeSatVaporPressureDerivative(double T) const;
     double computeDw(double h) const;
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new HeMoTransportMaterialStatus(gp); }
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override { return std::make_unique<HeMoTransportMaterialStatus>(gp); }
 
 protected:
     double computeCapacityCoeff(MatResponseMode mode, GaussPoint *gp, TimeStep *atTime) const;

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -38,6 +38,7 @@
 #include "sm/Elements/structural2delement.h"
 #include "zznodalrecoverymodel.h"
 #include "nodalaveragingrecoverymodel.h"
+#include "spatiallocalizer.h"
 
 #define _IFT_QPlaneStress2d_Name "qplanestress2d"
 
@@ -48,7 +49,7 @@ class FEI2dQuadQuad;
  * This class implements an Quadratic isoparametric eight-node quadrilateral plane-
  * stress elasticity finite element. Each node has 2 degrees of freedom.
  */
-class QPlaneStress2d : public PlaneStressElement, public ZZNodalRecoveryModelInterface, public NodalAveragingRecoveryModelInterface
+class QPlaneStress2d : public PlaneStressElement, public ZZNodalRecoveryModelInterface, public NodalAveragingRecoveryModelInterface, public SpatialLocalizerInterface
 {
 protected:
     static FEI2dQuadQuad interpolation;

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2020   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -76,10 +76,10 @@ SimoPisterMaterial::giveFirstPKStressVector_3d(const FloatArrayF< 9 > &vF, Gauss
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 SimoPisterMaterial::CreateStatus(GaussPoint *gp) const
 {
-    return new StructuralMaterialStatus(gp);
+    return std::make_unique<StructuralMaterialStatus>(gp);
 }
 
 

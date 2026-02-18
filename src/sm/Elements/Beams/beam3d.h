@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -59,6 +59,7 @@
 namespace oofem {
 
 class FEI3dLineLin;
+class ParamKey;
 
 /**
  * This class implements a 2-dimensional beam element
@@ -101,6 +102,14 @@ protected:
     
     // macro element number
     int macroElem;
+
+    static ParamKey IPK_Beam3d_dofsToCondense; ///< [optional] DOFs to condense
+    static ParamKey IPK_Beam3d_refnode; ///< [optional] Reference node for the beam 
+    static ParamKey IPK_Beam3d_refangle; ///< [optional] Reference angle for the beam
+    static ParamKey IPK_Beam3d_yaxis; ///< [optional] Y axis for the beam
+    static ParamKey IPK_Beam3d_zaxis; ///< [optional] Z axis for the beam
+    static ParamKey IPK_Beam3d_subsoilmat; ///< [optional] Subsoil material for the beam
+
 public:
     Beam3d(int n, Domain *d);
     virtual ~Beam3d();
@@ -174,8 +183,8 @@ public:
     // definition & identification
     const char *giveClassName() const override { return "Beam3d"; }
     const char *giveInputRecordName() const override { return _IFT_Beam3d_Name; }
-    virtual void giveInputRecord(DynamicInputRecord &input);
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
+    void postInitialize() override;
     ///@todo Introduce interpolator and remove these two:
     virtual integrationDomain giveIntegrationDomain() const { return _Line; }
     virtual Element_Geometry_Type giveGeometryType() const { return EGT_Composite; }

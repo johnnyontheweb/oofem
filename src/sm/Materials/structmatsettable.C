@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -82,10 +82,10 @@ StructuralMaterialSettable :: give3dMaterialStiffnessMatrix(MatResponseMode mode
     return isoLE.give3dMaterialStiffnessMatrix(mode, gp, atTime);
 }
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 StructuralMaterialSettable :: CreateStatus(GaussPoint *gp) const
 {
-    return new StructuralMaterialStatus(gp);
+    return std::make_unique<StructuralMaterialStatus>(gp);
 }
 
 

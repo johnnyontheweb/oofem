@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -87,7 +87,6 @@ public:
     // definition & identification
     const char *giveInputRecordName() const override { return _IFT_TrPlanestressRotAllman_Name; }
     const char *giveClassName() const override { return "TrPlanestressRotAllman"; }
-    void initializeFrom(InputRecord &ir) override;
     MaterialMode giveMaterialMode() override { return _PlaneStress; }
     integrationDomain giveIntegrationDomain() const override { return _Triangle; }
     /** Computes the stiffness matrix of receiver. Overloaded to add stabilization of zero-energy mode (equal rotations) */

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -59,7 +59,7 @@ FCMMaterial :: hasMaterialModeCapability(MaterialMode mode) const
 void
 FCMMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint *gp,
                                     const FloatArray &totalStrain,
-                                    TimeStep *tStep)
+                                    TimeStep *tStep) const 
 //
 // returns real stress vector in 3d stress space of receiver according to
 // previous level of stress and current
@@ -102,7 +102,6 @@ FCMMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint *gp,
     double d_tau_old = 0.;
     bool illinoisFlag = false;
 
-    int iterLimitGlobal = 20;
     int iterLimitGradient = 20;
     int iterLimitNormal = 100;
     int iterLimitShear = 100;
@@ -970,7 +969,7 @@ FCMMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint *gp,
   
 
 void
-FCMMaterial :: initializeCrack(GaussPoint *gp, TimeStep *tStep, FloatMatrix &base, int nCrack)
+FCMMaterial :: initializeCrack(GaussPoint *gp, TimeStep *tStep, FloatMatrix &base, int nCrack) const
 {
     MaterialMode mMode = gp->giveMaterialMode();
     FCMMaterialStatus *status = static_cast< FCMMaterialStatus * >( this->giveStatus(gp) );
@@ -1040,7 +1039,7 @@ FCMMaterial :: initializeCrack(GaussPoint *gp, TimeStep *tStep, FloatMatrix &bas
 
 
 bool
-FCMMaterial :: isIntact(GaussPoint *gp, int icrack) {
+FCMMaterial :: isIntact(GaussPoint *gp, int icrack) const {
     FCMMaterialStatus *status = static_cast< FCMMaterialStatus * >( this->giveStatus(gp) );
 
     if ( icrack >= 4 ) {
@@ -1058,7 +1057,7 @@ FCMMaterial :: isIntact(GaussPoint *gp, int icrack) {
 
 
 bool
-FCMMaterial :: isIntactForShear(GaussPoint *gp, int i) {
+FCMMaterial :: isIntactForShear(GaussPoint *gp, int i) const {
     FCMMaterialStatus *status = static_cast< FCMMaterialStatus * >( this->giveStatus(gp) );
 
     int normal_1, normal_2;
@@ -1092,7 +1091,7 @@ FCMMaterial :: isIntactForShear(GaussPoint *gp, int i) {
 
 
 bool
-FCMMaterial :: isThisShearComponent(GaussPoint *gp, int component) {
+FCMMaterial :: isThisShearComponent(GaussPoint *gp, int component) const {
 
     MaterialMode mMode = gp->giveMaterialMode();
 
@@ -1128,7 +1127,7 @@ FCMMaterial :: isThisShearComponent(GaussPoint *gp, int component) {
   
 
 double
-FCMMaterial :: computeNormalCrackOpening(GaussPoint *gp, int i) {
+FCMMaterial :: computeNormalCrackOpening(GaussPoint *gp, int i) const {
     FCMMaterialStatus *status = static_cast< FCMMaterialStatus * >( this->giveStatus(gp) );
 
     double crackOpening, N;
@@ -1147,7 +1146,7 @@ FCMMaterial :: computeNormalCrackOpening(GaussPoint *gp, int i) {
 
 
 double
-FCMMaterial :: computeMaxNormalCrackOpening(GaussPoint *gp, TimeStep *tStep, int i) {
+FCMMaterial :: computeMaxNormalCrackOpening(GaussPoint *gp, TimeStep *tStep, int i) const {
     FCMMaterialStatus *status = static_cast< FCMMaterialStatus * >( this->giveStatus(gp) );
 
     double crackOpening, N;
@@ -1166,7 +1165,7 @@ FCMMaterial :: computeMaxNormalCrackOpening(GaussPoint *gp, TimeStep *tStep, int
 
 
 double
-FCMMaterial :: computeShearSlipOnCrack(GaussPoint *gp, TimeStep *tStep, int icrack) {
+FCMMaterial :: computeShearSlipOnCrack(GaussPoint *gp, TimeStep *tStep, int icrack) const{
     MaterialMode mMode = gp->giveMaterialMode();
 
     FCMMaterialStatus *status = static_cast< FCMMaterialStatus * >( this->giveStatus(gp) );
@@ -1273,7 +1272,7 @@ FCMMaterial :: computeShearSlipOnCrack(GaussPoint *gp, TimeStep *tStep, int icra
 
 
 bool
-FCMMaterial :: isStrengthExceeded(const FloatMatrix &base, GaussPoint *gp, TimeStep *tStep, int iCrack, double trialStress) {
+FCMMaterial :: isStrengthExceeded(const FloatMatrix &base, GaussPoint *gp, TimeStep *tStep, int iCrack, double trialStress) const {
   if ( trialStress > this->giveTensileStrength(gp, tStep) ) {
         return true;
     } else {
@@ -1285,7 +1284,7 @@ FCMMaterial :: isStrengthExceeded(const FloatMatrix &base, GaussPoint *gp, TimeS
 
 
 double
-FCMMaterial :: computeShearStiffnessRedistributionFactor(GaussPoint *gp, TimeStep *tStep, int ithCrackPlane, int jthCrackDirection) {
+FCMMaterial :: computeShearStiffnessRedistributionFactor(GaussPoint *gp, TimeStep *tStep, int ithCrackPlane, int jthCrackDirection) const {
     double factor_ij;
     double D2_i, D2_j;
 
@@ -1299,7 +1298,7 @@ FCMMaterial :: computeShearStiffnessRedistributionFactor(GaussPoint *gp, TimeSte
 
 
 bool
-FCMMaterial :: checkStrengthCriterion(FloatMatrix &newBase, const FloatArray &globalStress, GaussPoint *gp, TimeStep *tStep, int nCrack) {
+FCMMaterial :: checkStrengthCriterion(FloatMatrix &newBase, const FloatArray &globalStress, GaussPoint *gp, TimeStep *tStep, int nCrack) const {
     FCMMaterialStatus *status = static_cast< FCMMaterialStatus * >( this->giveStatus(gp) );
 
     double sigX, sigY, tau, sig2;
@@ -1499,14 +1498,14 @@ FCMMaterial :: checkStrengthCriterion(FloatMatrix &newBase, const FloatArray &gl
 
 
 double
-FCMMaterial :: giveCharacteristicElementLength(GaussPoint *gp, const FloatArray &crackPlaneNormal)
+FCMMaterial :: giveCharacteristicElementLength(GaussPoint *gp, const FloatArray &crackPlaneNormal) const
 {
     return gp->giveElement()->giveCharacteristicLength(crackPlaneNormal);
 }
 
 
 void
-FCMMaterial :: updateCrackStatus(GaussPoint *gp)
+FCMMaterial :: updateCrackStatus(GaussPoint *gp) const
 {
     FCMMaterialStatus *status = static_cast< FCMMaterialStatus * >( this->giveStatus(gp) );
 
@@ -1593,7 +1592,7 @@ FCMMaterial :: updateCrackStatus(GaussPoint *gp)
 void
 FCMMaterial :: giveTotalLocalCrackedStiffnessMatrix(FloatMatrix &answer,
                                                MatResponseMode rMode, GaussPoint *gp,
-                                               TimeStep *tStep)
+                                               TimeStep *tStep) const
 {
     int dim, j;
     FloatMatrix Dcr;
@@ -1622,7 +1621,7 @@ FCMMaterial :: giveTotalLocalCrackedStiffnessMatrix(FloatMatrix &answer,
 void
 FCMMaterial :: giveNormalLocalCrackedStiffnessMatrix(FloatMatrix &answer,
                                                MatResponseMode rMode, GaussPoint *gp,
-                                               TimeStep *tStep)
+                                               TimeStep *tStep) const 
 {
 
     FloatMatrix Dcr;
@@ -1644,7 +1643,7 @@ void
 FCMMaterial :: giveMaterialStiffnessMatrix(FloatMatrix &answer,
                                            MatResponseMode rMode,
                                            GaussPoint *gp,
-                                           TimeStep *tStep)
+                                           TimeStep *tStep) const
 //
 // returns effective material stiffness matrix in full form
 // for gp stress strain mode
@@ -1854,7 +1853,7 @@ FCMMaterial :: giveMaterialStiffnessMatrix(FloatMatrix &answer,
 
 
 double
-FCMMaterial :: computeTotalD2Modulus(GaussPoint *gp, TimeStep *tStep, int shearDirection)
+FCMMaterial :: computeTotalD2Modulus(GaussPoint *gp, TimeStep *tStep, int shearDirection) const
 {
     double D2 = 0.;
     int crackA, crackB;
@@ -1925,7 +1924,7 @@ FCMMaterial :: computeTotalD2Modulus(GaussPoint *gp, TimeStep *tStep, int shearD
 
 
 double
-FCMMaterial :: computeNumerD2Modulus(GaussPoint *gp, TimeStep *tStep, int shearDirection)
+FCMMaterial :: computeNumerD2Modulus(GaussPoint *gp, TimeStep *tStep, int shearDirection) const
 {
     double D2 = 0.;
     int crackA, crackB;
@@ -1977,6 +1976,8 @@ FCMMaterial :: initializeFrom(InputRecord &ir)
     StructuralMaterial :: initializeFrom(ir);
     linearElasticMaterial.initializeFrom(ir);
 
+    IR_GIVE_OPTIONAL_FIELD(ir,iterLimitGlobal,"iterlimitglobal");
+
     this->nAllowedCracks = 3;
     IR_GIVE_OPTIONAL_FIELD(ir, nAllowedCracks, _IFT_FCM_nAllowedCracks);
 
@@ -2021,14 +2022,14 @@ FCMMaterial :: give(int aProperty, GaussPoint *gp) const
 
 
 double
-FCMMaterial :: giveCrackSpacing(void)
+FCMMaterial :: giveCrackSpacing(void) const
 {
     return crackSpacing;
 }
 
 
 double
-FCMMaterial :: giveNumberOfCracksInDirection(GaussPoint *gp, int iCrack)
+FCMMaterial :: giveNumberOfCracksInDirection(GaussPoint *gp, int iCrack) const
 {
     FCMMaterialStatus *status = static_cast< FCMMaterialStatus * >( this->giveStatus(gp) );
     double spacing, L, N;
@@ -2047,7 +2048,7 @@ FCMMaterial :: giveNumberOfCracksInDirection(GaussPoint *gp, int iCrack)
 
 
 double
-FCMMaterial :: giveNumberOfCracksForShearDirection(GaussPoint *gp, int i)
+FCMMaterial :: giveNumberOfCracksForShearDirection(GaussPoint *gp, int i) const
 {
     double N;
     int dir_1, dir_2;

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -96,7 +96,7 @@ public:
     // definition & identification
     const char *giveInputRecordName() const override { return _IFT_TR_SHELL01_Name; }
     const char *giveClassName() const override { return "TR_SHELL01"; }
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
 
     void giveCharacteristicVector(FloatArray &answer, CharType mtrx, ValueModeType mode, TimeStep *tStep) override;
     void giveCharacteristicMatrix(FloatMatrix &answer, CharType mtrx, TimeStep *tStep) override;

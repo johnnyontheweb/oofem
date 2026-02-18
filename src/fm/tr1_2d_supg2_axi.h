@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -95,7 +95,7 @@ public:
     const char *giveClassName() const override { return "TR1_2D_SUPG2_AXI"; }
     const char *giveInputRecordName() const override { return _IFT_TR1_2D_SUPG2_AXI_Name; }
     MaterialMode giveMaterialMode() override { return _2dAxiFlow; }
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
     void giveInputRecord(DynamicInputRecord &input) override;
 
     void printOutputAt(FILE *file, TimeStep *tStep) override;

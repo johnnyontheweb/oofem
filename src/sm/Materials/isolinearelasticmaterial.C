@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -213,7 +213,7 @@ void
 IsotropicLinearElasticMaterial :: giveDeviatoric3dMaterialStiffnessMatrix(FloatMatrix &answer,
                                                                           MatResponseMode mode,
                                                                           GaussPoint *gp,
-                                                                          TimeStep *tStep)
+                                                                          TimeStep *tStep) const
 //
 // forceElasticResponse ignored - always elastic
 //
@@ -239,7 +239,7 @@ void
 IsotropicLinearElasticMaterial :: giveDeviatoricPlaneStrainStiffMtrx(FloatMatrix &answer,
                                                                      MatResponseMode mode,
                                                                      GaussPoint *gp,
-                                                                     TimeStep *tStep)
+                                                                     TimeStep *tStep) const
 {
     answer.resize(4, 4);
 
@@ -259,7 +259,7 @@ IsotropicLinearElasticMaterial :: giveDeviatoricPlaneStrainStiffMtrx(FloatMatrix
 
 
 void
-IsotropicLinearElasticMaterial :: giveRealStressVectorUP_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, double pressure, TimeStep *tStep)
+IsotropicLinearElasticMaterial :: giveRealStressVectorUP_3d(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, double pressure, TimeStep *tStep) const
 {
     FloatArray strainVector;
     FloatMatrix d;
@@ -281,7 +281,7 @@ IsotropicLinearElasticMaterial :: giveRealStressVectorUP_3d(FloatArray &answer, 
 
 
 void
-IsotropicLinearElasticMaterial :: giveRealStressVectorUP_PlaneStrain(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, double pressure, TimeStep *tStep)
+IsotropicLinearElasticMaterial :: giveRealStressVectorUP_PlaneStrain(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, double pressure, TimeStep *tStep) const
 {
     FloatArray strainVector;
     FloatMatrix d;
@@ -300,4 +300,42 @@ IsotropicLinearElasticMaterial :: giveRealStressVectorUP_PlaneStrain(FloatArray 
     status->letTempStrainVectorBe(reducedStrain);
     status->letTempStressVectorBe(answer);
 }
+
+double 
+IsotropicLinearElasticMaterial::giveCharacteristicValue(MatResponseMode type, GaussPoint* gp, TimeStep *tStep) const {
+    switch (type) {
+        case ElasticBulkModulus:
+            return giveBulkModulus(); 
+        case ElasticBulkModulusInverse:
+            return 1./giveBulkModulus();
+        case MRM_ScalarOne:
+            return 1.0;
+        default:
+            return this->Material::giveCharacteristicValue(type, gp, tStep);
+    }
+}
+
+void
+IsotropicLinearElasticMaterial::giveCharacteristicVector(FloatArray &answer, FloatArray& flux, MatResponseMode type, GaussPoint* gp, TimeStep *tStep) const {
+    if (type == Stress) {
+        return LinearElasticMaterial::giveRealStressVector(answer, gp, flux, tStep);
+    } else if (type == DeviatoricStress) {
+        FloatMatrix d;
+        this->giveDeviatoricConstitutiveMatrix(d, TangentStiffness, gp, tStep);
+        answer.beProductOf(d, flux);
+        return; 
+    } else {
+        OOFEM_ERROR("Not implemented");
+    } 
+}
+
+void 
+IsotropicLinearElasticMaterial::giveCharacteristicMatrix(FloatMatrix &answer, MatResponseMode type, GaussPoint* gp, TimeStep *tStep) const {
+    if (type == DeviatoricStiffness) {
+        return this->giveDeviatoricConstitutiveMatrix(answer, type, gp, tStep);
+    } else {
+        return this->LinearElasticMaterial::giveCharacteristicMatrix(answer, type, gp, tStep);
+    }
+}
+
 } // end namespace oofem

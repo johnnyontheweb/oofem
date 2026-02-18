@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -37,9 +37,14 @@
 #include "gausspoint.h"
 #include "sm/CrossSections/structuralcrosssection.h"
 #include "gaussintegrationrule.h"
-#include <math.h>
+#include "mathfem.h"
+#include "parametermanager.h"
+#include "paramkey.h"
 
 namespace oofem {
+
+ParamKey Structural2DElement::IPK_Structural2DElement_materialCoordinateSystem("matcs");
+
 Structural2DElement::Structural2DElement(int n, Domain *aDomain) :
     NLStructuralElement(n, aDomain),
     matRotation(false)
@@ -56,10 +61,11 @@ Structural2DElement::~Structural2DElement()
 
 
 void
-Structural2DElement::initializeFrom(InputRecord &ir)
+Structural2DElement::initializeFrom(InputRecord &ir, int priority)
 {
-    NLStructuralElement::initializeFrom(ir);
-    matRotation = ir.hasField(_IFT_Structural2DElement_materialCoordinateSystem); //|| this->elemLocalCS.isNotEmpty();
+    ParameterManager &ppm = domain->elementPPM;
+    NLStructuralElement::initializeFrom(ir, priority);
+    PM_CHECK_FLAG_AND_REPORT(ppm, ir, this->number, IPK_Structural2DElement_materialCoordinateSystem, priority, matRotation) ;
 }
 
 
@@ -140,20 +146,20 @@ void
 Structural2DElement::giveMaterialOrientationAt(FloatArray &x, FloatArray &y, const FloatArray &lcoords)
 {
     if ( this->elemLocalCS.isNotEmpty() ) { // User specified orientation
-        x = {
+        x = Vec2(
             elemLocalCS.at(1, 1), elemLocalCS.at(2, 1)
-        };
-        y = {
+        );
+        y = Vec2(
             -x(1), x(0)
-        };
+        );
     } else {
         FloatMatrix jac;
         this->giveInterpolation()->giveJacobianMatrixAt(jac, lcoords, * this->giveCellGeometryWrapper() );
         x.beColumnOf(jac, 1); // This is {dx/dxi, dy/dxi, dz/dxi}
         x.normalize();
-        y = {
+        y = Vec2(
             -x(1), x(0)
-        };
+        );
     }
 }
 
@@ -163,7 +169,6 @@ Structural2DElement::giveCharacteristicLength(const FloatArray &normalToCrackPla
 {
     return this->giveCharacteristicLengthForPlaneElements(normalToCrackPlane);
 }
-
 
 
 
@@ -223,9 +228,6 @@ Structural2DElement::computeLoadLEToLRotationMatrix(FloatMatrix &answer, int iEd
 
     return 1;
 }
-
-
-
 
 
 // Plane stress
@@ -294,11 +296,11 @@ PlaneStressElement::computeStressVector(FloatArray &answer, const FloatArray &e,
 
         auto s = this->giveStructuralCrossSection()->giveRealStress_PlaneStress(rotStrain, gp, tStep);
 
-        answer = {
+        answer = Vec3(
             s [ 0 ] * x [ 0 ] * x [ 0 ] + 2 * s [ 2 ] * x [ 0 ] * y [ 0 ] + s [ 1 ] * y [ 0 ] * y [ 0 ],
             s [ 0 ] * x [ 1 ] * x [ 1 ] + 2 * s [ 2 ] * x [ 1 ] * y [ 1 ] + s [ 1 ] * y [ 1 ] * y [ 1 ],
             s [ 1 ] * y [ 0 ] * y [ 1 ] + s [ 0 ] * x [ 0 ] * x [ 1 ] + s [ 2 ] * ( x [ 1 ] * y [ 0 ] + x [ 0 ] * y [ 1 ] )
-        };
+        );
     } else {
         answer = this->giveStructuralCrossSection()->giveRealStress_PlaneStress(e, gp, tStep);
     }
@@ -315,11 +317,11 @@ PlaneStressElement::computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponse
 
         this->giveMaterialOrientationAt(x, y, gp->giveNaturalCoordinates() );
 
-        Q = {
+        Q = FloatMatrix({
             { x(0) * x(0), x(1) * x(1), x(0) * x(1) },
             { y(0) * y(0), y(1) * y(1), y(0) * y(1) },
             { 2 * x(0) * y(0), 2 * x(1) * y(1), x(1) * y(0) + x(0) * y(1) }
-        };
+        });
         answer.rotatedWith(Q, 't');
     }
 }
@@ -334,18 +336,15 @@ PlaneStressElement::computeConstitutiveMatrix_dPdF_At(FloatMatrix &answer, MatRe
 
         this->giveMaterialOrientationAt(x, y, gp->giveNaturalCoordinates() );
 
-        Q = {
+        Q = FloatMatrix({
             { x(0) * x(0), x(1) * x(1), x(0) * x(1), x(1) * x(0) },
             { y(0) * y(0), y(1) * y(1), y(0) * y(1), y(1) * y(0) },
             { x(0) * y(0), x(1) * y(1), x(0) * y(1), x(1) * y(0) },
             { y(0) * x(0), y(1) * x(1), y(0) * x(1), y(1) * x(0) }
-        };
+        });
         answer.rotatedWith(Q, 't');
     }
 }
-
-
-
 
 
 // Plane strain
@@ -418,12 +417,12 @@ PlaneStrainElement::computeStressVector(FloatArray &answer, const FloatArray &e,
             2 * e [ 0 ] * x [ 0 ] * y [ 0 ] + 2 * e [ 1 ] * x [ 1 ] * y [ 1 ] + e [ 3 ] * ( x [ 1 ] * y [ 0 ] + x [ 0 ] * y [ 1 ] )
         };
         auto s = this->giveStructuralCrossSection()->giveRealStress_PlaneStrain(rotStrain, gp, tStep);
-        answer = {
+        answer = Vec4(
             s [ 0 ] * x [ 0 ] * x [ 0 ] + 2 * s [ 3 ] * x [ 0 ] * y [ 0 ] + s [ 1 ] * y [ 0 ] * y [ 0 ],
             s [ 0 ] * x [ 1 ] * x [ 1 ] + 2 * s [ 3 ] * x [ 1 ] * y [ 1 ] + s [ 1 ] * y [ 1 ] * y [ 1 ],
             s [ 2 ],
             y [ 1 ] * ( s [ 3 ] * x [ 0 ] + s [ 1 ] * y [ 0 ] ) + x [ 1 ] * ( s [ 0 ] * x [ 0 ] + s [ 3 ] * y [ 0 ] )
-        };
+        );
     } else {
         answer = this->giveStructuralCrossSection()->giveRealStress_PlaneStrain(e, gp, tStep);
     }
@@ -439,12 +438,12 @@ PlaneStrainElement::computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponse
         FloatMatrix Q;
 
         this->giveMaterialOrientationAt(x, y, gp->giveNaturalCoordinates() );
-        Q = {
+        Q = FloatMatrix({
             { x(0) * x(0), x(1) * x(1), 0, x(0) * x(1) },
             { y(0) * y(0), y(1) * y(1), 0, y(0) * y(1) },
             { 0, 0, 1, 0 },
             { 2 * x(0) * y(0), 2 * x(1) * y(1), 0, x(1) * y(0) + x(0) * y(1) }
-        };
+        });
 
         answer.rotatedWith(Q, 't');
     }
@@ -461,18 +460,16 @@ PlaneStrainElement::computeConstitutiveMatrix_dPdF_At(FloatMatrix &answer, MatRe
 
         this->giveMaterialOrientationAt(x, y, gp->giveNaturalCoordinates() );
 
-        Q = {
+        Q = FloatMatrix({
             { x(0) * x(0), x(1) * x(1), 0, x(0) * x(1), x(1) * x(0) },
             { y(0) * y(0), y(1) * y(1), 0, y(0) * y(1), y(1) * y(0) },
             { 0, 0, 1, 0, 0           },
             { x(0) * y(0), x(1) * y(1), 0, x(0) * y(1), x(1) * y(0) },
             { y(0) * x(0), y(1) * x(1), 0, y(0) * x(1), y(1) * x(0) }
-        };
+        });
         answer.rotatedWith(Q, 't');
     }
 }
-
-
 
 
 // Axisymmetry
@@ -624,14 +621,14 @@ AxisymElement::computeStressVector(FloatArray &answer, const FloatArray &e, Gaus
             2 * e [ 0 ] * x [ 0 ] * y [ 0 ] + 2 * e [ 1 ] * x [ 1 ] * y [ 1 ] + e [ 5 ] * ( x [ 1 ] * y [ 0 ] + x [ 0 ] * y [ 1 ] )
         };
         auto s = this->giveStructuralCrossSection()->giveRealStress_3d(rotStrain, gp, tStep);
-        answer = {
+        answer = Vec6(
             s [ 0 ] * x [ 0 ] * x [ 0 ] + 2 * s [ 5 ] * x [ 0 ] * y [ 0 ] + s [ 1 ] * y [ 0 ] * y [ 0 ],
             s [ 0 ] * x [ 1 ] * x [ 1 ] + 2 * s [ 5 ] * x [ 1 ] * y [ 1 ] + s [ 1 ] * y [ 1 ] * y [ 1 ],
             s [ 2 ],
             s [ 4 ] * x [ 1 ] + s [ 3 ] * y [ 1 ],
             s [ 4 ] * x [ 0 ] + s [ 3 ] * y [ 0 ],
             y [ 1 ] * ( s [ 5 ] * x [ 0 ] + s [ 1 ] * y [ 0 ] ) + x [ 1 ] * ( s [ 0 ] * x [ 0 ] + s [ 5 ] * y [ 0 ] )
-        };
+        );
     } else {
         answer = this->giveStructuralCrossSection()->giveRealStress_3d(e, gp, tStep);
     }
@@ -648,14 +645,14 @@ AxisymElement::computeConstitutiveMatrixAt(FloatMatrix &answer,
         FloatMatrix Q;
 
         this->giveMaterialOrientationAt(x, y, gp->giveNaturalCoordinates() );
-        Q = {
+        Q = FloatMatrix({
             { x(0) * x(0), x(1) * x(1), 0, 0, 0, x(0) * x(1) },
             { y(0) * y(0), y(1) * y(1), 0, 0, 0, y(0) * y(1) },
             { 0, 0, 1, 0, 0, 0 },
             { 0, 0, 0, y(1), y(0), 0 },
             { 0, 0, 0, x(1), x(0), 0 },
             { 2 * x(0) * y(0), 2 * x(1) * y(1), 0, 0, 0, x(1) * y(0) + x(0) * y(1) }
-        };
+        });
 
         answer.rotatedWith(Q, 't');
     }
@@ -670,14 +667,14 @@ AxisymElement::computeConstitutiveMatrix_dPdF_At(FloatMatrix &answer, MatRespons
         FloatMatrix Q;
 
         this->giveMaterialOrientationAt(x, y, gp->giveNaturalCoordinates() );
-        Q = {
+        Q = FloatMatrix({
             { x(0) * x(0), x(1) * x(1), 0, 0,    0,    x(0) * x(1), 0, 0, x(1) * x(0) },
             { y(0) * y(0), y(1) * y(1), 0, 0,    0,    y(0) * y(1), 0, 0, y(1) * y(0) },
             { 0,           0,           1, 0,    0,    0,           0, 0, 0           },
             { 0,           0,           0, y(1), y(0), 0,           0, 0, 0 },
             { 0, 0, 0, x(1), x(0), 0 },
             { 2 * x(0) * y(0), 2 * x(1) * y(1), 0, 0, 0, x(1) * y(0) + x(0) * y(1) }
-        };
+        });
 
         answer.rotatedWith(Q, 't');
     }

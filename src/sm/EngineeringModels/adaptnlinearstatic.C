@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -174,7 +174,7 @@ void
 AdaptiveNonLinearStatic :: updateYourself(TimeStep *tStep)
 {
     if ( timeStepLoadLevels.isEmpty() ) {
-        timeStepLoadLevels.resize( this->giveNumberOfSteps() );
+        timeStepLoadLevels.resize( this->numberOfSteps );
     }
 
     // in case of adaptive restart from given timestep
@@ -415,7 +415,7 @@ AdaptiveNonLinearStatic :: initializeAdaptive(int tStepNumber)
 {
     try {
         FileDataStream stream(this->giveContextFileName(tStepNumber, 0), false);
-        this->restoreContext(stream, CM_State);
+        this->restoreContext(stream, CM_State|CM_Definition);
     } catch(ContextIOERR & c) {
         c.print();
         exit(1);
@@ -426,11 +426,11 @@ AdaptiveNonLinearStatic :: initializeAdaptive(int tStepNumber)
     int sernum = this->giveDomain(1)->giveSerialNumber();
     OOFEM_LOG_INFO("restoring domain %d.%d\n", 1, sernum + 1);
     Domain *dNew = new Domain(2, sernum + 1, this);
-    OOFEMTXTDataReader domainDr(this->giveDomainFileName(1, sernum + 1));
+    OOFEMTXTDataReader domainDr(this->giveDomainFileName(1, sernum + 1), true);
     if ( !dNew->instanciateYourself(domainDr) ) {
         OOFEM_ERROR("domain Instanciation failed");
     }
-
+    dNew->postInitialize();
     // remap solution to new domain
     return this->adaptiveRemap(dNew);
 }

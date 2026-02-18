@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2016   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -101,13 +101,13 @@ public:
     const char *giveClassName() const override { return "ConcreteFCM"; }
     const char *giveInputRecordName() const override { return _IFT_ConcreteFCM_Name; }
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new ConcreteFCMStatus(gp); }
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override { return std::make_unique<ConcreteFCMStatus>(gp); }
 
     double give(int aProperty, GaussPoint *gp) const override;
 
     int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 
-    MaterialStatus *giveStatus(GaussPoint *gp) const override;
+    MaterialStatus* giveStatus(GaussPoint *gp) const override;
 
 protected:
     /// Fracture energy
@@ -141,20 +141,20 @@ protected:
     /// strain at failure
     double eps_f = 0.;
 
-    double giveTensileStrength(GaussPoint *gp, TimeStep *tStep) override { return this->give(ft_strength, gp); }
-    virtual double giveFractureEnergy(GaussPoint *gp, TimeStep *tStep) { return this->give(gf_ID, gp); }
-    double giveCrackingModulus(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep, int i) override;
-    double giveCrackingModulusInTension(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep, int i) override;
-    double computeEffectiveShearModulus(GaussPoint *gp, TimeStep *tStep, int i) override;
-    double computeD2ModulusForCrack(GaussPoint *gp, TimeStep *tStep, int icrack) override;
-    double computeNumerD2ModulusForCrack(GaussPoint *gp, TimeStep *tStep, int icrack) override;
-    double giveNormalCrackingStress(GaussPoint *gp, TimeStep *tStep, double eps_cr, int i) override;
-    double maxShearStress(GaussPoint *gp, TimeStep *tStep, int i) override;
+    double giveTensileStrength(GaussPoint *gp, TimeStep *tStep) const override { return this->give(ft_strength, gp); }
+    virtual double giveFractureEnergy(GaussPoint *gp, TimeStep *tStep) const { return this->give(gf_ID, gp); }
+    double giveCrackingModulus(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep, int i) const override;
+    double giveCrackingModulusInTension(MatResponseMode rMode, GaussPoint *gp, TimeStep *tStep, int i) const override;
+    double computeEffectiveShearModulus(GaussPoint *gp, TimeStep *tStep, int i) const override;
+    double computeD2ModulusForCrack(GaussPoint *gp, TimeStep *tStep, int icrack) const override;
+    double computeNumerD2ModulusForCrack(GaussPoint *gp, TimeStep *tStep, int icrack) const override;
+    double giveNormalCrackingStress(GaussPoint *gp, TimeStep *tStep, double eps_cr, int i) const override;
+    double maxShearStress(GaussPoint *gp, TimeStep *tStep, int i) const override;
 
     /// based on the maximum crack opening evaluates the residual strength
-    virtual double computeResidualTensileStrength(GaussPoint *gp, TimeStep *tStep);
+    virtual double computeResidualTensileStrength(GaussPoint *gp, TimeStep *tStep) const;
 
-    void checkSnapBack(GaussPoint *gp, TimeStep *tStep, int crack) override;
+    void checkSnapBack(GaussPoint *gp, TimeStep *tStep, int crack) const override;
 
     /// type of post-peak behavior in the normal direction to the crack plane
     enum SofteningType { ST_NONE, ST_Exponential, ST_Linear, ST_Hordijk, ST_UserDefinedCrack, ST_LinearHardeningStrain, ST_UserDefinedStrain, ST_Unknown };

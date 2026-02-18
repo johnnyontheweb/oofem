@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -83,7 +83,7 @@ public:
     void giveElementDofIDMask(IntArray &answer) const override = 0;
     void giveDofManDofIDMask(int inode, IntArray &answer) const override = 0;
     int computeNumberOfDofs() override = 0;
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
     int checkConsistency() override;
 
     Interface *giveInterface(InterfaceType) override = 0;

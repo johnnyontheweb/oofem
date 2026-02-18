@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -53,12 +53,6 @@ REGISTER_Element(LTRSpaceBoundaryPlate);
 LTRSpaceBoundaryPlate :: LTRSpaceBoundaryPlate(int n, Domain *aDomain) :
     LTRSpaceBoundary(n, aDomain)
 {}
-
-void
-LTRSpaceBoundaryPlate :: initializeFrom(InputRecord &ir)
-{
-    LTRSpaceBoundary :: initializeFrom(ir);
-}
 
 void
 LTRSpaceBoundaryPlate :: giveDofManDofIDMask(int inode, IntArray &answer) const

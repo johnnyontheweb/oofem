@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -173,7 +173,7 @@ public:
     Eurocode2CreepMaterial(int n, Domain *d) : KelvinChainMaterial(n, d) {}
 
     void giveRealStressVector(FloatArray &answer, GaussPoint *gp,
-                              const FloatArray &reducedStrain, TimeStep *tStep) override;
+                              const FloatArray &reducedStrain, TimeStep *tStep) const override;
 
     void giveShrinkageStrainVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep, ValueModeType mode) const override;
 
@@ -181,7 +181,7 @@ public:
     const char *giveInputRecordName() const override { return _IFT_Eurocode2CreepMaterial_Name; }
     void initializeFrom(InputRecord &ir) override;
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override;
 
     /// evaluates concrete strength at given age 
     virtual double computeConcreteStrengthAtAge(double age) const;

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -121,7 +121,7 @@ public:
     B3SolidMaterial(int n, Domain *d) : KelvinChainMaterial(n, d) {}
 
     void giveRealStressVector(FloatArray &answer, GaussPoint *gp,
-                              const FloatArray &reducedStrain, TimeStep *tStep) override;
+                              const FloatArray &reducedStrain, TimeStep *tStep) const override;
 
     void giveShrinkageStrainVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep, ValueModeType mode) const override;
 
@@ -129,7 +129,7 @@ public:
     const char *giveInputRecordName() const override { return _IFT_B3SolidMaterial_Name; }
     void initializeFrom(InputRecord &ir) override;
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override;
 
     /// Evaluation of the compliance function of the non-aging solidifying constituent.
     double computeCreepFunction(double t, double t_prime, GaussPoint *gp, TimeStep *tStep) const override;

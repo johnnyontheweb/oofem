@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -130,7 +130,7 @@ public:
     //    LinearElasticMaterial *giveLinearElasticMaterial() { return linearElasticMaterial; }
 
 protected:
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new MisesMatGradStatus(gp); }
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override { return std::make_unique<MisesMatGradStatus>(gp); }
 };
 } // end namespace oofem
 #define MisesMatGrad_h

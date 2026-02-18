@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -48,6 +48,8 @@
 #include "mathfem.h"
 #include "gausspoint.h"
 #include "spatiallocalizer.h"
+#include "parametermanager.h"
+#include "paramkey.h"
 
 namespace oofem {
 
@@ -55,6 +57,9 @@ namespace oofem {
     must be scaled with 1/factor in the input file
 */
 const double DISC_DOF_SCALE_FAC = 1.0;
+
+ParamKey Shell7BaseXFEM::IPK_Shell7BaseXFEM_CohesiveZoneMaterial("czmaterial");
+
 
 Shell7BaseXFEM :: Shell7BaseXFEM(int n, Domain *aDomain) : Shell7Base(n, aDomain), XfemElementInterface(this) 
 {
@@ -161,9 +166,10 @@ Shell7BaseXFEM :: computeFailureCriteriaQuantities(FailureCriteriaStatus *fcStat
 }
 
 
-void Shell7BaseXFEM :: initializeFrom(InputRecord &ir)
+void Shell7BaseXFEM :: initializeFrom(InputRecord &ir, int priority)
 {
-    Shell7Base :: initializeFrom(ir);
+    Shell7Base :: initializeFrom(ir, priority);
+    
     if ( ir.hasField(_IFT_Shell7BaseXFEM_CohesiveZoneMaterial) ) {
         OOFEM_ERROR("'czmaterial' this keyword is not in use anymore! Instead define cz material for each interface in the cross secton, ex: interfacematerials 3 x x x ");
     }
@@ -1641,7 +1647,7 @@ Shell7BaseXFEM :: edgeEvalEnrCovarBaseVectorsAt(const FloatArrayF<3> &lcoords, c
     const auto g3 = normalize(fac3*m);                              // director field
     const auto g1 = normalize(cross(g2, g3));
 
-    return FloatMatrixF<3,3>({g1, g2, g3});
+    return FloatMatrixF<3,3>::fromColumns({g1, g2, g3});
 }
 
 
@@ -2520,9 +2526,9 @@ Shell7BaseXFEM :: giveLocalNodeCoordsForExport(FloatArray &nodeLocalXi1Coords, F
     this->computeLocalCoordinates(loc3, gs3);
 
     // Compute coordinates for the three mid nodes 
-    auto loc12 = 0.5 * (loc1 + loc2);
-    auto loc23 = 0.5 * (loc2 + loc3);
-    auto loc31 = 0.5 * (loc3 + loc1);
+    FloatArray loc12 = 0.5 * (loc1 + loc2);
+    FloatArray loc23 = 0.5 * (loc2 + loc3);
+    FloatArray loc31 = 0.5 * (loc3 + loc1);
     double a = loc1.at(1);
     double b = loc2.at(1);
     double c = loc3.at(1);
@@ -2541,8 +2547,7 @@ Shell7BaseXFEM :: giveLocalNodeCoordsForExport(FloatArray &nodeLocalXi1Coords, F
 
     nodeLocalXi3Coords = { -z, -z, -z, z, z, z, -z, -z, -z, z, z, z, 0., 0., 0. };
 
-    FloatMatrix localNodeCoordsT;
-    localNodeCoordsT = {nodeLocalXi1Coords, nodeLocalXi2Coords, nodeLocalXi3Coords};
+    FloatMatrix localNodeCoordsT = FloatMatrix::fromCols({nodeLocalXi1Coords, nodeLocalXi2Coords, nodeLocalXi3Coords});
     localNodeCoords.beTranspositionOf(localNodeCoordsT);
 }
 
@@ -2572,9 +2577,9 @@ Shell7BaseXFEM :: giveLocalCZNodeCoordsForExport(FloatArray &nodeLocalXi1Coords,
     this->computeLocalCoordinates(loc3, gs3);
 
     // Compute coordinates for the three mid nodes 
-    auto loc12 = 0.5 * (loc1 + loc2);
-    auto loc23 = 0.5 * (loc2 + loc3);
-    auto loc31 = 0.5 * (loc3 + loc1);
+    FloatArray loc12 = 0.5 * (loc1 + loc2);
+    FloatArray loc23 = 0.5 * (loc2 + loc3);
+    FloatArray loc31 = 0.5 * (loc3 + loc1);
     double a = loc1.at(1);
     double b = loc2.at(1);
     double c = loc3.at(1);
@@ -2593,8 +2598,7 @@ Shell7BaseXFEM :: giveLocalCZNodeCoordsForExport(FloatArray &nodeLocalXi1Coords,
 
     nodeLocalXi3Coords = { 0., 0., 0., 0., 0., 0. };
 
-    FloatMatrix localNodeCoordsT;
-    localNodeCoordsT = {nodeLocalXi1Coords, nodeLocalXi2Coords, nodeLocalXi3Coords};
+    FloatMatrix localNodeCoordsT = FloatMatrix::fromCols({nodeLocalXi1Coords, nodeLocalXi2Coords, nodeLocalXi3Coords});
     localNodeCoords.beTranspositionOf(localNodeCoordsT);
 }
 

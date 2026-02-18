@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2019   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -55,8 +55,6 @@ class LIBeam3dBoundaryTruss : public LIBeam3dBoundary
 public:
     LIBeam3dBoundaryTruss(int n, Domain *d);
     virtual ~LIBeam3dBoundaryTruss() { }
-
-    void initializeFrom(InputRecord &ir) override;
 
     int computeNumberOfDofs() override { return 13; }
     void giveDofManDofIDMask(int inode, IntArray &answer) const override;

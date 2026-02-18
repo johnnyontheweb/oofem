@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -46,6 +46,7 @@
 //@}
 
 namespace oofem {
+class ParamKey;
 /**
  * Class implements an triangular three-node  plane-
  * stress elasticity finite element with independent rotation field.
@@ -59,10 +60,7 @@ class TrPlaneStrRot : public TrPlaneStress2d
 {
 protected:
     int numberOfRotGaussPoints;
-    static IntArray drillOrdering;
-private:
-    std::vector<std::unique_ptr<FloatMatrix>> BMatrices;
-
+    static ParamKey IPK_TrPlaneStrRot_niprot;
 public:
     TrPlaneStrRot(int, Domain *);
     virtual ~TrPlaneStrRot() { }
@@ -85,7 +83,8 @@ public:
     // definition & identification
     const char *giveInputRecordName() const override { return _IFT_TrPlaneStrRot_Name; }
     const char *giveClassName() const override { return "TrPlaneStrRot"; }
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
+    void postInitialize() override;
     MaterialMode giveMaterialMode() override { return _PlaneStressRot; }
 
     int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;

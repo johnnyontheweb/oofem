@@ -1,5 +1,6 @@
 # OOFEM.org
-![Build workflow](https://github.com/oofem/oofem/actions/workflows/build.yml/badge.svg)
+[![Linux](https://github.com/oofem/oofem/actions/workflows/linux.yml/badge.svg)](https://github.com/oofem/oofem/actions/workflows/linux.yml)
+[![Windows MSVC](https://github.com/oofem/oofem/actions/workflows/windows.yml/badge.svg)](https://github.com/oofem/oofem/actions/workflows/windows.yml)
 [![License: LGPL v2.1](https://img.shields.io/badge/License-LGPL%20v2.1-blue.svg)](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4339630.svg)](https://doi.org/10.5281/zenodo.4339630)
 
@@ -9,7 +10,7 @@ OOFEM is parallel, object-oriented finite element code for solving mechanical, t
 OOFEM is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public
 License as published by the Free Software Foundation; either version 2.1 of the License, or (at your option) any later version.
 
-Copyright (C) 1993 - 2024   Borek Patzak
+Copyright (C) 1993 - 2025   Borek Patzak
     
 ## Getting Started
 ### What is here
@@ -23,7 +24,7 @@ The source directory tree holds source code to the OOFEM package.
   |
   |-- src - source files of all oofem modules
   |   |
-  |   |-- oofemlib - sources of the core part of OOFEM, the OOFEMlib module.
+  |   |-- core     - sources of the core part of OOFEM.
   |   |
   |   |-- sm       - sources of structural analysis module.
   |   |

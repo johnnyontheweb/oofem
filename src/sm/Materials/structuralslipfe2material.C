@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2021   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -100,7 +100,7 @@ StructuralSlipFE2Material :: giveInputRecord(DynamicInputRecord &input)
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus>
 StructuralSlipFE2Material :: CreateStatus(GaussPoint *gp) const
 {
     int rank = -1;
@@ -120,16 +120,16 @@ StructuralSlipFE2Material :: CreateStatus(GaussPoint *gp) const
         if ( std::find(gpArray.begin(), gpArray.end(), gp) != gpArray.end() ) {
             int nel = gp->giveElement()->giveGlobalNumber();
             int gpn = gp->giveNumber();
-            return new StructuralSlipFE2MaterialStatus(rank, gp, this->inputfile, nel, gpn);
+            return std::make_unique<StructuralSlipFE2MaterialStatus>(rank, gp, this->inputfile, nel, gpn);
         } else {
-            return new StructuralSlipFE2MaterialStatus(rank, gp, this->inputfile, 1, 1);
+            return std::make_unique<StructuralSlipFE2MaterialStatus>(rank, gp, this->inputfile, 1, 1);
         }
     } else if ( allGPRes ) {
         int nel = gp->giveElement()->giveGlobalNumber();
         int gpn = gp->giveNumber();
-        return new StructuralSlipFE2MaterialStatus(rank, gp, this->inputfile, nel, gpn);
+        return std::make_unique<StructuralSlipFE2MaterialStatus>(rank, gp, this->inputfile, nel, gpn);
     } else {
-        return new StructuralSlipFE2MaterialStatus(rank, gp, this->inputfile, 1, 1);
+        return std::make_unique<StructuralSlipFE2MaterialStatus>(rank, gp, this->inputfile, 1, 1);
     }
 
 }

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -54,8 +54,6 @@ protected:
 public:
     QTruss1d(int n, Domain *d);
     virtual ~QTruss1d() { }
-
-    void initializeFrom(InputRecord &ir) override;
 
     int computeNumberOfDofs() override { return 3; }
     void giveDofManDofIDMask(int inode, IntArray &) const override;

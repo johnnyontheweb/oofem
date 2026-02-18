@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -66,7 +66,7 @@ public:
     const char *giveInputRecordName() const override { return _IFT_Truss3dnl2_Name; }
     const char *giveClassName() const override { return "Truss3dnl2"; }
 
-    void initializeFrom(InputRecord &ir) override;
+    void postInitialize() override;
     void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep) override;
     void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord = 0) override;
 

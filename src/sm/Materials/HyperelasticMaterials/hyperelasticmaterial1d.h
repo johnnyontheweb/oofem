@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2020   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -87,7 +87,7 @@ public:
     FloatMatrixF< 1, 1 > give1dStressStiffnessMatrix_dPdF(MatResponseMode mmode, GaussPoint *gp, TimeStep *tStep) const override;
    
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override;
 
     const char *giveInputRecordName() const override { return _IFT_HyperelasticMaterial1d_Name; }
     const char *giveClassName() const override { return "HyperelasticMaterial1d"; }

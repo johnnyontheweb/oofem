@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -187,7 +187,7 @@ protected:
     bool isotropic = false;
 
     /// dummy Young's modulus
-    double E = -1.;
+    mutable double E = -1.;
 
     /// Maximum limit on omega. The purpose is elimination of a too compliant material which may cause convergence problems. Set to something like 0.99 if needed.
     double maxOmega = 0.999999;
@@ -236,7 +236,7 @@ public:
 
     int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 
-    void giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep) override;
+    void giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep) const override;
 
     double givee0(GaussPoint *gp) const;
     double givegf(GaussPoint *gp) const;
@@ -247,9 +247,9 @@ public:
      * @param totalStrainVector Current total strain vector.
      * @param gp Integration point.
      */
-    void initDamaged(double kappa, FloatArray &totalStrainVector, GaussPoint *gp, TimeStep *tStep);
+    void initDamaged(double kappa, FloatArray &totalStrainVector, GaussPoint *gp, TimeStep *tStep) const;
 
-    void initDamagedFib(GaussPoint *gp, TimeStep *tStep);
+    void initDamagedFib(GaussPoint *gp, TimeStep *tStep) const;
 
     //void computeEquivalentStrain(double &kappa, const FloatArray &strain, GaussPoint *gp, TimeStep *tStep);
 
@@ -273,7 +273,7 @@ public:
      */
     double computeDamageForCohesiveCrack(double kappa, GaussPoint *gp) const;
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override;
 
 
     virtual double computeTensileStrength(double equivalentTime) const;

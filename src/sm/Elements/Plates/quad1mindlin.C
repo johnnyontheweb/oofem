@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -47,9 +47,12 @@
 #include "mathfem.h"
 #include "fei2dquadlin.h"
 #include "classfactory.h"
+#include "parametermanager.h"
+#include "paramkey.h"
 
 namespace oofem {
 REGISTER_Element(Quad1Mindlin);
+ParamKey Quad1Mindlin::IPK_Quad1Mindlin_reducedIntegration("reducedintegration");
 
 FEI2dQuadLin Quad1Mindlin::interp_lin(1, 2);
 
@@ -172,11 +175,11 @@ Quad1Mindlin::computeConstitutiveMatrixAt(FloatMatrix &answer, MatResponseMode r
 
 
 void
-Quad1Mindlin::initializeFrom(InputRecord &ir)
+Quad1Mindlin::initializeFrom(InputRecord &ir, int priority)
 {
-    this->numberOfGaussPoints = 4;
-    this->reducedIntegrationFlag = ir.hasField(_IFT_Quad1Mindlin_ReducedIntegration);
-    StructuralElement::initializeFrom(ir);
+    ParameterManager &ppm = this->giveDomain()->elementPPM;
+    PM_CHECK_FLAG_AND_REPORT(ppm, ir, this->number, IPK_Quad1Mindlin_reducedIntegration, priority, reducedIntegrationFlag);
+    StructuralElement::initializeFrom(ir, priority);
 }
 
 
@@ -221,7 +224,7 @@ Quad1Mindlin::computeLumpedMassMatrix(FloatMatrix &answer, TimeStep *tStep)
     ///@todo Other/higher integration for lumped mass matrices perhaps?
     double mass = 0.;
     for ( GaussPoint *gp: * integrationRulesArray [ 0 ] ) {
-        double dV = this->computeVolumeAround(gp);
+        double dV = this->computeVolumeAround(gp)*this->giveCrossSection()->give(CS_Thickness, gp);
         mass += dV * this->giveStructuralCrossSection()->give('d', gp);
     }
 

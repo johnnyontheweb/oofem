@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -142,10 +142,10 @@ RankineMat :: initializeFrom(InputRecord &ir)
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 RankineMat :: CreateStatus(GaussPoint *gp) const
 {
-    return new RankineMatStatus(gp);
+    return std::make_unique<RankineMatStatus>(gp);
 }
 
 

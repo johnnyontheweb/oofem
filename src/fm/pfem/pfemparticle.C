@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -50,14 +50,6 @@ REGISTER_DofManager(PFEMParticle);
   PFEMParticle :: PFEMParticle(int n, Domain *aDomain) : Node(n, aDomain), freeFlag(true), alphaShapeFlag(false), activeFlag(true)
 { }
 
-/**
- * Gets from the source line from the data file all the data of the receiver.
- */
-void
-PFEMParticle :: initializeFrom(InputRecord &ir)
-{
-    Node :: initializeFrom(ir);
-}
 
 /**
  * Checks internal data consistency in node.
@@ -80,11 +72,6 @@ PFEMParticle :: updateYourself(TimeStep *tStep)
     Node :: updateYourself(tStep);
 }
 
-void
-PFEMParticle :: printOutputAt(FILE *stream, TimeStep *stepN)
-{
-    DofManager :: printOutputAt(stream, stepN);
-}
 
 #ifdef __OOFEG
 void PFEMParticle :: drawScalar(oofegGraphicContext &gc)

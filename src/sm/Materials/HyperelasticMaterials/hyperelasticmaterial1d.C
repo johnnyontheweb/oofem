@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2020   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -95,10 +95,10 @@ HyperelasticMaterial1d::give1dStressStiffnessMatrix_dPdF(MatResponseMode mode, G
 
   
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 HyperelasticMaterial1d::CreateStatus(GaussPoint *gp) const
 {
-    return new StructuralMaterialStatus(gp);
+    return std::make_unique<StructuralMaterialStatus>(gp);
 }
 
 

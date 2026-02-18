@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -80,10 +80,10 @@ NewtonianFluidMaterial :: give(int aProperty, GaussPoint *gp) const
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 NewtonianFluidMaterial :: CreateStatus(GaussPoint *gp) const
 {
-    return new FluidDynamicMaterialStatus(gp);
+    return std::make_unique<FluidDynamicMaterialStatus>(gp);
 }
 
 

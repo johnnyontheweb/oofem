@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -162,7 +162,7 @@ protected:
     double computeEikonalInternalLength_aPrime(GaussPoint *gp);
     double computeEikonalInternalLength_bPrime(GaussPoint *gp);
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new RankineMatGradStatus(gp); }
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override { return std::make_unique<RankineMatGradStatus>(gp); }
 };
 } // end namespace oofem
 #define RankineMatGrad_h

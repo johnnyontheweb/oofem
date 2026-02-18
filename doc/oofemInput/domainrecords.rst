@@ -87,21 +87,26 @@ Components size record
 | This record describes the number of components in related domain. The
   particular records will follow immediately in input file. The general
   format is:
+
 | ``ndofman #(in)`` ``nelem #(in)``
   ``ncrosssect #(in)`` ``nmat #(in)`` ``nbc #(in)``
-  ``nic #(in)`` ``nltf #(in)`` [``nbarrier #(in)``]
-   where
-  ``ndofman`` represents number of dof managers (e.g. nodes) and their
+  ``nic #(in)`` ``nltf #(in)`` [``nset #(in)``] [``ncontactsurf #(in)``] [``nbarrier #(in)``] 
+  
+| where ``ndofman`` represents number of dof managers (e.g. nodes) and their
   associated records, ``nelem`` represents number of elements and their
   associated records, ``ncrosssect`` is number of cross sections and
   their records, ``nmatdnMat`` is number of material models and their
   records, ``nbc`` represents number of boundary conditions (including
-  loads) and their records, ``nic`` parameter determines the number of
+  loads and contact conditions) and their records, ``nic`` parameter determines the number of
   initial conditions, and ``nltf`` represents number of time functions
-  and their associated records. The optional parameter ``nbarrier``
+  and their associated records. The optional ``nset`` parameter specifies the
+  number of set records (see :ref:`SetRecords`), and the optional ``ncontactsurf``
+  parameter specifies the number of contact surface records (see
+  :ref:`ContactSurfaceRecords`).The optional parameter ``nbarrier``
   represents the number of nonlocal barriers and their records. If not
-  specified, no barriers are assumed.
-
+  specified, no optional entities (sets, contact surfaces, or barriers)
+  are assumed.
+  
 .. _NodeElementSideRecords:
 
 Dof manager records
@@ -404,7 +409,8 @@ condition, though sets can be used for many other things as well.
 
 ``Set`` ``#(in)`` [``elements #(ia)``] [``elementranges #(rl)``]
 [``allElements``] [``nodes #(ia)``] [``noderanges #(rl)``] [``allNodes``]
-[``elementboundaries #(ia)``] [``elementedges #(ia)``]
+[``elementboundaries #(ia)``] [``elementedges #(ia)``] 
+<``ver 1.6`` [``dofmanprops #(s)``] [``elemprops #(s)``]>
 
 Volumes (elements) and nodes can be specified using either a list,
 ``elements``, ``nodes``, or with a range list ``elementranges``,
@@ -431,6 +437,76 @@ would be applied to ``elements`` in a set. A external pressure would be
 defined as a surface load an be applied to the ``elementboundaries`` in
 a set. The element integrates the load (analytically) around the axis,
 so the load would still count as a surface load.
+
+Arbitrary dof manager and element properties can be specified using
+``dofmanprops`` and ``elemprops`` parameters (supported by ver. 1.6 and higher). The optional ``dofmanprops``
+parameter is a string, which contains any dof manager parameters that are subsequently set for all 
+dof managers in the set. The optional ``elemprops`` parameter is a string, which contains any element
+parameters that are subsequently set for all elements in the set. The syntax for setting the individual parameters is the syntax of input file records.
+Note that parameters defined using this mechanism have the lowest priority, i.e. 
+they can be overridden by the parameters defined in the dof manager or element records (see tests/sm/setprops01.in for an example).
+
+
+
+
+.. _ContactSurfaceRecords:
+
+Contact surface records
+-----------------------
+
+Contact surfaces define geometric entities that participate in contact
+interactions. Each surface is formed by a set of contact elements and can
+be assigned the role of *master* or *slave* within a contact boundary
+condition. Contact surfaces provide the link between the geometric
+description of the contacting interfaces and the boundary conditions that
+enforce their interaction.
+
+**Syntax**
+
+``FEContactSurfaceType`` ``#(in)`` ``ce_set #(in)``
+
+**Parameters**
+
+- ``#(in)`` — unique surface identifier.
+- ``ce_set`` — identifier of the element set that contains the contact
+  elements forming this surface (see :ref:`SetRecords`).
+
+**Description**
+
+Each contact surface groups one or more contact elements of type
+``ContactElementType_*`` into a single logical entity. These surfaces
+are referenced by contact boundary conditions (see
+:ref:`ContactBoundaryConditions`) as ``mastersurface`` or ``slavesurface``.
+Both surfaces must exist before defining any contact boundary condition.
+
+**Example**
+
+::
+
+   StructuralFEContactSurface 1 ce_set 3
+   StructuralFEContactSurface 2 ce_set 4
+
+In this example, structural finite element surface 1 is created from contact elements included in set
+3, and surface 2 from structural contact elements in set 4. These surfaces can then be
+paired using a ``structuralpenaltycontactbc`` record to define a contact
+interaction.
+
+**Notes**
+
+- Each contact surface can serve as a master or slave surface depending on
+  the definition in the contact boundary condition.
+- The number of contact surface records is given by ``ncontactsurf`` in the
+  Components size record.
+- Contact surfaces do not introduce new DOFs; they provide only geometric
+  organization for contact evaluation.
+
+
+
+
+
+
+
+
 
 .. _CrossSectionRecords:
 
@@ -830,7 +906,7 @@ Currently, EntType keyword can be one from
      nodes have to interconnect opposing boundary nodes of a unit cell.
 
 - Boundary loads
-  -  Constant edge fluxes (load)
+   -  Constant edge fluxes (load)
 
      ``ConstantEdgeLoad`` ``loadType #(in)`` ``components #(ra)``
      [``dofexcludemask #(ia)``] [``csType #(in)``]
@@ -893,7 +969,7 @@ Currently, EntType keyword can be one from
      default) or in entity - specific local coordinate system (``csType``
      = 1).
 
-  -  Linear edge flux (load)
+   -  Linear edge flux (load)
 
      ``LinearEdgeLoad`` ``loadType #(in)`` ``components #(ra)``
      [``dofexcludemask #(ia)``] [``csType #(in)``]
@@ -906,7 +982,19 @@ Currently, EntType keyword can be one from
      (``csType`` = 0, default) or in entity - specific local coordinate
      system (``csType`` = 1).
 
-  -  InteractionLoad
+   -  User Defined Boundary Flux (load) 
+      ``UserDefinedBoundaryLoad`` ``loadTimeFunction #(in)`` ``dofs #(ia)`` ``set #(in)`` ``intensityfunction #(in)`` ``geomtype #(in)`` ``approxorder #(in)`` ``components 0``
+
+      Represents user defined boundary flux, where the flux is specified using configured function (see :ref:`TimeFunctionsRecords`). Note that PythonExpression provides complete configurability. 
+      The flux intensity is defined by the ``intensityfunction``, which is a reference to specific function. 
+      The function is defined in the global coordinate system as a function of position (x array variable) and time (t variable). 
+      The ``geomtype`` parameter determines the type of geometry, where the flux is applied (4 for surface flux (defaut), 3 for edge flux). 
+      The ``approxorder`` parameter determines the (approximate) order of intensity function. This is used to set up integration rule on the boundary.
+      The ``dofs`` array determines the DOFs, to which the flux is applied. 
+      The ``set`` parameter determines the set of element boundary entities, to which the flux is applied. 
+      The ``loadTimeFunction`` and ``components`` parameters have no effect, but needs to be provided.
+
+   -  InteractionLoad
 
      ``InteractionLoad`` ``ndofs #(in)`` ``loadType #(in)``
      ``Components #(ra)`` [``csType #(in)``]
@@ -922,6 +1010,56 @@ Currently, EntType keyword can be one from
      normal direction of the edge. Array ``coupledparticles`` assign
      PFEMParticles from the fluid part of the problem providing fluid
      pressure.
+     
+          
+     -  Structural penalty contact boundary condition
+
+   ``structuralpenaltycontactbc`` ``loadTimeFunction #(in)`` ``dofs #(ia)``
+   ``pn #(rn)`` ``pt #(rn)`` ``friction #(rn)`` ``mastersurface #(in)``
+   ``slavesurface #(in)`` ``nsd #(in)``
+
+   Represents a penalty-based contact boundary condition used to model
+   contact interactions between deformable bodies. The contact formulation
+   enforces normal and tangential constraints between surfaces defined by
+   ``StructuralFEContactSurface`` records and their underlying
+   ``StructuralContactElement_*`` elements.
+
+   The parameters have the following meaning:
+
+   - ``pn`` — normal penalty stiffness, controlling resistance against
+     penetration between contacting surfaces.
+   - ``pt`` — tangential penalty stiffness, controlling tangential
+     response.
+   - ``friction`` — coefficient of friction (currently experimental and
+     under development). Set to ``0.0`` for frictionless contact.
+   - ``mastersurface`` and ``slavesurface`` — identifiers of the master
+     and slave contact surfaces defined by corresponding
+     ``StructuralFEContactSurface`` records (see :ref:`ContactSurfaceRecords`).
+   - ``dofs`` — list of affected degrees of freedom (typically ``1 2`` in 2D
+     problems or ``1 2 3`` in 3D problems).
+   - ``nsd`` — number of spatial dimensions (2 for plane strain or plane stress, or 3 for
+     3D problems).
+
+   The contact is enforced via the penalty method and contributes to the
+   residual and tangent system of equations at each iteration. This
+   boundary condition supports frictionless contact and a preliminary
+   version of frictional contact, which is currently experimental and
+   under development.
+
+   **Example:**
+
+   ::
+
+      structuralpenaltycontactbc 3 loadTimeFunction 1 dofs 2 1 2 \
+          pn 1.e8 pt 1.e8 friction 0.0 mastersurface 1 slavesurface 2 nsd 2
+
+   This example defines a frictionless penalty contact condition between
+   master surface 1 and slave surface 2 with normal and tangential
+   stiffness equal to 1.e8. The condition acts on degrees of freedom 1 and
+   2 (displacement is X and Y direction) in a 2D plane strain/stress domain.
+
+   For bidirectional contact, two such boundary conditions can be defined
+   with swapped master and slave surfaces.
 
 .. _InitialConditions:
 
@@ -931,7 +1069,10 @@ Initial conditions
 These records specify description of initial conditions. The general
 format is following:
 
-``InitialCondition`` ``#(in)`` ``conditions #(dc)``
+``InitialCondition`` ``#(in)`` ``conditions #(dc)`` (deprecated)
+   
+``InitialCondition`` ``#(in)`` ``f #(expr)`` ``dfdt #(expr)`` ``d2fdt2 #(expr)`` ``set #(in)`` ``dofs #(ia)`` 
+
 The order of particular
 records is optional, load, boundary or initial condition number is
 determined by (``num``\ #)(in) parameter. The numbering should start
@@ -940,10 +1081,15 @@ parameters are listed in ``conditions`` dictionary using keys followed
 by their initial values. Now ’v’ key represents velocity and ’a’ key
 represents acceleration.
 
+The second alternative allows to specify initial conditions providing expressions for unknown value, velocity and acceleration using expressions (``f``, ``dfdt``, ``d2fdt2`` parameters). 
+The expressions can depend on position (’x’, ’y’, and ’z’ variables corresponding to x,y, and z coordinates of given node (dof manager)). 
+The individual DOFs are determined using ``dofs`` array. 
+The ``set`` parameter determines the set of nodes, to which the initial condition is applied.
+
 .. _TimeFunctionsRecords:
 
-Time functions records
-----------------------
+(Time) Functions records
+----------------------------
 
 These records specify description of time functions, which generally
 describe time variation of components during solution. The general
@@ -1014,7 +1160,19 @@ Currently, TimeFunctType keyword can be one from
    using ``dfdt(t)`` and ``d2fdt2(t)`` parameters. The first and second
    derivatives may be required, this depend on type of analysis.
 
-   Very general, but relatively slow.
+-  User defined Python expression <requires to compile with  USE_PYTHON_EXTENSION = ON >
+
+   ``PythonExpression`` (``f #(s)`` | ``fpath #(s)``) [``dfdt #(s)`` | ``dfdtpath #(s)``] [``d2fdt2 #(s)`` | ``d2fdt2path #(s)``]
+
+
+   Represents user defined function defined by Python script. The expressions can depend on
+   ``t`` parameter, for which actual time will be substituted and ``x`` array containing the position.
+   The python expression or script should define ``ret`` variable, which will be returned as the value of the function.
+
+   The parameter ``f`` is an string containing Python expression, alternativaly, the parameter ``fpath`` is a string containing the path to the Python script file defining the python code for the function. 
+   Optional parameters ``dfdt``, ``dfdtpath``, ``d2fdt2``, and ``d2fdt2path`` allow to prowide expressions or path to python scripts for evaluating derivative and second derivative of a function, 
+   that may be required, depending on the context of use.
+
 
 .. _XFEMManagerRecords:
 

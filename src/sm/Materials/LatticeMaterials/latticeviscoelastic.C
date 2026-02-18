@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2019   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -61,11 +61,10 @@ LatticeViscoelastic::initializeFrom(InputRecord &ir)
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 LatticeViscoelastic::CreateStatus(GaussPoint *gp) const
 {
-    LatticeViscoelasticStatus *answer = new LatticeViscoelasticStatus(gp);
-    return answer;
+    return std::make_unique<LatticeViscoelasticStatus>(gp);
 }
 
 

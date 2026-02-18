@@ -496,13 +496,13 @@ Optional parameter ``timeScale`` scales time in output. In transport problem, ba
 
 Currently, the supported export modules are following
 
--  VTK export, **DEPRECATED - Use VTKXML or vtkhdf5 **
+-  VTK export, **DEPRECATED - Use VTKXML or vtkhdf5**
 
    ``vtk`` [``vars #(ia)``] [``primvars #(ia)``] [``cellvars #(ia)``]
    [``stype #(in)``] [``regionstoskip #(ia)``]
 
    ``vtkxml`` [``vars #(ia)``] [``primvars #(ia)``] [``cellvars #(ia)``]
-   [``ipvars #(ia)``] [``stype #(in)``] 
+   [``ipvars #(ia)``] [``stype #(in)``] [``setmembership``]
 
    | <``ver 1.6``> 
    | ``vtkhdf5`` [``vars #(ia)``] [``primvars #(ia)``] [``cellvars #(ia)``]
@@ -522,19 +522,19 @@ Currently, the supported export modules are following
       variables which are to be exported. These variables will be
       smoothed and transfered to nodes. The id values are defined by
       InternalStateType enumeration, which is defined in include file
-      “src/oofemlib/internalstatetype.h”.
+      “src/core/internalstatetype.h”.
 
    -  The array ``primvars`` contains identifiers of primary variables
       to be exported. The possible values correspond to the values of
       enumerated type UnknownType, which is again defined in
-      “src/oofemlib/unknowntype.h”. Please note, that the values
+      “src/core/unknowntype.h”. Please note, that the values
       corresponding to enumerated type values start from zero, if not
       specified directly and that not all values are supported by
       particular material model or analysis type.
 
    -  The array ``cellvars`` contains identifiers of constant variables
       defined on an element (cell), e.g. a material number. Identifier
-      numbers are specified in “src/oofemlib/internalstatetype.h”.
+      numbers are specified in “src/core/internalstatetype.h”.
 
    -  The array ``ipvars`` contains identifiers for those internal
       variables which are to be exported. These variables will be
@@ -542,7 +542,7 @@ Currently, the supported export modules are following
       point corresponds to individual integration point. A separate vtu
       file for these raw, point data will be created. The id values are
       defined by InternalStateType enumeration, which is defined in
-      include file “src/oofemlib/internalstatetype.h”.
+      include file “src/core/internalstatetype.h”.
 
    -  The parameter ``stype`` allows to select smoothing procedure for
       internal variables, which is used to compute nodal values from
@@ -551,6 +551,11 @@ Currently, the supported export modules are following
       triangular and tetrahedral elements), :math:`1` for Zienkiewicz
       Zhu recovery (default), and :math:`2` for Superconvergent Patch
       Recovery (SPR, based on least square fitting).
+   -  The paramneter ``setmembership`` will trigger export of set
+      membership information. The set membership information (at present for DofManagers and cells) is
+      exported as a point/cell variable. As vtk format does not support sparse sets, 
+      the set membership is encoded into datasets containing byte values (UINT8, named VertexSetMembership and CellSetMembership), 
+      where i-th bit is set to 1 if the given component is member of set, zero otherwise. 
 
    
 -  VTK pfem (particle FEM) export. Exports particle positions to vtk as a point dataset.
@@ -610,7 +615,7 @@ Currently, the supported export modules are following
    -  The array ``vars`` contains identifiers for those internal
       variables which are to be exported. The id values are defined by
       InternalStateType enumeration, which is defined in include file
-      “src/oofemlib/internalstatetype.h”.
+      “src/core/internalstatetype.h”.
 
    -  Parameter ``ncoords`` specifies the number of spatial coordinates
       to be exported at each Gauss point. Depending on the spatial
@@ -720,4 +725,103 @@ Currently, the supported export modules are following
    By default the module performs the regression tests and issues the error when one or more tests fail.
    The module can also be used to extract user-selected quantities rather than testing them against expected values. This can be done by adding ``extract`` keyword to the input record of the module.
    The ``filename`` parameter allows to specify filename (with path) in which the rules are defined, insted of input file itself (the default).
+
+.. _VariablesSec:
+
+Variables (symbolic mpm module)
+-------------------------------
+The symbolic mpm module allows to define problem(s) by defining problem weak form using variables, terms and integrals. 
+In this section we describe how to define variable or field apperaing in weak form. The general syntax is following:
+
+``Variable`` ``name #(s)`` ``interpolation #(s)`` ``type #(in)`` ``quantity #(in)`` ``size #(in)`` ``dofs #(ia)``
+
+where the parameters have following meaning:
+
+- ``name`` is the string containing the name of the variable
+- ``interpolation`` string, defining the interpolation of the varaible. The supported values are:
+    
+  - ``feiconst`` - constant interpolation
+  - ``feilin`` - linear interpolation
+  - ``feiquad`` - quadratic interpolation
+- ``type`` defines the rank of the variable. The supported values are:
+  
+  - 0 - for scalar variable
+  - 1 - for vector variable
+- ``quantity`` attribute defines the physical meaning of variable. Supported values include
+  
+   - 0 - for displacement field
+   - 1 - for velocity field
+   - 2 - for temperature field
+   - 3 - for pressure field
+- ``size`` attribute determines the size (dimension) of variable.
+- ``dofs`` array of integers, defining the physical meaning of variable DOFs. The size of the array should be equal to the size of the variable. 
+    The supported values are defined in src/core/dofiditem.h file.
+
+.. _TermsSec:
+
+Terms (symbolic mpm module)
+---------------------------
+The integrals in the weak form integrate terms. The individual term record have the following generic syntax:
+
+``TermType``  ``variable #(s)``  ``testvariable #(s)`` ``mmode #(in)``
+
+The Supported TermType keywords are documented below.
+The parameters have following meaning:
+
+  - ``variable`` is the name of the unknown variable (field) of the term
+  - ``testvariable`` is the name of the test variable (field) of the term
+  - ``mmode`` allows to define material mode used to evaluate the term
+
+Note that sopecific terms can introduce additional parameters to define the term.
+
+Supported TermTypes
+^^^^^^^^^^^^^^^^^^^^
++--------------+-----------------------------------------------------------------------------------------------------------------------------+
+| Keyword      | Description & parameters                                                                                                    |
++==============+=============================================================================================================================+
+|| BTSigmaTerm || :math:`\int_\Omega \nabla^s \mathbf{w}\ \mathbf{\sigma}(\nabla^s \mathbf{u})`,                                             |
+||             || where :math:`\mathbf{\sigma}` is (nonlinar) operator evaluated by constitutive model.                                      |
+||             || Supported material modes (``mmode``): _3dMat, _3dUP, _2dUP, _PlaneStress                                                   |
+||             || Optional parameters                                                                                                        |
+||             || * ``lhsmatmode #(in)``                                                                                                     |
++--------------+-----------------------------------------------------------------------------------------------------------------------------+
+|| BTamNTerm   || :math:`\int_\Omega \nabla^s \mathbf{w}\ a\mathbf{m}\ p`,                                                                   |
+||             || where ``a`` is material parameter, defined by contitutive model with meaning defined by ``atype`` parameter                |
+||             || and :math:`\mathbf{m}^T=[1,1,1,0,0,0]^T`. Note that :math:`\mathbf{\sigma}_{D}=\mathbf{\sigma}-\mathbf{m}p`                |
++--------------+-----------------------------------------------------------------------------------------------------------------------------+
+| NTamTBTerm   | This is transposed version of BTamNTerm :math:`=\int_\Omega w\ \alpha\mathbf{m}\ \nabla^s \mathbf{u}`                       |
++--------------+-----------------------------------------------------------------------------------------------------------------------------+
+| NTcN         | :math:`\int_\Omega q c p`, where ``c`` is constant defined by material model with meaning determined by `ctype` parameter.  |
++--------------+-----------------------------------------------------------------------------------------------------------------------------+
+| NTfTerm      | :math:`\int_\Omega \mathbf{w}\cdot\bar{\mathbf{t}}`, where ``t`` is given flux vector, defined by ``flux #(ra)`` parameter. |
++--------------+-----------------------------------------------------------------------------------------------------------------------------+
+
+Notation
+^^^^^^^^
++----------------------+-------------------------+
+| Symbol               | Description             |
++======================+=========================+
+| q,p                  | scalar valued functions |
++----------------------+-------------------------+
+| :math:`\mathbf{w,u}` | vector valued functions |
++----------------------+-------------------------+
+
+
+
+
+
+.. _IntergarlsSec:
+
+Integrals (symbolic mpm module)
+--------------------------------
+The Integrals in the weak form integrate individual terms. The individual integral record have the following generic syntax:
+
+``Integral #(in)``  ``domain #(in)`` ``set #(in)`` ``term #(in)``
+
+The parameters have following meaning:
+  - The record keyword is always ``Integral``, followed by its number,
+  - ``domain`` determines the domain in which integral is defined (by providing domain number),
+  - ``set`` is the set number, which defines integral domain using set of elements over which the integration is performed. Note that boundary integrals require the presence of boundary elements. 
+  - ``term`` defines term to integrate by providing its number.
+
 

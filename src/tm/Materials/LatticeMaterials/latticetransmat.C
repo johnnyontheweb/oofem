@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -258,10 +258,10 @@ LatticeTransportMaterial :: computeCapacity(double suction, GaussPoint *gp) cons
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 LatticeTransportMaterial :: CreateStatus(GaussPoint *gp) const
 {
-    return new LatticeTransportMaterialStatus(gp);
+    return std::make_unique<LatticeTransportMaterialStatus>(gp);
 }
 
 

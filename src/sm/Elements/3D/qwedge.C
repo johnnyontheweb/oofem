@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -58,15 +58,14 @@ FEI3dWedgeQuad QWedge :: interpolation;
 QWedge :: QWedge(int n, Domain *aDomain) : Structural3DElement(n, aDomain), ZZNodalRecoveryModelInterface(this), SpatialLocalizerInterface(this)
 {
     numberOfDofMans = 15;
+    numberOfGaussPoints = 9;
 }
 
 
 void
-QWedge :: initializeFrom(InputRecord &ir)
+QWedge :: initializeFrom(InputRecord &ir, int priority)
 {
-    numberOfGaussPoints = 9;
-
-    Structural3DElement :: initializeFrom(ir);
+    Structural3DElement :: initializeFrom(ir, priority);
 }
 
 FEInterpolation *

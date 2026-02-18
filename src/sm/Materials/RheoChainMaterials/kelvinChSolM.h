@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -69,8 +69,8 @@ class KelvinChainSolidMaterial : public RheoChainMaterial
 public:
     KelvinChainSolidMaterial(int n, Domain * d);
 
-    void giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep) override;
-    void computeHiddenVars(GaussPoint *gp, TimeStep *tStep);
+    void giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep) const override;
+    void computeHiddenVars(GaussPoint *gp, TimeStep *tStep) const;
 
     // identification and auxiliary functions
     const char *giveClassName() const override { return "KelvinChainSolidMaterial"; }
@@ -84,7 +84,7 @@ public:
 
     void giveEigenStrainVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep, ValueModeType mode) const override;
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override;
 
     /// Evaluation of the creep compliance function - function useless here
     double computeCreepFunction(double ofAge, double tPrime, GaussPoint *gp, TimeStep *tStep) const override;

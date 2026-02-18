@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -69,10 +69,10 @@ TutorialMaterial :: giveInputRecord(DynamicInputRecord &ir)
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 TutorialMaterial :: CreateStatus(GaussPoint *gp) const
 {
-    return new TutorialMaterialStatus(gp);
+    return std::make_unique<TutorialMaterialStatus>(gp);
 }
 
 

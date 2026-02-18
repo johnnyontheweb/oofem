@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -173,8 +173,8 @@ FloatArrayF<6> SimpleVitrificationMaterial :: giveThermalDilatationVector(GaussP
 }
 
 
-MaterialStatus *SimpleVitrificationMaterial :: CreateStatus(GaussPoint *gp) const
+std::unique_ptr<MaterialStatus> SimpleVitrificationMaterial :: CreateStatus(GaussPoint *gp) const
 {
-    return new StructuralMaterialStatus(gp);
+    return std::make_unique<StructuralMaterialStatus>(gp);
 }
 } // end namespace oofem

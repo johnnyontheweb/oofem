@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2019   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -211,7 +211,7 @@ public:
 
     double computeDeltaDissipation3d(double omega, const FloatArrayF< 6 > &reducedStrain, GaussPoint *gp, TimeStep *atTime) const;
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override;
 
     double give(int aProperty, GaussPoint *gp) const override;
 

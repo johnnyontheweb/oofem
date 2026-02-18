@@ -18,6 +18,7 @@ struct PrintStatistics {
     double distance_moved    = 0; /**< The total distance moved by the printer. */
     double filament_extruded = 0; /**< The total amount of filament extruded by the printer. */
     double time              = 0; /**< The total time taken by the printer to process commands. */
+    int    nunber_of_commands = 0; /**< The total number of commands processed by the printer. */
 };
 
 /**
@@ -59,8 +60,14 @@ struct PrinterOptions {
 
     LayerHeightModel layerHeightModel = LayerHeightModel::Constant; /**< The layer height model of the printer. */
     double layerHeight                = 0.2; /**< The layer height value. */
+    double extrusionWidth             = 0.4 * 1.2;
+    double depositionTemperature      = 235.; /** Temperature of deposited material */
+    double heatBedTemperature         = 60.; /* heat bed temperature */
+    double chamberTemperature         = 30.; /* air temperature in printer chamber*/
+    double heatTransferFilmCoefficient= 10.;  /* film coefficient for heat transfer between deposited material and air*/
+    double depositedMaterialHeatPower = 4200000.0; /* power = specificHeat * density */
 
-    double filamentDiameter = 1.75; /**< The diameter of the filament. */
+    double filamentDiameter = 1.75; /**< The diameter of the filament. Not used*/
 };
 
 /**
@@ -81,7 +88,15 @@ public:
         voxelGrid          = { { options.steps[0], options.steps[1], options.steps[2] }, { options.sizes[0], options.sizes[1], options.sizes[2] } };
         layer_height_model = options.layerHeightModel;
         layer_height       = options.layerHeight;
+        extrusion_width    = options.extrusionWidth;
+
         filament_diameter  = options.filamentDiameter;
+
+        depositionTemperature = options.depositionTemperature; 
+        heatBedTemperature    = options.heatBedTemperature;
+        chamberTemperature    = options.chamberTemperature;
+        heatTransferFilmCoefficient= options.heatTransferFilmCoefficient;
+        depositedMaterialHeatPower = options.depositedMaterialHeatPower;
 
         registerCallbacks();
     }
@@ -132,6 +147,7 @@ public:
         auto it = commandCallbacks.find( command.getCode() );
         if ( it != commandCallbacks.end() ) {
             // Execute the callback associated with the command code
+            this->statistics.nunber_of_commands++;
             it->second( command );
         } else {
             // Handle unknown command
@@ -361,8 +377,13 @@ public:
             if ( dxy > 0 && de > 0 && dz == 0 ) {
                 // Activate grid elements
                 double h   = layer_height_model == LayerHeightModel::Constant ? layer_height : 0.2;
+#if 0                
                 double r   = filament_diameter / 2;
                 double w   = M_PI * r * r * de / ( dxy * h );
+#else
+                double w = extrusion_width;
+#endif
+
                 Model move = get_model( prev_position, position, h, w );
 
                 auto pt  = voxelGrid.get_indices_from_point( { prev_position[0], prev_position[1], prev_position[2] } );
@@ -419,6 +440,7 @@ public:
                 }
             }
         }
+        //printf("[%d] G1: Ts=%.2f, Te=%.2f, dist=%.2f, h=%.2f, E=%.2f\n", this->statistics.nunber_of_commands, statistics.time-move_time, statistics.time, distance, prev_position[2], eValue.value_or(0.0));
     }
 
     /**
@@ -468,8 +490,14 @@ private:
     // Dimensions
     LayerHeightModel layer_height_model = LayerHeightModel::Constant; /**< The layer height model of the printer. */
     double layer_height                 = 0.2; /**< The layer height value. */
-    double nozzle_diameter              = 0.4; /**< Nozzle diameter */
-    double filament_diameter            = 1.75; /**< Filament diameter */
+    double nozzle_diameter              = 0.4; /**< Nozzle diameter, not used */
+    double filament_diameter            = 1.75; /**< Filament diameter, not used */
     double extrusion_multiplier         = 1.0; /**< Extrusion multiplier */
     double extrusion_width              = nozzle_diameter * 1.2; /**< Current extrusion width */
+public:
+    double depositionTemperature      = 235.; /** Temperature of deposited material */
+    double heatBedTemperature         = 60.; /* heat bed temperature */
+    double chamberTemperature         = 30.; /* air temperature in printer chamber*/
+    double heatTransferFilmCoefficient= 10.;  /* film coefficient for heat transfer between deposited material and air*/
+    double depositedMaterialHeatPower = 4200000.0; /* power = specificHeat * density */
 };

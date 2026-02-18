@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2019   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -54,8 +54,6 @@ class LatticeStructuralElement : public StructuralElement
 {
 public:
     LatticeStructuralElement(int n, Domain *d);
-
-    void initializeFrom(InputRecord &ir) override;
 
     void printOutputAt(FILE *file, TimeStep *tStep) override;
 

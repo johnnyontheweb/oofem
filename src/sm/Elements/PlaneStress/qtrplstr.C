@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -84,14 +84,6 @@ QTrPlaneStress2d :: giveInterface(InterfaceType interface)
     }
 
     return NULL;
-}
-
-
-void
-QTrPlaneStress2d :: initializeFrom(InputRecord &ir)
-{
-    numberOfGaussPoints = 4;
-    PlaneStressElement :: initializeFrom(ir);
 }
 
 

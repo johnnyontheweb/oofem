@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -651,8 +651,7 @@ void
 SimpleCrossSection::createMaterialStatus(GaussPoint &iGP)
 {
     Material *mat = domain->giveMaterial(materialNumber);
-    MaterialStatus *matStat = mat->CreateStatus(& iGP);
-    iGP.setMaterialStatus(matStat);
+    iGP.setMaterialStatus(mat->CreateStatus(& iGP));
 }
 
 

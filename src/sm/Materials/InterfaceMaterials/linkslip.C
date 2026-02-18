@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -104,10 +104,10 @@ LinkSlip :: initializeFrom(InputRecord &ir)
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 LinkSlip :: CreateStatus(GaussPoint *gp) const
 {
-    return new LinkSlipStatus(gp);
+    return std::make_unique<LinkSlipStatus>(gp);
 }
   
 double
@@ -168,7 +168,7 @@ LinkSlip :: giveEngTraction_3d(const FloatArrayF<3> &jump, GaussPoint *gp, TimeS
 
     if ( f > 0 ) { //plastic response.
         //Reduced stress by increasing plastic strain.
-        traction.at(1) = evaluateBondStress(tempKappa);;
+      traction.at(1) = sgn(traction.at(1)) * evaluateBondStress(tempKappa);
     }
 
     //Compute the lateral stress components

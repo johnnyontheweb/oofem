@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -87,10 +87,10 @@ Truss1dGradDamage :: giveDofManDofIDMask_d(IntArray &answer) const
 
 
 void
-Truss1dGradDamage :: initializeFrom(InputRecord &ir)
+Truss1dGradDamage :: initializeFrom(InputRecord &ir, int priority)
 {
     GradientDamageElement :: initializeFrom(ir);
-    StructuralElement :: initializeFrom(ir);
+    StructuralElement :: initializeFrom(ir, priority);
 }
 
 

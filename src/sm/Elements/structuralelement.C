@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -518,18 +518,16 @@ StructuralElement :: computeResultingIPTemperatureAt(FloatArray &answer, TimeSte
     //}
     // --------------------------------------------------------------------------------
     // add exact end forces due to nonnodal loading applied indirectly (via sets)
-    if ( this->number >0) {    
-        BCTracker *bct = this->domain->giveBCTracker();
-        BCTracker::entryListType bcList = bct->getElementRecords(this->number);
+    BCTracker *bct = this->domain->giveBCTracker();
+    const BCTracker::entryListType& bcList = bct->getElementRecords(this->number);
     
-        for (BCTracker::entryListType::iterator it = bcList.begin(); it != bcList.end(); ++it) {
-          GeneralBoundaryCondition *bc = this->domain->giveBc((*it).bcNumber);
-                if ( ( load = dynamic_cast< StructuralTemperatureLoad * >( bc ) ) ) {
-                if  ( bc->giveSetNumber() && bc->isImposed(tStep) ) {
-                    if ( load->giveBCValType() == TemperatureBVT ) {
-                        load->computeValueAt(temperature, tStep, gCoords, mode);
-                        answer.add(temperature);
-                    }
+    for (BCTracker::entryListType::const_iterator it = bcList.begin(); it != bcList.end(); ++it) {
+      GeneralBoundaryCondition *bc = this->domain->giveBc((*it).bcNumber);
+            if ( ( load = dynamic_cast< StructuralTemperatureLoad * >( bc ) ) ) {
+            if  ( bc->giveSetNumber() && bc->isImposed(tStep) ) {
+                if ( load->giveBCValType() == TemperatureBVT ) {
+                    load->computeValueAt(temperature, tStep, gCoords, mode);
+                    answer.add(temperature);
                 }
             }
         }
@@ -1267,12 +1265,6 @@ StructuralElement :: adaptiveUpdate(TimeStep *tStep)
     }
 
     return result;
-}
-
-void
-StructuralElement :: initializeFrom(InputRecord &ir)
-{
-    Element :: initializeFrom(ir);
 }
 
 void StructuralElement :: giveInputRecord(DynamicInputRecord &input)

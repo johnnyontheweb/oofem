@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -533,8 +533,8 @@ void FiberedCrossSection::createMaterialStatus(GaussPoint &iGP)
     for ( int i = 1; i <= fiberMaterials.giveSize(); i++ ) {
         GaussPoint *fiberGp = this->giveSlaveGaussPoint(& iGP, i - 1);
         Material *mat = domain->giveMaterial(fiberMaterials.at(i) );
-        MaterialStatus *matStat = mat->CreateStatus(fiberGp);
-        iGP.setMaterialStatus(matStat);
+        //MaterialStatus *matStat = mat->CreateStatus(fiberGp);
+        iGP.setMaterialStatus(mat->CreateStatus(fiberGp));
     }
 }
 
@@ -564,7 +564,7 @@ FiberedCrossSection::giveSlaveGaussPoint(GaussPoint *masterGp, int i) const
         for ( int j = 0; j < fiberMaterials.giveSize(); j++ ) {
             // in gp - is stored isoparametric coordinate (-1,1) of z-coordinate
             masterGp->gaussPoints [ j ] = new GaussPoint(masterGp->giveIntegrationRule(), j + 1,
-                                                         { fiberYcoords.at(j + 1), fiberZcoords.at(j + 1) }, 0., slaveMode);
+                                                         Vec2( fiberYcoords.at(j + 1), fiberZcoords.at(j + 1) ), 0., slaveMode);
         }
 
         slave = masterGp->gaussPoints [ i ];

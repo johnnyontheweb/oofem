@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -46,6 +46,7 @@
 
 namespace oofem {
 class FEI3dHexaLin;
+class ParamKey;
 
 /**
  * This class implements a Linear 8-noded shell like solid with ANS and EAS to remove and reduce certain locking aspects
@@ -57,6 +58,7 @@ class SolidShell  : public LSpace
 {
 protected:
     static FEI3dHexaLin interpolation;
+    static ParamKey IPK_SolidShell_EAS_type;
 
 public:
     SolidShell(int n, Domain * d);

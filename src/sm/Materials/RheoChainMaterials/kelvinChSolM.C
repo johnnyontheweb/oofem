@@ -9,7 +9,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -60,16 +60,20 @@ KelvinChainSolidMaterial :: giveEModulus(GaussPoint *gp, TimeStep *tStep) const
     if ( ! Material :: isActivated( tStep ) ) {
         OOFEM_ERROR("Attempted to evaluate E modulus at time lower than casting time");
     }
-
-    if ( this->EparVal.isEmpty() ) {
-        this->updateEparModuli(0., gp, tStep); // stiffnesses are time independent (evaluated at time t = 0.)
-    }
-
     double sum = 0.0;
-    for ( int mu = 1; mu <= nUnits; mu++ ) {
-        double lambdaMu = this->computeLambdaMu(gp, tStep, mu);
-        double Emu = this->giveEparModulus(mu);
-        sum += ( 1 - lambdaMu ) / Emu;
+    #ifdef _OPENMP
+        #pragma omp critical (KelvinChainSolidMaterial_EModulus)
+    #endif
+    {
+        if ( this->EparVal.isEmpty() ) {
+            this->updateEparModuli(0., gp, tStep); // stiffnesses are time independent (evaluated at time t = 0.)
+        }
+
+        for ( int mu = 1; mu <= nUnits; mu++ ) {
+            double lambdaMu = this->computeLambdaMu(gp, tStep, mu);
+            double Emu = this->giveEparModulus(mu);
+            sum += ( 1 - lambdaMu ) / Emu;
+        }
     }
 
     double v = this->computeSolidifiedVolume(gp, tStep);
@@ -150,7 +154,7 @@ KelvinChainSolidMaterial :: computeLambdaMu(GaussPoint *gp, TimeStep *tStep, int
 
 
 void
-KelvinChainSolidMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep)
+KelvinChainSolidMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep) const
 {
     RheoChainMaterial :: giveRealStressVector(answer, gp, reducedStrain, tStep);
 
@@ -160,7 +164,7 @@ KelvinChainSolidMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint 
 
 
 void
-KelvinChainSolidMaterial :: computeHiddenVars(GaussPoint *gp, TimeStep *tStep)
+KelvinChainSolidMaterial :: computeHiddenVars(GaussPoint *gp, TimeStep *tStep) const
 {
     /*
      * Updates hidden variables used to effectively trace the load history
@@ -217,13 +221,13 @@ KelvinChainSolidMaterial :: computeHiddenVars(GaussPoint *gp, TimeStep *tStep)
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 KelvinChainSolidMaterial :: CreateStatus(GaussPoint *gp) const
 /*
  * creates a new material status corresponding to this class
  */
 {
-    return new KelvinChainSolidMaterialStatus(gp, nUnits);
+    return std::make_unique<KelvinChainSolidMaterialStatus>(gp, nUnits);
 }
 
 void

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -133,7 +133,7 @@ public:
         return answer;
     }
 
-    void giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep) override;
+    void giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep) const override;
 
     FloatMatrixF< 1, 1 >give1dStressStiffMtrx(MatResponseMode mode, GaussPoint *gp, TimeStep *tStep) const override;
 
@@ -141,22 +141,22 @@ public:
      * evaluates stress-related strain - subtracts not only temperature strains but also strains caused by steel relaxation
      */
     void giveStressDependentPartOfStrainVector(FloatArray &answer, GaussPoint *gp, const FloatArray &totalStrain,
-                                               TimeStep *tStep, ValueModeType mode);
+                                               TimeStep *tStep, ValueModeType mode) const;
     /**
      * evaluates eigenstrain due to steel relaxation
      */
     void computeStressRelaxationStrainVector(FloatArray &answer, GaussPoint *gp, const FloatArray &totalStrain,
-                                             TimeStep *tStep, ValueModeType mode);
+                                             TimeStep *tStep, ValueModeType mode) const;
 
     /**
      * computes steel relaxation (eurocode formula)
      */
-    void evalStressRelaxationAtConstStrain(double &answer, GaussPoint *gp, double dt);
+    void evalStressRelaxationAtConstStrain(double &answer, GaussPoint *gp, double dt) const;
 
     /**
      * implementation of cumulative time approach according to Eurocode to get prestress loss at variable strain
      */
-    void computeIncrOfPrestressLossAtVarStrain(double &answer, GaussPoint *gp, TimeStep *tStep, double stress);
+    void computeIncrOfPrestressLossAtVarStrain(double &answer, GaussPoint *gp, TimeStep *tStep, double stress) const;
 
     void initializeFrom(InputRecord &ir) override;
 
@@ -169,7 +169,7 @@ public:
     const char *giveInputRecordName() const override { return _IFT_SteelRelaxMat_Name; }
     const char *giveClassName() const override { return "SteelRelaxMat"; }
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override;
 
     int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 };

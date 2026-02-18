@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -272,14 +272,10 @@ RerShell :: giveArea()
 
 
 void
-RerShell :: initializeFrom(InputRecord &ir)
+RerShell :: initializeFrom(InputRecord &ir, int priority)
 {
+    StructuralElement :: initializeFrom(ir, priority);
     numberOfGaussPoints = 1;
-    StructuralElement :: initializeFrom(ir);
-
-    if ( numberOfGaussPoints != 1 ) {
-        numberOfGaussPoints = 1;
-    }
 }
 
 

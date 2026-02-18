@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -705,10 +705,10 @@ DruckerPragerPlasticitySM :: giveIPValue(FloatArray &answer,
     }
 }
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 DruckerPragerPlasticitySM :: CreateStatus(GaussPoint *gp) const
 {
-    return new DruckerPragerPlasticitySMStatus(gp);
+    return std::make_unique<DruckerPragerPlasticitySMStatus>(gp);
 }
 
 

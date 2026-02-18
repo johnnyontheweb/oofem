@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -65,7 +65,6 @@ public:
     void giveDofManDofIDMask(int inode, IntArray &answer) const override;
 
     // definition & identification
-    void initializeFrom(InputRecord &ir) override;
     const char *giveInputRecordName() const override { return _IFT_LTRSpaceBoundaryTruss_Name; }
     const char *giveClassName() const override { return "LTRSpaceBoundaryTruss"; }
 };

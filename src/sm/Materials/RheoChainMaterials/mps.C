@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2015   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -231,9 +231,21 @@ MPSMaterial::initializeFrom(InputRecord &ir)
     if ( mode == 0 ) { // default - estimate model parameters q1,..,q4 from composition
         IR_GIVE_FIELD(ir, fc, _IFT_MPSMaterial_fc); // 28-day standard cylinder compression strength [MPa]
         IR_GIVE_FIELD(ir,  c, _IFT_MPSMaterial_cc); // cement content of concrete [kg/m^3]
-        IR_GIVE_FIELD(ir, wc, _IFT_MPSMaterial_wc); // ratio (by weight) of water to cementitious material
-        IR_GIVE_FIELD(ir, ac, _IFT_MPSMaterial_ac); // ratio (by weight) of aggregate to cement
+        if ( ir.hasField(_IFT_MPSMaterial_wc) ) { // ratio (by weight) of water to cementitious material
+            IR_GIVE_FIELD(ir, wc, _IFT_MPSMaterial_wc);
+        } else if (ir.hasField(_IFT_MPSMaterial_wcr)) {
+            IR_GIVE_FIELD(ir, wc, _IFT_MPSMaterial_wcr);
+        } else {
+            throw ValueInputException(ir, "none", "w/c not defined");
+        }
 
+        if ( ir.hasField(_IFT_MPSMaterial_ac)){  // ratio (by weight) of aggregate to cement
+            IR_GIVE_FIELD(ir, ac, _IFT_MPSMaterial_ac);
+        } else if ( ir.hasField(_IFT_MPSMaterial_acr)){
+            IR_GIVE_FIELD(ir, ac, _IFT_MPSMaterial_acr);
+        } else {
+            throw ValueInputException(ir, "none", "a/c not defined");
+        }
         this->predictParametersFrom(fc, c, wc, ac);
     } else { // read model parameters for creep
         IR_GIVE_FIELD(ir, q1, _IFT_MPSMaterial_q1);
@@ -452,7 +464,7 @@ MPSMaterial::initializeFrom(InputRecord &ir)
 
 
 void
-MPSMaterial::giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep)
+MPSMaterial::giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep) const
 {
     KelvinChainSolidMaterial::giveRealStressVector(answer, gp, reducedStrain, tStep);
 
@@ -557,13 +569,13 @@ MPSMaterial::giveShrinkageStrainVector(FloatArray &answer,
     return;
 }
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 MPSMaterial::CreateStatus(GaussPoint *gp) const
 /*
  * creates a new material status corresponding to this class
  */
 {
-    return new MPSMaterialStatus(gp, nUnits);
+    return std::make_unique<MPSMaterialStatus>(gp, nUnits);
 }
 
 
@@ -736,13 +748,18 @@ MPSMaterial::giveEModulus(GaussPoint *gp, TimeStep *tStep) const
     if ( status->giveStoredEmodulusFlag() ) {
         Emodulus = status->giveStoredEmodulus();
     } else {
-        if ( EparVal.giveSize() == 0 ) {
-            this->updateEparModuli(0., gp, tStep); // stiffnesses are time independent (evaluated at time t = 0.)
-        }
+        #ifdef _OPENMP
+            #pragma omp critical (MPS_Emodulus)
+        #endif
+        { // critical section as EparVal is a class variable; if the receiver is slave model (e.g. ConcreteFCMViscoElastic) 
+          // it can be shared by several master models with different parameters
+            if ( EparVal.giveSize() == 0 ) {
+                this->updateEparModuli(0., gp, tStep); // stiffnesses are time independent (evaluated at time t = 0.)
+            }
 
-        // contribution of the solidifying Kelving chain
-        sum = KelvinChainSolidMaterial::giveEModulus(gp, tStep);
-
+            // contribution of the solidifying Kelving chain
+            sum = KelvinChainSolidMaterial::giveEModulus(gp, tStep);
+        }      
         v = computeSolidifiedVolume(gp, tStep);
 
         dt = tStep->giveTimeIncrement();

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2016   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -102,19 +102,19 @@ public:
     const char *giveClassName() const override { return "ConcreteFCMViscoElastic"; }
     const char *giveInputRecordName() const override { return _IFT_ConcreteFCMViscoElastic_Name; }
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new ConcreteFCMViscoElasticStatus(gp); }
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override { return std::make_unique<ConcreteFCMViscoElasticStatus>(gp); }
 
     double give(int aProperty, GaussPoint *gp) const override;
 
     void giveRealStressVector(FloatArray &answer, GaussPoint *gp,
-                                      const FloatArray &reducedStrain, TimeStep *tStep) override;
+                                      const FloatArray &reducedStrain, TimeStep *tStep) const override;
 
     FloatArray computeStressIndependentStrainVector(GaussPoint *gp, TimeStep *tStep, ValueModeType mode) const override;
 
     
     int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
     
-    MaterialStatus *giveStatus(GaussPoint *gp) const override;
+    MaterialStatus* giveStatus(GaussPoint *gp) const override;
 
 protected:
     /// number of the viscoelastic material
@@ -131,18 +131,18 @@ protected:
     double stiffnessFactor = 0.;    
 
 
-    double giveTensileStrength(GaussPoint *gp, TimeStep *tStep) override;
-    double giveFractureEnergy(GaussPoint *gp, TimeStep *tStep) override;    
+    double giveTensileStrength(GaussPoint *gp, TimeStep *tStep) const override;
+    double giveFractureEnergy(GaussPoint *gp, TimeStep *tStep) const override;    
 
    
-    double computeOverallElasticStiffness(GaussPoint *gp, TimeStep *tStep) override;
-    double computeOverallElasticShearModulus(GaussPoint *gp, TimeStep *tStep) override;
+    double computeOverallElasticStiffness(GaussPoint *gp, TimeStep *tStep) const override;
+    double computeOverallElasticShearModulus(GaussPoint *gp, TimeStep *tStep) const override;
     
 
     int checkConsistency(void) override; 
    
     /// returns equivalent time (used to compute time-dependent ft and gf)
-    virtual double giveEquivalentTime(GaussPoint *gp, TimeStep *tStep);
+    virtual double giveEquivalentTime(GaussPoint *gp, TimeStep *tStep) const;
 
 };
 } // end namespace oofem

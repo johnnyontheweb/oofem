@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -45,23 +45,26 @@
 #include "intarray.h"
 #include "mathfem.h"
 #include "classfactory.h"
+#include "parametermanager.h"
+#include "paramkey.h"
 
 
 namespace oofem {
 REGISTER_Element(Truss3dnl);
+ParamKey Truss3dnl::IPK_Truss3dnl_initialStretch("initstretch");
 
 Truss3dnl :: Truss3dnl(int n, Domain *aDomain) : Truss3d(n, aDomain)
 {
+  initialStretch = 1;
 }
 
 
 void
-Truss3dnl :: initializeFrom(InputRecord &ir)
+Truss3dnl :: initializeFrom(InputRecord &ir, int priority)
 {
-  Truss3d :: initializeFrom(ir);
-    initialStretch      = 1;
-    numberOfGaussPoints = 1;
-  IR_GIVE_OPTIONAL_FIELD(ir, initialStretch, _IFT_Truss3dnl_initialStretch);
+  Truss3d :: initializeFrom(ir, priority);
+  ParameterManager &ppm = this->giveDomain()->dofmanPPM;
+  PM_UPDATE_PARAMETER(initialStretch, ppm, ir, this->number, IPK_Truss3dnl_initialStretch, priority) ;
 }
 
   
@@ -217,7 +220,7 @@ Truss3dnl :: computeBnlMatrixAt(GaussPoint *gp, FloatMatrix &answer, TimeStep *t
   if(!lin) {
     factor /= 2;
   } 
-  Bnl.beProductOf(A,d);
+  Bnl.beProductOf(A,FloatMatrix::fromArray(d));
   Bnl.times(factor);
   answer.beTranspositionOf(Bnl);
   

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -518,10 +518,10 @@ DustMaterial :: giveIPValue(FloatArray &answer,
     // return 0;
 }
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 DustMaterial :: CreateStatus(GaussPoint *gp) const
 {
-    return new DustMaterialStatus(gp, this->giveQ0() );
+    return std::make_unique<DustMaterialStatus>(gp, this->giveQ0() );
 }
 
 double

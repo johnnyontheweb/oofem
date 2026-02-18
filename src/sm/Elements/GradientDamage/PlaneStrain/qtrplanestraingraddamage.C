@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -96,10 +96,10 @@ QTrPlaneStrainGradDamage :: giveDofManDofIDMask_d(IntArray &answer) const
   
 
 void
-QTrPlaneStrainGradDamage :: initializeFrom(InputRecord &ir)
+QTrPlaneStrainGradDamage :: initializeFrom(InputRecord &ir, int priority)
 {
     numberOfGaussPoints = 4;
-    QTrPlaneStrain :: initializeFrom(ir);
+    QTrPlaneStrain :: initializeFrom(ir, priority);
 }
 
 void

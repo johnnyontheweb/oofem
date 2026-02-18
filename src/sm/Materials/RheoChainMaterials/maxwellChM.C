@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -121,21 +121,25 @@ MaxwellChainMaterial :: giveEModulus(GaussPoint *gp, TimeStep *tStep) const
     }
 
     double tPrime = this->relMatAge - this->castingTime + ( tStep->giveTargetTime() - 0.5 * tStep->giveTimeIncrement() ) / timeFactor;
-    this->updateEparModuli(tPrime, gp, tStep);
+    #ifdef _OPENMP
+        #pragma omp critical (MaxwellChainMaterial_EModulus)
+    #endif
+    {
+        this->updateEparModuli(tPrime, gp, tStep);
 
-    for ( int mu = 1; mu <= nUnits; mu++ ) {
-        double deltaYmu = tStep->giveTimeIncrement() / timeFactor / this->giveCharTime(mu);
-        if ( deltaYmu <= 0.0 ) {
-            deltaYmu = 1.e-3;
+        for ( int mu = 1; mu <= nUnits; mu++ ) {
+            double deltaYmu = tStep->giveTimeIncrement() / timeFactor / this->giveCharTime(mu);
+            if ( deltaYmu <= 0.0 ) {
+                deltaYmu = 1.e-3;
+            }
+
+            deltaYmu = pow( deltaYmu, this->giveCharTimeExponent(mu) );
+
+            double lambdaMu = ( 1.0 - exp(-deltaYmu) ) / deltaYmu;
+            double Emu = this->giveEparModulus(mu); // previously updated by updateEparModuli
+            E += lambdaMu * Emu;
         }
-
-        deltaYmu = pow( deltaYmu, this->giveCharTimeExponent(mu) );
-
-        double lambdaMu = ( 1.0 - exp(-deltaYmu) ) / deltaYmu;
-        double Emu = this->giveEparModulus(mu); // previously updated by updateEparModuli
-        E += lambdaMu * Emu;
     }
-
     return E;
 }
 
@@ -190,7 +194,7 @@ MaxwellChainMaterial :: giveEigenStrainVector(FloatArray &answer,
 
 
 void
-MaxwellChainMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep)
+MaxwellChainMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep) const
 {
     RheoChainMaterial :: giveRealStressVector(answer, gp, reducedStrain, tStep);
 
@@ -200,7 +204,7 @@ MaxwellChainMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint *gp,
 
 
 void
-MaxwellChainMaterial :: computeHiddenVars(GaussPoint *gp, TimeStep *tStep)
+MaxwellChainMaterial :: computeHiddenVars(GaussPoint *gp, TimeStep *tStep) const
 {
     /*
      * Updates hidden variables used to effectively trace the load history
@@ -261,10 +265,10 @@ MaxwellChainMaterial :: computeHiddenVars(GaussPoint *gp, TimeStep *tStep)
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 MaxwellChainMaterial :: CreateStatus(GaussPoint *gp) const
 {
-    return new MaxwellChainMaterialStatus(gp, nUnits);
+    return std::make_unique<MaxwellChainMaterialStatus>(gp, nUnits);
 }
 
 

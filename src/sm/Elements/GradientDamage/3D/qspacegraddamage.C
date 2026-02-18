@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -57,14 +57,15 @@ QSpaceGradDamage :: QSpaceGradDamage(int n, Domain *aDomain) :  QSpace(n, aDomai
     totalSize = nPrimVars * nPrimNodes + nSecVars * nSecNodes;
     locSize   = nPrimVars * nPrimNodes;
     nlSize    = nSecVars * nSecNodes;
+    numberOfGaussPoints = 27;
 }
 
 
 void
-QSpaceGradDamage :: initializeFrom(InputRecord &ir)
+QSpaceGradDamage :: initializeFrom(InputRecord &ir, int priority)
 {
     numberOfGaussPoints = 27;
-    Structural3DElement :: initializeFrom(ir);
+    Structural3DElement :: initializeFrom(ir, priority);
 }
 
 

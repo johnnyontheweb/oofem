@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -53,15 +53,14 @@ FEI3dHexaQuad QSpace :: interpolation;
 QSpace :: QSpace(int n, Domain *aDomain) : Structural3DElement(n, aDomain), ZZNodalRecoveryModelInterface(this), SpatialLocalizerInterface(this)
 {
     numberOfDofMans = 20;
+    numberOfGaussPoints = 27;
 }
 
 
 void
-QSpace :: initializeFrom(InputRecord &ir)
+QSpace :: initializeFrom(InputRecord &ir, int priority)
 {
-    numberOfGaussPoints = 27;
-
-    Structural3DElement :: initializeFrom(ir);
+    Structural3DElement :: initializeFrom(ir, priority);
 }
 
 

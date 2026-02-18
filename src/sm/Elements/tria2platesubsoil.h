@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2014   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -68,8 +68,6 @@ public:
     const char *giveInputRecordName() const override { return _IFT_Tria2PlateSubSoil_Name; }
     const char *giveClassName() const override { return "Tria2PlateSubSoil"; }
     Element_Geometry_Type giveGeometryType() const override {return EGT_triangle_2;}
-
-    void initializeFrom(InputRecord &ir) override;
 
     int computeNumberOfDofs() override { return 6; }
     

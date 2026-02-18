@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -643,15 +643,15 @@ Eurocode2CreepMaterial :: computeIncrementOfAutogenousShrinkageVector(FloatArray
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 Eurocode2CreepMaterial :: CreateStatus(GaussPoint *gp) const
 {
-    return new Eurocode2CreepMaterialStatus(gp, nUnits);
+    return std::make_unique<Eurocode2CreepMaterialStatus>(gp, nUnits);
 }
 
 
 void
-Eurocode2CreepMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep)
+Eurocode2CreepMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep) const
 {
     KelvinChainMaterial :: giveRealStressVector(answer, gp, reducedStrain, tStep);
 

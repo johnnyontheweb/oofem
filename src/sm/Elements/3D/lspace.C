@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -44,6 +44,8 @@
 #include "mathfem.h"
 #include "crosssection.h"
 #include "classfactory.h"
+#include "parametermanager.h"
+#include "paramkey.h"
 
 #ifdef __OOFEG
  #include "oofeggraphiccontext.h"
@@ -55,6 +57,7 @@ namespace oofem {
 REGISTER_Element(LSpace);
 
 FEI3dHexaLin LSpace :: interpolation;
+ParamKey LSpace::IPK_LSpace_reducedShearIntegration("reducedshearint");
 
 LSpace :: LSpace(int n, Domain *aDomain) : Structural3DElement(n, aDomain), ZZNodalRecoveryModelInterface(this),
     SPRNodalRecoveryModelInterface(), SpatialLocalizerInterface(this),
@@ -63,6 +66,7 @@ LSpace :: LSpace(int n, Domain *aDomain) : Structural3DElement(n, aDomain), ZZNo
 {
     numberOfDofMans  = 8;
     numberOfGaussPoints = 8;
+    reducedShearIntegration = false;
 }
 
 
@@ -88,11 +92,11 @@ LSpace :: giveInterface(InterfaceType interface)
 
 
 void
-LSpace :: initializeFrom(InputRecord &ir)
+LSpace :: initializeFrom(InputRecord &ir, int priority)
 {
-    numberOfGaussPoints = 8;
-    Structural3DElement :: initializeFrom(ir);
-    this->reducedShearIntegration = ir.hasField(_IFT_LSpace_reducedShearIntegration);
+    Structural3DElement :: initializeFrom(ir, priority);
+    ParameterManager &ppm = this->giveDomain()->elementPPM;
+    PM_UPDATE_PARAMETER(reducedShearIntegration, ppm, ir, this->number, IPK_LSpace_reducedShearIntegration, priority) ;
 }
 
 
@@ -763,7 +767,7 @@ LSpace :: computeLoadLSToLRotationMatrix(FloatMatrix &answer, int isurf, GaussPo
         h1.normalize();
         h2 = domain->giveNode( snodes.at(j) )->giveCoordinates();
         h2.subtract(gc);
-        h2.normalize();	
+        h2.normalize();
         n.beVectorProductOf(h1, h2);
 
         nn.add(n);

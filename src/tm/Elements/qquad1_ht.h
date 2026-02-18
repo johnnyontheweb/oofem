@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -68,7 +68,7 @@ public:
 
 
     int computeNumberOfDofs() override { return 4; }
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
     MaterialMode giveMaterialMode() override { return _2dHeat; }
     double giveThicknessAt(const FloatArray &gcoords) override;
 

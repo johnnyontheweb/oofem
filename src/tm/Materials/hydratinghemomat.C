@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -258,9 +258,9 @@ HydratingHeMoMaterial :: giveIPValue(FloatArray &answer, GaussPoint *gp, Interna
     }
 }
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 HydratingHeMoMaterial :: CreateStatus(GaussPoint *gp) const
 {
-    return new HydratingTransportMaterialStatus(gp);
+    return std::make_unique<HydratingTransportMaterialStatus>(gp);
 }
 } // end namespace oofem

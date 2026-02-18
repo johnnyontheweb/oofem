@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -71,13 +71,11 @@ HTSelement :: giveDofManDofIDMask(int inode, IntArray &answer) const
 }
 
 
-void
-HTSelement :: initializeFrom(InputRecord &ir)
+void 
+HTSelement::postInitialize()
 {
-    StructuralElement :: initializeFrom(ir);
+    StructuralElement :: postInitialize();
     numberOfGaussPoints = 8;
-    //IR_GIVE_FIELD(ir, numberOfEdges, _IFT_HTSelement_numberOfEdges, "numberOfEdges");
-    //numberOfEdges = 3;
 
     this->computeCenterOfGravity();
 }

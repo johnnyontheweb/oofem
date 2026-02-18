@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -59,7 +59,7 @@ class SUPGElement2 : public SUPGElement
 public:
     SUPGElement2(int n, Domain * aDomain);
 
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
     void giveInputRecord(DynamicInputRecord &input) override;
 
     // characteristic  matrix

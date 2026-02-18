@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -39,6 +39,12 @@
 #include "bodyload.h"
 
 namespace oofem {
+
+#define _IFT_BTamNTerm_Name "BTamNTerm"
+#define _IFT_NTamTBTerm_Name "NTamTBTerm"
+#define _IFT_NTcN_Name "NTcN"
+
+
 /**
  * @brief A Linear momentum balance equation term ($B^T\sigma(u)$)
  * 
@@ -46,7 +52,7 @@ namespace oofem {
 class BTSigTerm : public Term {
     protected:
     public:
-    BTSigTerm (const Variable &testField, const Variable& unknownField) ;
+    BTSigTerm (const Variable *testField, const Variable* unknownField) ;
 
     /**
      * @brief Evaluates the linearization of $B^T\sigma(u)$, i.e. $B^TDBu$
@@ -76,7 +82,7 @@ class BTSigTerm : public Term {
      * @param cell 
      * @param coords 
      */
-    void grad(FloatMatrix& answer, const Variable &v, const FEInterpolation& interpol, const Element& cell, const FloatArray& coords, const MaterialMode mmode) const  ;
+    void grad(FloatMatrix& answer, const Variable *v, const FEInterpolation* interpol, const Element& cell, const FloatArray& coords, const MaterialMode mmode) const  ;
     
 };
 
@@ -87,7 +93,7 @@ class gNTfTerm : public Term {
     protected:
     MatResponseMode lhsType, rhsType;
     public:
-    gNTfTerm (const Variable &testField, const Variable& unknownField, MatResponseMode lhsType, MatResponseMode rhsType) ;
+    gNTfTerm (const Variable *testField, const Variable* unknownField, MatResponseMode lhsType, MatResponseMode rhsType) ;
 
     /**
      * @brief Evaluates $\bf{H}$ matrix, the linearization of $w^T(\grad N)^T f(p)$, i.e. $(\grad N)^T \bf{k}/\mu \grad p = \bf{H}$
@@ -117,17 +123,19 @@ class gNTfTerm : public Term {
      * @param cell 
      * @param coords 
      */
-    void grad(FloatMatrix& answer, const Variable &v, const FEInterpolation& interpol, const Element& cell, const FloatArray& coords) const ;
+    void grad(FloatMatrix& answer, const Variable *v, const FEInterpolation* interpol, const Element& cell, const FloatArray& coords) const ;
     
 };
 
 /**
  * @brief A continuity equation term $Qp=(B)^T \alpha\bf{m}N_p$. 
  */
-class BTamNTerm : public Term {
+class BTamNTerm : public MPMSymbolicTerm {
     protected:
+        MatResponseMode aType = BiotConstant;
     public:
-    BTamNTerm (const Variable &testField, const Variable& unknownField) ;
+    BTamNTerm() : MPMSymbolicTerm() {}
+    BTamNTerm (const Variable *testField, const Variable* unknownField, MatResponseMode at = BiotConstant) ;
 
     /**
      * @brief Evaluates the linearization of receiver, i.e. the LHS term
@@ -145,7 +153,13 @@ class BTamNTerm : public Term {
      */
     void evaluate (FloatArray&, MPElement& cell, GaussPoint* gp, TimeStep* tstep) const override;
     void getDimensions(Element& cell) const override;
-    void initializeCell(Element& cell) const override;
+    void initializeFrom(InputRecord &ir, EngngModel* problem) override {
+        MPMSymbolicTerm::initializeFrom(ir, problem);
+        int value = 0;
+        IR_GIVE_FIELD(ir, value, "atype");
+        aType = static_cast<MatResponseMode>(value);
+    }
+
 
     protected:
     /**
@@ -157,17 +171,20 @@ class BTamNTerm : public Term {
      * @param cell 
      * @param coords 
      */
-    void grad(FloatMatrix& answer, const Variable &v, const FEInterpolation& interpol, const Element& cell, const FloatArray& coords, const MaterialMode mmode) const ;
+    void grad(FloatMatrix& answer, const Variable *v, const FEInterpolation* interpol, const Element& cell, const FloatArray& coords, const MaterialMode mmode) const ;
     
 };
 
 /**
  * @brief A continuity equation term $Q^T(du\over dt)=(N)^T \alpha\bf{m}^TB du\over dt$. 
  */
-class NTamTBTerm : public Term {
+class NTamTBTerm : public MPMSymbolicTerm {
     protected:
+        MatResponseMode aType = BiotConstant;
+        ValueModeType unknownFieldVMT = VM_Velocity;
     public:
-    NTamTBTerm (const Variable &testField, const Variable& unknownField) ;
+    NTamTBTerm () : MPMSymbolicTerm() {}
+    NTamTBTerm (const Variable *testField, const Variable* unknownField, MatResponseMode at = BiotConstant, ValueModeType unknownFieldVMT = VM_Velocity) ;
 
     /**
      * @brief Evaluates the linearization of receiver, i.e. the LHS term
@@ -185,8 +202,16 @@ class NTamTBTerm : public Term {
      */
     void evaluate (FloatArray&, MPElement& cell, GaussPoint* gp, TimeStep* tstep) const override;
     void getDimensions(Element& cell) const override;
-    void initializeCell(Element& cell) const override;
+    void initializeFrom(InputRecord &ir, EngngModel* problem) override {
+        MPMSymbolicTerm::initializeFrom(ir, problem);
+        int value = 0;
+        IR_GIVE_FIELD(ir, value, "atype");
+        aType = static_cast<MatResponseMode>(value);
 
+        value = unknownFieldVMT; // VM_Velocity
+        IR_GIVE_OPTIONAL_FIELD(ir, value, "uvmt" );
+        unknownFieldVMT = static_cast<ValueModeType>(value);
+    }
     protected:
     /**
      * @brief Evaluates B matrix; i.e. $\grad N$ where $N$ is interpolation matrix of unknown (p)
@@ -197,7 +222,7 @@ class NTamTBTerm : public Term {
      * @param cell 
      * @param coords 
      */
-    void grad(FloatMatrix& answer, const Variable &v, const FEInterpolation& interpol, const Element& cell, const FloatArray& coords, const MaterialMode mmode) const ;
+    void grad(FloatMatrix& answer, const Variable *v, const FEInterpolation* interpol, const Element& cell, const FloatArray& coords, const MaterialMode mmode) const ;
     
 };
 
@@ -205,11 +230,13 @@ class NTamTBTerm : public Term {
 /**
  * @brief A continuity equation compressibility matrix $S=(N_p)^T c\ N_p$, where $c=({\alpha-n}\over{K_s}+{n}\over{K_w})$. 
  */
-class NTcN : public Term {
+class NTcN : public MPMSymbolicTerm {
     protected:
         MatResponseMode ctype;
+        ValueModeType unknownFieldVMT = VM_Velocity;
     public:
-    NTcN (const Variable &testField, const Variable& unknownField, MatResponseMode ctype) ;
+    NTcN () : MPMSymbolicTerm() {}
+    NTcN (const Variable *testField, const Variable* unknownField, MatResponseMode ctype, ValueModeType uFieldVMT = VM_Velocity) ;
 
     /**
      * @brief Evaluates the linearization of term (the lhs contribution)
@@ -227,7 +254,16 @@ class NTcN : public Term {
      */
     void evaluate (FloatArray&, MPElement& cell, GaussPoint* gp, TimeStep* tstep) const override;
     void getDimensions(Element& cell) const override;
-    void initializeCell(Element& cell) const override;
+    void initializeFrom(InputRecord &ir, EngngModel* problem) override {
+        MPMSymbolicTerm::initializeFrom(ir, problem);
+        int value = 0;
+        IR_GIVE_FIELD(ir, value, "ctype");
+        ctype = static_cast<MatResponseMode>(value);
+
+        value = unknownFieldVMT; // VM_Velocity
+        IR_GIVE_OPTIONAL_FIELD(ir, value, "uvmt" );
+        unknownFieldVMT = static_cast<ValueModeType>(value);
+    }
     
 };
 
@@ -237,7 +273,7 @@ class NTcN : public Term {
  */
 class NTfFunctor {
     public:
-  virtual void evaluate(FloatArray& answer, const FloatArray& coords, MPElement& cell, const Variable &testField, TimeStep* tStep) const = 0;
+  virtual void evaluate(FloatArray& answer, const FloatArray& coords, MPElement& cell, const Variable *testField, TimeStep* tStep) const = 0;
 };
 
 
@@ -250,14 +286,14 @@ class BoundaryFluxFunctor: public NTfFunctor {
     public:
     BoundaryFluxFunctor(BoundaryLoad *load, int surf, const IntArray& dofIDs, char btype) : load(load), dofIDs(dofIDs), isurf(surf), type(btype) {}
 
-    void evaluate(FloatArray& answer, const FloatArray& lcoords, MPElement& cell, const Variable &testField, TimeStep* tStep) const override {
+    void evaluate(FloatArray& answer, const FloatArray& lcoords, MPElement& cell, const Variable *testField, TimeStep* tStep) const override {
 
         ValueModeType mode = VM_Total;
         if ( load->giveFormulationType() == Load :: FT_Entity ) {
             load->computeValues(answer, tStep, lcoords, dofIDs, mode);
         } else {
             FloatArray globalIPcoords;
-            testField.interpolation.local2global(globalIPcoords, lcoords, FEIElementGeometryWrapper(&cell) );
+            testField->interpolation->local2global(globalIPcoords, lcoords, FEIElementGeometryWrapper(&cell) );
             load->computeValues(answer, tStep, globalIPcoords, dofIDs, mode);
         }
 
@@ -269,7 +305,7 @@ class BoundaryFluxFunctor: public NTfFunctor {
         } else {
             FloatMatrix T;
             // then to global c.s
-            if ( cell.computeFluxLBToLRotationMatrix(T, isurf, lcoords, testField.q, type )) {
+            if ( cell.computeFluxLBToLRotationMatrix(T, isurf, lcoords, testField->q, type )) {
                 answer.rotatedWith(T, 'n');
             }
         }
@@ -283,14 +319,14 @@ class BodyFluxFunctor: public NTfFunctor {
     public:
     BodyFluxFunctor(BodyLoad *load, const IntArray& dofIDs) : load(load), dofIDs(dofIDs) {}
 
-    void evaluate(FloatArray& answer, const FloatArray& lcoords, MPElement& cell, const Variable &testField, TimeStep* tStep) const override {
+    void evaluate(FloatArray& answer, const FloatArray& lcoords, MPElement& cell, const Variable *testField, TimeStep* tStep) const override {
 
         ValueModeType mode = VM_Total;
         if ( load->giveFormulationType() == Load :: FT_Entity ) {
             load->computeValues(answer, tStep, lcoords, dofIDs, mode);
         } else {
             FloatArray globalIPcoords;
-            testField.interpolation.local2global(globalIPcoords, lcoords, FEIElementGeometryWrapper(&cell) );
+            testField->interpolation->local2global(globalIPcoords, lcoords, FEIElementGeometryWrapper(&cell) );
             load->computeValues(answer, tStep, globalIPcoords, dofIDs, mode);
         }
 
@@ -314,7 +350,7 @@ class NTf_Surface : public Term {
         const NTfFunctor& f;
         int isurf;
     public:
-  NTf_Surface (const Variable &testField, const NTfFunctor& f, int surf) ;
+    NTf_Surface (const Variable *testField, const NTfFunctor& f, int surf) ;
 
     /**
      * @brief Evaluates the linearization of term (the lhs contribution)
@@ -344,7 +380,7 @@ class NTf_Edge : public Term {
         const NTfFunctor& f;
         int isurf;
     public:
-  NTf_Edge (const Variable &testField, const NTfFunctor& f, int surf) ;
+   NTf_Edge (const Variable *testField, const NTfFunctor& f, int surf) ;
 
     /**
      * @brief Evaluates the linearization of term (the lhs contribution)
@@ -373,7 +409,7 @@ class NTf_Body : public Term {
     protected:
         const NTfFunctor& f;
     public:
-  NTf_Body (const Variable &testField, const NTfFunctor& f) ;
+    NTf_Body (const Variable *testField, const NTfFunctor& f) ;
 
     /**
      * @brief Evaluates the linearization of term (the lhs contribution)

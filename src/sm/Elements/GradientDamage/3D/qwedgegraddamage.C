@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -69,10 +69,10 @@ QWedgeGradDamage :: QWedgeGradDamage(int n, Domain *aDomain) :  QWedge(n, aDomai
 
 
 void
-QWedgeGradDamage :: initializeFrom(InputRecord &ir)
+QWedgeGradDamage :: initializeFrom(InputRecord &ir, int priority)
 {
     numberOfGaussPoints = 9;
-    Structural3DElement :: initializeFrom(ir);
+    Structural3DElement :: initializeFrom(ir, priority);
 }
 
 

@@ -1,0 +1,1186 @@
+/*
+ *
+ *                 #####    #####   ######  ######  ###   ###
+ *               ##   ##  ##   ##  ##      ##      ## ### ##
+ *              ##   ##  ##   ##  ####    ####    ##  #  ##
+ *             ##   ##  ##   ##  ##      ##      ##     ##
+ *            ##   ##  ##   ##  ##      ##      ##     ##
+ *            #####    #####   ##      ######  ##     ##
+ *
+ *
+ *             OOFEM : Object Oriented Finite Element Code
+ *
+ *               Copyright (C) 1993 - 2025   Borek Patzak
+ *
+ *
+ *
+ *       Czech Technical University, Faculty of Civil Engineering,
+ *   Department of Structural Mechanics, 166 29 Prague, Czech Republic
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2.1 of the License, or (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+
+#include "floatarray.h"
+#include "intarray.h"
+#include "floatmatrix.h"
+#include "mathfem.h"
+#include "error.h"
+#include "datastream.h"
+#include "mathfem.h"
+
+#include <cstdarg>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <ostream>
+#include <memory>
+#include <numeric>
+#include <cmath>
+
+
+namespace oofem {
+// enable this to get text trace of all resize operations (useful to compare eigen and non-eigen version if they diverge)
+// #define _DBG(tag) printYourself(tag)
+#define _DBG(tag)
+
+#ifdef _USE_EIGEN
+    void FloatArray::_resize_internal(Index newsize){
+        _DBG("ri/BEFORE");
+        if(newsize==size()) /* nothing */;
+        else if(newsize<size()) conservativeResize(newsize);
+        else (*this)=VectorXd::Zero(newsize);
+        _DBG("ri/AFTER");
+    }
+    void FloatArray::resizeWithValues(Index n, /* ignored*/ std::size_t allocChunk){
+        _DBG("rwv/BEFORE");
+        if(n==size()){ _DBG("rwv/AFTER"); return; }
+        Index size0=size();
+        VectorXd::conservativeResize(n);
+        (*this).tail(size()-size0).array()=0.;
+        _DBG("rwv/AFTER");
+    }
+    void FloatArray::resize(Index n){
+        _DBG("r/BEFORE");
+        Index size0=size();
+        VectorXd::conservativeResize(n);
+        (*this).tail(size()-size0).array()=0.;
+        _DBG("r/AFTER");
+    }
+#else
+    void FloatArray::_resize_internal(Index newsize){
+        _DBG("ri/BEFORE");
+        if ( (newsize) < this->size() ) {
+            this->values.resize((newsize));
+        } else if ( (newsize) > this->size() ) {
+            this->values.assign((newsize), 0.);
+        }
+        _DBG("ri/AFTER");
+    }
+    void FloatArray :: resize(int n)
+    {
+        _DBG("r/BEFORE");
+        this->values.resize(n);
+        ///@todo Change to this (faster)
+        //this->values.assign(n, 0.);
+        _DBG("r/AFTER");
+    }
+
+    void FloatArray :: resizeWithValues(Index n, std::size_t allocChunk)
+    {
+    #ifndef NDEBUG
+        if ( allocChunk < 0 ) {
+            OOFEM_FATAL("allocChunk must be non-negative; %ld", allocChunk);
+        }
+
+    #endif
+        _DBG("rwv/BEFORE");
+        if ( allocChunk > 0 && (Index)this->values.capacity() < n ) {
+            this->values.reserve(n + allocChunk);
+        }
+
+        this->values.resize(n);
+
+        _DBG("rwv/AFTER");
+    }
+#endif
+
+FloatArray FloatArray::fromList(const std::list<double>& lst){
+    FloatArray ret;
+    ret.resize(lst.size());
+    Index i=0;
+    for(const double& x: lst) ret(i++)=x;
+    return ret;
+
+}
+
+FloatArray FloatArray::fromVector(const std::vector<double>& v){
+    FloatArray ret;
+    ret.resize(v.size());
+    for(size_t i=0; i<v.size(); i++) ret(i)=v[i];
+    return ret;
+}
+
+FloatArray FloatArray::fromIniList(std::initializer_list<double> ini) {
+    FloatArray ret;
+    ret.resize(ini.size());
+    Index i=0;
+    for(const double& x: ini) ret(i++)=x;
+    return ret;
+}
+
+FloatArray FloatArray::fromConcatenated(std::initializer_list<FloatArray> ini){
+    int len=0; for(const auto& a: ini) len+=a.size();
+    FloatArray ret(len);
+    int ix=0;
+    for(const auto& a: ini){
+        for(Index i=0; i<a.size(); i++) ret[ix++]=a[i];
+    }
+    return ret;
+}
+
+
+
+#ifdef _USE_EIGEN
+bool FloatArray :: isAllFinite() const { return this->array().isFinite().all(); }
+void FloatArray :: beScaled(double s, const FloatArray &b){ *this=b*s; }
+void FloatArray :: add(const FloatArray &b){ if(b.isEmpty()) return; if(this->isEmpty()){ *this=b; return; } *this+=b; }
+void FloatArray :: add(double offset){ this->array()+=offset; }
+void FloatArray :: add(double factor, const FloatArray &b) { if(this->isEmpty()){ *this=factor*b;  return; }  *this+=factor*b; }
+void FloatArray :: plusProduct(const FloatMatrix &b, const FloatArray &s, double dV){ if(this->isEmpty()){ *this=b.transpose()*s*dV;  return; } *this+=b.transpose()*s*dV; }
+void FloatArray :: subtract(const FloatArray &src){ if(src.isEmpty()) return; if(this->isEmpty()){ *this=-src; return; } *this-=src; }
+void FloatArray :: beMaxOf(const FloatArray &a, const FloatArray &b){ if(a.isEmpty()){ *this=b; return; } if(b.isEmpty()){ *this=a; return; } *this=a.array().max(b.array()).matrix(); }
+void FloatArray :: beMinOf(const FloatArray &a, const FloatArray &b){  if(a.isEmpty()){ *this=b; return; } if(b.isEmpty()){ *this=a; return; } *this=a.array().min(b.array()).matrix(); }
+void FloatArray :: beDifferenceOf(const FloatArray &a, const FloatArray &b){ *this=a-b; }
+void FloatArray :: beDifferenceOf(const FloatArray &a, const FloatArray &b, Index n){ *this=(a-b).head(n); }
+void FloatArray :: beSubArrayOf(const FloatArray &src, const IntArray &indx){ *this=src(indx.minusOne()); }
+void FloatArray :: addSubVector(const FloatArray &src, Index si){ /* grow as needed: tests pass without this */{ int req=(si-1)+src.size(); if(this->size()<req) this->resizeWithValues(req); } this->segment(si-1,src.size())=src; }
+void FloatArray :: beVectorProductOf(const FloatArray &v1, const FloatArray &v2){ Eigen::Ref<const Eigen::Vector3d> v1r(v1), v2r(v2); *this=v1r.cross(v2r); }
+int FloatArray :: giveIndexMinElem(){ Eigen::Index ix; this->minCoeff(&ix); return ix+1; }
+int FloatArray :: giveIndexMaxElem(){ Eigen::Index ix; this->maxCoeff(&ix); return ix+1; }
+/* FIXME: this trips test_sm_NAFEMS_FV12_FreeThinSquarePlate_mitc1.in and test_sm_NAFEMS_FV12_FreeThinSquarePlate_mitc2.in because some FP delta is being accumulated. */
+double FloatArray :: dotProduct(const FloatArray &x) const { return this->dot(x); }
+// double FloatArray :: dotProduct(const FloatArray &x) const {  return std::inner_product(this->begin(), this->end(), x.begin(), 0.); /* */  }
+double FloatArray :: dotProduct(const FloatArray &x, Index size) const { return this->head(size).dot(x.head(size)); }
+double FloatArray :: distance_square(const FloatArray &from) const { return (from-(*this)).squaredNorm(); }
+void FloatArray :: checkSizeTowards(const IntArray &loc){ int sz=loc.maximum(); if(this->size()<sz) this->resize(sz); }
+bool FloatArray :: containsOnlyZeroes() const { return (this->array()==0.).all(); }
+void FloatArray :: zero() { this->array()=0.; }
+void FloatArray :: beProductOf(const FloatMatrix &aMatrix, const FloatArray &anArray){ *this=aMatrix*anArray; }
+void FloatArray :: beTProductOf(const FloatMatrix &aMatrix, const FloatArray &anArray){ *this=anArray.transpose()*aMatrix; }
+void FloatArray :: negated() { *this*=-1; }
+void FloatArray :: times(double factor){ this->array()*=factor; }
+double FloatArray :: sum() const { return this->array().sum(); }
+double FloatArray :: product() const { return this->array().prod(); }
+void FloatArray :: copySubVector(const FloatArray &src, int si){ this->resizeWithValues(src.size()+si-1); this->tail(src.size())=src; }
+void FloatArray :: power(const double exponent){ *this=this->array().pow(exponent).matrix(); }
+void FloatArray :: beColumnOf(const FloatMatrix &mat, int col){ *this=mat.col(col-1); }
+void FloatArray :: beRowOf(const FloatMatrix &mat, Index row){ *this=mat.row(row-1).transpose(); }
+#else
+
+bool FloatArray :: isAllFinite() const
+{
+    for(Index i=0; i<this->size(); i++){
+        if(!std::isfinite((*this)[i])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+void
+FloatArray :: beScaled(double s, const FloatArray &b)
+{
+    _resize_internal(b.size());
+
+    for ( Index i = 0; i < this->size(); ++i ) {
+        (*this) [ i ] = s * b [ i ];
+    }
+}
+
+
+void FloatArray :: add(const FloatArray &b)
+// Performs the operation a=a+b, where a stands for the receiver. If the
+// receiver's size is 0, adjusts its size to that of b. Returns the
+// receiver.
+{
+    if ( b.isEmpty() ) {
+        return;
+    }
+
+    if ( !this->size() ) {
+        * this = b;
+        return;
+    }
+
+#  ifndef NDEBUG
+    if ( this->size() != b.size() ) {
+        OOFEM_ERROR("dimension mismatch in a[%d]->add(b[%d])", this->giveSize(), b.giveSize());
+    }
+
+#  endif
+
+#ifdef __LAPACK_MODULE
+    int inc = 1;
+    double s = 1.;
+    int size = this->giveSize();
+    daxpy_(& size, & s, b.givePointer(), & inc, this->givePointer(), & inc, b.giveSize(), this->giveSize());
+#else
+    for (Index i = 0; i < this->size(); i++ ) {
+        (*this) [ i ] += b [ i ];
+    }
+#endif
+}
+
+
+void FloatArray :: add(double offset)
+{
+    for ( double &x: *this ) {
+        x += offset;
+    }
+}
+
+
+void FloatArray :: add(double factor, const FloatArray &b)
+// Performs the operation a=a+factor*b, where a stands for the receiver. If the
+// receiver's size is 0, adjusts its size to that of b.
+{
+    if ( this->isEmpty() ) {
+        this->beScaled(factor, b);
+        return;
+    }
+
+#  ifndef NDEBUG
+    if ( this->size() != b.size() ) {
+        OOFEM_ERROR("dimension mismatch in a[%d]->add(b[%d])", this->giveSize(), b.giveSize());
+    }
+
+#  endif
+
+#ifdef __LAPACK_MODULE
+    int inc = 1;
+    int size = this->giveSize();
+    daxpy_(& size, & factor, b.givePointer(), & inc, this->givePointer(), & inc, b.giveSize(), this->giveSize());
+#else
+    for ( Index i = 0; i < this->size(); ++i ) {
+        (*this) [ i ] += factor * b [ i ];
+    }
+#endif
+}
+
+
+void FloatArray :: plusProduct(const FloatMatrix &b, const FloatArray &s, double dV)
+// Performs the operation a += b^T . s * dV
+{
+    const int nRows = b.giveNumberOfRows();
+    const int nColumns = b.giveNumberOfColumns();
+
+    if ( this->isEmpty() ) {
+        this->resize( nColumns );
+    }
+
+#  ifndef NDEBUG
+    if ( this->giveSize() != b.giveNumberOfColumns() ) {
+        OOFEM_ERROR( "dimension mismatch in a[%d] and b[%d, *]", this->giveSize(), b.giveNumberOfColumns() );
+    }
+#  endif
+
+#ifdef __LAPACK_MODULE
+    double beta = 1.;
+    int inc = 1;
+    dgemv_("t", & nRows, & nColumns, & dV, b.givePointer(), & nRows, s.givePointer(), & inc, & beta, this->givePointer(), & inc, nColumns, nColumns, nRows);
+#else
+    for ( Index i = 1; i <= nColumns; i++ ) {
+        double sum = 0.;
+        for ( Index j = 1; j <= nRows; j++ ) {
+            sum += b.at(j, i) * s.at(j);
+        }
+        this->at(i) += sum * dV;
+    }
+#endif
+}
+
+
+void FloatArray :: subtract(const FloatArray &src)
+// Performs the operation a=a-src, where a stands for the receiver. If the
+// receiver's size is 0, adjusts its size to that of src.
+{
+    if ( src.isEmpty() ) {
+        return;
+    }
+
+    if ( this->isEmpty() ) {
+        _resize_internal(src.size());
+        for ( Index i = 0; i < this->size(); ++i ) {
+            (*this) [ i ] = -src [ i ];
+        }
+
+        return;
+    }
+
+#  ifndef NDEBUG
+    if ( this->size() != src.size() ) {
+        OOFEM_ERROR("dimension mismatch in a[%d]->add(b[%d])", this->giveSize(), src.giveSize());
+    }
+
+#  endif
+
+    for ( Index i = 0; i < this->size(); ++i ) {
+        (*this) [ i ] -= src [ i ];
+    }
+}
+
+
+void FloatArray :: beMaxOf(const FloatArray &a, const FloatArray &b)
+{
+    Index n = a.size();
+
+    if ( a.size() == 0 ) {
+        *this = b;
+        return;
+    } else if ( b.size() == 0 ) {
+        *this = a;
+        return;
+    }
+
+#  ifndef NDEBUG
+    if ( n != b.size() ) {
+        OOFEM_ERROR("dimension mismatch in beMaxOf(a[%d],b[%d])", n, b.giveSize());
+    }
+
+#  endif
+
+    _resize_internal(n);
+
+    for ( Index i = 0; i < n; i++ ) {
+        (*this) [ i ] = max( a [ i ], b [ i ] );
+    }
+}
+
+
+void FloatArray :: beMinOf(const FloatArray &a, const FloatArray &b)
+{
+    Index n = a.size();
+
+    if ( a.size() == 0 ) {
+        *this = b;
+        return;
+    } else if ( b.size() == 0 ) {
+        *this = a;
+        return;
+    }
+
+#  ifndef NDEBUG
+    if ( n != b.size() ) {
+        OOFEM_ERROR("dimension mismatch in beMinOf(a[%d],b[%d])", n, b.giveSize());
+    }
+
+#  endif
+
+    _resize_internal(n);
+    for ( Index i = 0; i < n; i++ ) {
+        (*this) [ i ] = min( a [ i ], b [ i ] );
+    }
+}
+
+
+void FloatArray :: beDifferenceOf(const FloatArray &a, const FloatArray &b)
+{
+#ifndef NDEBUG
+    if ( a.size() != b.size() ) {
+        OOFEM_ERROR("size mismatch (%d : %d)", a.giveSize(), b.giveSize());
+    }
+
+#endif
+#if 0
+    _resize_internal(a.giveSize());
+    for ( int i = 0; i < this->giveSize(); ++i ) {
+        (*this) [ i ] = a [ i ] - b [ i ];
+    }
+#else
+    this->resize(a.giveSize());
+    for ( Index i = 0; i < a.size(); ++i ) {
+        (*this)[i]=a[i] - b[i];
+    }
+
+#endif
+}
+
+void FloatArray :: beDifferenceOf(const FloatArray &a, const FloatArray &b, Index n)
+{
+#ifndef NDEBUG
+    if ( a.size() < n || b.size() < n ) {
+        OOFEM_ERROR("wrong size %d vs %d", a.giveSize(), b.giveSize());
+    }
+
+#endif
+    _resize_internal(n);
+    for ( Index i = 0; i < n; ++i ) {
+        (*this) [ i ] = a [ i ] - b [ i ];
+    }
+}
+
+
+void FloatArray :: beSubArrayOf(const FloatArray &src, const IntArray &indx)
+//
+// Returns a subVector of the receiver constructed from an index array.
+// this->at(i) = src.at(indx->at(i))
+//
+{
+#ifndef NDEBUG
+    if ( indx.maximum() > src.giveSize() || indx.minimum() < 1 ) {
+        OOFEM_ERROR("index points outside of source");
+    }
+#endif
+
+    Index n = indx.size();
+    _resize_internal(n);
+    for ( Index i = 1; i <= n; i++ ) {
+        this->at(i) = src.at( indx.at(i) );
+    }
+}
+
+
+void FloatArray :: addSubVector(const FloatArray &src, Index si)
+{
+    Index reqSize, n = src.size();
+
+    si--;
+    reqSize = si + n;
+    if ( this->size() < reqSize ) {
+        this->resizeWithValues(reqSize);
+    }
+
+    for (Index i = 0; i < n; i++ ) {
+        (*this) [si + i] += src [ i ];
+    }
+}
+
+
+void FloatArray :: beVectorProductOf(const FloatArray &v1, const FloatArray &v2)
+{
+#  ifndef NDEBUG
+    // check proper bounds
+    if ( ( v1.giveSize() != 3 ) || ( v2.giveSize() != 3 ) ) {
+        OOFEM_ERROR("size mismatch, size is not equal to 3");
+    }
+#  endif
+
+    _resize_internal(3);
+
+    this->at(1) = v1.at(2) * v2.at(3) - v1.at(3) * v2.at(2);
+    this->at(2) = v1.at(3) * v2.at(1) - v1.at(1) * v2.at(3);
+    this->at(3) = v1.at(1) * v2.at(2) - v1.at(2) * v2.at(1);
+}
+
+int FloatArray :: giveIndexMinElem()
+{
+    Index index = 1;
+    if ( !this->giveSize() ) {
+        return -1;
+    }
+    double val = (*this) [ 0 ];
+    for (Index i = 1; i < this->size(); i++ ) {
+        if ( val > (*this) [ i ] ) {
+            val = (*this) [ i ];
+            index = i + 1;
+        }
+    }
+    return index;
+}
+
+int FloatArray :: giveIndexMaxElem()
+{
+    Index index = 1;
+    if ( !this->giveSize() ) {
+        return -1;
+    }
+    double val = (*this) [ 0 ];
+    for (Index i = 1; i < this->size(); i++ ) {
+        if ( val < (*this) [ i ] ) {
+            val = (*this) [ i ];
+            index = i + 1;
+        }
+    }
+    return index;
+}
+
+double FloatArray :: dotProduct(const FloatArray &x) const
+{
+#  ifndef NDEBUG
+    if ( this->size() != x.size() ) {
+        OOFEM_ERROR("dimension mismatch in a[%d]->dotProduct(b[%d])", this->giveSize(), x.giveSize());
+    }
+
+#  endif
+
+    return std::inner_product(this->begin(), this->end(), x.begin(), 0.);
+}
+
+
+double FloatArray :: dotProduct(const FloatArray &x, Index size) const
+{
+#  ifndef NDEBUG
+    if ( size > this->size() || size > x.size() ) {
+        OOFEM_ERROR("dimension mismatch in a[%d]->dotProduct(b[%d])", this->giveSize(), x.giveSize());
+    }
+
+#  endif
+
+    return std::inner_product(this->begin(), this->begin()+size, x.begin(), 0.);
+}
+
+#endif
+
+double FloatArray :: distance(const FloatArray &x) const
+{
+    return std::sqrt( this->distance_square(x) );
+}
+
+double FloatArray :: distance(const FloatArray &iP1, const FloatArray &iP2, double &oXi, double &oXiUnbounded) const
+{
+    return std::sqrt( distance_square(iP1, iP2, oXi, oXiUnbounded) );
+}
+
+double FloatArray :: distance_square(const FloatArray &iP1, const FloatArray &iP2, double &oXi, double &oXiUnbounded) const
+{
+    const double l2 = iP1.distance_square(iP2);
+
+    if ( l2 > 0.0 ) {
+
+        const double s = (oofem::dot(*this, iP2) - oofem::dot(*this, iP1) ) - ( oofem::dot(iP1, iP2) - oofem::dot(iP1, iP1) );
+
+        if ( s < 0.0 ) {
+            // X is closest to P1
+            oXi = 0.0;
+            oXiUnbounded = s/l2;
+            return this->distance_square(iP1);
+        } else {
+            if ( s > l2 ) {
+                // X is closest to P2
+                oXi = 1.0;
+                oXiUnbounded = s/l2;
+                return this->distance_square(iP2);
+            } else {
+                oXi = s / l2;
+                oXiUnbounded = s/l2;
+                const FloatArray q = ( 1.0 - oXi ) * iP1 + oXi * iP2;
+                return this->distance_square(q);
+            }
+        }
+    } else {
+        // If the points P1 and P2 coincide,
+        // we can compute the distance to any
+        // of these points.
+        oXi = 0.5;
+        oXiUnbounded = 0.5;
+        return this->distance_square(iP1);
+    }
+}
+
+#ifndef _USE_EIGEN
+
+double FloatArray :: distance_square(const FloatArray &from) const
+// returns distance between receiver and from from
+// computed using generalized pythagorean formulae
+{
+    double dist = 0.;
+    Index s = min(this->size(), from.size());
+    for (Index i = 1; i <= s; ++i ) {
+        double dx = this->at(i) - from.at(i);
+        dist += dx * dx;
+    }
+
+    return dist;
+}
+
+#endif
+
+
+void FloatArray :: assemble(const FloatArray &fe, const IntArray &loc)
+// Assembles the array fe (typically, the load vector of a finite
+// element) to the receiver, using loc as location array.
+{
+    Index n = fe.size();
+#  ifndef NDEBUG
+    if ( n != (Index) loc.size() ) {
+        OOFEM_ERROR("dimensions of 'fe' (%d) and 'loc' (%d) mismatch", fe.giveSize(), loc.giveSize() );
+    }
+
+#  endif
+
+    for (Index i = 1; i <= n; i++ ) {
+        int ii = loc.at(i);
+        if ( ii ) { // if non 0 coefficient,
+            this->at(ii) += fe.at(i);
+        }
+    }
+}
+
+
+void FloatArray :: assembleSquared(const FloatArray &fe, const IntArray &loc)
+// Assembles the array fe (typically, the load vector of a finite
+// element) to the receiver, using loc as location array.
+{
+    Index n = fe.size();
+#  ifndef NDEBUG
+    if ( n != (Index) loc.size() ) {
+        OOFEM_ERROR("dimensions of 'fe' (%d) and 'loc' (%d) mismatch", fe.giveSize(), loc.giveSize() );
+    }
+
+#  endif
+
+    for (Index i = 1; i <= n; i++ ) {
+        int ii = loc.at(i);
+        if ( ii ) { // if non 0 coefficient,
+            this->at(ii) += fe.at(i) * fe.at(i);
+        }
+    }
+}
+
+#ifndef _USE_EIGEN
+void FloatArray :: checkSizeTowards(const IntArray &loc)
+// Expands the receiver if loc points to coefficients beyond the size of
+// the receiver.
+{
+    int high = loc.maximum();
+    if ( high > this->giveSize() ) {   // receiver must be expanded
+        this->resize(high);
+    }
+}
+
+
+
+
+bool FloatArray :: containsOnlyZeroes() const
+{
+    for ( double x : *this ) {
+        if ( x != 0. ) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+void FloatArray :: zero()
+{
+    std::fill(this->begin(), this->end(), 0.);
+}
+
+
+void FloatArray :: beProductOf(const FloatMatrix &aMatrix, const FloatArray &anArray)
+// Stores the product of aMatrix * anArray in to receiver
+{
+    const int nColumns = aMatrix.giveNumberOfColumns();
+    const int nRows = aMatrix.giveNumberOfRows();
+
+    _resize_internal(nRows);
+
+#  ifndef NDEBUG
+    if ( aMatrix.giveNumberOfColumns() != anArray.giveSize() ) {
+        OOFEM_ERROR("dimension mismatch (%d, %d) . (%d)", 
+                    aMatrix.giveNumberOfRows(), aMatrix.giveNumberOfColumns(), anArray.giveSize());
+    }
+#  endif
+
+#ifdef __LAPACK_MODULE
+    double alpha = 1., beta = 0.;
+    int inc = 1;
+    dgemv_("n", & nRows, & nColumns, & alpha, aMatrix.givePointer(), & nRows, anArray.givePointer(), & inc, & beta, this->givePointer(), & inc, nColumns, nColumns, nRows);
+#else
+    for (Index i = 1; i <= nRows; i++ ) {
+        double sum = 0.;
+        for (Index j = 1; j <= nColumns; j++ ) {
+            sum += aMatrix.at(i, j) * anArray.at(j);
+        }
+
+        this->at(i) = sum;
+    }
+#endif
+}
+
+
+void FloatArray :: beTProductOf(const FloatMatrix &aMatrix, const FloatArray &anArray)
+// Stores the product of aMatrix^T * anArray in to receiver
+{
+    const int nRows = aMatrix.giveNumberOfRows();
+    const int nColumns = aMatrix.giveNumberOfColumns();
+
+#  ifndef NDEBUG
+    if ( aMatrix.giveNumberOfRows() != anArray.giveSize() ) {
+        OOFEM_ERROR( "dimension mismatch, matrix rows = %d, array size = %d", aMatrix.giveNumberOfRows(), anArray.giveSize() );
+    }
+
+#  endif
+    _resize_internal(nColumns);
+
+#ifdef __LAPACK_MODULE
+    double alpha = 1., beta = 0.;
+    int inc = 1;
+    dgemv_("t", & nRows, & nColumns, & alpha, aMatrix.givePointer(), & nRows, anArray.givePointer(), & inc, & beta, this->givePointer(), & inc, nColumns, nColumns, nRows);
+#else
+    for (Index i = 1; i <= nColumns; i++ ) {
+        double sum = 0.;
+        for (Index j = 1; j <= nRows; j++ ) {
+            sum += aMatrix.at(j, i) * anArray.at(j);
+        }
+
+        this->at(i) = sum;
+    }
+#endif
+}
+
+
+void FloatArray :: negated()
+{
+    for ( double &x: *this ) {
+        x = -x;
+    }
+}
+
+#endif /* ifndef _USE_EIGEN */
+
+
+void FloatArray :: printYourself() const
+// Prints the receiver on screen.
+{
+    printf("FloatArray of size : %d \n", (int)this->giveSize());
+    for ( double x: *this ) {
+        printf( "%10.3e  ", x );
+    }
+
+    printf("\n");
+}
+
+
+void FloatArray :: printYourself(const std::string &name) const
+// Prints the receiver on screen.
+{
+    printf("%s (%d): \n", name.c_str(), (int)this->giveSize());
+    for ( double x: *this ) {
+        printf( "%10.3e  ", x );
+    }
+
+    printf("\n");
+}
+
+void FloatArray :: pY() const
+// Prints the receiver on screen with higher accuracy than printYourself.
+{
+    printf("[");
+    for ( double x: *this ) {
+        printf( "%20.14e; ", x );
+    }
+
+    printf("];\n");
+}
+
+
+void FloatArray :: rotatedWith(FloatMatrix &r, char mode)
+// Returns the receiver 'a' rotated according the change-of-base matrix r.
+// If mode = 't', the method performs the operation  a = r(transp) * a .
+// If mode = 'n', the method performs the operation  a = r * a .
+{
+    FloatArray rta;
+
+    if ( mode == 't' ) {
+        rta.beTProductOf(r, * this);
+    } else if ( mode == 'n' ) {
+        rta.beProductOf(r, * this);
+    } else {
+        OOFEM_ERROR("unsupported mode");
+    }
+
+    * this = rta;
+}
+
+#ifndef _USE_EIGEN
+
+void FloatArray :: times(double factor)
+// Multiplies every coefficient of the receiver by factor.
+{
+    //std::transform(this->begin(), this->end(), this->begin(), std::bind2nd(std::multiplies<double>(), factor));
+    for ( double &x : *this ) {
+        x *= factor;
+    }
+}
+
+#endif
+
+void FloatArray :: normalize(){
+    (void) normalize_giveNorm();
+}
+
+
+double FloatArray :: normalize_giveNorm()
+{
+    double norm = this->computeNorm();
+    if ( norm < 1.e-80 ) {
+        OOFEM_ERROR("cannot norm receiver, norm is too small");
+    }
+    this->times(1. / norm);
+    return norm;
+}
+
+
+double FloatArray :: computeNorm() const
+{
+    return std::sqrt( this->computeSquaredNorm() );
+}
+
+
+double FloatArray :: computeSquaredNorm() const
+{
+    return std::inner_product(this->begin(), this->end(), this->begin(), 0.);
+}
+
+#ifndef _USE_EIGEN
+
+double FloatArray :: sum() const
+{
+    return std::accumulate(this->begin(), this->end(), 0.);
+}
+
+
+double FloatArray :: product() const
+{
+    return std::accumulate(this->begin(), this->end(), 1.0, [](double a, double b) { return a*b; });
+}
+
+
+void FloatArray :: copySubVector(const FloatArray &src, int si)
+{
+    si--;
+    this->resizeWithValues(si + src.giveSize());
+    std :: copy( src.begin(), src.end(), this->begin() + si);
+}
+#endif
+
+contextIOResultType FloatArray :: storeYourself(DataStream &stream) const
+// writes receiver's binary image into stream
+// use id to distinguish some instances
+// return value >0 success
+//              =0 file i/o error
+{
+    // write size
+    Index size = this->size();
+    if ( !stream.write(size) ) {
+        return CIO_IOERR;
+    }
+
+    // write raw data
+    if ( size ) {
+        if ( !stream.write(this->givePointer(), size) ) {
+            return CIO_IOERR;
+        }
+    }
+
+    // return result back
+    return CIO_OK;
+}
+
+contextIOResultType FloatArray :: restoreYourself(DataStream &stream)
+// reads receiver from stream
+// warning - overwrites existing data!
+// returns 0 if file i/o error
+//        -1 if id od class id is not correct
+{
+    // read size
+    Index size;
+    if ( !stream.read(size) ) {
+        return CIO_IOERR;
+    }
+
+    this->resize(size); // FIXME: useless zero-initialization
+
+    // read raw data
+    if ( size ) {
+        if ( !stream.read(this->givePointer(), size) ) {
+            return CIO_IOERR;
+        }
+    }
+
+    // return result back
+    return CIO_OK;
+}
+
+
+int FloatArray :: givePackSize(DataStream &buff) const
+{
+    return buff.givePackSizeOfSizet(1) + buff.givePackSizeOfDouble(this->giveSize());
+}
+
+
+#ifndef _USE_EIGEN
+// IML compat
+
+FloatArray &FloatArray :: operator = ( const double & val )
+{
+    std::fill(this->begin(), this->begin(), val);
+    return * this;
+}
+
+FloatArray &operator *= ( FloatArray & x, const double & a )
+{
+    x.times(a);
+    return x;
+}
+
+FloatArray operator *( const double & a, const FloatArray & x )
+{
+    FloatArray result;
+    result.beScaled(a, x);
+    return result;
+}
+
+FloatArray operator *( const FloatArray & x, const double & a )
+{
+    FloatArray result;
+    result.beScaled(a, x);
+    return result;
+}
+
+FloatArray operator + ( const FloatArray & x, const FloatArray & y )
+{
+    FloatArray result(x);
+    result.add(y);
+    return result;
+}
+
+FloatArray operator - ( const FloatArray & x, const FloatArray & y )
+{
+    FloatArray result;
+    result.beDifferenceOf(x, y);
+    return result;
+}
+
+FloatArray &operator += ( FloatArray & x, const FloatArray & y )
+{
+    x.add(y);
+    return x;
+}
+
+FloatArray &operator -= ( FloatArray & x, const FloatArray & y )
+{
+    x.subtract(y);
+    return x;
+}
+
+FloatArray &operator /= ( FloatArray & x, const double & a )
+{
+    x.times(1./a);
+    return x;
+}
+#endif
+
+double dot(const FloatArray &x, const FloatArray &y)
+{
+    return x.dotProduct(y);
+}
+
+double distance(const FloatArray &x, const FloatArray &y)
+{
+    return x.distance(y);
+}
+
+double distance_square(const FloatArray &x, const FloatArray &y)
+{
+    return x.distance_square(y);
+}
+
+double norm(const FloatArray &x)
+{
+    return x.computeNorm();
+}
+
+double norm_square(const FloatArray &x)
+{
+    return x.computeSquaredNorm();
+}
+
+bool isfinite(const FloatArray &x)
+{
+    return x.isAllFinite();
+}
+
+bool iszero(const FloatArray &x)
+{
+    return x.containsOnlyZeroes();
+}
+
+double sum(const FloatArray & x)
+{
+    return x.sum();
+}
+
+double product(const FloatArray & x)
+{
+    return x.product();
+}
+
+
+// End of IML compat
+
+void FloatArray :: beVectorForm(const FloatMatrix &aMatrix)
+{
+    // Rewrites the matrix on vector form, order: 11, 22, 33, 23, 13, 12, 32, 31, 21
+#  ifndef NDEBUG
+    if (  aMatrix.giveNumberOfColumns() != 3 || aMatrix.giveNumberOfRows() != 3 ) {
+        OOFEM_ERROR("matrix dimension is not 3x3");
+    }
+
+#  endif
+    *this = {
+        aMatrix.at(1, 1),
+        aMatrix.at(2, 2),
+        aMatrix.at(3, 3),
+        aMatrix.at(2, 3),
+        aMatrix.at(1, 3),
+        aMatrix.at(1, 2),
+        aMatrix.at(3, 2),
+        aMatrix.at(3, 1),
+        aMatrix.at(2, 1)
+    };
+}
+
+void FloatArray :: beSymVectorFormOfStrain(const FloatMatrix &aMatrix)
+{
+    // Revrites a symmetric strain matrix on reduced vector form, order: 11, 22, 33, 23, 13, 12
+    // shear components are multiplied with a factor 2
+#  ifndef NDEBUG
+    if (  aMatrix.giveNumberOfColumns() != 3 || aMatrix.giveNumberOfRows() != 3 ) {
+        OOFEM_ERROR("matrix dimension is not 3x3");
+    }
+#  endif
+
+    *this = {
+        aMatrix.at(1, 1),
+        aMatrix.at(2, 2),
+        aMatrix.at(3, 3),
+        ( aMatrix.at(2, 3) + aMatrix.at(3, 2) ),
+        ( aMatrix.at(1, 3) + aMatrix.at(3, 1) ),
+        ( aMatrix.at(1, 2) + aMatrix.at(2, 1) )
+    };
+}
+
+
+void FloatArray :: beSymVectorForm(const FloatMatrix &aMatrix)
+{
+    // Revrites the  matrix on vector form (symmetrized matrix used), order: 11, 22, 33, 23, 13, 12
+#  ifndef NDEBUG
+    if (  aMatrix.giveNumberOfColumns() != 3 || aMatrix.giveNumberOfRows() != 3 ) {
+        OOFEM_ERROR("matrix dimension is not 3x3");
+    }
+
+#  endif
+
+    *this = {
+        aMatrix.at(1, 1),
+        aMatrix.at(2, 2),
+        aMatrix.at(3, 3),
+        0.5 * ( aMatrix.at(2, 3) + aMatrix.at(3, 2) ),
+        0.5 * ( aMatrix.at(1, 3) + aMatrix.at(3, 1) ),
+        0.5 * ( aMatrix.at(1, 2) + aMatrix.at(2, 1) )
+    };
+}
+
+void FloatArray :: changeComponentOrder()
+{
+    // OOFEM:           11, 22, 33, 23, 13, 12, 32, 31, 21
+    // UMAT:            11, 22, 33, 12, 13, 23, 32, 21, 31
+
+    if ( this->giveSize() == 6 ) {
+        std :: swap( this->at(4), this->at(6) );
+    } else if ( this->giveSize() == 9 )    {
+        // OOFEM:       11, 22, 33, 23, 13, 12, 32, 31, 21
+        // UMAT:        11, 22, 33, 12, 13, 23, 32, 21, 31
+        const int abq2oo [ 9 ] = {
+            1,  2,  3,  6,  5,  4,  7,  9,  8
+        };
+
+        FloatArray tmp(9);
+        for ( int i = 0; i < 9; i++ ) {
+            tmp(i) = this->at(abq2oo [ i ]);
+        }
+
+        * this = tmp;
+    }
+}
+
+
+std :: ostream &operator << ( std :: ostream & out, const FloatArray & x )
+{
+    out << x.giveSize();
+    for ( double xi : x ) {
+        out << " " << xi;
+    }
+    return out;
+}
+
+//void FloatArray :: beReducedVectorFormOfStrain(const FloatMatrix &aMatrix)
+//{
+//    // Revrites the  matrix on vector form (symmetrized matrix used), order: 11, 22, 33, 23, 13, 12
+//#  ifndef NDEBUG
+//    if (  aMatrix.giveNumberOfColumns() !=3 || aMatrix.giveNumberOfColumns() !=3) {
+//        OOFEM_ERROR("matrix dimension is not 3x3");
+//    }
+//
+//#  endif
+//
+//    this->values.resize(6);
+//    this->at(1) = aMatrix.at(1,1); this->at(2) = aMatrix.at(2,2); this->at(3) = aMatrix.at(3,3);
+//    this->at(4) = ( aMatrix.at(2,3) + aMatrix.at(3,2) ); // Shear strains multiplied with a factor of 2
+//    this->at(5) = ( aMatrix.at(1,3) + aMatrix.at(3,1) );
+//    this->at(6) = ( aMatrix.at(1,2) + aMatrix.at(2,1) );
+//}
+
+#ifndef _USE_EIGEN
+void FloatArray :: power(const double exponent)
+{
+    for ( double &x : *this ) {
+        x = std::pow(x, exponent);
+    }
+}
+
+
+
+void FloatArray :: beColumnOf(const FloatMatrix &mat, int col)
+{
+    ///@todo This duplicates the "copyColumn" from FloatMatrix.
+    mat.copyColumn(*this, col);
+}
+
+void FloatArray :: beRowOf(const FloatMatrix &mat, Index row)
+{
+    Index nColumns = mat.cols();
+
+#  ifndef NDEBUG
+    Index nRows = mat.rows();
+    if (row>nRows) {
+        OOFEM_ERROR( "dimension mismatch, matrix rows = %d, wanted row = %d", nRows, row)    
+    }
+#  endif    
+    
+    _resize_internal(nColumns);
+    for ( Index i = 1; i <= nColumns; i++ ) {
+        this->at(i) = mat.at(row,i);
+    }
+}
+#endif
+    
+} // end namespace oofem

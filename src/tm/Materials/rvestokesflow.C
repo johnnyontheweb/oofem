@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -207,7 +207,11 @@ RVEStokesFlow :: computeTangent3D(MatResponseMode mode, GaussPoint *gp, TimeStep
         FloatMatrix answer;
         status->giveRVE()->computeTangent(answer, tStep);
         answer.resizeWithData(3, 3);
+        #pragma GCC diagnostic push
+        // answer is possible uninitialized
+        #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
         status->letTempTangentMatrixBe(answer);
+        #pragma GCC diagnostic pop
         status->oldTangent = false;
         return answer;
     } else {
@@ -218,14 +222,14 @@ RVEStokesFlow :: computeTangent3D(MatResponseMode mode, GaussPoint *gp, TimeStep
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 RVEStokesFlow :: CreateStatus(GaussPoint *gp) const
 {
     int rank = -1;
     if ( this->domain->giveEngngModel()->isParallel() && this->domain->giveEngngModel()->giveNumberOfProcesses() > 1 ) {
         rank = this->domain->giveEngngModel()->giveRank();
     }
-    return new RVEStokesFlowMaterialStatus(n++, rank, gp, this->rveFilename);
+    return std::make_unique<RVEStokesFlowMaterialStatus>(n++, rank, gp, this->rveFilename);
 }
 
 }

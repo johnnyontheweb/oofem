@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -128,14 +128,6 @@ IntElSurfQuad1 :: computeAreaAround(IntegrationPoint *ip)
     G3.beVectorProductOf(G1, G2);
     return G3.computeNorm() * weight;
 }
-
-
-void
-IntElSurfQuad1 :: initializeFrom(InputRecord &ir)
-{
-    StructuralInterfaceElement :: initializeFrom(ir);
-}
-
 
 void
 IntElSurfQuad1 :: giveDofManDofIDMask(int inode, IntArray &answer) const

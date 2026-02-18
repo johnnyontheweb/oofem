@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -44,6 +44,7 @@
 
 namespace oofem {
 class FEI2dQuadLin;
+class ParamKey;
 
 /**
  * This class implements an quadrilateral four-node Mindlin plate.
@@ -70,6 +71,8 @@ protected:
     /// Flag controlling reduced (one - point) integration for shear
     bool reducedIntegrationFlag = false;
 
+    static ParamKey IPK_Quad1Mindlin_reducedIntegration;
+
 public:
     Quad1Mindlin(int n, Domain *d);
 
@@ -82,7 +85,7 @@ public:
     // definition & identification
     const char *giveInputRecordName() const override { return _IFT_Quad1Mindlin_Name; }
     const char *giveClassName() const override { return "Quad1Mindlin"; }
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
 
     int computeNumberOfDofs() override { return 12; }
     void giveDofManDofIDMask(int inode, IntArray &) const override;

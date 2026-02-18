@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -72,7 +72,7 @@ public:
     virtual ~PFEMElement();
 
     ///Initializes receiver acording to object description stored in input record.
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
 
     // characteristic  matrix
     void giveCharacteristicMatrix(FloatMatrix & answer, CharType, TimeStep *) override;
@@ -94,7 +94,7 @@ public:
     /// Returns the interpolation for the pressure
     virtual FEInterpolation *givePressureInterpolation() = 0;
 
-    computeLoadVector(FloatArray &answer, BodyLoad *load, CharType type, ValueModeType mode, TimeStep *tStep) override;
+    void computeLoadVector(FloatArray &answer, BodyLoad *load, CharType type, ValueModeType mode, TimeStep *tStep) override;
     
     // definition
     const char *giveClassName() const override { return "PFEMElement"; }

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -49,12 +49,15 @@
 #include "floatarrayf.h"
 #include "floatmatrixf.h"
 #include "connectivitytable.h"
+#include "parametermanager.h"
+#include "paramkey.h"
 #include <fstream>
 
 namespace oofem {
 
 FEI3dTrQuad  Shell7Base   :: interpolationForCZExport;
 FEI3dWedgeQuad Shell7Base :: interpolationForExport;
+ParamKey Shell7Base :: IPK_Shell7Base_recoverStress("recoverstress");
 
 
 Shell7Base :: Shell7Base(int n, Domain *aDomain) : NLStructuralElement(n, aDomain),  LayeredCrossSectionInterface(), 
@@ -62,14 +65,11 @@ Shell7Base :: Shell7Base(int n, Domain *aDomain) : NLStructuralElement(n, aDomai
     recoverStress(false) 
     {}
 
-void Shell7Base :: initializeFrom(InputRecord &ir)
+void Shell7Base :: initializeFrom(InputRecord &ir, int priority)
 {
-    NLStructuralElement :: initializeFrom(ir);
-    //IR_GIVE_OPTIONAL_FIELD(ir, this->recoverStress, _IFT_Shell7base_recoverStress);
-    if ( ir.hasField(_IFT_Shell7base_recoverStress) ) {
-        this->recoverStress = true;
-    }
-
+    ParameterManager & pm = this->giveDomain()->elementPPM;
+    NLStructuralElement :: initializeFrom(ir, priority);
+    PM_UPDATE_PARAMETER(recoverStress, pm, ir, this->number, IPK_Shell7Base_recoverStress, priority);
 }
 
 int 
@@ -172,7 +172,7 @@ Shell7Base :: computeGlobalCoordinates(FloatArray &answer, const FloatArray &lco
     for ( int i = 1; i <= this->giveNumberOfDofManagers(); i++ ) {
         const auto &xbar = this->giveNode(i)->giveCoordinates();
         const auto &M = this->giveInitialNodeDirector(i);
-        answer.add(N.at(i), ( xbar + zeta * M ));
+        answer.add(N.at(i), ( xbar + FloatArray(zeta * M)));
     }
 
     return 1;
@@ -701,9 +701,9 @@ FloatMatrixF<3,3>
 Shell7Base :: computeStressMatrix(FloatArray &genEps, GaussPoint *gp, Material *mat, TimeStep *tStep)
 {
     auto F = computeFAt(gp->giveNaturalCoordinates(), genEps, tStep);
-    auto vF = to_voigt_form(F);
+    auto vF = to_voigt_form_33(F);
     auto vP = static_cast< StructuralMaterial * >( mat )->giveFirstPKStressVector_3d(vF, gp, tStep);
-    return from_voigt_form(vP);
+    return from_voigt_form_9(vP);
 }
 
 

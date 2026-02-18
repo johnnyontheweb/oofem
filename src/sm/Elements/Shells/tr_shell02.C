@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -63,11 +63,10 @@ TR_SHELL02 :: TR_SHELL02(int n, Domain *aDomain) : StructuralElement(n, aDomain)
 
 
 void
-TR_SHELL02 :: initializeFrom(InputRecord &ir)
+TR_SHELL02 :: initializeFrom(InputRecord &ir, int priority)
 {
     // proc tady neni return = this...   ??? termitovo
-    StructuralElement :: initializeFrom(ir);
-
+    StructuralElement :: initializeFrom(ir, priority);
     // optional record for 1st local axes
     la1.resize(3);
     la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
@@ -76,9 +75,9 @@ TR_SHELL02 :: initializeFrom(InputRecord &ir)
     this->macroElem = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_TR_SHELL02_macroElem);
 
-    plate->initializeFrom(ir);
+    plate->initializeFrom(ir, priority);
     plate->la1 = la1;
-    membrane->initializeFrom(ir);
+    membrane->initializeFrom(ir, priority);
     membrane->la1 = la1;
 }
 
@@ -659,7 +658,7 @@ TR_SHELL02 :: SpatialLocalizerI_giveBBox(FloatArray &bb0, FloatArray &bb1)
     const FloatMatrix *GtoLRotationMatrix = plate->computeGtoLRotationMatrix();
 
     // setup vector in the element local cs. perpendicular to element plane of thickness/2 length
-    lt3 = {0., 0., 1.}; //this->giveCrossSection()->give(CS_Thickness)/2.0; // HUHU
+    lt3 = Vec3(0., 0., 1.); //this->giveCrossSection()->give(CS_Thickness)/2.0; // HUHU
     // transform it to globa cs
     gt3.beTProductOf(* GtoLRotationMatrix, lt3);
 

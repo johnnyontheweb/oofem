@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -62,10 +62,10 @@ LargeStrainMasterMaterialGrad :: hasMaterialModeCapability(MaterialMode mode) co
 }
 
 // creates a new material status  corresponding to this class
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 LargeStrainMasterMaterialGrad :: CreateStatus(GaussPoint *gp) const
 {
-    return new LargeStrainMasterMaterialStatus(gp, this->giveDomain(), slaveMat);
+    return std::make_unique<LargeStrainMasterMaterialStatus>(gp, this->giveDomain(), slaveMat);
 }
 
 

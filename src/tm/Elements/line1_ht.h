@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -64,7 +64,7 @@ public:
     const char *giveClassName() const override { return "Line1_htElement"; }
 
     int computeNumberOfDofs() override { return ( emode == HeatMass1TransferEM ) ? 4 : 2; }
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
     MaterialMode giveMaterialMode() override { return _3dHeat; }
     Element_Geometry_Type giveGeometryType() const override {return EGT_line_1;}
 

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -56,6 +56,7 @@
 //@}
 
 namespace oofem {
+class ParamKey;
 /**
  * UEL interface from Abaqus user elements.
  *
@@ -158,12 +159,18 @@ private:
 
     /// File containing the uel function
     std::string filename;
-
     /// Pointer to the dynamically loaded uelInit function (translated to C)
-    void(*uelInit)();
-
+    void ( *uelInit )();
     // macro element number
     int macroElem;
+
+    static ParamKey IPK_AbaqusUserElement_userElement;
+    static ParamKey IPK_AbaqusUserElement_numcoords;
+    static ParamKey IPK_AbaqusUserElement_dofs;
+    static ParamKey IPK_AbaqusUserElement_numsvars;
+    static ParamKey IPK_AbaqusUserElement_properties;
+    static ParamKey IPK_AbaqusUserElement_type;
+    static ParamKey IPK_AbaqusUserElement_name;
 
 public:
     /// Constructor
@@ -207,9 +214,8 @@ public:
         return tempAmatrx;
     }
 
+    void initializeFrom(InputRecord &ir, int priority) override;
     virtual Interface *giveInterface(InterfaceType it);
-
-    void initializeFrom(InputRecord &ir) override;
     void giveInputRecord(DynamicInputRecord &input) override;
     void postInitialize() override;
 

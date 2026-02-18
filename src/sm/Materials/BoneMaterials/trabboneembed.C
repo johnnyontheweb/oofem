@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -252,8 +252,8 @@ TrabBoneEmbedStatus :: restoreContext(DataStream &stream, ContextMode mode)
 }
 
 
-MaterialStatus *TrabBoneEmbed :: CreateStatus(GaussPoint *gp) const
+std::unique_ptr<MaterialStatus> TrabBoneEmbed :: CreateStatus(GaussPoint *gp) const
 {
-    return new TrabBoneEmbedStatus(gp);
+    return std::make_unique<TrabBoneEmbedStatus>(gp);
 }
 } // end namespace oofem

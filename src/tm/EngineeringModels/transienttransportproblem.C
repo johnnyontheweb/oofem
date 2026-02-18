@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -541,6 +541,8 @@ FieldPtr TransientTransportProblem::giveField(FieldType key, TimeStep *tStep)
         return std::make_shared<MaskedPrimaryField>( key, this->field.get(), IntArray{T_f} );
     } else if ( key == FT_HumidityConcentration ) {
         return std::make_shared<MaskedPrimaryField>( key, this->field.get(), IntArray{C_1} );
+    } else if ( key == FT_VOF ) {
+        return this->giveContext()->giveFieldManager()->giveField(key);
     } else {
         return FieldPtr();
     }

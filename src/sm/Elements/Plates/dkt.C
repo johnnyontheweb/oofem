@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -368,9 +368,9 @@ DKTPlate :: giveNodeCoordinates(double &x1, double &x2, double &x3,
 
 
 void
-DKTPlate :: initializeFrom(InputRecord &ir)
+DKTPlate::initializeFrom(InputRecord &ir, int priority)
 {
-    StructuralElement::initializeFrom(ir);
+    StructuralElement::initializeFrom(ir, priority);
 
     BMatrices.resize(this->numberOfGaussPoints);
 
@@ -765,16 +765,16 @@ DKTPlate :: computeVertexBendingMoments(FloatMatrix &answer, TimeStep *tStep)
     answer.resize(5, 3);
 
     FloatArray eps, m;
-    FloatArray coords [ 3 ]; // vertex local coordinates
-    coords [ 0 ] = {
+    FloatArray coords[ 3 ];  // vertex local coordinates
+    coords [ 0 ] = Vec2(
         1.0, 0.0
-    };
-    coords [ 1 ] = {
+    );
+    coords [ 1 ] = Vec2(
         0.0, 1.0
-    };
-    coords [ 2 ] = {
+    );
+    coords [ 2 ] = Vec2(
         0.0, 0.0
-    };
+    );
 
     GaussIntegrationRule iRule = GaussIntegrationRule(1, this, 1, 1); // dummy rule used to evaluate B at vertices
     iRule.SetUpPointsOnTriangle(1, _Unknown);

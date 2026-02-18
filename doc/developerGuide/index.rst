@@ -3,20 +3,25 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to OOFEM Developer guide's documentation!
+Developer guide's
 =================================================
 
+Authors: |author|
+
+Version: |version|
+
+
 .. toctree::
-   :maxdepth: 4
-   :caption: Contents:
+   :caption: Content
+   :maxdepth: 2
  
    introduction
-   coding_standards
-   general_structure
-   engng_frame.rst
+   codingstandards
+   generalstructure
+   engngframe.rst
    dofmanagers.rst
-   element_frame.rst
-   material_frame.rst
+   elementframe.rst
+   materialframe.rst
    utilityclasses.rst
    xfem.rst
    iga.rst

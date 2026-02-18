@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2019   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -80,10 +80,10 @@ LatticeSlip :: initializeFrom(InputRecord &ir)
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 LatticeSlip :: CreateStatus(GaussPoint *gp) const
 {
-    return new LatticeSlipStatus(gp);
+    return std::make_unique<LatticeSlipStatus>(gp);
 }
 
 

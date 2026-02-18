@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2021   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -94,7 +94,7 @@ void PrescribedDispSlipMultiple::setSlipField( const FloatArray &t )
 
 void PrescribedDispSlipMultiple::setDispGradient( const FloatArray &t )
 {
-    this->slipGradient = t;
+    this->slipGradient = FloatMatrix::fromArray(t);
     for ( int i : this->bcs ) {
         auto bc = dynamic_cast<PrescribedDispSlipHomogenization*>(this->giveDomain()->giveBc(i));
         bc->setDispGradient(t);
@@ -104,7 +104,7 @@ void PrescribedDispSlipMultiple::setDispGradient( const FloatArray &t )
 
 void PrescribedDispSlipMultiple::setSlipGradient( const FloatArray &t )
 {
-    this->slipGradient = t;
+    this->slipGradient = FloatMatrix::fromArray(t);
     for ( int i : this->bcs ) {
         auto bc = dynamic_cast<PrescribedDispSlipHomogenization*>(this->giveDomain()->giveBc(i));
         bc->setSlipGradient(t);

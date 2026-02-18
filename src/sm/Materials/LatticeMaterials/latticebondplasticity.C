@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2019   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -100,10 +100,10 @@ LatticeBondPlasticity::initializeFrom(InputRecord &ir)
     IR_GIVE_OPTIONAL_FIELD(ir, this->ef, _IFT_LatticeBondPlasticity_ef);
 }
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 LatticeBondPlasticity::CreateStatus(GaussPoint *gp) const
 {
-    return new LatticeBondPlasticityStatus(1, LatticeBondPlasticity::domain, gp);
+    return std::make_unique<LatticeBondPlasticityStatus>(1, LatticeBondPlasticity::domain, gp);
 }
 
 double

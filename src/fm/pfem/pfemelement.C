@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -64,9 +64,9 @@ PFEMElement :: ~PFEMElement()
 { }
 
 void
-PFEMElement :: initializeFrom(InputRecord &ir)
+PFEMElement :: initializeFrom(InputRecord &ir, int priority)
 {
-    FMElement :: initializeFrom(ir);
+    FMElement :: initializeFrom(ir, priority);
 
     this->computeGaussPoints();
 }
@@ -210,7 +210,7 @@ PFEMElement :: updateInternalState(TimeStep *stepN)
 }
 
 void
-PFEMElement :: printOutputAt(FILE *file, TimeStep *tStep) const
+PFEMElement :: printOutputAt(FILE *file, TimeStep *tStep) 
 // Performs end-of-step operations.
 {
 #ifdef __MPI_PARALLEL_MODE

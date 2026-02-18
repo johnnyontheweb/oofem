@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -60,7 +60,7 @@ public:
     const char *giveClassName() const override { return "QTruss1dGradDamage"; }
 
     MaterialMode giveMaterialMode() override { return _1dMat; }
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
     int computeNumberOfDofs() override { return 5; }
 
 protected:

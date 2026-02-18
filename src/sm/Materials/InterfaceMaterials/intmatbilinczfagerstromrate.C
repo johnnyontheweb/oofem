@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -256,7 +256,7 @@ IntMatBilinearCZFagerstromRate :: giveFirstPKTraction_3d(const FloatArrayF<3> &d
                 dAlpha = 1. - oldDamage;
             }
 
-            auto Iep = Smati({0,1,2},{0,1,2});
+            FloatMatrixF<3,3> Iep = Smati({0,1,2},{0,1,2});
             status->letTempIepBe(Iep);
 
             FloatArrayF<3> alpha_v {

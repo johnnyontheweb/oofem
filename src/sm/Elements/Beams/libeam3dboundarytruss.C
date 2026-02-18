@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -51,14 +51,6 @@ REGISTER_Element(LIBeam3dBoundaryTruss);
 LIBeam3dBoundaryTruss :: LIBeam3dBoundaryTruss(int n, Domain *aDomain) : LIBeam3dBoundary(n, aDomain)
     // Constructor.
 {}
-
-
-void
-LIBeam3dBoundaryTruss :: initializeFrom(InputRecord &ir)
-{
-    LIBeam3dBoundary :: initializeFrom(ir);
-}
-
 
 void
 LIBeam3dBoundaryTruss :: giveDofManDofIDMask(int inode, IntArray &answer) const

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2019   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -51,13 +51,6 @@ REGISTER_Element(LIBeam3dBoundaryMembrane);
 LIBeam3dBoundaryMembrane :: LIBeam3dBoundaryMembrane(int n, Domain *aDomain) : LIBeam3dBoundary(n, aDomain)
     // Constructor.
 {}
-
-
-void
-LIBeam3dBoundaryMembrane :: initializeFrom(InputRecord &ir)
-{
-    LIBeam3dBoundary :: initializeFrom(ir);
-}
 
 
 void

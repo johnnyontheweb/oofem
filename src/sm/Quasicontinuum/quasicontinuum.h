@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -74,9 +74,9 @@ public:
     void computeStiffnessTensorOf1Link(FloatMatrix &D1, double &S0, Element *e, Domain *d);
     bool stiffnessAssignment( std::vector<FloatMatrix> &individualStiffnessTensors, FloatArray &individialS0, Domain *d, Element *e, qcNode *qn1, qcNode *qn2 );
 
-    void computeIntersectionsOfLinkWithInterpElements( IntArray &intersected, FloatArray &lengths, Domain *d, Element *e, qcNode *qn1, qcNode *qn2);
-    bool computeIntersectionsOfLinkWith2DTringleElements( IntArray &intersected, FloatArray &lengths, Domain *d, Element *e, qcNode *qn1, qcNode *qn2);
-    bool computeIntersectionsOfLinkWith3DTetrahedraElements( IntArray &intersected, FloatArray &lengths, Domain *d, Element *e, qcNode *qn1, qcNode *qn2);
+    void computeIntersectionsOfLinkWithInterpElements( IntArray &intersected, std::vector<double> & lengths, Domain *d, Element *e, qcNode *qn1, qcNode *qn2);
+    bool computeIntersectionsOfLinkWith2DTringleElements( IntArray &intersected, std::vector<double> &lengths, Domain *d, Element *e, qcNode *qn1, qcNode *qn2);
+    bool computeIntersectionsOfLinkWith3DTetrahedraElements( IntArray &intersected, std::vector<double> &lengths, Domain *d, Element *e, qcNode *qn1, qcNode *qn2);
 
     void initializeConnectivityTableForInterpolationElements( Domain *d );
 

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -1231,10 +1231,10 @@ Concrete2 :: givePlateLayerStiffMtrx(MatResponseMode rMode,
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 Concrete2 :: CreateStatus(GaussPoint *gp) const
 {
-    return new Concrete2MaterialStatus(gp);
+    return std::make_unique<Concrete2MaterialStatus>(gp);
 }
 
 

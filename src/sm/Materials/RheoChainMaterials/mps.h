@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2015   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -49,7 +49,9 @@
 #define _IFT_MPSMaterial_fc "fc"
 #define _IFT_MPSMaterial_cc "cc"
 #define _IFT_MPSMaterial_wc "w/c"
+#define _IFT_MPSMaterial_wcr "wc" //for Python bindings
 #define _IFT_MPSMaterial_ac "a/c"
+#define _IFT_MPSMaterial_acr "ac" //for Python bindings
 #define _IFT_MPSMaterial_q1 "q1"
 #define _IFT_MPSMaterial_q2 "q2"
 #define _IFT_MPSMaterial_q3 "q3"
@@ -312,7 +314,7 @@ public:
 
     int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 
-    void giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep) override;
+    void giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep) const override;
     //void updateYourself(GaussPoint *gp, TimeStep *tStep) override;
 
     void giveShrinkageStrainVector(FloatArray &answer, GaussPoint *gp, TimeStep *tStep, ValueModeType mode) const override;
@@ -322,7 +324,7 @@ public:
 
     double giveEquivalentTime(GaussPoint *gp, TimeStep *tStep) const override;
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override;
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override;
 
 protected:
     void predictParametersFrom(double, double, double, double);

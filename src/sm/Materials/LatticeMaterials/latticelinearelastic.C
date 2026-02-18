@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2019   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -97,27 +97,22 @@ LatticeLinearElastic :: initializeFrom(InputRecord &ir)
     IR_GIVE_OPTIONAL_FIELD(ir, cAlpha, _IFT_LatticeLinearElastic_calpha);
 }
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 LatticeLinearElastic :: CreateStatus(GaussPoint *gp) const
 {
-    return new LatticeMaterialStatus(gp);
+    return std::make_unique<LatticeMaterialStatus>(gp);
 }
 
 MaterialStatus *
 LatticeLinearElastic :: giveStatus(GaussPoint *gp) const
 {
-    MaterialStatus *status = static_cast< MaterialStatus * >( gp->giveMaterialStatus() );
-    if ( !status ) {
+    if (!gp->hasMaterialStatus()) {
         // create a new one
-        status = this->CreateStatus(gp);
-
-        if ( status ) {
-            gp->setMaterialStatus(status);
-            this->_generateStatusVariables(gp);
-        }
+        gp->setMaterialStatus(this->CreateStatus(gp));
+        this->_generateStatusVariables(gp);
     }
 
-    return status;
+    return static_cast<MaterialStatus*> (gp->giveMaterialStatus());
 }
 
 

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2014   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -45,6 +45,7 @@
 
 namespace oofem {
 class FEI3dLineLin;
+class ParamKey;
 
 /**
  * This class implements two-node subsoil element with linear interpolation.
@@ -62,6 +63,9 @@ protected:
     IntArray dofs;
     FloatArray springStiffnesses;
 
+    static ParamKey IPK_LineDistributedSpring_Dofs;
+    static ParamKey IPK_LineDistributedSpring_Stiffnesses;
+
 public:
     LineDistributedSpring(int n, Domain * d);
     virtual ~LineDistributedSpring() { }
@@ -76,7 +80,8 @@ public:
     const char *giveClassName() const override { return "LineDistributedSpring"; }
     Element_Geometry_Type giveGeometryType() const override {return EGT_line_1;}
 
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
+    void postInitialize() override;
 
     int computeNumberOfDofs() override { return this->dofs.giveSize(); }
     void giveDofManDofIDMask(int inode, IntArray &) const override;

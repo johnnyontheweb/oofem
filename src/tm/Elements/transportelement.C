@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -54,6 +54,9 @@
 #include "dof.h"
 #include "tm/EngineeringModels/stationarytransportproblem.h"
 #include "function.h"
+#include "parametermanager.h"
+#include "paramkey.h"
+
 #ifdef __CEMHYD_MODULE
  #include "tm/Materials/cemhyd/cemhydmat.h"
 #endif
@@ -66,21 +69,29 @@
 namespace oofem {
 
 const double TransportElement :: stefanBoltzmann = 5.67e-8; //W/m2/K4
+ParamKey TransportElement::IPK_TransportElement_vof_function("voffunction");
+
 
 TransportElement :: TransportElement(int n, Domain *aDomain, ElementMode em) :
     Element(n, aDomain), emode( em )
 {
+    this->vofFunction = 0;
 }
 
 
 void
-TransportElement :: initializeFrom(InputRecord &ir)
+TransportElement :: initializeFrom(InputRecord &ir, int priority)
 {
-    Element::initializeFrom(ir);
-    this->vofFunction = 0;
-    IR_GIVE_OPTIONAL_FIELD(ir, vofFunction, _IFT_TransportElement_vof_function);
+    Element::initializeFrom(ir, priority);
+    ParameterManager &ppm =  this->giveDomain()->elementPPM;
+    PM_UPDATE_PARAMETER(vofFunction, ppm, ir, this->number, IPK_TransportElement_vof_function, priority) ;
 }
 
+void
+TransportElement :: postInitialize()
+{
+    Element::postInitialize();
+}
 
 void
 TransportElement :: giveDofManDofIDMask(int inode, IntArray &answer) const
@@ -573,6 +584,7 @@ TransportElement :: computeLoadVector(FloatArray &answer, BodyLoad *load, CharTy
     ///@todo Deal with coupled fields (I think they should be another class of problems completely).
     FEInterpolation *interp = this->giveInterpolation();
     std :: unique_ptr< IntegrationRule > iRule( interp->giveIntegrationRule( load->giveApproxOrder() + 1 + interp->giveInterpolationOrder(), this->giveGeometryType()) );
+    iRule->setElement(this);
 
     if ( load->giveType() == ConvectionBC || load->giveType() == RadiationBC ) {
         this->computeVectorOf(dofid, VM_TotalIntrinsic, tStep, unknowns);
@@ -585,14 +597,7 @@ TransportElement :: computeLoadVector(FloatArray &answer, BodyLoad *load, CharTy
         N.beNMatrixOf(n, unknownsPerNode);
 
         double dV = this->computeVolumeAround(gp);
-
-        if ( load->giveFormulationType() == Load :: FT_Entity ) {
-            load->computeValueAt(val, tStep, lcoords, mode);
-        } else {
-            interp->local2global( gcoords, lcoords, FEIElementGeometryWrapper(this) );
-            load->computeValueAt(val, tStep, gcoords, mode);
-        }
-
+        load->computeValueAt(val, tStep, gp, mode);
         answer.plusProduct(N, val, dV);
     }
 }
@@ -674,7 +679,7 @@ TransportElement :: computeBoundarySurfaceLoadVector(FloatArray &answer, Boundar
 
 //Contribution to conductivity matrix from convection and radiation
 void
-TransportElement :: computeTangentFromSurfaceLoad(FloatMatrix &answer, SurfaceLoad *load, int boundary, MatResponseMode rmode, TimeStep *tStep)
+TransportElement :: computeTangentFromSurfaceLoad(FloatMatrix &answer, BoundaryLoad *load, int boundary, MatResponseMode rmode, TimeStep *tStep)
 {
     answer.clear();
 
@@ -725,7 +730,7 @@ TransportElement :: computeTangentFromSurfaceLoad(FloatMatrix &answer, SurfaceLo
 
 
 void
-TransportElement :: computeTangentFromEdgeLoad(FloatMatrix &answer, EdgeLoad *load, int boundary, MatResponseMode rmode, TimeStep *tStep)
+TransportElement :: computeTangentFromEdgeLoad(FloatMatrix &answer, BoundaryLoad *load, int boundary, MatResponseMode rmode, TimeStep *tStep)
 {
     answer.clear();
 

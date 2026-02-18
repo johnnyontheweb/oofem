@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -85,10 +85,9 @@ Tetrah1_ht :: computeGaussPoints()
 
 
 void
-Tetrah1_ht :: initializeFrom(InputRecord &ir)
+Tetrah1_ht :: initializeFrom(InputRecord &ir, int priority)
 {
-    numberOfGaussPoints = 1;
-    TransportElement :: initializeFrom(ir);
+    TransportElement :: initializeFrom(ir, priority);
 }
 
 

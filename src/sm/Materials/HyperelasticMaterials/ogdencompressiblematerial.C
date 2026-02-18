@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2014   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -151,10 +151,10 @@ OgdenCompressibleMaterial::giveDeviatoricSecondPKStressVector_3d(const Tensor2_3
 
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 OgdenCompressibleMaterial::CreateStatus(GaussPoint *gp) const
 {
-    return new StructuralMaterialStatus(gp);
+    return std::make_unique<StructuralMaterialStatus>(gp);
 }
 
 

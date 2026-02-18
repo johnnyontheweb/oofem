@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -50,6 +50,7 @@ class GaussPoint;
 class FloatMatrix;
 class FloatArray;
 class IntArray;
+class ParamKey;
 
 /**
  * Abstract base class for "structural" finite elements with geometrical nonlinearities.
@@ -87,8 +88,9 @@ class NLStructuralElement : public StructuralElement
 {
 protected:
     /// Flag indicating if geometrical nonlinearities apply.
-    int nlGeometry;
+    int nlGeometry=0;
 
+    static ParamKey IPK_NLStructuralElement_nlgeoflag;
 public:
     /**
      * Constructor. Creates element with given number, belonging to given domain.
@@ -226,7 +228,7 @@ public:
     double computeCurrentVolume(TimeStep *tStep);
 
     // data management
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
     void giveInputRecord(DynamicInputRecord &input) override;
 
     // definition

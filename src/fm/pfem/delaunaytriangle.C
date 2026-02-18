@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -138,7 +138,7 @@ DelaunayTriangle :: giveEdgeLength(int nodeA, int nodeB)
     DofManager *dmanA = domain->giveDofManager( giveNode(nodeA) );
     DofManager *dmanB = domain->giveDofManager( giveNode(nodeB) );
 
-    return distance(*dmanA->giveCoordinates(), *dmanB->giveCoordinates());
+    return distance(dmanA->giveCoordinates(), dmanB->giveCoordinates());
 }
 } // end namespace oofem
 

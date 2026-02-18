@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -62,10 +62,9 @@ LWedge :: LWedge(int n, Domain *aDomain) : Structural3DElement(n, aDomain), ZZNo
 
 
 void
-LWedge :: initializeFrom(InputRecord &ir)
+LWedge :: initializeFrom(InputRecord &ir, int priority)
 {
-    numberOfGaussPoints = 6;
-    Structural3DElement :: initializeFrom(ir);
+    Structural3DElement :: initializeFrom(ir, priority);
 }
 
 

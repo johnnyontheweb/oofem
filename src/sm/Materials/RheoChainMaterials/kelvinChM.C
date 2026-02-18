@@ -9,7 +9,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -198,7 +198,7 @@ KelvinChainMaterial :: giveEigenStrainVector(FloatArray &answer, GaussPoint *gp,
 
 
 void
-KelvinChainMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep)
+KelvinChainMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint *gp, const FloatArray &reducedStrain, TimeStep *tStep) const
 {
     RheoChainMaterial :: giveRealStressVector(answer, gp, reducedStrain, tStep);
 
@@ -206,7 +206,7 @@ KelvinChainMaterial :: giveRealStressVector(FloatArray &answer, GaussPoint *gp, 
 }
 
 void
-KelvinChainMaterial :: computeHiddenVars(GaussPoint *gp, TimeStep *tStep)
+KelvinChainMaterial :: computeHiddenVars(GaussPoint *gp, TimeStep *tStep) const
 {
     /*
      * Updates hidden variables used to effectively trace the load history
@@ -272,10 +272,10 @@ KelvinChainMaterial :: computeHiddenVars(GaussPoint *gp, TimeStep *tStep)
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 KelvinChainMaterial :: CreateStatus(GaussPoint *gp) const
 {
-    return new KelvinChainMaterialStatus(gp, nUnits);
+    return std::make_unique<KelvinChainMaterialStatus>(gp, nUnits);
 }
 
 void

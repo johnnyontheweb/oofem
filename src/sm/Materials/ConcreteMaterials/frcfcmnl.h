@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -107,42 +107,42 @@ public:
     void initializeFrom(InputRecord &ir) override;
 
     void giveRealStressVector(FloatArray &answer, GaussPoint *gp,
-                              const FloatArray &reducedStrain, TimeStep *tStep) override;
+                              const FloatArray &reducedStrain, TimeStep *tStep) const override;
 
     void giveMaterialStiffnessMatrix(FloatMatrix & answer, MatResponseMode,
                                      GaussPoint * gp,
-                                     TimeStep * tStep) override;
+                                     TimeStep * tStep) const override;
 
     Interface *giveInterface(InterfaceType it) override;
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new FRCFCMNLStatus(gp); }
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override { return std::make_unique<FRCFCMNLStatus>(gp); }
 
     int giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStateType type, TimeStep *tStep) override;
 
     //nothing to update here, is it?
     void updateBeforeNonlocAverage(const FloatArray &strainVector, GaussPoint *gp, TimeStep *tStep) const override { }
 
-    bool isStrengthExceeded(const FloatMatrix &base, GaussPoint *gp, TimeStep *tStep, int iCrack, double trialStress) override;
+    bool isStrengthExceeded(const FloatMatrix &base, GaussPoint *gp, TimeStep *tStep, int iCrack, double trialStress) const override;
 
-    double computeDebondedLength(double delta);
+    double computeDebondedLength(double delta) const;
 
     /// compute the the difference in fiber stress in the target (local stress) and receiver (nonlocal stress)
-    double computeDecreaseInFibreStress(double distance, double delta, double debondedLength);
+    double computeDecreaseInFibreStress(double distance, double delta, double debondedLength) const;
 
     /// computes cetroid of a finite element - works only for linear 3 and 4-node elements
-    void computeElementCentroid(FloatArray &answer, GaussPoint *gp);
+    void computeElementCentroid(FloatArray &answer, GaussPoint *gp) const;
 
     /// checks if a element center of homeGP is in projection of element containing nearGP
-    bool isInElementProjection(GaussPoint *homeGp, GaussPoint *nearGp, int iNlCrack);
+    bool isInElementProjection(GaussPoint *homeGp, GaussPoint *nearGp, int iNlCrack) const;
 
     /// computes nonlocal stress in fibers in cracked GP
-    virtual double computeNonlocalStressInFibers(const FloatArray &crackVector, GaussPoint *gp, TimeStep *tStep);
+    virtual double computeNonlocalStressInFibers(const FloatArray &crackVector, GaussPoint *gp, TimeStep *tStep) const;
 
     /// computes nonlocal stress in fibers in uncracked GP
-    virtual double computeNonlocalStressInFibersInUncracked(GaussPoint *gp, TimeStep *tStep);
+    virtual double computeNonlocalStressInFibersInUncracked(GaussPoint *gp, TimeStep *tStep) const;
 
     /// computes an angle between two vectors
-    double computeAngleBetweenVectors(const FloatArray &vec1, const FloatArray &vec2);
+    double computeAngleBetweenVectors(const FloatArray &vec1, const FloatArray &vec2) const ;
 
 protected:
     /// participation angle. The target gauss point must fall into this angle to contribute to the nonlocal stress

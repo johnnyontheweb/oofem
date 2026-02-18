@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -44,6 +44,7 @@
 
 namespace oofem {
 class TransportCrossSection;
+class ParamKey;
 
 /**
  * This abstract class represent a general base element class for transport problems.
@@ -61,6 +62,8 @@ protected:
     static const double stefanBoltzmann;
     /// Fuction determining the relative volume of reference material in element
     int vofFunction = 0;
+
+    static ParamKey IPK_TransportElement_vof_function;
 
 public:
     TransportElement(int n, Domain * d, ElementMode em = HeatTransferEM);
@@ -80,8 +83,8 @@ public:
     //Boundary load by prescribed flux, convection, or radiation over surface
     void computeBoundarySurfaceLoadVector(FloatArray &answer, BoundaryLoad *load, int boundary, CharType type, ValueModeType mode, TimeStep *tStep, bool global=true) override;
     //Contribution to conductivity matrix from convection
-    void computeTangentFromSurfaceLoad(FloatMatrix &answer, SurfaceLoad *load, int boundary, MatResponseMode rmode, TimeStep *tStep) override;
-    void computeTangentFromEdgeLoad(FloatMatrix &answer, EdgeLoad *load, int boundary, MatResponseMode rmode, TimeStep *tStep) override;
+    void computeTangentFromSurfaceLoad(FloatMatrix &answer, BoundaryLoad *load, int boundary, MatResponseMode rmode, TimeStep *tStep) override;
+    void computeTangentFromEdgeLoad(FloatMatrix &answer, BoundaryLoad *load, int boundary, MatResponseMode rmode, TimeStep *tStep) override;
     //Boundary load by prescribed flux, convection, or radiation over length
     void computeBoundaryEdgeLoadVector(FloatArray &answer, BoundaryLoad *load, int edge, CharType type, ValueModeType mode, TimeStep *tStep, bool global=true) override;
 
@@ -89,7 +92,8 @@ public:
 
     TransportCrossSection * giveTransportCrossSection();
     Material * giveMaterial() override;
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
+    void postInitialize() override;
     const char *giveClassName() const override { return "TransportElement"; }
     
     /**

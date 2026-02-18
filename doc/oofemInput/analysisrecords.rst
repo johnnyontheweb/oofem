@@ -17,11 +17,11 @@ The general format of this record can be specified using
    | ``nsteps #(in)`` [``renumber #(in)``]
      [``profileopt #(in)``] ``attributes #(string)``
      [``ninitmodules #(in)``] [``nmodules #(in)``]
-     [``nxfemman #(in)``]
+     [``nxfemman #(in)``] [``nvariables #(in)``] [``nterms #(in)``] [``nintegrals #(in)``]
 
 -  | “meta step-syntax”
    | ``nmsteps #(in)`` [``ninitmodules #(in)``]
-     [``nmodules #(in)``] [``nxfemman #(in)``]
+     [``nmodules #(in)``] [``nxfemman #(in)``] [``nvariables #(in)``] [``nterms #(in)``] [``nintegrals #(in)``]
    | immediately followed by ``nmsteps`` meta step records with the
      following syntax:
    | ``nsteps #(in)`` ``attributes #(string)``
@@ -62,6 +62,10 @@ The general format of this record can be specified using
       Export modules allow to export computed data into external
       software for postprocessing. The available export modules are
       described in section :ref:`ExportModulesSec`.
+   
+   -  To support symbolic computations provided by mpm module, the number of Variables, Terms and Integrals appearing in
+      weak form are specified by ``nvariables``, ``nterms`` and ``nintegrals`` respectively. The Varialble, Terms and Integral records are specified 
+      following export module records.
 
    -  ``nxfemman`` - 1 implies that an XFEM manager is created, 0
       implies that no XFEM manager is created. The XFEM manager stores a
@@ -73,6 +77,8 @@ The general format of this record can be specified using
       Used for adaptive analysis, but can also be used to compute and
       write error estimates to the output files. See adaptive
       engineering models for details.
+
+
 
 Not all of analysis types support the metastep syntax, and if not
 mentioned, the standard-syntax is expected. Currently, supported
@@ -95,6 +101,8 @@ analysis types are
 
 -  Non-linear static analysis, see section :ref:`NonLinearStatic`.
 
+-  Stationary symbolic MPM analysis, see section :ref:`StationaryMPMSProblem`,
+
 -  Dymmy problem, see section :ref:`DummyEngngModel` 
 
 Structural Problems
@@ -105,7 +113,8 @@ Structural Problems
 StaticStructural
 ~~~~~~~~~~~~~~~~
 
-``StaticStructural`` ``nsteps #(in)`` [``deltat #(...)``] [``prescribedtimes #(...)``] [``stiffmode #(...)``] [``nonlocalext #(...)``] [``sparselinsolverparams #(...)``]
+``StaticStructural`` ``nsteps #(in)`` [``deltat #(...)``] [``prescribedtimes #(...)``] [``stiffmode #(...)``] [``nonlocalext #(...)``] [``sparselinsolverparams #(...)``] [``finalt #(...)``]
+    [``treductiontype #(...)``] [``dTmax #(...)``]  [``dTmin #(...)``] [``minrequirediter #(...)``]   [``maxrequirediter #(...)``]
 
 Static structural analysis. Can be used to solve linear and nonlinear
 static structural problems, supporting changes in boundary conditions
@@ -128,7 +137,55 @@ the length of time step (equal to 1.0 by default). The times
 corresponding to individual solution times can be specified using
 optional parameter ``prescribedtimes``, allowing to input array of
 discrete solution times, the number of solution steps is then equal to
-the size of this array. .
+the size of this array. 
+
+In addition to standard boundary condition types, the ``StaticStructural``
+analysis also supports **contact analysis** through the penalty-based contact
+formulation. Contact interactions can be defined using
+``structuralpenaltycontactbc`` boundary conditions together with
+``StructuralContactElement_*`` elements and
+``StructuralFEContactSurface`` records. This enables simulation of
+frictionless or frictional(currently only experimental and under development) contact between deformable bodies within a static framework. More details on contact elements, surfaces, and boundary
+conditions can be found in the corresponding sections of this manual.
+
+
+
+    Adaptive Increase/Decrease of Time Step
+---------------------------------------
+Additional parameters related to adaptive time-stepping can be specified to control the increment size during nonlinear
+iterations.
+
+``finalt``
+    Final analysis time.
+
+``deltat``
+    Initial time step used at the beginning of the analysis.
+
+``treductiontype``
+    Strategy used to reduce the timestep when convergence fails.
+    ``"SimpleReduction"`` reduces the timestep using a fixed factor.
+
+``ncrf``
+    No-convergence reduction factor. If a step fails to converge, the
+    timestep is multiplied by this factor.
+
+
+The number of Newton–Raphson iterations required for convergence
+determines whether the current timestep should be enlarged or reduced.
+
+``minrequirediter``
+    Minimum number of Newton iterations that justify keeping the current
+    timestep.
+
+    If convergence occurs in fewer iterations than ``minrequirediter``,
+    → the step was “too easy”, and the timestep will be increased.
+
+``maxrequirediter``
+    Maximum number of Newton iterations allowed for convergence.
+
+    If convergence requires more iterations than ``maxrequirediter``,
+    → the step was too large, and the timestep will be reduced.
+
 
 .. _LinearStatic:
 
@@ -229,7 +286,7 @@ Represents direct implicit integration of linear dynamic problems. Solution proc
 K. Subbaraj and M. A. Dokainish, A SURVEY OF DIRECT TIME-INTEGRATION METHODS IN COMPUTATIONAL STRUCTURAL DYNAMICS - II. IMPLICIT METHODS,
 Computers & Structures Vol. 32. No. 6. pp. 1387-1401, 1989.
 
-Parameter ``ddtscheme`` determines integration scheme, as defined in src/oofemlib/timediscretizationtype.h (TD_ThreePointBackward=0 (default), TD_TwoPointBackward =  1,
+Parameter ``ddtscheme`` determines integration scheme, as defined in src/core/timediscretizationtype.h (TD_ThreePointBackward=0 (default), TD_TwoPointBackward =  1,
 TD_Newmark =  2, TD_Wilson =  3, TD_Explicit  =  4).
 
 Parameters ``beta`` and ``gamma`` determine the stability and acuracy of the integration algorithm, both have zero values as default. For ``gamma=0.5`` and ``beta = l/6``, the linear acceleration method is obtained. Unconditional stability is obtained, when :math:`2\beta \ge \gamma \ge 1/2`. 
@@ -418,7 +475,7 @@ where
    should be replaced by group number (numbering starts from 1). This
    array contains the DofIDItem values, that identify the physical
    meaning of DOFs in the group. The values and their physical meaning
-   is defined by DofIDItem enum type (see src/oofemlib/dofiditem.h for
+   is defined by DofIDItem enum type (see src/core/dofiditem.h for
    reference).
 
 -  ``rtolv`` determines relative convergence norm (both for displacement
@@ -546,7 +603,7 @@ where
    should be replaced by group number (numbering starts from 1). This
    array contains the DofIDItem values, that identify the physical
    meaning of DOFs in the group. The values and their physical meaning
-   is defined by DofIDItem enum type (see src/oofemlib/dofiditem.h for
+   is defined by DofIDItem enum type (see src/core/dofiditem.h for
    reference).
 
 -  ``rtolv`` determines relative convergence norm (both for displacement
@@ -1105,6 +1162,78 @@ performed, if not specified by ``maxiter``.
 
 Note: This problem type **is included in PFEM module** and it can be
 used only when this module is configured.
+
+.. _AdditiveManufacturingProblem :
+
+Additive Manufacturing Problem
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``AdditiveManufacturingProblem`` ``nsteps #(in)`` (``deltaT #(rn))`` :math:`|`
+``timeDefinedByProb #(in)`` :math:`|` ``dtf #(in)``)
+``gcode #(s)`` ``prob1 #(s)`` ``prob2 #(s)``
+``stepx #(rn)`` ``stepy #(rn)`` ``stepz #(rn)``
+[``skipsm #(in)``] [``minsteplength #(rn)``] [``maxsteplength #(rn)``] 
+[``reqIterations #(in)``] [``stepMultiplier #(rn)``]
+[``layerheight`` #(rn)``] [``extrusionwidth`` #(rn)``]
+[``chambertemperature #(rn)``] [``depositiontemperature #(rn)``] [``heatbedtemperature #(rn)``]
+[``heattransferfilmcoefficient #(rn)``] [``depositedmaterialheatpower #(rn)``] 
+
+Represent additive manufacturing analysis, performed as a sequence of sub-problems in each time step over the time-evolving domain defined by G-code file.
+The time-evolving computational domain is defined by G-code file (``gcode`` parameter), which is interpretted by build-in G-code processor.
+The G-code processor provides precise emulation of the machine G-code file in a virtual domain represented
+by a structured grid with user-defined resolution both in space (``stepx``, ``stepy`` and ``stepz`` parameters) and time. 
+It tracks the evolution of Representative Volume of Deposited Material (RVOM) values in
+individual elements of a structured grid, considering realistic extruder path, speed, and
+deposition profile defined by the G-code file. Note that g-code units are in [mm] and [mm/s], but this is translated into basic units ([m] and [m/s]) internally.
+
+User can configure some printer process parameters, such as layer height in [mm] (``layerheight`` parameter), 
+extrusion width in [mm] (``extrusionwidth`` parameter), ambient temperature (``chambertemperature`` parameter), 
+deposition temperature (``depositiontemperature`` parameter), heat bed prescribed temperature (``heatbedtemperature`` parameter), 
+heat transfer film coefficient between deposited material and surrounding air in printer chamber (``heattransferfilmcoefficient`` parameter),
+and deposited material heat power, defined as product of material specific heat and density (``depositedmaterialheatpower`` parameter).``
+The ``prob1`` and ``prob2`` parameters are strings containing a path to sub-problem input files, which run in a staggered manner for each solution step 
+(the first is typycally transient heat analysis follwed by mechanical analysis).
+
+
+
+Initially, the RVOM of all elements are set to zero, making all elements empty without
+any deposited material. The elements with zero RVOM are defined as inactive. 
+In each step, the updated computational domain is identified. It consists of a set of elements with non-
+zero RVOM values, exceeding the treshold. Active nodes are subsequently defined as nodes that are shared by at least one active element. 
+The boundary conditions are generated by the G-code processor (ambient temperature, prescribed bottom temperature).
+
+.. In consecutive time steps, individual elements and corresponding nodes are activated when
+   the material was deposited into the cell volume exceeds the user defined treshold (``minvof`` parameter). 
+
+.. Additionally, empty elements inside regions fully bounded by elements with nonzero RVOM values are added in each layer. This ensured that elements representing
+   internal voids (air-filled) are also a part of the computational domain. This naturally
+   allows us to consider, for example, the heat transfer inside a specimen.
+
+See ``tests/am`` directory for examples of input files.
+
+
+
+.. _StationaryMPMSProblem:
+
+Stationary Symbolic MPM Problem
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Stationary symbolic multiphysic problem (StationaryMPMSProblem) allows to formulate the problem 
+symbolically by defining its weak form in terms of variables, terms, and integrals.
+
+``StationaryMPMSProblem`` ``nsteps #(in)`` ``nvariables #(in)`` ``nterms #(in)``
+``nintegrals #(in)`` ``lhsterms #(ia)`` ``rhsterms #(ia)``
+
+The problem is defined by its weak form in terms of set of integrals of specific (predefined) terms as a function of defined variables.
+The number of variables, terms and integrals is defined by ``nvariables``, ``nterms``, and ``nintegrals`` parameters, respectively.
+The ``lhsterms`` and ``rhsterms`` parameters are integer arrays, 
+defining the integrals (of terms) that contribute to 
+the non-linear problem left-hand and right-hand sides, respectively. 
+The Newton-Raphson nonlinear solver (NRSolver) is used to solve the resulting nonlinear system of equations.
+
+See https://oofem.github.io/blog/mpm-incompressible-elasticity-up-formulation/ for commented example and https://github.com/oofem/oofem/blob/devel/tests/mpm/cook2_u1p0_2.in for an example of complete input file.
+
+
+
 
 .. _DummyEngngModel:
 

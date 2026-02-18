@@ -2,8 +2,13 @@
 # this example illustrates the user defined material model in python injected into oofem
 #
 #
-import oofempy
-import util
+try: # installed
+    import oofem as oofempy
+    from oofem import util
+except: # in-tree
+    import oofempy
+    import util
+
 
 class MyMaterial(oofempy.StructuralMaterial):
     def __init__(self, num, domain):
@@ -31,10 +36,12 @@ class MyMaterial(oofempy.StructuralMaterial):
         return answer;
     def giveStatus (self, gp):
         print ("getStatus")
-        if (gp.giveMaterialStatus() is None):
-            print ("getStatus creating")
+        if (not gp.hasMaterialStatus()):
+            print ("status created")
             status = oofempy.StructuralMaterialStatus (gp)
-            gp.setMaterialStatus(status)
+            print(status)
+            gp.setMaterialStatus(status, oofempy.IntegrationPointStatusIDType.IPSID_Default)
+            print(gp.giveMaterialStatus())
         return gp.giveMaterialStatus() 
         
 def test_4():

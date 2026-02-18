@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -63,7 +63,7 @@ void
 PerfectlyPlasticMaterial :: giveRealStressVector(FloatArray &answer,
                                                  GaussPoint *gp,
                                                  const FloatArray &totalStrain,
-                                                 TimeStep *tStep)
+                                                 TimeStep *tStep) const 
 //
 // returns  stress vector (in full or reduced form )  of receiver according to
 // previous level of stress and current
@@ -266,7 +266,7 @@ void
 PerfectlyPlasticMaterial :: giveEffectiveMaterialStiffnessMatrix(FloatMatrix &answer,
                                                                  MatResponseMode mode,
                                                                  GaussPoint *gp,
-                                                                 TimeStep *tStep)
+                                                                 TimeStep *tStep) const
 //
 //
 // for case of perfectly plastic material
@@ -296,7 +296,7 @@ PerfectlyPlasticMaterial :: giveEffectiveMaterialStiffnessMatrix(FloatMatrix &an
 void
 PerfectlyPlasticMaterial :: giveMaterialStiffnessMatrix(FloatMatrix &answer, MatResponseMode mode,
                                                         GaussPoint *gp,
-                                                        TimeStep *tStep)
+                                                        TimeStep *tStep) const
 //
 //
 //
@@ -500,7 +500,7 @@ PerfectlyPlasticMaterial :: givePlateLayerStiffMtrx(MatResponseMode mode,
 void
 PerfectlyPlasticMaterial :: computeTrialStressIncrement(FloatArray &answer, GaussPoint *gp,
                                                         const FloatArray &strainIncrement,
-                                                        TimeStep *tStep)
+                                                        TimeStep *tStep) const
 //
 // computest the elastic stress increment
 // from stressIncrement in full stress strain space
@@ -525,7 +525,7 @@ PerfectlyPlasticMaterial :: computePlasticStiffnessAt(FloatMatrix &answer,
                                                       FloatArray *currentPlasticStrainVector,
                                                       FloatArray *strainIncrement3d,
                                                       TimeStep *tStep,
-                                                      double &lambda)
+                                                      double &lambda) const
 //
 // Computes full form of  Plastic stiffness Matrix at given state.
 // gp is used only and only for setting proper MaterialMode ()
@@ -550,13 +550,13 @@ PerfectlyPlasticMaterial :: computePlasticStiffnessAt(FloatMatrix &answer,
     yeldStressGrad = this->GiveYCStressGradient(gp, currentStressVector,
                                                 currentPlasticStrainVector);
     crossSection->imposeStressConstrainsOnGradient(gp, yeldStressGrad);
-    yeldStressGradMat = new FloatMatrix(*yeldStressGrad, 1); // transpose
+    yeldStressGradMat = new FloatMatrix(FloatMatrix::fromArray(*yeldStressGrad, 1)); // transpose
 
     loadingStressGrad = this->GiveLCStressGradient(gp, currentStressVector,
                                                    currentPlasticStrainVector);
 
     crossSection->imposeStrainConstrainsOnGradient(gp, loadingStressGrad);
-    loadingStressGradMat = new FloatMatrix(*yeldStressGrad);
+    loadingStressGradMat = new FloatMatrix(FloatMatrix::fromArray(*yeldStressGrad));
 
     help.beProductOf(de, * loadingStressGrad);
     delete loadingStressGrad;
@@ -592,7 +592,7 @@ PerfectlyPlasticMaterial :: computePlasticStiffnessAt(FloatMatrix &answer,
 FloatArray *
 PerfectlyPlasticMaterial :: GiveStressCorrectionBackToYieldSurface(GaussPoint *gp,
                                                                    FloatArray *stressVector3d,
-                                                                   FloatArray *plasticVector3d)
+                                                                   FloatArray *plasticVector3d) const
 //
 // returns the stress correction -> correction is in the direction of
 // the normal to the yield surface
@@ -653,13 +653,13 @@ PerfectlyPlasticMaterial :: give(int aProperty, GaussPoint *gp) const
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 PerfectlyPlasticMaterial :: CreateStatus(GaussPoint *gp) const
 /*
  * creates new  material status  corresponding to this class
  */
 {
-    return new PerfectlyPlasticMaterialStatus(gp);
+    return std::make_unique<PerfectlyPlasticMaterialStatus>(gp);
 }
 
 

@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -128,7 +128,7 @@ protected:
     virtual const IntArray &giveOrderingPhFi(SolutionFieldPhFi fieldType) const = 0;
     virtual const IntArray &giveOrdering_Disp() const = 0;
     virtual const IntArray &giveOrdering_Damage() const = 0;
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
 
     // Tangent matrices
     void computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, TimeStep *tStep) override;

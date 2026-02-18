@@ -1,4 +1,15 @@
-cmake_minimum_required (VERSION 3.1)
+cmake_minimum_required (VERSION 3.15...3.30)
+set(CMAKE_MODULE_PATH  ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+
+
+# use py-build-cmake variables for scikit-build-core as well
+if(PY_BUILD_CMAKE_IMPORT_NAME)
+    set(SKBUILD_PROJECT_NAME ${PY_BUILD_CMAKE_IMPORT_NAME})
+    set(SKBUILD_PROJECT_VERSION ${PY_BUILD_CMAKE_PROJECT_VERSION})
+    set(SKBUILD_PROJECT_VERSION_FULL ${PY_BUILD_CMAKE_PROJECT_VERSION}) # PY_BUILD_CMAKE does not provide VERSION_FULL (?)
+endif()
+
+include (FetchContent)
 include (CheckSymbolExists)
 include (CheckCXXSymbolExists)
 include (CheckIncludeFiles)
@@ -7,25 +18,33 @@ include (CheckCXXSourceCompiles)
 include (GenerateExportHeader)
 include (ProcessorCount)
 
+## local script, in src/
+include(src/DefineVersionsFromGit.cmake)
+
+
 # Use ccache if available. Needs to be performed early for it to work with cmake.
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
 endif()
 
+
+# cmake>=3.12: honor *_ROOT variables (needed for cibuildwheel python envs)
+cmake_policy(SET CMP0074 NEW)
+set(CMAKE_POLICY_DEFAULT_CMP0074 NEW)
+
+
 project (oofem CXX C)
-set (oofem_VERSION_MAJOR 2)
-set (oofem_VERSION_MINOR 6)
-set (oofem_VERSION_PATCH 0) # Unused
-set (oofem_HOMEPAGE "http://www.oofem.org")
-set (bp_HOMEPAGE "http://ksm.fsv.cvut.cz/%7Ebp/bp.html")
+set (OOFEM_HOMEPAGE "http://www.oofem.org")
+set (bp_HOMEPAGE "http://ksm.fsv.cvut.cz/~bp/bp.html")
 string(TIMESTAMP YEAR "%Y")
-set (oofem_COPYRIGHT "Copyright (C) 1994-${YEAR} Borek Patzak")
-set (oofem_EMAIL "oofem@fsv.cvut.cz")
+set (OOFEM_COPYRIGHT "Copyright (C) 1994-${YEAR} Borek Patzak")
+set (OOFEM_EMAIL "oofem@fsv.cvut.cz")
 
 set(CMAKE_MODULE_PATH  ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Default is debug build
 if (NOT CMAKE_BUILD_TYPE)
@@ -54,11 +73,17 @@ endfunction(add_git_submodule)
 if (MSVC)
     add_definitions (-D_USE_MATH_DEFINES)
     set (CMAKE_REQUIRED_DEFINITIONS "-D_USE_MATH_DEFINES")
+    # needed for py-build-cmake (cibuildwheel adds this flag automatically)
+    #   enable c++ stack unwinding; for translating c++ exceptions back to python via pybind11
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -EHsc")
     # I'm not sure we should block these warnings or not:
     # C4800 Conversion from int to bool performance warning (we should probably be using bool in most of these places though).
     # C4127 Conditional expression is constant: Most of these uses are intentional (debugging code etc.)
     # C4267 size_t to int conversion. Most of these are indices, but many places can be replaced by a for-each loop as well.
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W4 -wd4786 -wd4100 -wd4996 -wd4706 -wd4512 -wd4251 -wd4800")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W3 -wd4786 -wd4100 -wd4996 -wd4706 -wd4512 -wd4251 -wd4800")
+    # make MSVC a bit more silent (though most of this should be fixed really)
+	 # C4608: don't report unknown pragmas (used e.g. as "#pragma GCC diagnostic push" "#pragma GCC diagnostic ignored "-Woverloaded-virtual" /* ... */ "#pragma GCC diagnostic pop" to locally disable certain harmless warnings from gcc)
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4275 -wd4267 -wd4458 -wd4456 -wd5205 -wd4244 -wd4101 -wd4068")
 else ()
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -fPIC")
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -fPIC")
@@ -157,10 +182,15 @@ option (USE_TM "Enable heat/mass transfer module" ON)
 option (USE_CEMHYD "Enable CemHyd support" OFF)
 option (USE_AM "Enable additive manufacturing module" OFF)
 option (USE_T3D "Enable T3D support" OFF)
-option (USE_BOOSTPYTHON_BINDINGS "Rather obsolete, use USE_PYBIND_BINDINGS. Enable Python bidings using boost (OOFEM callable from Python)." OFF)
 option (USE_PYBIND_BINDINGS "Enable Python Pybind11 bindings (OOFEM callable from Python and vice versa)." OFF)
+option (USE_NANOBIND "Use nanobind instead of pybind; requires USE_PYBIND_BINDINGS" OFF)
 option (USE_PYTHON_EXTENSION "Enable Python extension for exposing C++ code to python. Uses Python.h library." OFF)
 option (USE_HDF5 "HDF5 support" OFF)
+option (USE_MPM "Enable experimental multiphysics module" OFF)
+option (USE_OOFEM_EXE "Build oofem executable" ON)
+OPTION (USE_EIGEN "Use Eigen instead of home-made array classes (experimental)" OFF)
+OPTION (USE_XML "Reader for XML input format (requires pugixml)" OFF)
+OPTION (USE_TRACE_FIELDS "Allow tracing field access by setting OOFEM_TRACE_FIELDS_CSV env var" OFF)
 # memory stream
 option (USE_MEMSTR "Enable memory stream support" ON)
 option (USE_MPM "Enable experimental multiphysics module" OFF)
@@ -185,13 +215,24 @@ endif ()
 #######################################################################
 # I believe the subdirs should be used when including instead.
 include_directories ("${oofem_SOURCE_DIR}/src")
-include_directories ("${oofem_SOURCE_DIR}/src/oofemlib")
-include_directories ("${oofem_SOURCE_DIR}/src/oofemlib/T3d/src")
+include_directories ("${oofem_SOURCE_DIR}/src/core")
+include_directories ("${oofem_SOURCE_DIR}/src/core/T3d/src")
 include_directories ("${oofem_BINARY_DIR}")
 include_directories ("${oofem_SOURCE_DIR}/src/spectra")
 
 # Is there really any reason not to compile all of them? Some has cross dependencies.
 list (APPEND LIBS $<TARGET_OBJECTS:core>)
+
+if (USE_AM)
+    include_directories ("${oofem_SOURCE_DIR}/src/am")
+    add_definitions (-D__AM_MODULE)
+    list (APPEND LIBS $<TARGET_OBJECTS:am>)
+    list (APPEND MODULE_LIST "am")
+    # AM depends on TM and SM modules
+    set(USE_TM ON)
+    set(USE_SM ON)
+endif ()
+
 
 if (USE_FM)
     include_directories ("${oofem_SOURCE_DIR}/src/fm")
@@ -229,7 +270,7 @@ if (USE_SM)
     list (APPEND LIBS $<TARGET_OBJECTS:sm> $<TARGET_OBJECTS:sm_elements> $<TARGET_OBJECTS:sm_materials>)
     list (APPEND MODULE_LIST "sm" "sm_elements" "sm_materials")
 
-    if (NOT MSVC AND NOT MINGW)
+    if (NOT MSVC AND NOT MINGW AND NOT EMSCRIPTEN)
         find_library (DL_LIB dl) 
         list (APPEND EXT_LIBS ${DL_LIB})
     endif ()
@@ -299,17 +340,11 @@ endif ()
 ######################## External libraries ###########################
 #######################################################################
 
-#if (USE_BOOST) 
-#    set (CMAKE_LIBRARY_DIR ${BOOST_DIR})
-#    find_package (BOOST REQUIRED)
-#    list (APPEND EXT_LIBS ${BOOST_LIBRARIES})
-#    if (BOOST_DIR)
-#    	include_directories ("${BOOST_DIR}")
-#    	list (APPEND MODULE_LIST "BOOST")
-#     endif ()
-# 
-#    add_definitions (-D__BOOST_MODULE)
-#endif ()
+if (USE_EIGEN)
+    add_definitions(-D_USE_EIGEN)
+    find_package(Eigen3 REQUIRED NO_MODULE)
+    link_libraries(Eigen3::Eigen)
+endif()
 
 if (USE_LAPACK)
     set (CMAKE_LIBRARY_DIR ${LAPACK_DIR})
@@ -318,6 +353,17 @@ if (USE_LAPACK)
     list (APPEND MODULE_LIST "LAPACK")
     add_definitions (-D__LAPACK_MODULE)
 endif ()
+
+if (USE_XML)
+    add_definitions(-D_USE_XML)
+    find_package(pugixml REQUIRED)
+    link_libraries(pugixml::pugixml)
+endif()
+
+if (USE_TRACE_FIELDS)
+    add_definitions(-D_USE_TRACE_FIELDS)
+endif()
+
 
 
 ## There is a conflict on set.h as defined by libstdc and superlu_mt 3.1
@@ -341,9 +387,25 @@ if (USE_SUPERLU_MT)
     if (NOT HAVE_SUPERLU_MT_DDEFS_H)
         message (FATAL_ERROR "Necessary SUPERLU_MT headers not found; refer to CMakeLists.txt for details")
     endif ()
-
-
 endif ()
+
+# perhaps use in the future instead
+#
+#if (USE_SUPERLU_MT)
+#    if(SUPERLU_MT_DIR)
+#        add_subdirectory(${SUPERLLU_MT_DIR})
+#    else()
+#        FetchContent_Declare(
+#            superlu_mt
+#            GIT_REPOSITORY https://github.com/xiaoyeli/superlu_mt.git
+#            GIT_TAG v4.0.1
+#        )
+#        FetchContent_MakeAvailable(superlu_mt)
+#    endif()
+#    # ...
+#endif()
+
+
 
 if (USE_VTK)
     set (CMAKE_LIBRARY_DIR ${VTK_DIR})
@@ -403,15 +465,19 @@ if (USE_PARDISO_ORG)
 endif ()
 
 if (USE_INTEL_MKL_PARDISO)
+    if(INTEL_MKL_PARDISO_DIR)
+        include_directories("${INTEL_MKL_PARDISO_DIR}/mkl/include")
+    else()
+        find_path (MKL_INCLUDE_DIR mkl.h PATHS /usr/include/mkl /opt/intel/composerxe/mkl/include REQUIRED)
+        include_directories("${MKL_INCLUDE_DIR}")
+    endif()
     # Find the actual libraries:
     list(APPEND MKL_LIBS "mkl_core" "mkl_gf_lp64" "mkl_gnu_thread" "pthread")
     foreach (f ${MKL_LIBS})
         if (INTEL_MKL_PARDISO_DIR)
             find_library (${f}_LIB ${f} PATH "${INTEL_MKL_PARDISO_DIR}/mkl/lib/intel64/" DOC "MKLPARDISO (library)")
-            include_directories ("${INTEL_MKL_PARDISO_DIR}/mkl/include")
         else ()
             find_library (${f}_LIB ${f} HINTS "/opt/intel/composerxe/mkl/lib/intel64/" DOC "MKLPARDISO (library)")
-            include_directories ("/opt/intel/composerxe/mkl/include")
         endif ()
         if (${${f}_LIB} STREQUAL "${f}_LIB-NOTFOUND")
             message (FATAL_ERROR "MKLPARDISO library not found")
@@ -488,37 +554,10 @@ set (USE_PETSC ON)
 endif ()
 
 if (USE_PETSC)
-    # A real PETScConfig.cmake file would have been nice to use:
-    #find_package (PETSc 3.3 HINTS "${MY_PETSC_DIR}/${MY_PETSC_ARCH}")
-
-    # Have to use pkgconfig information
-    #~ find_package (PkgConfig REQUIRED)
-    
-    #~ set (ENV{PKG_CONFIG_PATH} ${MY_PETSC_DIR}/${MY_PETSC_ARCH}/lib/pkgconfig)
-    #~ pkg_check_modules (PC_PETSC REQUIRED PETSc)
-    #~ include_directories (${PC_PETSC_INCLUDE_DIRS})
-
-    #~ # Find the actual libraries:
-    #~ foreach (f ${PC_PETSC_LIBRARIES})
-        #~ find_library (${f}_LIBRARY NAMES ${f} lib${f}
-            #~ HINTS
-            #~ ${PC_PETSC_LIBRARY_DIRS}
-        #~ )
-        #~ list (APPEND EXT_LIBS ${${f}_LIBRARY})
-    #~ endforeach ()
-    # Currently unused flags:
-    #   PC_PETSC_LDFLAGS        ... all required linker flags
-    #   PC_PETSC_LDFLAGS_OTHER  ... all other linker flags
-    #   PC_PETSC_CFLAGS         ... all required cflags
-    #   PC_PETSC_CFLAGS_OTHER   ... the other compiler flags
-
-    #find_package (PETSc REQUIRED HINTS "${MY_PETSC_DIR}/${MY_PETSC_ARCH}/conf")
-    include_directories ("${MY_PETSC_DIR}/include" "${MY_PETSC_DIR}/${MY_PETSC_ARCH}/include" ${PETSC_INCLUDE_PATH})
-    find_library (PETSC_LIB petsc PATH "${MY_PETSC_DIR}/${MY_PETSC_ARCH}/lib/") 
-    if (${PETSC_LIB} STREQUAL "PETSC_LIB-NOTFOUND")
-        message (FATAL_ERROR "PETSc library not found")
-    endif ()
-    list (APPEND EXT_LIBS ${PETSC_LIB} ${PETSC_PACKAGE_LIBS})
+    find_package (PETSc)
+    # find_package(PETSc COMPONENTS CXX)
+    include_directories (${PETSC_INCLUDES})
+    list (APPEND EXT_LIBS ${PETSC_LIBRARIES})
     list (APPEND MODULE_LIST "PETSc")
     #set (USE_MPI ON) # use sequential slepc
     add_definitions (-D__PETSC_MODULE)
@@ -548,8 +587,8 @@ endif ()
 
 if (USE_T3D)
     add_definitions (-D__T3D)
-    include_directories ("${oofem_SOURCE_DIR}/src/oofemlib/T3d/src")
-    check_include_file_cxx ("${oofem_SOURCE_DIR}/src/oofemlib/T3d/src/t3d.h" HAVE_T3D_H)
+    include_directories ("${oofem_SOURCE_DIR}/src/core/T3d/src")
+    check_include_file_cxx ("${oofem_SOURCE_DIR}/src/core/T3d/src/t3d.h" HAVE_T3D_H)
     if ((NOT HAVE_T3D_H))
         message (FATAL_ERROR "Necessary T3D headers not found")
     endif ()
@@ -635,32 +674,6 @@ if (USE_MEMSTR)
     list (APPEND MODULE_LIST "MEMSTR")
 endif ()
 
-if (USE_PYTHON_EXTENSION OR USE_BOOSTPYTHON_BINDINGS)
-    # PythonLibs in cmake is bugged, have to try and rely on PythonInterp to get the suitable major and minor versions.
-    #set (CMAKE_LIBRARY_DIR ${PYTHON_DIR})
-    #Print if set up manually
-    message(STATUS "PYTHON_LIBRARY = ${Python3_LIBRARIES}")
-    message(STATUS "PYTHON_EXECUTABLE = ${Python3_EXECUTABLE}")
-    message(STATUS "PYTHON_INCLUDE_DIR = ${Python3_INCLUDE_DIRS}")
-    find_package (Python3 COMPONENTS Interpreter Development)
-#     find_package(PythonInterp "3" REQUIRED)
-#    find_package(PythonLibs "${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}" REQUIRED)
-    include_directories (${Python3_INCLUDE_DIRS})
-    list (APPEND EXT_LIBS ${Python3_LIBRARIES})
-    list (APPEND MODULE_LIST "Python")
-    if(USE_PYTHON_EXTENSION)
-        add_definitions(-D_PYTHON_EXTENSION)    
-    endif ()
-    
-    if(USE_BOOSTPYTHON_BINDINGS)
-        # require boost_python also for python stuff by itself
-        find_package(Boost COMPONENTS "python-py${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}" REQUIRED)
-        include_directories (${Boost_INCLUDE_DIRS})
-        list (APPEND EXT_LIBS ${Boost_LIBRARIES})
-        add_definitions(-D_BOOSTPYTHON_BINDINGS)
-     endif ()   
-endif ()
-
 
 if(WIN32)
     set(PYTHON_MODULE_EXTENSION ".pyd")
@@ -669,21 +682,58 @@ else()
 endif()
 
 
-if (USE_PYBIND_BINDINGS)
-    #build pybind11 bindings
-    find_package(Python COMPONENTS Interpreter Development)
-    #find_package(pybind11 CONFIG)
-    add_git_submodule(extern/pybind11)
-    if (PYBIND_DIR)
-        message(STATUS "PYBIND_DIR = ${PYBIND_DIR}")
-        include_directories (${PYBIND_DIR})#Need also to manually set it up since it can be anywhere
-    endif ()
-    include_directories (${pybind11_INCLUDE_DIR} ${Python_INCLUDE_DIRS})
-    list (APPEND EXT_LIBS ${Python_LIBRARIES})
-    pybind11_add_module(oofempy THIN_LTO ${oofem_SOURCE_DIR}/bindings/python/oofem.cpp ${PYBIND11_HEADERS})
-    target_link_libraries(oofempy PRIVATE liboofem)
-    set_target_properties (oofempy PROPERTIES SUFFIX "${PYTHON_MODULE_EXTENSION}")
+if(USE_NANOBIND AND NOT USE_PYBIND_BINDINGS)
+    MESSAGE(FATAL_ERROR "USE_NANOBIND requires simultaneous USE_PYBIND_BINDINGS")
+endif()
 
+if (USE_PYBIND_BINDINGS)
+    add_definitions(-D_PYBIND_BINDINGS)
+    # workaround for emscripten: https://github.com/pyodide/pyodide/issues/5054
+    set(PYBIND11_FINDPYTHON ON)
+    find_package(Python COMPONENTS Interpreter Development)
+    link_libraries(Python::Module)
+    if(USE_NANOBIND)
+        if(0)
+            add_subdirectory(extern/nanobind)
+        else()
+            FetchContent_Declare(
+                nanobind
+                GIT_REPOSITORY https://github.com/wjakob/nanobind.git
+                GIT_TAG v2.7.0
+            )
+            FetchContent_MakeAvailable(nanobind)
+        endif()
+        nanobind_add_module(oofempy NB_STATIC STABLE_ABI LTO ${oofem_SOURCE_DIR}/bindings/python/oofem.cpp)
+        nanobind_build_library(nanobind-static) # -static is added via NB_STATIC for the module
+        link_libraries(nanobind-static) # for pythonfield.C and possibly others using nanobind functions
+        add_definitions(-D_USE_NANOBIND)
+        include_directories(${oofem_SOURCE_DIR}/extern/nanobind/include)
+    else()
+        if (PYBIND_DIR)
+            message(STATUS "PYBIND_DIR = ${PYBIND_DIR}")
+            include_directories (${PYBIND_DIR}) # need also to manually set it up since it can be anywhere
+            add_git_submodule(${PYBIND_DIR})
+        else()
+            add_git_submodule(extern/pybind11)
+        endif ()
+        # use python include paths and libs for all future targets (liboofem and oofem binary)
+        link_libraries(pybind11::embed)
+        pybind11_add_module(oofempy THIN_LTO ${oofem_SOURCE_DIR}/bindings/python/oofem.cpp)
+    endif()
+    if(USE_SHARED_LIB)
+        if(EMSCRIPTEN)
+            MESSAGE(FATAL_ERROR "USE_SHARED_LIB=1 is incompatible with Emscripten (some unresolved symbols at runtime).")
+        endif()
+        target_link_libraries(oofempy PRIVATE liboofem)
+        set_target_properties(oofempy PROPERTIES INSTALL_RPATH "$ORIGIN") # look for liboofem.so (if shared) where the module is installed
+        set_target_properties(oofempy PROPERTIES BUILD_RPATH ".") # look for liboofem.so in the build directory (before installation, for tests)
+    else()
+        target_sources(oofempy PRIVATE ${LIBS} ${EXT_LIBS})
+    endif()
+    # set_target_properties (oofempy PROPERTIES SUFFIX "${PYTHON_MODULE_EXTENSION}")
+    if(SKBUILD_PROJECT_NAME)
+        install(TARGETS oofempy DESTINATION ${SKBUILD_PROJECT_NAME} COMPONENT python_module)
+    endif()
     # Make sure pytest is found or produce a fatal error
     if(NOT PYTEST_FOUND)
         execute_process(COMMAND ${Python_EXECUTABLE} -c "import pytest; print(pytest.__version__)"
@@ -693,32 +743,37 @@ if (USE_PYBIND_BINDINGS)
                     " (try: ${Python_EXECUTABLE} -m pip install pytest)")
         endif()
         set(PYBIND11_PYTEST_FOUND TRUE CACHE INTERNAL "")
-    add_definitions(-D_PYBIND_BINDINGS)
     endif()
-    set (USE_SHARED_LIB ON)
+endif()
+
+if(USE_PYTHON_EXTENSION)
+    find_package(Python COMPONENTS Interpreter Development.Module Development.Embed)
+    add_definitions(-D_PYTHON_EXTENSION)
+    link_libraries(Python::Python) # embedded python
 endif()
 
 #######################################################################
 ######################## Configuration ################################
 #######################################################################
+
 site_name (HOST_NAME)
-set (HOST_TYPE "${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_SYSTEM_NAME}") # This should be renamed TARGET_TYPE.
-set (BUILDNAME "OOFEM(${MODULE_LIST})-${HOST_TYPE}-${HOST_NAME}")
+list(JOIN MODULE_LIST " " MODULE_LIST_SPACES) # space-saparated so that it can be passed with -D
+# OOFEMCFG_C_COMPILE_DEFINITIONS is used with oofemcfg.C bu in src/core (visible only in the same dir)
+set(OOFEMCFG_C_COMPILE_DEFINITIONS "__OOFEM_VERSION=\"${OOFEM_VERSION}\";__OOFEM_MAJOR_VERSION=\"${OOFEM_VERSION_MAJOR}\";__OOFEM_MINOR_VERSION=\"${OOFEM_VERSION_MINOR}\";__OOFEM_GIT_HASH=\"${OOFEM_GIT_HASH}\";__OOFEM_GIT_REPOURL=\"${OOFEM_GIT_REPOURL}\";__OOFEM_GIT_BRANCH=\"${OOFEM_GIT_BRANCH}\";__HOST_TYPE=\"${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_SYSTEM_NAME}\";__HOST_NAME=\"${HOST_NAME}\";__OOFEM_COPYRIGHT=\"${OOFEM_COPYRIGHT}\";__MODULE_LIST=\"${MODULE_LIST_SPACES}\";")
+
 
 check_include_file_cxx ("execinfo.h" HAVE_EXECINFO_H)
 check_cxx_symbol_exists ("cbrt" "cmath" HAVE_CBRT)
 check_cxx_symbol_exists ("isnan" "cmath" HAVE_ISNAN)
+
 if (USE_SHARED_LIB)
     set (OOFEM_EXPORT_HEADER "#include \"oofem_export.h\"")
+    add_definitions(-D_USE_SHARED)
     # For consistant library on linux and windows platforms.
     #add_compiler_export_flags (LIBOOFEM_EXPORT_CFLAGS)
 else ()
     set (OOFEM_EXPORT_HEADER "#define OOFEM_EXPORT\n#define OOFEM_NO_EXPORT")
 endif ()
-configure_file (
-  "${oofem_SOURCE_DIR}/src/oofemcfg.h.in"
-  "${oofem_BINARY_DIR}/oofemcfg.h"
-  )
 configure_file (
   "${oofem_SOURCE_DIR}/src/oofemenv.h.in"
   "${oofem_BINARY_DIR}/oofemenv.h"
@@ -729,7 +784,7 @@ configure_file (
 #######################################################################
 # Subtargets
 set (LIB_TYPE OBJECT)
-add_subdirectory ("${oofem_SOURCE_DIR}/src/oofemlib")
+add_subdirectory ("${oofem_SOURCE_DIR}/src/core")
 if (USE_DSS)
     add_subdirectory ("${oofem_SOURCE_DIR}/src/dss")
 endif ()
@@ -750,22 +805,20 @@ endif ()
 if (USE_MPM)
     add_subdirectory ("${oofem_SOURCE_DIR}/src/mpm")
 endif ()
-set (oofempy)
-if (USE_BOOSTPYTHON_BINDINGS)
-    set (oofempy ${oofem_SOURCE_DIR}/bindings/Deprecated/python/oofemlib.cpp)
-endif ()
 
 
 # Main targets
 if (USE_SHARED_LIB)
-    add_library (liboofem
-        SHARED
-        ${oofempy}
-        ${LIBS} 
-        )
-    target_link_libraries (liboofem ${EXT_LIBS})
+    add_library (liboofem SHARED)
+    target_sources(liboofem PRIVATE ${LIBS})
+    target_link_libraries (liboofem PUBLIC ${EXT_LIBS})
     set_target_properties (liboofem PROPERTIES OUTPUT_NAME oofem)
     set_target_properties(liboofem PROPERTIES PDB_NAME oofemlib)
+    if(SKBUILD_PROJECT_NAME)
+        # if shared, install liboofem.so alongside with the python module
+        install(TARGETS liboofem DESTINATION ${SKBUILD_PROJECT_NAME} COMPONENT python_module)
+    endif()
+
     if (NOT "${LIBOOFEM_EXPORT_CFLAGS}" STREQUAL "")
         set_target_properties (liboofem PROPERTIES COMPILE_FLAGS ${LIBOOFEM_EXPORT_CFLAGS})
     endif ()
@@ -773,6 +826,12 @@ if (USE_SHARED_LIB)
 
     # This should be set automatically, but I think TARGET:objs confuses cmake:
     set_target_properties (core PROPERTIES COMPILE_DEFINITIONS "liboofem_EXPORTS")
+    if (USE_DSS)
+        set_target_properties (dss PROPERTIES COMPILE_DEFINITIONS "liboofem_EXPORTS")
+        if (NOT "${LIBOOFEM_EXPORT_CFLAGS}" STREQUAL "")
+            set_target_properties (dss PROPERTIES COMPILE_FLAGS ${LIBOOFEM_EXPORT_CFLAGS})
+        endif ()
+    endif()
     if (USE_FM)
         set_target_properties (fm PROPERTIES COMPILE_DEFINITIONS "liboofem_EXPORTS")
         if (NOT "${LIBOOFEM_EXPORT_CFLAGS}" STREQUAL "")
@@ -812,32 +871,29 @@ if (USE_SHARED_LIB)
         if (NOT "${LIBOOFEM_EXPORT_CFLAGS}" STREQUAL "")
             set_target_properties (mpm PROPERTIES COMPILE_FLAGS ${LIBOOFEM_EXPORT_CFLAGS})
         endif ()
-endif()
+    endif()
 
     generate_export_header (liboofem
         BASE_NAME OOFEM
-        )
-endif ()
+    )
+endif (USE_SHARED_LIB)
 
 # OOFEM target
-if (USE_SHARED_LIB) # Prefer dynamic lib if available.
-  add_executable (oofem ${oofem_SOURCE_DIR}/src/main/main.C)
-  add_dependencies(oofem version)
+if (USE_OOFEM_EXE)
+    if (USE_SHARED_LIB) # Prefer dynamic lib if available.
+        add_executable (oofem ${oofem_SOURCE_DIR}/src/main/main.C)
+        target_link_libraries (oofem PUBLIC liboofem)
+    else ()
+        add_executable (oofem ${oofem_SOURCE_DIR}/src/main/main.C ${LIBS})
+        target_link_libraries (oofem PUBLIC ${EXT_LIBS})
+    endif ()
+    install (TARGETS oofem DESTINATION bin)
 
-  target_link_libraries (oofem liboofem)
-else ()
-  add_executable (oofem ${oofem_SOURCE_DIR}/src/main/main.C ${LIBS})
-  add_dependencies(oofem version)
-
-  target_link_libraries (oofem ${EXT_LIBS})
-endif ()
-
-install (TARGETS oofem DESTINATION bin)
-
-if (USE_MFRONT)
-    find_package (MFrontGenericInterface REQUIRED)
-    target_link_libraries(oofem mgis::MFrontGenericInterface)
-endif ()
+    if (USE_MFRONT)
+        find_package (MFrontGenericInterface REQUIRED)
+        target_link_libraries(oofem mgis::MFrontGenericInterface)
+    endif ()
+endif()
 
 if (USE_OOFEG)
     #  OOFEG target:
@@ -849,34 +905,31 @@ if (USE_OOFEG)
         target_link_libraries (oofeg ${EXT_LIBS})
     endif ()
     install(TARGETS oofeg DESTINATION bin)
-    add_dependencies(oofeg version)
 endif ()
 
 
 if (BUILD_EXTRA_BENCHMARKS)
     find_package(benchmark REQUIRED)
     add_executable(liboofem_benchmark ${oofem_SOURCE_DIR}/src/main/benchmark.C)
-    add_dependencies(liboofem_benchmark version)
     set_target_properties(liboofem_benchmark PROPERTIES EXCLUDE_FROM_ALL TRUE)
     target_link_libraries (liboofem_benchmark liboofem benchmark)
 endif ()
 
 if (BUILD_EXTRA_EXAMPLES)
     # Example of using liboofem with dynamic input record:
-    add_executable(beam2d_1 ${oofem_SOURCE_DIR}/bindings/oofemlib/beam2d_1.C)
-    add_dependencies(beam2d_1 version)
+    add_executable(beam2d_1 ${oofem_SOURCE_DIR}/bindings/core/beam2d_1.C)
     set_target_properties(beam2d_1 PROPERTIES EXCLUDE_FROM_ALL TRUE)
     target_link_libraries (beam2d_1 liboofem)
 endif ()
 
 if (BUILD_EXTRA_HEXGRID)
-    add_executable(hexgrid ${oofem_SOURCE_DIR}/bindings/oofemlib/hexgrid.C)
+    add_executable(hexgrid ${oofem_SOURCE_DIR}/bindings/core/hexgrid.C)
     set_target_properties(hexgrid PROPERTIES EXCLUDE_FROM_ALL TRUE)
     target_link_libraries (hexgrid liboofem)
 endif ()
 
 if (BUILD_EXTRA_DREAM3D)
-    add_executable(dream3d_analysis ${oofem_SOURCE_DIR}/bindings/oofemlib/dream3d_analysis.C)
+    add_executable(dream3d_analysis ${oofem_SOURCE_DIR}/bindings/core/dream3d_analysis.C)
     set_target_properties(dream3d_analysis PROPERTIES EXCLUDE_FROM_ALL TRUE)
     target_link_libraries(dream3d_analysis liboofem)
 endif ()
@@ -930,7 +983,9 @@ endif (DOXYGEN_FOUND)
 
 configure_file (
     "${oofem_SOURCE_DIR}/doc/include.tex.in"
-    "${oofem_BINARY_DIR}")
+    "${oofem_SOURCE_DIR}/doc/include/include.tex"
+    )
+message (STATUS "Generating include.tex for manuals")
 
 # TODO: Manuals not done yet
 #add_custom_target (
@@ -944,10 +999,12 @@ configure_file (
 #######################################################################
 ######################## Tests ########################################
 #######################################################################
-set (oofem_TEST_DIR "${oofem_SOURCE_DIR}/tests/")
-set (oofem_cmd  $<TARGET_FILE:oofem>)
-file(TO_CMAKE_PATH "${oofem_TEST_DIR}/valgrind.supp" MEMORYCHECK_SUPPRESSIONS_FILE)
 include (CTest)
+
+if(USE_OOFEM_EXE)
+set (oofem_TEST_DIR "${oofem_SOURCE_DIR}/tests/")
+set (oofem_cmd $<TARGET_FILE:oofem> -Werror)
+file(TO_CMAKE_PATH "${oofem_TEST_DIR}/valgrind.supp" MEMORYCHECK_SUPPRESSIONS_FILE)
 
 #set (CTEST_MEMORYCHECK_SUPPRESSIONS_FILE ${oofem_TEST_DIR}/tests/valgrind.supp)
 
@@ -974,7 +1031,34 @@ if (USE_SM)
     foreach (case ${sm_tests})
         add_test (NAME "test_sm_${case}" WORKING_DIRECTORY ${oofem_TEST_DIR}/sm COMMAND bash ${case} ${oofem_cmd})
     endforeach (case)
+
+    file (GLOB sm_nafems_tests RELATIVE "${oofem_TEST_DIR}/sm/NAFEMS" "${oofem_TEST_DIR}/sm/NAFEMS/*.in")
+    foreach (case ${sm_nafems_tests})
+        add_test (NAME "test_sm_NAFEMS_${case}" WORKING_DIRECTORY ${oofem_TEST_DIR}/sm/NAFEMS COMMAND ${oofem_cmd} "-f" ${case})
+    endforeach (case)
 endif ()
+
+if (USE_XML)
+    if(USE_SM)
+        file (GLOB xml_sm_tests RELATIVE "${oofem_TEST_DIR}/xml/sm" "${oofem_TEST_DIR}/xml/sm/*.xml")
+        foreach (case ${xml_sm_tests})
+            add_test (NAME "test_xml_sm_${case}" WORKING_DIRECTORY ${oofem_TEST_DIR}/xml/sm COMMAND ${oofem_cmd} "-f" ${case})
+        endforeach (case)
+    endif()
+    if(USE_TM)
+            file (GLOB xml_tm_tests RELATIVE "${oofem_TEST_DIR}/xml/tm" "${oofem_TEST_DIR}/xml/tm/*.xml")
+        foreach (case ${xml_tm_tests})
+            add_test (NAME "test_xml_tm_${case}" WORKING_DIRECTORY ${oofem_TEST_DIR}/xml/tm COMMAND ${oofem_cmd} "-f" ${case})
+        endforeach (case)
+    endif()
+    if(USE_FM)
+            file (GLOB xml_fm_tests RELATIVE "${oofem_TEST_DIR}/xml/fm" "${oofem_TEST_DIR}/xml/fm/*.xml")
+        foreach (case ${xml_fm_tests})
+            add_test (NAME "test_xml_fm_${case}" WORKING_DIRECTORY ${oofem_TEST_DIR}/xml/fm COMMAND ${oofem_cmd} "-f" ${case})
+        endforeach (case)
+    endif()
+endif()
+
 
 if (USE_FM)
     file (GLOB fm_tests RELATIVE "${oofem_TEST_DIR}/fm" "${oofem_TEST_DIR}/fm/*.in")
@@ -1029,6 +1113,13 @@ if (USE_SM AND USE_MFRONT)
     file (GLOB smmfront_tests RELATIVE "${oofem_TEST_DIR}/smmfront" "${oofem_TEST_DIR}/smmfront/*.in")
     foreach (case ${smmfront_tests})
         add_test (NAME "test_sm_${case}" WORKING_DIRECTORY ${oofem_TEST_DIR}/smmfront COMMAND ${oofem_cmd} "-f" ${case})
+    endforeach (case)
+endif()
+
+if (USE_SM AND USE_PYTHON_EXTENSION)
+    file (GLOB smpython_tests RELATIVE "${oofem_TEST_DIR}/sm/python" "${oofem_TEST_DIR}/sm/python/*.in")
+    foreach (case ${smpython_tests})
+        add_test (NAME "test_sm_python_${case}" WORKING_DIRECTORY ${oofem_TEST_DIR}/sm/python COMMAND ${oofem_cmd} "-f" ${case})
     endforeach (case)
 endif()
 
@@ -1097,11 +1188,12 @@ else ()
     add_custom_target (partests   COMMAND ${CMAKE_CTEST_COMMAND} "-R" "^partest")
     add_custom_target (benchmarks COMMAND ${CMAKE_CTEST_COMMAND} "-j${N}" "-R" "^benchmark")
 endif ()
+endif(USE_OOFEM_EXE)
 
 ######################## Tests of Python bindings ########################################
 if (USE_PYBIND_BINDINGS)
-    add_test (NAME "test_python_pybind11_bindings" WORKING_DIRECTORY ${oofem_SOURCE_DIR}/bindings/python COMMAND ${Python_EXECUTABLE} "-m" "pytest" ${oofem_SOURCE_DIR}/bindings/python)
-    set_tests_properties("test_python_pybind11_bindings" PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}")
+    add_test (NAME "test_python_pybind11_bindings" WORKING_DIRECTORY ${oofem_SOURCE_DIR}/bindings/python/tests COMMAND ${Python_EXECUTABLE} "-m" "pytest" ${oofem_SOURCE_DIR}/bindings/python/tests)
+    set_tests_properties("test_python_pybind11_bindings" PROPERTIES ENVIRONMENT PYTHONPATH=${CMAKE_BINARY_DIR}:${oofem_SOURCE_DIR}/bindings/python/oofem)
 endif()
 
 
@@ -1109,9 +1201,9 @@ endif()
 ######################## Packing ######################################
 #######################################################################
 ### versions
-set (CPACK_PACKAGE_VERSION_MAJOR ${oofem_VERSION_MAJOR})
-set (CPACK_PACKAGE_VERSION_MINOR ${oofem_VERSION_MINOR})
-set (CPACK_PACKAGE_VERSION_PATCH ${oofem_VERSION_PATCH})
+set (CPACK_PACKAGE_VERSION_MAJOR ${OOFEM_VERSION_MAJOR})
+set (CPACK_PACKAGE_VERSION_MINOR ${OOFEM_VERSION_MINOR})
+set (CPACK_PACKAGE_VERSION_PATCH ${OOFEM_VERSION_PATCH})
 set (CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}")
 
 ### general settings
@@ -1122,7 +1214,7 @@ set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "Object Oriented Finite Element")
 set (CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/README")
 set (CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/COPYING.LGPLv2.1")
 set (CPACK_PACKAGE_INSTALL_DIRECTORY ${CPACK_PACKAGE_NAME})
-set (CPACK_PACKAGE_EXECUTABLES "oofem")
+set (CPACK_PACKAGE_EXECUTABLES "oofem;OOFEM")
 set (CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}_${CMAKE_SYSTEM_PROCESSOR})
 
 ### default generators

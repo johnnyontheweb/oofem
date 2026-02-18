@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -55,7 +55,7 @@ class InputRecord;
  * Abstract base class for hyperelastic materials
  * It provides calculation of first and second derivative of principal invariants of the left Cauchy green tensor with respect to deformation gradient
  * It provides calculation of volumetric energy(currently only a logarithmic form is supported)
- * All the calculations are based on the oofemlib/tensor/tensoralgebra.h file which uses FTensor library
+ * All the calculations are based on the core/tensor/tensoralgebra.h file which uses FTensor library
  * More to be added gradually
  * @author Martin Horak
  **/

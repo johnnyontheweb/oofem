@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -149,10 +149,10 @@ Quasicontinuum :: createInterpolationElements(Domain *d)
             int elemNumber = nelem + i;
             d->resizeElements(elemNumber);
             auto elem = classFactory.createElement(elemType, elemNumber, d);
-            irEl.setField(interpolationMeshNodes [ i - 1 ], _IFT_Element_nodes);
+            irEl.setField(interpolationMeshNodes [ i - 1 ], Element::IPK_Element_nodes.getNameCStr());
             //irEl.setField( ncrosssect, _IFT_Element_crosssect);
             //irEl.setField( nmat, _IFT_Element_mat);
-            elem->initializeFrom(irEl);
+            elem->initializeFrom(irEl, 1);
             elem->setGlobalNumber(elemNumber);
             d->setElement(elemNumber, std::move(elem));
         }
@@ -334,27 +334,27 @@ Quasicontinuum :: applyApproach2(Domain *d, int homMtrxType, double volumeOfInte
         //OOFEM_ERROR("anisotropic homog. is not inmplemented yet");
         mat = classFactory.createMaterial("AnisoLE", nmat, d);
         FloatArray stiff;
-        FloatArray alpha(6);
-        alpha.zero();
+        //FloatArray alpha(6);
+        //alpha.zero();
         if ( nDimensions == 2 ) {
-            stiff = {
+            stiff = VecX({
                 Diso.at(1, 1), Diso.at(1, 2), 0, 0, 0, Diso.at(1, 6), \
                 Diso.at(2, 2), 0, 0, 0, Diso.at(2, 6), 33, 0, 0, 0, 44, \
                 0, 0, 55, 0, Diso.at(6, 6)
-            };
+            });
         } else if ( nDimensions == 3 ) {
-            stiff = {
+            stiff = VecX({
                 Diso.at(1, 1), Diso.at(1, 2), Diso.at(1, 3), Diso.at(1, 4), Diso.at(1, 5), Diso.at(1, 6), \
                 Diso.at(2, 2), Diso.at(2, 3), Diso.at(2, 4), Diso.at(2, 5), Diso.at(2, 6), \
                 Diso.at(3, 3), Diso.at(3, 4), Diso.at(3, 5), Diso.at(3, 6), \
                 Diso.at(4, 4), Diso.at(4, 5), Diso.at(4, 6), \
                 Diso.at(5, 5), Diso.at(5, 6), Diso.at(6, 6)
-            };
+            });
         } else {
             OOFEM_ERROR("Invalid number of dimensions. Only 2d and 3d domains are supported in QC simulation. \n");
         }
         irMat.setField(stiff, _IFT_AnisotropicLinearElasticMaterial_stiff);
-        irMat.setField(alpha, _IFT_AnisotropicLinearElasticMaterial_talpha);
+        //irMat.setField(alpha, _IFT_AnisotropicLinearElasticMaterial_talpha);
         irMat.setField(0.0, _IFT_Material_density);
     } else {
         OOFEM_ERROR("Invalid homMtrxType");
@@ -560,26 +560,26 @@ Quasicontinuum :: applyApproach3(Domain *d, int homMtrxType)
             nmat++;
             auto mat = classFactory.createMaterial("AnisoLE", nmat, d);
             FloatArray stiff;
-            FloatArray alpha(6);
+            // FloatArray alpha(6);
             if ( nDimensions == 2 ) {
-                stiff = {
+                stiff = VecX({
                     Da.at(1, 1), Da.at(1, 2), 0, 0, 0, Da.at(1, 6), \
                     Da.at(2, 2), 0, 0, 0, Da.at(2, 6), 33, 0, 0, 0, 44, \
                     0, 0, 55, 0, Da.at(6, 6)
-                };
+                });
             } else if ( nDimensions == 3 ) {
-                stiff = {
+                stiff = VecX({
                     Da.at(1, 1), Da.at(1, 2), Da.at(1, 3), Da.at(1, 4), Da.at(1, 5), Da.at(1, 6), \
                     Da.at(2, 2), Da.at(2, 3), Da.at(2, 4), Da.at(2, 5), Da.at(2, 6), \
                     Da.at(3, 3), Da.at(3, 4), Da.at(3, 5), Da.at(3, 6), \
                     Da.at(4, 4), Da.at(4, 5), Da.at(4, 6), \
                     Da.at(5, 5), Da.at(5, 6), Da.at(6, 6)
-                };
+                });
             } else {
                 OOFEM_ERROR("Invalid number of dimensions. Only 2d and 3d domains are supported in QC simulation. \n");
             }
             irMat.setField(stiff, _IFT_AnisotropicLinearElasticMaterial_stiff);
-            irMat.setField(alpha, _IFT_AnisotropicLinearElasticMaterial_talpha);
+            // irMat.setField(alpha, _IFT_AnisotropicLinearElasticMaterial_talpha);
             irMat.setField(0.0, _IFT_Material_density);
 
             mat->initializeFrom(irMat);
@@ -807,9 +807,10 @@ Quasicontinuum :: stiffnessAssignment(std :: vector< FloatMatrix > &individualSt
         return true;
     } else {   // ends are located in different elements -> all intersected el needs to be found
         IntArray intersected; // to store numbers of intersected elem
-        FloatArray lengths; // to store lengths ofintersections
+        std::vector<double> lengths_; // to store lengths ofintersections
 
-        computeIntersectionsOfLinkWithInterpElements(intersected, lengths, d, e, qn1, qn2);
+        computeIntersectionsOfLinkWithInterpElements(intersected, lengths_, d, e, qn1, qn2);
+        FloatArray lengths=FloatArray::fromVector(lengths_);
 
         // check: is there any intersectted elements
         int noIntersected = lengths.giveSize();
@@ -844,7 +845,7 @@ Quasicontinuum :: stiffnessAssignment(std :: vector< FloatMatrix > &individualSt
 
 
 void
-Quasicontinuum :: computeIntersectionsOfLinkWithInterpElements(IntArray &intersected, FloatArray &lengths, Domain *d, Element *e, qcNode *qn1, qcNode *qn2)
+Quasicontinuum :: computeIntersectionsOfLinkWithInterpElements(IntArray &intersected, std::vector<double> &lengths, Domain *d, Element *e, qcNode *qn1, qcNode *qn2)
 {
     int dim = d->giveNumberOfSpatialDimensions();
     if ( dim == 2 ) {
@@ -858,7 +859,7 @@ Quasicontinuum :: computeIntersectionsOfLinkWithInterpElements(IntArray &interse
 
 
 bool
-Quasicontinuum :: computeIntersectionsOfLinkWith2DTringleElements(IntArray &intersected, FloatArray &lengths, Domain *d, Element *e, qcNode *qn1, qcNode *qn2)
+Quasicontinuum :: computeIntersectionsOfLinkWith2DTringleElements(IntArray &intersected, std::vector<double> &lengths, Domain *d, Element *e, qcNode *qn1, qcNode *qn2)
 {
     intersected.clear();
     lengths.clear();
@@ -1043,7 +1044,7 @@ Quasicontinuum :: computeIntersectionsOfLinkWith2DTringleElements(IntArray &inte
 
 
         // check: all length of link is assembles
-        sumLength = lengths.sum();
+        sumLength = std::accumulate(lengths.begin(), lengths.end(), 0.);
         if ( ( fabs(sumLength / TotalLength - 1) ) <= ( 0.0001 ) ) {
             return true;
         }
@@ -1059,7 +1060,7 @@ Quasicontinuum :: computeIntersectionsOfLinkWith2DTringleElements(IntArray &inte
 
 
 bool
-Quasicontinuum :: computeIntersectionsOfLinkWith3DTetrahedraElements(IntArray &intersected, FloatArray &lengths, Domain *d, Element *e, qcNode *qn1, qcNode *qn2)
+Quasicontinuum :: computeIntersectionsOfLinkWith3DTetrahedraElements(IntArray &intersected, std::vector<double> &lengths, Domain *d, Element *e, qcNode *qn1, qcNode *qn2)
 {
     intersected.clear();
     lengths.clear();
@@ -1247,7 +1248,7 @@ Quasicontinuum :: computeIntersectionsOfLinkWith3DTetrahedraElements(IntArray &i
 
 
         // check: all length of link is assembles
-        sumLength = lengths.sum();
+        sumLength = std::accumulate(lengths.begin(), lengths.end(), 0.);
         if ( ( fabs(sumLength / TotalLength - 1) ) <= ( 0.0001 ) ) {
             return true;
         }
@@ -1558,7 +1559,7 @@ Quasicontinuum :: intersectionTestSegmentSegment2D(FloatArray &intersectCoords, 
     // test
     double EPS = 1e-10;
     if ( ( x1 <= x + EPS ) && ( x <= x2 + EPS ) && ( x3 <= x + EPS ) && ( x <= x4 + EPS )  &&  ( y1 <= y + EPS ) && ( y <= y2 + EPS ) && ( y3 <= y + EPS ) && ( y <= y4 + EPS ) ) {
-        intersectCoords = {x, y};
+        intersectCoords = Vec2(x, y);
         return true;
     } else {
         intersectCoords.clear();

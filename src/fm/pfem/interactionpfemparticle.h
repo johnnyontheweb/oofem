@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -40,9 +40,6 @@
 ///@name Input fields for Pfemparticle
 //@{
 #define _IFT_InteractionPFEMParticle_Name "interactionpfemparticle"
-#define _IFT_Node_coords "coords"
-#define _IFT_Node_lcs "lcs"
-#define _IFT_InteractionPFEMParticle_CoupledNode "couplednode"
 //@}
 
 namespace oofem {
@@ -50,6 +47,7 @@ class FloatArray;
 class IntArray;
 class StructuralEngngModel;
 class FluidStructureProblem;
+class ParamKey;
 
 /**
  * This class represents a fluid particle attached to a node on the structural part
@@ -60,6 +58,7 @@ class OOFEM_EXPORT InteractionPFEMParticle : public PFEMParticle
 protected:
     int coupledNode;
 
+    static ParamKey IPK_InteractionPFEMParticle_CoupledNode;
 public:
     /**
      * Constructor. Creates a particle  with number n, belonging to aDomain.
@@ -72,7 +71,7 @@ public:
      */
     virtual ~InteractionPFEMParticle(void) { }
 
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
     int checkConsistency() override;
 
     void updateYourself(TimeStep *tStep) override;
@@ -81,8 +80,6 @@ public:
                                      ValueModeType mode, TimeStep *stepN) override;
 
     void giveCoupledVelocities(FloatArray &answer, TimeStep *stepN);
-
-    void printOutputAt(FILE *stream, TimeStep *stepN) const override;
 
     const char *giveClassName() const override { return "InteractionPFEMParticle"; }
     const char *giveInputRecordName() const override { return _IFT_InteractionPFEMParticle_Name; }

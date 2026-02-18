@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -130,29 +130,29 @@ public:
     double give(int aProperty, GaussPoint *gp) const override;
 
     void giveRealStressVector(FloatArray &answer, GaussPoint *gp,
-                              const FloatArray &, TimeStep *tStep) override;
+                              const FloatArray &, TimeStep *tStep) const override;
 
-    MaterialStatus *CreateStatus(GaussPoint *gp) const override { return new RCSDMaterialStatus(gp); }
+    std::unique_ptr<MaterialStatus> CreateStatus(GaussPoint *gp) const override { return std::make_unique<RCSDMaterialStatus>(gp); }
 
 protected:
-    double computeCurrEquivStrain(GaussPoint *, const FloatArray &, double, TimeStep *);
+    double computeCurrEquivStrain(GaussPoint *, const FloatArray &, double, TimeStep *) const;
     // two functions used to initialize and updating temporary variables in
     // gp's status. These variables are used to control process, when
     // we try to find equilibrium state.
 
     void giveEffectiveMaterialStiffnessMatrix(FloatMatrix &answer,
                                               MatResponseMode rMode,
-                                              GaussPoint *gp, TimeStep *tStep) override;
+                                              GaussPoint *gp, TimeStep *tStep) const override;
 
-    double computeDamageCoeff(double, double, double, double);
+    double computeDamageCoeff(double, double, double, double) const;
     double giveCrackingModulus(MatResponseMode rMode, GaussPoint *gp,
-                               double crackStrain, int i) override;
+                               double crackStrain, int i) const override;
     //double giveShearRetentionFactor(GaussPoint* gp, double eps_cr, int i) override;
-    double giveNormalCrackingStress(GaussPoint *gp, double eps_cr, int i) override;
-    double giveMinCrackStrainsForFullyOpenCrack(GaussPoint *gp, int i) override;
+    double giveNormalCrackingStress(GaussPoint *gp, double eps_cr, int i) const override;
+    double giveMinCrackStrainsForFullyOpenCrack(GaussPoint *gp, int i) const override;
     //void updateStatusForNewCrack( GaussPoint*, int, double) override;
-    double computeStrength(GaussPoint *gp, double) override;
-    int checkSizeLimit(GaussPoint *gp, double) override;
+    double computeStrength(GaussPoint *gp, double) const override;
+    int checkSizeLimit(GaussPoint *gp, double) const override;
 };
 } // end namespace oofem
 #endif // rcsd_h

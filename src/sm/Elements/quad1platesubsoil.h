@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2014   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -83,7 +83,6 @@ public:
     // definition & identification
     const char *giveInputRecordName() const override { return _IFT_Quad1PlateSubSoil_Name; }
     const char *giveClassName() const override { return "Quad1PlateSubSoil"; }
-    void initializeFrom(InputRecord &ir) override;
 
     int computeNumberOfDofs() override { return 4; }
     void giveDofManDofIDMask(int inode, IntArray &) const override;

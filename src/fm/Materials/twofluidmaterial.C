@@ -10,7 +10,7 @@
  *
  *             OOFEM : Object Oriented Finite Element Code
  *
- *               Copyright (C) 1993 - 2013   Borek Patzak
+ *               Copyright (C) 1993 - 2025   Borek Patzak
  *
  *
  *
@@ -104,10 +104,11 @@ TwoFluidMaterial :: giveIPValue(FloatArray &answer, GaussPoint *gp, InternalStat
 }
 
 
-MaterialStatus *
+std::unique_ptr<MaterialStatus> 
 TwoFluidMaterial :: CreateStatus(GaussPoint *gp) const
 {
-    return new TwoFluidMaterialStatus(gp, {this->giveMaterial(0), this->giveMaterial(1)});
+    std::array<Material*, 2> slaveMaterial({this->giveMaterial(0), this->giveMaterial(1)});
+    return std::make_unique<TwoFluidMaterialStatus>(gp, slaveMaterial);
 }
 
 FluidDynamicMaterial *
