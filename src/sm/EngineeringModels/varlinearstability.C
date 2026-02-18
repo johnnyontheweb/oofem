@@ -287,6 +287,11 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
     this->assembleVector( loadVector, tStep, ExternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(1) );
     this->updateSharedDofManagers(loadVector, EModelDefaultEquationNumbering(), ReactionExchangeTag);
 
+    // check for non-zero var. loading
+    if ( loadVector.computeNorm() < 1.e-10 ) { 
+        OOFEM_ERROR( "Buckling solver can't proceed without variable loading" );
+    }
+
     OOFEM_LOG_INFO("Solving linear static problem\n");
     nMethodLS->solve(*stiffnessMatrix, loadVector, displacementVector);
     // Initial displacements are stored at position 0; this is a bit of a hack. In the future, a cleaner approach of handling fields could be suitable,
