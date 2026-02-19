@@ -316,12 +316,11 @@ CCTPlate :: computeArea ()
   return (area = 0.5*(x2*y3+x1*y2+y1*x3-x2*y1-x3*y2-x1*y3)) ;
 }
 
-void
-
-CCTPlate :: initializeFrom(InputRecord &ir)
+void 
+CCTPlate ::initializeFrom( InputRecord &ir, int priority )
 {
     numberOfGaussPoints = 4;
-    StructuralElement::initializeFrom(ir);
+    StructuralElement::initializeFrom(ir, priority);
 
     // optional record for 1st local axes
     la1.resize(3);

@@ -78,6 +78,8 @@ public:
 
     int computeNumberOfDofs() override { return 8; }
 
+    void initializeFrom( InputRecord &ir, int priority ) override;
+
 protected:
     void computeGaussPoints() override;
     void computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int = 1, int = ALL_STRAINS) override;

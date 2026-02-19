@@ -460,9 +460,9 @@ void TrPlanestressRotAllman :: computeBoundaryEdgeLoadVector(FloatArray &answer,
  */
 
 void
-TrPlanestressRotAllman :: initializeFrom(InputRecord &ir)
+TrPlanestressRotAllman :: initializeFrom(InputRecord &ir, int priority)
 {
-    TrPlaneStress2d :: initializeFrom(ir);
+    TrPlaneStress2d :: initializeFrom(ir, priority);
     numberOfGaussPoints = 4;
     BMatrices.resize(this->numberOfGaussPoints);
 
@@ -471,8 +471,6 @@ TrPlanestressRotAllman :: initializeFrom(InputRecord &ir)
     la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_TrPlanestressRotAllman_FirstLocalAxis);
 }
-
-
 
 int
 TrPlanestressRotAllman :: SPRNodalRecoveryMI_giveNumberOfIP()

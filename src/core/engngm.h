@@ -476,7 +476,7 @@ public:
      */
 	virtual void solveYourself();
 	// Starts solution process without calling terminate(), i.e. without writings
-	virtual void solveYourselfNoWritings();
+	//virtual void solveYourselfNoWritings();
     /**
      * This method is called when the restart of the analysis is perfomed, e.g., du to the convergence problems, and does all the necesary steps for the restart. These steps are handled by the individual engineering models 
      */    

@@ -68,7 +68,11 @@ ParamKey Beam3d::IPK_Beam3d_refangle("refangle");
 ParamKey Beam3d::IPK_Beam3d_yaxis("yaxis");
 ParamKey Beam3d::IPK_Beam3d_zaxis("zaxis");
 ParamKey Beam3d::IPK_Beam3d_subsoilmat("subsoilmat");
-ParamKey Beam3d::IPK_Beam3d_dofsToCondense("dofstocondense");
+ParamKey Beam3d::IPK_Beam3d_dofsToCondense( "dofstocondense" );
+
+ParamKey Beam3d::IPK_Beam3d_macroElem( "macroelem" );
+ParamKey Beam3d::IPK_Beam3d_printGPs( "printgps" );
+
 
 FEI3dLineLin Beam3d :: interp;
 
@@ -578,7 +582,10 @@ Beam3d :: initializeFrom(InputRecord &ir, int priority)
     PM_UPDATE_PARAMETER(referenceNode, ppm, ir, this->number, IPK_Beam3d_refnode, priority) ;
     PM_UPDATE_PARAMETER(referenceAngle, ppm, ir, this->number, IPK_Beam3d_refangle, priority) ;
     PM_UPDATE_PARAMETER(subsoilMat, ppm, ir, this->number, IPK_Beam3d_subsoilmat, priority) ;
-    PM_UPDATE_TEMP_PARAMETER(IntArray, ppm, ir, this->number, IPK_Beam3d_dofsToCondense, priority) ;
+    PM_UPDATE_TEMP_PARAMETER( IntArray, ppm, ir, this->number, IPK_Beam3d_dofsToCondense, priority );
+
+    PM_UPDATE_PARAMETER( macroElem, ppm, ir, this->number, IPK_Beam3d_macroElem, priority );
+    PM_UPDATE_PARAMETER( printGPs, ppm, ir, this->number, IPK_Beam3d_printGPs, priority );
 
 }
 
@@ -630,55 +637,55 @@ Beam3d :: postInitialize()
         //dofsToCondense = NULL;
     }
 
-    this->subsoilMat = 0;
-    IR_GIVE_OPTIONAL_FIELD(ir, this->subsoilMat, _IFT_Beam3d_subsoilmat);
+    //this->subsoilMat = 0;
+    //IR_GIVE_OPTIONAL_FIELD(ir, this->subsoilMat, _IFT_Beam3d_subsoilmat);
     
-    this->macroElem = 0;
-    IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_Beam3d_macroElem);
+    //this->macroElem = 0;
+    //IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_Beam3d_macroElem);
 
-    IR_GIVE_OPTIONAL_FIELD(ir, this->printGPs, _IFT_Beam3d_printGPs);
+    //IR_GIVE_OPTIONAL_FIELD(ir, this->printGPs, _IFT_Beam3d_printGPs);
 }
 
-void
-    Beam3d::giveInputRecord(DynamicInputRecord &input)
-{
-    Element::giveInputRecord(input);
-
-    // now let's add what's left, that is the bunch of custom properties
-    if (referenceNode)
-    {
-	input.setField(referenceNode, _IFT_Beam3d_refnode);
-    }
-    else
-    {
-	input.setField(referenceAngle, _IFT_Beam3d_refangle);
-    }
-
-    IntArray dofsTC;
-    // now rebuild the dofstocondense list
-    if (numberOfCondensedDofs){
-
-	if (ghostNodes[0] != NULL)
-	{
-	    IntArray tempArray;
-	    ghostNodes[0]->giveCompleteMasterDofIDArray(tempArray);
-	    dofsTC.followedBy(tempArray);
-	}
-
-	if (ghostNodes[1] != NULL)
-	{
-	    IntArray tempArray;
-	    ghostNodes[1]->giveCompleteMasterDofIDArray(tempArray);
-	    for (int dID = 1; dID <= tempArray.giveSize(); dID++)
-	    {
-		tempArray.at(dID) += 6;
-	    }
-	    dofsTC.followedBy(tempArray);
-	}
-
-	input.setField(dofsTC, _IFT_Beam3d_dofstocondense);
-    }
-}
+//void
+//    Beam3d::giveInputRecord(DynamicInputRecord &input)
+//{
+//    Element::giveInputRecord(input);
+//
+//    // now let's add what's left, that is the bunch of custom properties
+//    if (referenceNode)
+//    {
+//	input.setField(referenceNode, _IFT_Beam3d_refnode);
+//    }
+//    else
+//    {
+//	input.setField(referenceAngle, _IFT_Beam3d_refangle);
+//    }
+//
+//    IntArray dofsTC;
+//    // now rebuild the dofstocondense list
+//    if (numberOfCondensedDofs){
+//
+//	if (ghostNodes[0] != NULL)
+//	{
+//	    IntArray tempArray;
+//	    ghostNodes[0]->giveCompleteMasterDofIDArray(tempArray);
+//	    dofsTC.followedBy(tempArray);
+//	}
+//
+//	if (ghostNodes[1] != NULL)
+//	{
+//	    IntArray tempArray;
+//	    ghostNodes[1]->giveCompleteMasterDofIDArray(tempArray);
+//	    for (int dID = 1; dID <= tempArray.giveSize(); dID++)
+//	    {
+//		tempArray.at(dID) += 6;
+//	    }
+//	    dofsTC.followedBy(tempArray);
+//	}
+//
+//	input.setField(dofsTC, _IFT_Beam3d_dofstocondense);
+//    }
+//}
 
 void
 Beam3d :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord)

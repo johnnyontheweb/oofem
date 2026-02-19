@@ -94,10 +94,10 @@ TR_SHELL01 :: initializeFrom(InputRecord &ir, int priority)
     this->macroElem = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_TR_SHELL01_macroElem);
 
-    plate->initializeFrom(ir);
+    plate->initializeFrom(ir, priority);
     plate->la1 = la1;
 
-    membrane->initializeFrom(ir);
+    membrane->initializeFrom( ir, priority );
     membrane->la1 = la1;
 
 }

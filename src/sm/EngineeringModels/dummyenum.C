@@ -164,7 +164,7 @@ DummyEnum::instanciateYourself( DataReader &dr, InputRecord &ir, const char* out
     // instanciate receiver
     this->initializeFrom( ir );
 
-    exportModuleManager.initializeFrom( ir );
+    exportModuleManager.initialize();
     // instanciate export module manager
     exportModuleManager.instanciateYourself( dr, ir );
 

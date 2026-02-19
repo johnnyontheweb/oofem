@@ -100,7 +100,7 @@ public:
     // definition & identification
     const char *giveInputRecordName() const override { return _IFT_TrPlaneStress2d_Name; }
     const char *giveClassName() const override { return "TrPlaneStress2d"; }
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom(InputRecord &ir, int priority) override;
 
     void NodalAveragingRecoveryMI_computeNodalValue(FloatArray &answer, int node,
                                                     InternalStateType type, TimeStep *tStep) override;

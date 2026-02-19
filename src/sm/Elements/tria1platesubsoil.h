@@ -84,7 +84,7 @@ public:
     // definition & identification
     const char *giveInputRecordName() const override { return _IFT_Tria1PlateSubSoil_Name; }
     const char *giveClassName() const override { return "Tria1PlateSubSoil"; }
-
+    void initializeFrom( InputRecord &ir, int priority ) override;
     int computeNumberOfDofs() override { return 3; }
     void giveDofManDofIDMask(int inode, IntArray &) const override;
     Element_Geometry_Type giveGeometryType() const override {return EGT_triangle_1;}

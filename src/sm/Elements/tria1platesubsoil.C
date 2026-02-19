@@ -131,10 +131,10 @@ Tria1PlateSubSoil :: computeConstitutiveMatrixAt(FloatMatrix &answer, MatRespons
 
 
 void
-Tria1PlateSubSoil :: initializeFrom(InputRecord &ir)
+Tria1PlateSubSoil :: initializeFrom(InputRecord &ir, int priority)
 {
     this->numberOfGaussPoints = 1;
-    StructuralElement::initializeFrom(ir);
+    StructuralElement::initializeFrom(ir, priority);
     // optional record for 1st local axes - here it is not used, unuseful
     la1.resize(3);
     la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;

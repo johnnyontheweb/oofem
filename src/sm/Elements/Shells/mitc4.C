@@ -899,13 +899,13 @@ MITC4Shell::giveCharacteristicTensor(CharTensor type, GaussPoint *gp, TimeStep *
         // this->computeThermalStrainVector( localStrain, gp, tStep );
         this->computeStressVector( localStress, localStrain, gp, tStep );
         auto stress = mat->transformStressVectorTo( GtoLRotationMatrix, localStress, false );
-        return from_voigt_stress( stress );
+        return from_voigt_stress_6( stress );
     } else if ( type == GlobalStrainTensor ) {
         FloatArray localStrain;
         this->computeStrainVector( localStrain, gp, tStep );
         this->computeThermalStrainVector( localStrain, gp, tStep );
         auto strain = mat->transformStrainVectorTo( GtoLRotationMatrix, localStrain, false );
-        return from_voigt_strain( strain );
+        return from_voigt_strain_6( strain );
     } else { throw std::runtime_error( "unsupported tensor mode" ); }
 }
 

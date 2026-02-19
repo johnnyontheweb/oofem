@@ -202,25 +202,25 @@ Quad1PlaneStrain :: computeBHmatrixAt(GaussPoint *gp, FloatMatrix &answer)
     }
 }
 
-
-void
-Quad1PlaneStrain :: postInitialize()
-{
-    if ( !( ( numberOfGaussPoints == 4 ) ||
-            ( numberOfGaussPoints == 1 ) ||
-            ( numberOfGaussPoints == 9 ) ||
-            ( numberOfGaussPoints == 16 ) ) ) {
+void 
+Quad1PlaneStrain ::initializeFrom( InputRecord &ir, int priority ) {
+    if ( !( ( numberOfGaussPoints == 4 ) || ( numberOfGaussPoints == 1 ) || ( numberOfGaussPoints == 9 ) || ( numberOfGaussPoints == 16 ) ) ) {
         numberOfGaussPoints = 4;
     }
 
     // optional record for 1st local axes
-    la1.resize(3);
-    la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
-    IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_Quad1PlaneStrain_FirstLocalAxis);
-    PlaneStrainElement :: postInitialize();
+    la1.resize( 3 );
+    la1.at( 1 ) = 0;
+    la1.at( 2 ) = 0;
+    la1.at( 3 ) = 0;
+    IR_GIVE_OPTIONAL_FIELD( ir, this->la1, _IFT_Quad1PlaneStrain_FirstLocalAxis );
 }
 
-
+void
+Quad1PlaneStrain :: postInitialize()
+{
+    PlaneStrainElement :: postInitialize();
+}
 
 Interface *
 Quad1PlaneStrain :: giveInterface(InterfaceType interface)

@@ -108,6 +108,7 @@ public:
     const char *giveClassName() const override { return "TrPlaneStrain"; }
     Element_Geometry_Type giveGeometryType() const override {return EGT_triangle_1;}
 
+    void initializeFrom( InputRecord &ir, int priority ) override;
     void postInitialize() override;
 
 protected:

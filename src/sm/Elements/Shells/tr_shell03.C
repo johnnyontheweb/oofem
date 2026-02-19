@@ -63,10 +63,10 @@ TR_SHELL03 :: TR_SHELL03(int n, Domain *aDomain) : StructuralElement(n, aDomain)
 
 
 void
-TR_SHELL03 :: initializeFrom(InputRecord &ir)
+TR_SHELL03 :: initializeFrom(InputRecord &ir, int priority)
 {
     // proc tady neni return = this...   ??? termitovo
-    StructuralElement :: initializeFrom(ir);
+    StructuralElement :: initializeFrom(ir, priority);
 
 //#if 0
 	//int val=-1;
@@ -89,10 +89,10 @@ TR_SHELL03 :: initializeFrom(InputRecord &ir)
 	this->macroElem = 0;
 	IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_TR_SHELL03_macroElem);
 
-    plate->initializeFrom(ir);
+    plate->initializeFrom( ir, priority );
 	plate->la1 = la1;
 
-    membrane->initializeFrom(ir);
+    membrane->initializeFrom( ir, priority );
 	membrane->la1 = la1;
 }
 

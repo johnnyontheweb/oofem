@@ -93,19 +93,27 @@ TrPlaneStrain :: giveInterface(InterfaceType interface)
 }
 
 void
-TrPlaneStrain :: postInitialize()
+TrPlaneStrain :: initializeFrom(InputRecord &ir, int priority)
 {
     numberOfGaussPoints = 1;
-    PlaneStrainElement :: initializeFrom(ir);
+    PlaneStrainElement :: initializeFrom(ir, priority);
 
-	// optional record for 1st local axes
-	la1.resize(3);
-	la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
-	IR_GIVE_OPTIONAL_FIELD(ir, this->la1, _IFT_TrPlaneStrain_FirstLocalAxis);
+    // optional record for 1st local axes
+    la1.resize( 3 );
+    la1.at( 1 ) = 0;
+    la1.at( 2 ) = 0;
+    la1.at( 3 ) = 0;
+    IR_GIVE_OPTIONAL_FIELD( ir, this->la1, _IFT_TrPlaneStrain_FirstLocalAxis );
 
     if ( numberOfGaussPoints != 1 ) {
         numberOfGaussPoints = 1;
     }
+}
+
+void
+TrPlaneStrain :: postInitialize()
+{
+
     PlaneStrainElement :: postInitialize();
 }
 

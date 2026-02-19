@@ -50,6 +50,8 @@
 #include "paramkey.h"
 #include "parametermanager.h"
 
+#include "fei2dtrlin.h"
+
 namespace oofem {
 REGISTER_Element(TrPlaneStrRot);
 ParamKey TrPlaneStrRot::IPK_TrPlaneStrRot_niprot("niprot");
@@ -88,8 +90,8 @@ TrPlaneStrRot :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, i
     answer.resize(4, 9);
     answer.zero();
 	if (BMatrices.at(gp->giveNumber() - 1)) {
-	answer.add(*BMatrices.at(gp->giveNumber() - 1));
-	return;
+	    answer.add(*BMatrices.at(gp->giveNumber() - 1));
+	    return;
     }
 
     // New version (13-09-2014 /JB)
@@ -763,7 +765,7 @@ TrPlaneStrRot :: giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, i
     }
 
     if (drillCoeffFlag) {
-	answer.assemble(drillMoment, this->drillOrdering);
+	    answer.assemble(drillMoment, this->drillOrdering);
     }
 }
 

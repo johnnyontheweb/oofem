@@ -213,9 +213,9 @@ int
 SpringElement3D::computeNumberOfGlobalDofs() { return 12; }
 
 void
-SpringElement3D::initializeFrom( InputRecord &ir )
+SpringElement3D::initializeFrom( InputRecord &ir, int priority )
 {
-    StructuralElement::initializeFrom( ir );
+    StructuralElement::initializeFrom( ir, priority );
 
     IR_GIVE_FIELD( ir, springC1, _IFT_SpringElement3D_springC1 );
     IR_GIVE_FIELD( ir, springC2, _IFT_SpringElement3D_springC2 );

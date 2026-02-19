@@ -110,6 +110,9 @@ protected:
     static ParamKey IPK_Beam3d_zaxis; ///< [optional] Z axis for the beam
     static ParamKey IPK_Beam3d_subsoilmat; ///< [optional] Subsoil material for the beam
 
+    static ParamKey IPK_Beam3d_macroElem; ///< [optional] Macro element number for the beam (for output purposes)
+    static ParamKey IPK_Beam3d_printGPs; ///< [optional] Print Gauss points
+
 public:
     Beam3d(int n, Domain *d);
     virtual ~Beam3d();

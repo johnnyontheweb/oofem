@@ -131,10 +131,10 @@ Quad1PlateSubSoil :: computeConstitutiveMatrixAt(FloatMatrix &answer, MatRespons
 
 
 void
-Quad1PlateSubSoil :: initializeFrom(InputRecord &ir)
+Quad1PlateSubSoil :: initializeFrom(InputRecord &ir, int priority)
 {
     this->numberOfGaussPoints = 4;
-    StructuralElement :: initializeFrom(ir);
+    StructuralElement :: initializeFrom(ir, priority);
     // optional record for 1st local axes - here it is not used, unuseful
     la1.resize(3);
     la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;

@@ -67,9 +67,9 @@ AbaqusUserElement1d :: ~AbaqusUserElement1d()
 }
 
 
-void AbaqusUserElement1d :: initializeFrom(InputRecord &ir)
+void AbaqusUserElement1d :: initializeFrom(InputRecord &ir, int priority)
 {
-    StructuralElement :: initializeFrom(ir);
+    StructuralElement ::initializeFrom( ir, priority );
 
     this->numberOfDofMans = dofManArray.giveSize();
 

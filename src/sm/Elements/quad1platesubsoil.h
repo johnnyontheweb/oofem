@@ -91,6 +91,8 @@ public:
 
     void computeMidPlaneNormal(FloatArray &answer, const GaussPoint *gp) override;
 
+    void initializeFrom( InputRecord &ir, int priority ) override;
+
     double giveCharacteristicLength(const FloatArray &normalToCrackPlane) override;
     double computeVolumeAround(GaussPoint *gp) override;
 

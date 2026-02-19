@@ -61,6 +61,11 @@ class TrPlaneStrRot : public TrPlaneStress2d
 protected:
     int numberOfRotGaussPoints;
     static ParamKey IPK_TrPlaneStrRot_niprot;
+    static IntArray drillOrdering;
+
+private:
+    std::vector<std::unique_ptr<FloatMatrix> > BMatrices;
+
 public:
     TrPlaneStrRot(int, Domain *);
     virtual ~TrPlaneStrRot() { }

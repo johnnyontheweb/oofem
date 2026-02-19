@@ -216,7 +216,7 @@ public:
 
     virtual Interface *giveInterface(InterfaceType it);
 
-    void initializeFrom(InputRecord &ir) override;
+    void initializeFrom( InputRecord &ir, int priority ) override;
     void giveInputRecord(DynamicInputRecord &input) override;
 	void postInitialize() override;
 

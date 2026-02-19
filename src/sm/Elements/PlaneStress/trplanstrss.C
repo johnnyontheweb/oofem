@@ -96,9 +96,9 @@ TrPlaneStress2d :: giveInterface(InterfaceType interface)
 }
 
 void
-TrPlaneStress2d::initializeFrom(InputRecord &ir)
+TrPlaneStress2d::initializeFrom(InputRecord &ir, int priority)
 {
-    NLStructuralElement::initializeFrom(ir);
+    NLStructuralElement::initializeFrom(ir, priority);
 
     // optional record for 1st local axes
     la1.resize(3);
