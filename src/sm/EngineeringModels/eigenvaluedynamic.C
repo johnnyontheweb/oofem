@@ -507,7 +507,7 @@ void EigenValueDynamic ::solveYourself()
                 // fetch the unknown from the eigen field. see giveUnknownComponent
                 charVec.at( dof->giveDofID() ) = dof->giveUnknown( VM_Total, tStep );
             }
-            plainEigVecs.assemble( charVec, loc, { dN } );
+            plainEigVecs.assemble( FloatMatrix::fromArray(charVec), loc, { dN } );
         }
 
         const FloatArray diff = node->giveCoordinates() - centroid;

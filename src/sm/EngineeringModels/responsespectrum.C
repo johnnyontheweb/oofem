@@ -578,7 +578,7 @@ void ResponseSpectrum::solveYourself()
                 // fetch the unknown from the eigen field. see giveUnknownComponent
                 charVec.at( dof->giveDofID() ) = dof->giveUnknown( VM_Total, tStep );
             }
-            plainEigVecs.assemble( charVec, loc, { dN } );
+            plainEigVecs.assemble( FloatMatrix::fromArray(charVec), loc, { dN } );
         }
 
         const FloatArray diff = node->giveCoordinates() - centroid;
@@ -821,7 +821,7 @@ void ResponseSpectrum::solveYourself()
     massMatrix.reset( NULL );
 
     // force the dof dictionary to point to the combined displacements
-    field->updateAll( FloatMatrix( combDisps ), defNumbering );
+    field->updateAll( FloatMatrix::fromArray( combDisps ), defNumbering );
     this->setActiveVector( 1 );
 
     this->updateInternalState( tStep );

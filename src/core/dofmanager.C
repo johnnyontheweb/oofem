@@ -308,6 +308,28 @@ void DofManager :: askNewEquationNumbers(TimeStep *tStep)
 }
 
 
+int DofManager :: giveNumberOfPrimaryMasterDofs(const IntArray &dofIDArray) const
+{
+    if ( !hasSlaveDofs ) {
+        return dofIDArray.giveSize();
+    }
+
+    int answer = 0;
+
+    for ( int dofid: dofIDArray ) {
+        auto pos = this->findDofWithDofId((DofIDItem)dofid);
+#ifdef DEBUG
+        if ( pos == this->end() ) {
+            OOFEM_ERROR("Dof with ID %d doesn't exist", dofid);
+        }
+#endif
+        answer += (*pos)->giveNumberOfPrimaryMasterDofs();
+    }
+
+    return answer;
+}
+
+
 void
 DofManager :: initializeFrom(InputRecord &ir, int priority)
 {

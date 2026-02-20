@@ -40,7 +40,6 @@ set (sm_emodel
     EngineeringModels/qclinearstatic.C
     EngineeringModels/pdelta.C
     EngineeringModels/responsespectrum.C
-    EngineeringModels/dummyenum.C
     )
 
 set (sm_loads
