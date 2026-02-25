@@ -787,7 +787,6 @@ StructuralElement :: giveInternalForcesVector(FloatArray &answer,
     answer.clear();
 
     for ( GaussPoint *gp : *this->giveDefaultIntegrationRulePtr() ) {
-        StructuralMaterialStatus *matStat = static_cast< StructuralMaterialStatus * >( gp->giveMaterialStatus() );
         this->computeBmatrixAt(gp, b);
 
         if ( useUpdatedGpRecord == 1 ) {
