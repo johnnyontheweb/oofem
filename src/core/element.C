@@ -788,7 +788,7 @@ Element :: initializeFinish()
     ParameterManager &ppm =  this->giveDomain()->elementPPM;
 
     //PM_ERROR_IFNOTSET(ppm, this->number, _IFT_Element_mat) ;
-    PM_ELEMENT_ERROR_IFNOTSET(ppm, this->number, IPK_Element_crosssect) ;
+    //PM_ELEMENT_ERROR_IFNOTSET(ppm, this->number, IPK_Element_crosssect) ;
     PM_ELEMENT_ERROR_IFNOTSET(ppm, this->number, IPK_Element_nodes) ;
 }
 

@@ -78,8 +78,14 @@ LumpedMassElement :: initializeFrom(InputRecord &ir, int priority)
 {
     ParameterManager &ppm =  this->giveDomain()->elementPPM;
     StructuralElement :: initializeFrom(ir, priority);
-    PM_UPDATE_PARAMETER(dofs, ppm, ir, this->number, IPK_LumpedMassElement_dofs, priority) ;
     PM_UPDATE_PARAMETER(components, ppm, ir, this->number, IPK_LumpedMassElement_components, priority) ;
+    PM_UPDATE_TEMP_PARAMETER( IntArray, ppm, ir, this->number, IPK_LumpedMassElement_dofs, priority );
+    if ( dofs.isEmpty() ) {
+        int Ndofs = components.giveSize();
+        dofs.resize( Ndofs );
+        for ( int i = 1; i <= Ndofs; i++ )
+            dofs.at( i ) = i;
+    }
 
 }
 
@@ -88,7 +94,7 @@ LumpedMassElement :: postInitialize()
 {
     ParameterManager &ppm =  this->giveDomain()->elementPPM;
     StructuralElement :: postInitialize();
-    PM_ELEMENT_ERROR_IFNOTSET(ppm, this->number, IPK_LumpedMassElement_dofs) ;
+    //PM_ELEMENT_ERROR_IFNOTSET(ppm, this->number, IPK_LumpedMassElement_dofs) ;
     PM_ELEMENT_ERROR_IFNOTSET(ppm, this->number, IPK_LumpedMassElement_components) ;
 }
 
