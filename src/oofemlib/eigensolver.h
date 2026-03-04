@@ -64,18 +64,24 @@ class EngngModel;
  *
  *
  */
- // not exportable due to conflicts with eigen OOFEM_EXPORT
-class  EigenSolver : public SparseGeneralEigenValueSystemNM
+// not exportable due to conflicts with eigen OOFEM_EXPORT
+class EigenSolver : public SparseGeneralEigenValueSystemNM
 {
 private:
     int nitem;
 
+    bool posOnly = false; // false will find the both positive and negative eigenvalues. true will focus on positive eigenvalues.
+
 public:
-    EigenSolver(Domain * d, EngngModel * m);
+    EigenSolver( Domain *d, EngngModel *m );
     virtual ~EigenSolver();
 
-    virtual ConvergedReason solve(SparseMtrx &A, SparseMtrx &B, FloatArray &x, FloatMatrix &v, double rtol, int nroot);
+    virtual ConvergedReason solve( SparseMtrx &A, SparseMtrx &B, FloatArray &x, FloatMatrix &v, double rtol, int nroot );
     virtual const char *giveClassName() const { return "EigenSolver"; }
+
+    // getter setter for pos only flag.
+    const bool &getPosOnlyFlag() const { return posOnly; }
+    void setPosOnlyFlag( bool _posOnly ) { this->posOnly = _posOnly; }
 };
 } // end namespace oofem
 #endif // eigensolver_h

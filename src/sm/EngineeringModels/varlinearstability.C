@@ -51,6 +51,7 @@
 #include "unknownnumberingscheme.h"
 #include "outputmanager.h"
 #include "eigenvectorprimaryfield.h"
+#include "eigensolver.h"
 
 
 #ifdef __OOFEG
@@ -130,6 +131,8 @@ VarLinearStability :: initializeFrom(InputRecord &ir)
 	    sparseMtrxType = SparseMtrxType::SMT_EigenSparse; // linStype = ST_Spooles;
 	    linStype = LinSystSolverType::ST_EigenLib;
     }
+
+    IR_GIVE_OPTIONAL_FIELD( ir, posOnly, _IFT_VarLinearStability_posonly );
 
     IR_GIVE_OPTIONAL_FIELD( ir, flexkg, _IFT_VarLinearStability_flexkg );
     
@@ -320,6 +323,11 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
     //stiffnessMatrix->writeToFile("K.dat");
     //initialStressMatrix->writeToFile("M.dat");
 #endif
+
+    if (solverType == GES_Eigen) {
+        EigenSolver *spectraSolver = static_cast<EigenSolver *>( nMethod.get() );
+        spectraSolver->setPosOnlyFlag( posOnly );
+    }
 
     auto cr = nMethod->solve(*stiffnessMatrix, *initialStressMatrix, eigVal, eigVec, rtolv, numberOfRequiredEigenValues);
     this->field->updateAll(eigVec, EModelDefaultEquationNumbering());

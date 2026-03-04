@@ -51,6 +51,7 @@
 #define _IFT_VarLinearStability_rtolv "rtolv"
 #define _IFT_VarLinearStability_stype "stype"
 #define _IFT_VarLinearStability_flexkg "flexkg"
+#define _IFT_VarLinearStability_posonly "posonly"
 //@}
 
 namespace oofem {
@@ -90,6 +91,8 @@ private:
     LinSystSolverType linStype;
     std ::unique_ptr<SparseLinearSystemNM> nMethodLS;
 
+    bool posOnly = false;
+
 public:
     VarLinearStability( int i, EngngModel *master = nullptr );
     virtual ~VarLinearStability() {}
@@ -127,7 +130,6 @@ public:
     const char *giveInputRecordName() const { return _IFT_VarLinearStability_Name; }
     const char *giveClassName() const override { return "VarLinearStability"; }
     fMode giveFormulation() override { return TL; }
-
 };
 } // end namespace oofem
 #endif // linearstabilityvar_h
