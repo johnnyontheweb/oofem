@@ -958,12 +958,11 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
     //answer.at(4, 10) = -answer.at(4, 4);
     //answer.at(10, 10) = answer.at(4, 4);
 
-    StructuralMaterial *mat = static_cast<StructuralMaterial *>(this->giveMaterial());
-
     FloatMatrix mat3d;
     double area, G;
 
     GaussPoint* gp = integrationRulesArray[0]->getIntegrationPoint(0);
+    StructuralMaterial *mat = static_cast<StructuralMaterial *>( gp->giveCrossSection()->giveMaterial(gp) );
     mat3d = mat->give1dStressStiffMtrx(ElasticStiffness, gp, tStep);
     G = mat->give('G', gp);
     area = this->giveStructuralCrossSection()->give(CS_Area, gp);
