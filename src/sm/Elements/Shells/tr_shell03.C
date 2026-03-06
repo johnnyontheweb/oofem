@@ -241,6 +241,8 @@ TR_SHELL03::computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
 
 	// matrix assembly vectors
 	IntArray asmz{ 3, 9, 15 };  // local z
+    IntArray asmx{ 1, 7, 13 }; // local u
+    IntArray asmy{ 2, 8, 14 }; // local v
 
 	// stress vector
 	FloatArray str,str2;
@@ -309,7 +311,8 @@ TR_SHELL03::computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
 	Kgx.add(sxy, Kgxy);
 	// once for local z
 	answer.assemble(Kgx, asmz);
-	// done
+    answer.assemble( Kgx, asmx ); // u
+    answer.assemble( Kgx, asmy ); // v
 }
 
 void TR_SHELL03 :: computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode)

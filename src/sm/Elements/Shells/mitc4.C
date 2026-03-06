@@ -208,6 +208,8 @@ MITC4Shell::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
     answer.zero();
 
     // matrix assembly vectors
+    IntArray asmx{ 1, 7, 13, 19 }; // local u
+    IntArray asmy{ 2, 8, 14, 20 }; // local v
     IntArray asmz{ 3, 9, 15, 21 }; // local z
 
     // stress vector
@@ -286,7 +288,8 @@ MITC4Shell::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
     Kgx.add( sxy, Kgxy );
     // once for local z
     answer.assemble( Kgx, asmz );
-    // done
+    answer.assemble( Kgx, asmx ); // u
+    answer.assemble( Kgx, asmy ); // v
 }
 
 double

@@ -261,7 +261,7 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
 
     if ( loadVector2.computeNorm() > 1.e-10 ) { // constant loading
         //loadVector.add( loadVector2 ); // sum to be consistent with deformed shape?
-        OOFEM_LOG_INFO( "Solving linear static problem\n" );
+        OOFEM_LOG_INFO( "Solving linear static problem for constant loading\n" );
         nMethodLS->solve( *stiffnessMatrix, loadVector2, displacementVector );
         // Initial displacements are stored at position 0; this is a bit of a hack. In the future, a cleaner approach of handling fields could be suitable,
         // but currently, it all converges down to the same giveUnknownComponent, so this is the easiest approach.
@@ -309,7 +309,7 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
     this->assemble( *initialStressMatrix, tStep, InitialStressMatrixAssembler(),
                    EModelDefaultEquationNumbering(), this->giveDomain(1) );
     initialStressMatrix->times(-1.0);
-
+    // eigenvector by column
     FloatMatrix eigVec(neq, numberOfRequiredEigenValues);
     eigVal.resize(numberOfRequiredEigenValues);
     eigVal.zero();
@@ -330,6 +330,28 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
     }
 
     auto cr = nMethod->solve(*stiffnessMatrix, *initialStressMatrix, eigVal, eigVec, rtolv, numberOfRequiredEigenValues);
+
+    // normalize eigen vectors
+    for ( int j = 1; j <= eigVec.giveNumberOfColumns(); ++j ) {
+        double maxVal = 0.0;
+        // abs max of current vector
+        for ( int i = 1; i <= eigVec.giveNumberOfRows(); ++i ) {
+            double absVal = std::abs( eigVec.at( i, j ) );
+            if ( absVal > maxVal ) {
+                maxVal = absVal;
+            }
+        }
+        // if not null
+        if ( maxVal > 0 ) {
+#ifdef DEBUG
+            OOFEM_LOG_INFO( "Max value of eigenvector %d: %e\n", j, maxVal );
+#endif
+            for ( int i = 1; i <= eigVec.giveNumberOfRows(); ++i ) {
+                eigVec.at( i, j ) /= maxVal;
+            }
+        }
+    }
+
     this->field->updateAll(eigVec, EModelDefaultEquationNumbering());
     if ( cr != CR_CONVERGED ) {
         OOFEM_ERROR( "Buckling solver couldn't find a solution." );
