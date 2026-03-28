@@ -295,7 +295,7 @@ void SpringElement3D::computeInitialStressMatrix( FloatMatrix &answer, TimeStep 
     answer.zero();
 
     double l = this->computeLength();
-    if ( l > 1.e-12 ) {
+    if ( l > 1.e-12 && d==0 ) {
         double N;
 
         answer.at( 2, 2 ) = 1;

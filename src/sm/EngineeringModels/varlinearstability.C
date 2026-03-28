@@ -334,11 +334,20 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
     // normalize eigen vectors
     for ( int j = 1; j <= eigVec.giveNumberOfColumns(); ++j ) {
         double maxVal = 0.0;
-        // abs max of current vector
-        for ( int i = 1; i <= eigVec.giveNumberOfRows(); ++i ) {
-            double absVal = std::abs( eigVec.at( i, j ) );
-            if ( absVal > maxVal ) {
-                maxVal = absVal;
+        int rows      = eigVec.giveNumberOfRows();
+        Domain *domain = this->giveDomain( 1 );
+        EModelDefaultEquationNumbering numbering;
+
+        // abs max of current vector, skipping ghost nodes
+        for ( auto &dman : domain->giveDofManagers() ) {
+            if ( strcmp( dman->giveClassName(), "Node" ) == 0 ) {
+                for ( Dof *dof : *dman ) {
+                    int eq = numbering.giveDofEquationNumber( dof );
+                    if ( eq > 0 && eq <= rows ) {
+                        double absVal = std::abs( eigVec.at( eq, j ) );
+                        if ( absVal > maxVal ) maxVal = absVal;
+                    }
+                }
             }
         }
         // if not null
@@ -346,7 +355,7 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
 #ifdef DEBUG
             OOFEM_LOG_INFO( "Max value of eigenvector %d: %e\n", j, maxVal );
 #endif
-            for ( int i = 1; i <= eigVec.giveNumberOfRows(); ++i ) {
+            for ( int i = 1; i <= rows; ++i ) {
                 eigVec.at( i, j ) /= maxVal;
             }
         }
