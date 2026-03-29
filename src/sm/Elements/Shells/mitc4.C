@@ -473,7 +473,7 @@ MITC4Shell::computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, T
         //    relDrillCoeff = 0.001; // default
         //}
 
-        int j = 1;
+        //int j = 1;
         //while ( answer.at( j, j ) == 0 ) { j++; }
         //drillCoeff = answer.at( j, j );
         //// find the smallest non-zero number on the diagonal
