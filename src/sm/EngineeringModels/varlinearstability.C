@@ -52,6 +52,7 @@
 #include "outputmanager.h"
 #include "eigenvectorprimaryfield.h"
 #include "eigensolver.h"
+#include "node.h"
 
 
 #ifdef __OOFEG
@@ -340,13 +341,21 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
 
         // abs max of current vector, skipping ghost nodes
         for ( auto &dman : domain->giveDofManagers() ) {
-            if ( strcmp( dman->giveClassName(), "Node" ) == 0 ) {
-                for ( Dof *dof : *dman ) {
-                    int eq = numbering.giveDofEquationNumber( dof );
-                    if ( eq > 0 && eq <= rows ) {
-                        double absVal = std::abs( eigVec.at( eq, j ) );
-                        if ( absVal > maxVal ) maxVal = absVal;
-                    }
+            // A simple string check would skip rigid arm nodes and possibly other dof managers.
+            Node *node = dynamic_cast<Node *>( dman.get() );  
+            if ( !node ) {
+                continue;
+            }
+
+            for ( Dof *dof : *dman ) {
+                DofIDItem id = dof->giveDofID();
+                if ( id < D_u || id > R_w ) {
+                    continue;
+                }
+                int eq = numbering.giveDofEquationNumber( dof );
+                if ( eq > 0 && eq <= rows ) {
+                    double absVal = std::abs( eigVec.at( eq, j ) );
+                    if ( absVal > maxVal ) maxVal = absVal;
                 }
             }
         }
@@ -361,6 +370,7 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
         }
     }
 
+    eigVec.printYourselfToFile( "wat.txt" );
     this->field->updateAll(eigVec, EModelDefaultEquationNumbering());
     if ( cr != CR_CONVERGED ) {
         OOFEM_ERROR( "Buckling solver couldn't find a solution." );
