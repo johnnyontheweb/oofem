@@ -89,7 +89,7 @@ EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatri
 	// spectra supports n-1 eigenvalues
 	if (nroot >= a.giveNumberOfRows()) {
 		nroot = a.giveNumberOfRows() - 1;
-		OOFEM_WARNING("The number of requested eigenvalues exceeds the problem size. The number is reduced down to %d", nroot);
+		OOFEM_WARNING("The number of requested eigenvalues exceeds the problem size. The number is reduced to %d", nroot);
 	}
 
 	//typedef Eigen::SparseMatrix<double,0,int> SparseMat;

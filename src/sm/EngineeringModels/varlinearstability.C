@@ -457,7 +457,7 @@ void VarLinearStability :: printOutputAt(FILE *file, TimeStep *tStep)
     fprintf(file, "\nLinear Stability:");
     fprintf(file, "\nEigen Values are:\n-----------------\n");
 
-    for ( int i = 1; i <= numberOfRequiredEigenValues; i++ ) {
+    for ( int i = 1; i <= eigVal.size(); i++ ) {
         fprintf(file, "%15.8e ", eigVal.at(i) );
         if ( ( i % 5 ) == 0 ) {
             fprintf(file, "\n");
@@ -466,7 +466,7 @@ void VarLinearStability :: printOutputAt(FILE *file, TimeStep *tStep)
 
     fprintf(file, "\n\n");
 
-    for ( int i = 1; i <= numberOfRequiredEigenValues; i++ ) {
+    for ( int i = 1; i <= eigVal.size(); i++ ) {
         TimeStep step = *tStep;
         step.setTime( ( double ) i );
         step.setNumber(i);

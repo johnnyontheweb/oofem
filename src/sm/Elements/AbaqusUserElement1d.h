@@ -181,6 +181,7 @@ public:
     void giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int useUpdatedGpRecord = 0) override;
     void giveInternalForcesVector( FloatArray &answer, TimeStep *tStep, FloatArray &U, FloatMatrix &DU, FloatArray &V, FloatArray &A, int useUpdatedGpRecord );
     int computeNumberOfDofs() override { return 2; }
+    int checkConsistency() override { return 1; }
     void giveDofManDofIDMask(int inode, IntArray &answer) const override;
     void computeField(ValueModeType mode, TimeStep *tStep, const FloatArray &lcoords, FloatArray &answer) override
     { OOFEM_ERROR("Abaqus user element cannot support computation of local unknown vector\n"); }

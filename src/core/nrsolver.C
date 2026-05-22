@@ -778,6 +778,10 @@ NRSolver :: checkConvergence(FloatArray &RT, FloatArray &F, FloatArray &rhs,  Fl
 		          answer = false;
 		        }
 
+                if ( engngModel->giveProblemScale() == macroScale && numPrintouts <= maxNumPrintouts ) {
+                    OOFEM_LOG_INFO( zeroFNorm ? " *%.3e" : "  %.3e", forceErr );
+                }
+
                 // Store the errors from the current iteration
                 if ( this->constrainedNRFlag ) {
                     forceErrVec.at(dg) = forceErr;
@@ -799,6 +803,10 @@ NRSolver :: checkConvergence(FloatArray &RT, FloatArray &F, FloatArray &rhs,  Fl
                 }
                 if ( dispErr > rtold.at(1) ) {
                     answer = false;
+                }
+
+                if ( engngModel->giveProblemScale() == macroScale && numPrintouts <= maxNumPrintouts ) {
+                    OOFEM_LOG_INFO( zeroDNorm ? " *%.3e" : "  %.3e", dispErr );
                 }
             }
         }
