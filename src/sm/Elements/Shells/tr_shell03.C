@@ -67,7 +67,9 @@ TR_SHELL03 :: initializeFrom(InputRecord &ir, int priority)
 {
     // proc tady neni return = this...   ??? termitovo
     StructuralElement :: initializeFrom(ir, priority);
+    plate->setNumber(this->number);
     plate->initializeFrom( ir, priority );
+    membrane->setNumber(this->number);
     membrane->initializeFrom( ir, priority );
 
 //#if 0
