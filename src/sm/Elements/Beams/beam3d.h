@@ -103,6 +103,8 @@ protected:
     // macro element number
     int macroElem;
 
+    bool useModifiedKg = false;
+
     static ParamKey IPK_Beam3d_dofsToCondense; ///< [optional] DOFs to condense
     static ParamKey IPK_Beam3d_refnode; ///< [optional] Reference node for the beam 
     static ParamKey IPK_Beam3d_refangle; ///< [optional] Reference angle for the beam

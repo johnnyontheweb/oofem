@@ -188,11 +188,8 @@ DruckerPragerPlasticitySM :: initializeFrom(InputRecord &ir)
     // call the corresponding service for the linear elastic material
     LEMaterial.initializeFrom(ir);
 
-    // initialize elastic constants
-    //eM = LEMaterial.give(Ex,gp);
-    //nu = LEMaterial.give(NYxz,gp);
-    //gM = eM / ( 2. * ( 1. + nu ) );
-    //kM = eM / ( 3. * ( 1. - 2. * nu ) );
+    double G = LEMaterial.giveShearModulus();
+    propertyDictionary.add( 'G', G );
 
     // instanciate the variables defined in DruckerPragerPlasticitySM
     IR_GIVE_FIELD(ir, initialYieldStress, _IFT_DruckerPragerPlasticitySM_iys); // initial yield stress under pure shear

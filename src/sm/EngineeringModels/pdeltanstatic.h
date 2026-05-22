@@ -53,7 +53,8 @@
 #define _IFT_PdeltaNstatic_forceloadBalancingFlag "forceloadbalancingflag"
 #define _IFT_PdeltaNstatic_updateElasticStiffnessFlag "updateelasticstiffnessflag"
 //#define _IFT_PdeltaNstatic_secondOrder "secorder"
-//#define _IFT_PDeltaStatic_rtolv "rtolv"
+#define _IFT_PDeltaStatic_rtolv "rtolv"
+#define _IFT_PdeltaNstatic_flexkg "flexkg"
 //@}
 
 namespace oofem {
@@ -120,8 +121,6 @@ protected:
     PdeltaNstatic_controlType controlMode;
     /// Intrinsic time increment.
     double deltaT;
-	// second order contribution for elements
-	//bool secOrder;
 
    /**
      * The following parameter allows to specify how the reference load vector
@@ -148,6 +147,7 @@ public:
     void printOutputAt(FILE *file, TimeStep *tStep) override;
 
     void updateComponent(TimeStep *tStep, NumericalCmpn, Domain *d) override;
+    void updateMatrix( SparseMtrx &mat, TimeStep *tStep, Domain *d ) override;
     void updateAttributes(MetaStep *mStep) override;
 
     double giveUnknownComponent(ValueModeType type, TimeStep *tStep, Domain *d, Dof *dof) override;

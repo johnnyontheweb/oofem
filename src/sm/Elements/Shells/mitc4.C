@@ -213,6 +213,8 @@ MITC4Shell::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
     answer.zero();
 
     // matrix assembly vectors
+    IntArray asmx{ 1, 7, 13, 19 }; // local u
+    IntArray asmy{ 2, 8, 14, 20 }; // local v
     IntArray asmz{ 3, 9, 15, 21 }; // local z
 
     // stress vector
@@ -291,7 +293,8 @@ MITC4Shell::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
     Kgx.add( sxy, Kgxy );
     // once for local z
     answer.assemble( Kgx, asmz );
-    // done
+    answer.assemble( Kgx, asmx ); // u
+    answer.assemble( Kgx, asmy ); // v
 }
 
 double
@@ -471,7 +474,7 @@ MITC4Shell::computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, T
         //    relDrillCoeff = 0.001; // default
         //}
 
-        int j = 1;
+        //int j = 1;
         //while ( answer.at( j, j ) == 0 ) { j++; }
         //drillCoeff = answer.at( j, j );
         //// find the smallest non-zero number on the diagonal

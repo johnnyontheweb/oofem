@@ -180,6 +180,9 @@ void ResponseSpectrum::initializeFrom( InputRecord &ir )
     IR_GIVE_OPTIONAL_FIELD( ir, damp, _IFT_ResponseSpectrum_damp );
     csi = damp;
 
+    IR_GIVE_OPTIONAL_FIELD( ir, combinedForcesFileName, _IFT_ResponseSpectrum_combinedForcesFileName );
+
+
     suppressOutput = ir.hasField( _IFT_EngngModel_suppressOutput );
 
     if ( suppressOutput ) {
@@ -210,6 +213,94 @@ void ResponseSpectrum::initializeFrom( InputRecord &ir )
     }
 }
 
+// export nodal forces exportCombinedForcesToFile( combinedForcesFileName );
+//void ResponseSpectrum::exportCombinedForcesToFile( const std::string &filename )
+//{
+//    if ( filename.empty() ) return;
+//    FILE *file = fopen( filename.c_str(), "w" );
+//    if ( !file ) return;
+//    fprintf( file, "# Combined forces after modal combination\n" );
+//    for ( int i = 1; i <= combForces.giveSize(); ++i ) {
+//        fprintf( file, "%d %.8e\n", i, combForces.at( i ) );
+//    }
+//    fclose( file );
+//}
+// export nodal forces exportCombinedForcesToFile( combinedForcesFileName );
+void ResponseSpectrum::exportCombinedForcesToFile( const std::string &filename )
+{
+    if ( filename.empty() ) return;
+    FILE *file = fopen( filename.c_str(), "w" );
+    if ( !file ) return;
+    fprintf( file, "# Combined nodal forces after modal combination\n" );
+    fprintf( file, "# nodeLabel type fx fy fz mx my mz\n" );
+
+    Domain *domain = this->giveDomain( 1 );
+    const EModelDefaultEquationNumbering defNumbering;
+    static const DofIDItem dofIDs[] = { D_u, D_v, D_w, R_u, R_v, R_w };
+
+    auto exportForces = [&]( const FloatArray &forcesArray, const std::string &type ) {
+        for ( std::unique_ptr<DofManager> &node : domain->giveDofManagers() ) {
+            Node *actualNode = dynamic_cast<Node *>( node.get() );
+            if ( actualNode && actualNode->hasLocalCS() ) {
+                continue; // skip nodes with LCS
+            }
+            if ( strcmp( node->giveClassName(), "Node" ) != 0 && strcmp( node->giveClassName(), "RigidArmNode" ) != 0 ) {
+                continue;
+            }
+
+            int label = node->giveLabel();
+            FloatArray forces( 6 );
+            forces.zero();
+
+            for ( int iDof = 0; iDof < 6; ++iDof ) {
+                DofIDItem dType = dofIDs[iDof];
+                auto pos        = node->findDofWithDofId( dType );
+                if ( pos == node->end() ) {
+                    continue;
+                }
+
+                if ( ( *pos )->isPrimaryDof() ) {
+                    int eqN = ( *pos )->giveEquationNumber( defNumbering );
+                    if ( eqN > 0 && eqN <= forcesArray.giveSize() ) {
+                        forces.at( iDof + 1 ) = forcesArray.at( eqN );
+                    }
+                } else {
+                    continue;
+                    //// For slave dofs, the force is associated with the master dof
+                    //IntArray masterDofMans;
+                    //( *pos )->giveMasterDofManArray( masterDofMans );
+                    //if ( masterDofMans.giveSize() > 0 ) {
+                    //    auto *masterMan = domain->giveDofManager( masterDofMans.at( 1 ) );
+                    //    auto masterDof  = masterMan->findDofWithDofId( dType );
+                    //    if ( masterDof != masterMan->end() ) {
+                    //        int eqN = ( *masterDof )->giveEquationNumber( defNumbering );
+                    //        if ( eqN > 0 && eqN <= forcesArray.giveSize() ) {
+                    //            forces.at( iDof + 1 ) = forcesArray.at( eqN );
+                    //        }
+                    //    }
+                    //}
+                }
+            }
+            if ( forces.computeNorm() == 0.0 ) {
+                continue;
+            }
+            fprintf( file, "%d %s %.8e %.8e %.8e %.8e %.8e %.8e\n",
+                label, type.c_str(), forces.at( 1 ), forces.at( 2 ), forces.at( 3 ), forces.at( 4 ), forces.at( 5 ), forces.at( 6 ) );
+        }
+    };
+
+    // Export combined forces with type 'C'
+    exportForces( combForces, "C" );
+
+    // Export forces for each mode with mode number
+    int mode = 1;
+    for ( const auto &modeForces : imposedForcesList ) {
+        exportForces( modeForces, std::to_string( mode ) );
+        mode++;
+    }
+
+    fclose( file );
+}
 
 void ResponseSpectrum::postInitialize()
 {
@@ -697,7 +788,7 @@ void ResponseSpectrum::solveYourself()
     OOFEM_LOG_INFO( "Starting analysis for each mode ...\n" );
 #endif
 
-    // determine dominat mode in requested direction
+    // determine dominant mode in requested direction
     FloatArray dirVect( dir );
     FloatArray dirFactors( numberOfRequiredEigenValues );
     dirVect.normalize();
@@ -739,6 +830,12 @@ void ResponseSpectrum::solveYourself()
         // store the vectors for the current mode
         reactionsList.push_back( reactions );
         dispList.push_back( dummyDisps );
+
+        // calculate mode forces
+        FloatArray imposedForces;
+        massMatrix->times( dummyDisps, imposedForces ); // M * u_disp
+        imposedForces *= eigVal.at( dN ); // M * w^2
+        imposedForcesList.push_back( imposedForces );
 
         map<int, map<int, map<int, map<string, FloatArray> > > > elemResponse;
         map<int, map<string, FloatArray> > beamResponse;
@@ -814,6 +911,8 @@ void ResponseSpectrum::solveYourself()
         this->CQC();
     }
 
+    exportCombinedForcesToFile( combinedForcesFileName );
+
     //
     // zero matrix
     //
@@ -876,6 +975,18 @@ void ResponseSpectrum::SRSS()
 
     calcRoot( combElemResponse );
     calcRoot( combBeamResponse );
+
+    // model forces
+    combForces.resize( imposedForcesList.front().giveSize() );
+    combForces.zero();
+    for ( auto &forces : imposedForcesList ) {
+        for ( int i = 1; i <= forces.giveSize(); ++i ) {
+            combForces.at( i ) += pow( forces.at( i ), 2 );
+        }
+    }
+    for ( int i = 1; i <= combForces.giveSize(); ++i ) {
+        combForces.at( i ) = sqrt( combForces.at( i ) );
+    }
 }
 
 
@@ -934,6 +1045,25 @@ void ResponseSpectrum::CQC()
         res *= signbit( disps.at( z ) ) ? -1 : 1;
         combDisps.at( z ) = res;
     }
+
+    // calculate mode forces
+    combForces.resize( imposedForcesList.front().giveSize() );
+    combForces.zero();
+    auto it1 = imposedForcesList.begin();
+    for ( int i = 1; it1 != imposedForcesList.end(); ++it1, ++i ) {
+        FloatArray &forces1 = *it1;
+        auto it2            = imposedForcesList.begin();
+        for ( int j = 1; it2 != imposedForcesList.end(); ++it2, ++j ) {
+            FloatArray &forces2 = *it2;
+            for ( int k = 1; k <= forces1.giveSize(); ++k ) {
+                combForces.at( k ) += fabs( forces1.at( k ) * forces2.at( k ) * rhos.at( i, j ) );
+            }
+        }
+    }
+    for ( int k = 1; k <= combForces.giveSize(); ++k ) {
+        combForces.at( k ) = sqrt( combForces.at( k ) );
+    }
+
 }
 
 

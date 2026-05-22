@@ -196,6 +196,8 @@ PdeltaNstatic :: initializeFrom(InputRecord &ir)
       updateElasticStiffnessFlag = true;
     }
 
+    IR_GIVE_OPTIONAL_FIELD( ir, flexkg, _IFT_PdeltaNstatic_flexkg );
+
 	//secOrder = false;
 	//IR_GIVE_OPTIONAL_FIELD(ir, secOrder, _IFT_PdeltaNstatic_secondOrder);
 	//if (secOrder && sparseMtrxType > 1) {
@@ -203,7 +205,8 @@ PdeltaNstatic :: initializeFrom(InputRecord &ir)
 	solverType = ST_EigenLib;
 	//}
 
-	//IR_GIVE_FIELD(ir, rtolv, _IFT_PDeltaStatic_rtolv);
+ //   rtolv = 0.0001;
+	//IR_GIVE_OPTIONAL_FIELD( ir, rtolv, _IFT_PDeltaStatic_rtolv );
     
 #ifdef __PARALLEL_MODE
     if ( isParallel() ) {
@@ -522,10 +525,11 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
         OOFEM_LOG_RELEVANT("Computing initial guess\n");
 #endif
 	    FloatArray extrapolatedForces;
-        this->assemblePrescribedExtrapolatedForces( extrapolatedForces, tStep, TangentStiffnessMatrix, this->giveDomain(di) );
+        this->assemblePrescribedExtrapolatedForces( extrapolatedForces, tStep, TangentStiffnessMatrix, this->giveDomain( di ) );
         extrapolatedForces.negated();
-        //this->updateMatrix( *stiffnessMatrix, tStep, this->giveDomain( di ) );
-        this->updateComponent( tStep, NonLinearLhs, this->giveDomain(di) );
+        //if (incrementalLoadVector.computeNorm() > 0.0) extrapolatedForces.add( incrementalLoadVector );
+        this->updateMatrix( *stiffnessMatrix, tStep, this->giveDomain( di ) );
+        //this->updateComponent( tStep, NonLinearLhs, this->giveDomain(di) );
         SparseLinearSystemNM *linSolver = nMethod->giveLinearSolver();
         OOFEM_LOG_RELEVANT("solving for increment\n");
         linSolver->solve(*stiffnessMatrix, extrapolatedForces, incrementOfDisplacement);
@@ -539,6 +543,7 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
 
 
 	// pdelta ----------------------------------------------------------
+#if 0
 //#ifdef VERBOSE
 //	OOFEM_LOG_INFO("\n\nSolving initial ...\n\n");
 //#endif
@@ -563,38 +568,46 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
 	//	// PDELTA approx solution with iterations - maximum 10 iterations
 	//	if (newNorm != 0) oldNorm = newNorm;
 		//maxIter += 1;
-        //this->updateComponent( tStep, InternalRhs, this->giveDomain( di ) );
+
+        // force at current step for Kg
+        //this->updateComponent( tStep, NonLinearLhs, this->giveDomain( di ) );
+        //SparseLinearSystemNM *linSolver = nMethod->giveLinearSolver();
+        //FloatArray dispTotal;
+        //FloatArray totalLoadVector = incrementalLoadVector;
+        //totalLoadVector.add( initialLoadVector );
+        //linSolver->solve( *stiffnessMatrix, totalLoadVector, dispTotal);
 #ifdef VERBOSE
 		OOFEM_LOG_INFO("Assembling initial stress matrix\n");
 #endif
 		// initialStressMatrix.reset(stiffnessMatrix->GiveCopy());
 		initialStressMatrix->zero();
-
+        //this->updateComponent( tStep, NonLinearLhs, this->giveDomain( di ) ); // update
 		this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain(di));
-		std::unique_ptr< SparseMtrx > Kiter;
-        Kiter = stiffnessMatrix->clone(); // initialGuessType == IG_Tangent is required, otherwise K is zero
-		Kiter->add(1, *initialStressMatrix);
-
-		//#ifdef DEBUG
-		//		stiffnessMatrix->writeToFile("Ke.dat");
-		//		Kiter->writeToFile("Kiter.dat");
-		//#endif
+		//std::unique_ptr< SparseMtrx > Kiter;
+  //      Kiter = stiffnessMatrix->clone(); // initialGuessType == IG_Tangent is required, otherwise K is zero
+		//Kiter->add(1, *initialStressMatrix);
+        
+		#ifdef DEBUG
+				stiffnessMatrix->writeToFile("Ke.dat");
+                initialStressMatrix->writeToFile( "KG.dat" );
+				//Kiter->writeToFile("Kiter.dat");
+		#endif
 
 		// solve again
 //#ifdef VERBOSE
 //		OOFEM_LOG_INFO("\nSolving iteration %d ...\n", maxIter);
 //#endif
-		// SOLVER
-		if (initialLoadVector.isNotEmpty()) {
-			numMetStatus = nMethod->solve(*Kiter, incrementalLoadVector, &initialLoadVector,
-				totalDisplacement, incrementOfDisplacement, internalForces,
-				internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
-		}
-		else {
-			numMetStatus = nMethod->solve(*Kiter, incrementalLoadVector, NULL,
-				totalDisplacement, incrementOfDisplacement, internalForces,
-				internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
-		}
+		//// SOLVER
+		//if (initialLoadVector.isNotEmpty()) {
+		//	numMetStatus = nMethod->solve(*Kiter, incrementalLoadVector, &initialLoadVector,
+		//		totalDisplacement, incrementOfDisplacement, internalForces,
+		//		internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
+		//}
+		//else {
+		//	numMetStatus = nMethod->solve(*Kiter, incrementalLoadVector, NULL,
+		//		totalDisplacement, incrementOfDisplacement, internalForces,
+		//		internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
+		//}
 
 //		// check convergence on DISPLACEMENTS: ( u(i)^2 - u(i-1)^2 ) / u(i)^2
 //		newNorm = totalDisplacement.computeSquaredNorm();
@@ -614,17 +627,80 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
         this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ),
                             VM_Total, EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
         incrementalLoadVector.subtract( feq );
-	    // SOLVER
-        if ( initialLoadVector.isNotEmpty() ) {
-          numMetStatus = nMethod->solve(*stiffnessMatrix, incrementalLoadVector, &initialLoadVector,
-                                          totalDisplacement, incrementOfDisplacement, internalForces,
-                                          internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
-        } else {
-          numMetStatus = nMethod->solve(*stiffnessMatrix, incrementalLoadVector, NULL,
-                                          totalDisplacement, incrementOfDisplacement, internalForces,
-                                          internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
-        }
     }
+#endif
+
+	// SOLVER
+    if ( initialLoadVector.isNotEmpty() ) {
+        numMetStatus = nMethod->solve(*stiffnessMatrix, incrementalLoadVector, &initialLoadVector,
+                                        totalDisplacement, incrementOfDisplacement, internalForces,
+                                        internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
+    } else {
+        numMetStatus = nMethod->solve(*stiffnessMatrix, incrementalLoadVector, NULL,
+                                        totalDisplacement, incrementOfDisplacement, internalForces,
+                                        internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
+    }
+#if 0
+
+    // NLGEOM pdelta approx solution with iterations
+	// norm of previous displ. vector
+    double oldNorm = totalDisplacement.computeSquaredNorm();
+    double newNorm = 0;
+    bool escape    = false;
+    int maxIter    = 0;
+    do {
+        // PDELTA approx solution with iterations - maximum 10 iterations
+        if ( newNorm != 0 ) oldNorm = newNorm;
+        maxIter += 1;
+#ifdef VERBOSE
+        OOFEM_LOG_INFO( "Assembling initial stress matrix\n" );
+#endif
+        this->updateComponent( tStep, NonLinearLhs, this->giveDomain( di ) );
+        initialStressMatrix->zero();
+        this->assemble( *initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
+        std::unique_ptr<SparseMtrx> Kiter;
+        Kiter = stiffnessMatrix->clone();
+        Kiter->add( 1, *initialStressMatrix );
+//#ifdef DEBUG
+//        stiffnessMatrix->writeToFile( "Ke.dat" );
+//        initialStressMatrix->writeToFile( "KG.dat" );
+//        // Kiter->writeToFile("Kiter.dat");
+//#endif
+        //  solve again
+#ifdef VERBOSE
+        OOFEM_LOG_INFO( "\nSolving iteration %d ...\n", maxIter );
+#endif
+#ifdef DEBUG
+        OOFEM_LOG_INFO( "\nDispl. norm = %.2e \n", totalDisplacement.computeSquaredNorm() );
+#endif // DEBUG
+
+        // SOLVER
+        if ( initialLoadVector.isNotEmpty() ) {
+            numMetStatus = nMethod->solve( *Kiter, incrementalLoadVector, &initialLoadVector,
+                totalDisplacement, incrementOfDisplacement, internalForces,
+                internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep );
+        } else {
+            numMetStatus = nMethod->solve( *Kiter, incrementalLoadVector, NULL,
+                totalDisplacement, incrementOfDisplacement, internalForces,
+                internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep );
+        }
+
+        // check convergence on DISPLACEMENTS: ( u(i)^2 - u(i-1)^2 ) / u(i)^2
+        FloatArray dispTotal = totalDisplacement;
+        //dispTotal.add( incrementOfDisplacement );
+        newNorm = dispTotal.computeSquaredNorm();
+#ifdef DEBUG
+        OOFEM_LOG_INFO( "\nUpdated displ. norm = %.2e \n", newNorm );
+#endif // DEBUG
+        double toll = abs( ( newNorm - oldNorm ) / newNorm );
+        if ( toll <= rtolv || maxIter >= 20 ) escape = true;
+#ifdef VERBOSE
+        OOFEM_LOG_INFO( "\nCurrent displ. residual: %.2e \n\n", toll );
+#endif
+        // PDELTA end p-delta stiffness
+    } while ( escape == false );
+#endif
+
 
     if (numMetStatus != CR_CONVERGED) {
 		OOFEM_ERROR("Solver couldn't find equilibrium at step number %5d.%d in %d iterations\n", tStep->giveNumber(), tStep->giveVersion(), currentIterations);
@@ -636,6 +712,37 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
     prevStepLength =  currentStepLength;
 }
 
+void 
+PdeltaNstatic ::updateMatrix( SparseMtrx &mat, TimeStep *tStep, Domain *d )
+{
+    if ( stiffMode == nls_tangentStiffness ) {
+        mat.zero(); // zero stiffness matrix
+#ifdef VERBOSE
+        OOFEM_LOG_DEBUG( "Assembling tangent stiffness matrix\n" );
+#endif
+        this->assemble( mat, tStep, TangentAssembler( TangentStiffness ), EModelDefaultEquationNumbering(), d );
+    } else if ( ( stiffMode == nls_secantStiffness ) || ( stiffMode == nls_secantInitialStiffness && initFlag ) ) {
+#ifdef VERBOSE
+        OOFEM_LOG_DEBUG( "Assembling secant stiffness matrix\n" );
+#endif
+        mat.zero(); // zero stiffness matrix
+        this->assemble( mat, tStep, TangentAssembler( SecantStiffness ), EModelDefaultEquationNumbering(), d );
+        initFlag = 0;
+    } else if ( ( stiffMode == nls_elasticStiffness ) && ( initFlag || ( this->giveMetaStep( tStep->giveMetaStepNumber() )->giveFirstStepNumber() == tStep->giveNumber() ) || ( updateElasticStiffnessFlag ) ) ) {
+#ifdef VERBOSE
+        OOFEM_LOG_DEBUG( "Assembling elastic stiffness matrix\n" );
+#endif
+        mat.zero(); // zero stiffness matrix
+        this->assemble( mat, tStep, TangentAssembler( ElasticStiffness ), EModelDefaultEquationNumbering(), d );
+        initFlag = 0;
+    } else {
+        // currently no action , this method is mainly intended to
+        // assemble new tangent stiffness after each iteration
+        // when secantStiffMode is on, we use the same stiffness
+        // during iteration process
+    }
+}
+
 void
 PdeltaNstatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *d)
 //
@@ -645,6 +752,8 @@ PdeltaNstatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *d)
 // of new equilibrium stage.
 //
 {
+    FloatArray feq;
+
     switch ( cmpn ) {
     case NonLinearLhs:
         if ( stiffMode == nls_tangentStiffness ) {
@@ -654,30 +763,13 @@ PdeltaNstatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *d)
 #endif
             this->assemble(*stiffnessMatrix, tStep, TangentAssembler(TangentStiffness),
                            EModelDefaultEquationNumbering(), d);
-			//if (secOrder) {
-				// update internal state - nodes ...
-				for (auto &dman : d->giveDofManagers()) {
-					dman->updateYourself(tStep);
-				}
-				// ... and elements
-				for (auto &elem : d->giveElements()) {
-					elem->updateInternalState(tStep);
-					elem->updateYourself(tStep);
-				}
-//#ifdef VERBOSE
-//				OOFEM_LOG_INFO("Assembling initial stress matrix\n");
-//#endif
-//				initialStressMatrix->zero();
-//				this->assemble(*initialStressMatrix, tStep, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), d);
-//				stiffnessMatrix->add(1, *initialStressMatrix); // in 1st step this would be zero
-			//}
+
         } else if ( ( stiffMode == nls_secantStiffness ) || ( stiffMode == nls_secantInitialStiffness && initFlag ) ) {
 #ifdef VERBOSE
             OOFEM_LOG_DEBUG("Assembling secant stiffness matrix\n");
 #endif
             stiffnessMatrix->zero(); // zero stiffness matrix
-            this->assemble(*stiffnessMatrix, tStep, TangentAssembler(SecantStiffness),
-                           EModelDefaultEquationNumbering(), d);
+            this->assemble(*stiffnessMatrix, tStep, TangentAssembler(SecantStiffness), EModelDefaultEquationNumbering(), d);
             initFlag = 0;
         } else if ( ( stiffMode == nls_elasticStiffness ) && ( initFlag ||
                                                               ( this->giveMetaStep( tStep->giveMetaStepNumber() )->giveFirstStepNumber() == tStep->giveNumber() ) || (updateElasticStiffnessFlag) ) ) {
@@ -702,6 +794,12 @@ PdeltaNstatic :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn, Domain *d)
 #endif
         // update internalForces and internalForcesEBENorm concurrently
         this->updateInternalRHS(internalForces, tStep, d, &this->internalForcesEBENorm );
+
+        // p-delta forces as alternative to p-delta stiffness matrix
+        feq.resize( internalForces.giveSize() );
+        this->assembleVector( feq, tStep, MatrixProductAssembler( InitialStressMatrixAssembler() ), VM_Total, EModelDefaultEquationNumbering(), d );
+        internalForces.add( feq );
+
         break;
 
     default:
@@ -725,6 +823,7 @@ PdeltaNstatic :: printOutputAt(FILE *File, TimeStep *tStep)
 
     this->giveDomain(1)->giveOutputManager()->doDofManOutput(File, tStep);
     this->giveDomain(1)->giveOutputManager()->doElementOutput(File, tStep);
+    this->printReactionForces( tStep, 1, File );
 }
 
 
@@ -735,7 +834,7 @@ PdeltaNstatic :: saveContext(DataStream &stream, ContextMode mode)
 //
 {
     contextIOResultType iores;
-    FILE *file = NULL;
+    //FILE *file = NULL;
 
     EngngModel::saveContext(stream, mode);
 
@@ -1093,7 +1192,7 @@ PdeltaNstatic :: unpackMigratingData(TimeStep *tStep)
         this->giveDomainErrorEstimator(1)->reinitialize();
     }
 
-    initFlag = true;
+    initFlag = 1;
 }
 
 } // end namespace oofem

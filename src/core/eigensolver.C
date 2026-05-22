@@ -106,7 +106,6 @@ EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatri
 	//arpack.compute(*A, *B, nroot, "SM");
 
 	Spectra::SparseSymMatProd<double> opB(B->giveEigenMatrix());
-#if 1
 	// cholesky
 	Spectra::SparseCholesky<double> op(A->giveEigenMatrix());
     if ( op.info() != Spectra::SUCCESSFUL ) {
@@ -114,43 +113,61 @@ EigenSolver :: solve(SparseMtrx &a, SparseMtrx &b, FloatArray &_eigv, FloatMatri
         OOFEM_LOG_INFO( "Eigen-Spectra :: Stiffness matrix is singular.\n" );
         return CR_FAILED;
     }
-	// Construct eigen solver object, requesting the largest three eigenvalues
-	Spectra::SymGEigsSolver< double, Spectra::LARGEST_MAGN, Spectra::SparseSymMatProd<double>, Spectra::SparseCholesky<double>, Spectra::GEIGS_CHOLESKY  > eigs(&opB, &op, nroot, min(2 * nroot, a.giveNumberOfColumns()));
-#else
-	// with regular inverse
-    Spectra::SparseRegularInverse<double> op( A->giveEigenMatrix() );
-    // Construct eigen solver object, requesting the largest three eigenvalues
-    Spectra::SymGEigsSolver<double, Spectra::LARGEST_MAGN, Spectra::SparseSymMatProd<double>, Spectra::SparseRegularInverse<double>, Spectra::GEIGS_REGULAR_INVERSE> eigs( &opB, &op, nroot, min( 2 * nroot, a.giveNumberOfColumns() ) );
-#endif
-	// Initialize and compute
-	eigs.init();
-	int nconv = eigs.compute(1000, rtol);
-	// Retrieve results
-	Eigen::VectorXcd evalues;
-	//if (eigs.info() == Spectra::SUCCESSFUL) // always copy
-	evalues = eigs.eigenvalues();
-	//_eigv.resize(evalues.size());
-	_eigv.resize(nroot); _eigv.zero(); // return zero if not converged for all
 
-	for (int i=0;i<evalues.size();++i)
-		_eigv.at(i+1)=1/(evalues.coeff(i).real());
+	// Lambda function to handle common solving logic
+	auto solveProblem = [&](auto& eigs) -> ConvergedReason {
+		// Initialize and compute
+		eigs.init();
+		int nconv = eigs.compute(1000, rtol, Spectra::LARGEST_MAGN);
+		
+		// Retrieve results
+		Eigen::VectorXcd evalues;
+		//if (eigs.info() == Spectra::SUCCESSFUL) // always copy
+		evalues = eigs.eigenvalues();
+		//_eigv.resize(evalues.size());
+		_eigv.resize(nroot); 
+		_eigv.zero(); // return zero if not converged for all
 
-	Eigen::MatrixXcd evectors = eigs.eigenvectors();
-	_r.resize(evectors.rows(), evectors.cols());
-	for (int i = 0; i < evectors.rows(); ++i)
-		for (int j = 0; j < evectors.cols(); ++j){
-			_r.at(i + 1, j + 1) = evectors.coeff(i, j).real();
-		}
+		for (int i = 0; i < evalues.size(); ++i)
+			_eigv.at(i + 1) = 1 / (evalues.coeff(i).real());
+
+		Eigen::MatrixXcd evectors = eigs.eigenvectors();
+		_r.resize(evectors.rows(), evectors.cols());
+		for (int i = 0; i < evectors.rows(); ++i)
+			for (int j = 0; j < evectors.cols(); ++j) {
+				_r.at(i + 1, j + 1) = evectors.coeff(i, j).real();
+			}
 
 #ifdef TIME_REPORT
-	timer.stopTimer();
-	OOFEM_LOG_INFO("EigenSolver info: user time consumed by solution: %.2fs\n", timer.getUtime());
+		timer.stopTimer();
+		OOFEM_LOG_INFO("EigenSolver info: user time consumed by solution: %.2fs\n", timer.getUtime());
 #endif
-	if (eigs.info() == Spectra::SUCCESSFUL) {
-		fprintf(outStream, "Eigen-Spectra :: convergence reached\n");
+		
+		if (eigs.info() == Spectra::SUCCESSFUL) {
+			fprintf(outStream, "Eigen-Spectra :: convergence reached\n");
+		} else {
+			fprintf(outStream, "Eigen-Spectra :: convergence not reached\n");
+		}
+		return CR_CONVERGED;
+	};
+
+	// Select solver based on posOnly flag
+	if (posOnly) {
+		// Use LARGEST_ALGE for positive-only eigenvalues
+		Spectra::SymGEigsSolver<double, Spectra::LARGEST_ALGE, 
+		                        Spectra::SparseSymMatProd<double>, 
+		                        Spectra::SparseCholesky<double>, 
+		                        Spectra::GEIGS_CHOLESKY> eigs(&opB, &op, nroot, 
+		                                                       min(2 * nroot, a.giveNumberOfColumns()));
+		return solveProblem(eigs);
 	} else {
-		fprintf(outStream, "Eigen-Spectra :: convergence not reached\n");
+		// Use LARGEST_MAGN for both positive and negative eigenvalues
+		Spectra::SymGEigsSolver<double, Spectra::LARGEST_MAGN, 
+		                        Spectra::SparseSymMatProd<double>, 
+		                        Spectra::SparseCholesky<double>, 
+		                        Spectra::GEIGS_CHOLESKY> eigs(&opB, &op, nroot, 
+		                                                       min(2 * nroot, a.giveNumberOfColumns()));
+		return solveProblem(eigs);
 	}
-	return CR_CONVERGED;
 }
 } // end namespace oofem

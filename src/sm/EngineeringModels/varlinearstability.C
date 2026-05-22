@@ -51,6 +51,8 @@
 #include "unknownnumberingscheme.h"
 #include "outputmanager.h"
 #include "eigenvectorprimaryfield.h"
+#include "eigensolver.h"
+#include "node.h"
 
 
 #ifdef __OOFEG
@@ -131,6 +133,10 @@ VarLinearStability :: initializeFrom(InputRecord &ir)
 	    linStype = LinSystSolverType::ST_EigenLib;
     }
 
+    IR_GIVE_OPTIONAL_FIELD( ir, posOnly, _IFT_VarLinearStability_posonly );
+
+    IR_GIVE_OPTIONAL_FIELD( ir, flexkg, _IFT_VarLinearStability_flexkg );
+    
     nMetaSteps = 0;
 
     suppressOutput = ir.hasField(_IFT_EngngModel_suppressOutput);
@@ -243,7 +249,7 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
     // create the actual initial stiffness matrix using only time = 1
     TimeStep tStep1( *tStep );
     tStep1.setNumber( 1 );
-    tStep1.setTime( 1.0 ); // constant loading a t=1
+    tStep1.setTime( 1.0 ); // constant loading at t=1
     TimeStep *tStep1Ptr = &tStep1;
 
     //  Internal forces first, negated;
@@ -256,7 +262,7 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
 
     if ( loadVector2.computeNorm() > 1.e-10 ) { // constant loading
         //loadVector.add( loadVector2 ); // sum to be consistent with deformed shape?
-        OOFEM_LOG_INFO( "Solving linear static problem\n" );
+        OOFEM_LOG_INFO( "Solving linear static problem for constant loading\n" );
         nMethodLS->solve( *stiffnessMatrix, loadVector2, displacementVector );
         // Initial displacements are stored at position 0; this is a bit of a hack. In the future, a cleaner approach of handling fields could be suitable,
         // but currently, it all converges down to the same giveUnknownComponent, so this is the easiest approach.
@@ -268,8 +274,7 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
 
         initialStressMatrix->zero(); // rewrite initialStressMatrix
         OOFEM_LOG_INFO( "Assembling initial stress matrix for constant loading\n" );
-        this->assemble( *initialStressMatrix, tStep1Ptr, InitialStressMatrixAssembler(),
-            EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
+        this->assemble( *initialStressMatrix, tStep1Ptr, InitialStressMatrixAssembler(), EModelDefaultEquationNumbering(), this->giveDomain( 1 ) );
         // add constant loads to update the stiffness matrix
         stiffnessMatrix->add( 1.0, *initialStressMatrix );
         displacementVector.zero(); // don't consider deformed shape for multipliers of variable loading, otherwise it will add constant loads again
@@ -286,6 +291,11 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
     this->assembleVector( loadVector, tStep, ExternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), this->giveDomain(1) );
     this->updateSharedDofManagers(loadVector, EModelDefaultEquationNumbering(), ReactionExchangeTag);
 
+    // check for non-zero var. loading
+    if ( loadVector.computeNorm() < 1.e-10 ) { 
+        OOFEM_ERROR( "Buckling solver can't proceed without variable loading" );
+    }
+
     OOFEM_LOG_INFO("Solving linear static problem\n");
     nMethodLS->solve(*stiffnessMatrix, loadVector, displacementVector);
     // Initial displacements are stored at position 0; this is a bit of a hack. In the future, a cleaner approach of handling fields could be suitable,
@@ -300,7 +310,7 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
     this->assemble( *initialStressMatrix, tStep, InitialStressMatrixAssembler(),
                    EModelDefaultEquationNumbering(), this->giveDomain(1) );
     initialStressMatrix->times(-1.0);
-
+    // eigenvector by column
     FloatMatrix eigVec(neq, numberOfRequiredEigenValues);
     eigVal.resize(numberOfRequiredEigenValues);
     eigVal.zero();
@@ -315,7 +325,52 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
     //initialStressMatrix->writeToFile("M.dat");
 #endif
 
+    if (solverType == GES_Eigen) {
+        EigenSolver *spectraSolver = static_cast<EigenSolver *>( nMethod.get() );
+        spectraSolver->setPosOnlyFlag( posOnly );
+    }
+
     auto cr = nMethod->solve(*stiffnessMatrix, *initialStressMatrix, eigVal, eigVec, rtolv, numberOfRequiredEigenValues);
+
+    // normalize eigen vectors
+    for ( int j = 1; j <= eigVec.giveNumberOfColumns(); ++j ) {
+        double maxVal = 0.0;
+        int rows      = eigVec.giveNumberOfRows();
+        Domain *domain = this->giveDomain( 1 );
+        EModelDefaultEquationNumbering numbering;
+
+        // abs max of current vector, skipping ghost nodes
+        for ( auto &dman : domain->giveDofManagers() ) {
+            // A simple string check would skip rigid arm nodes and possibly other dof managers.
+            Node *node = dynamic_cast<Node *>( dman.get() );  
+            if ( !node ) {
+                continue;
+            }
+
+            for ( Dof *dof : *dman ) {
+                DofIDItem id = dof->giveDofID();
+                if ( id < D_u || id > R_w ) {
+                    continue;
+                }
+                int eq = numbering.giveDofEquationNumber( dof );
+                if ( eq > 0 && eq <= rows ) {
+                    double absVal = std::abs( eigVec.at( eq, j ) );
+                    if ( absVal > maxVal ) maxVal = absVal;
+                }
+            }
+        }
+        // if not null
+        if ( maxVal > 0 ) {
+#ifdef DEBUG
+            OOFEM_LOG_INFO( "Max value of eigenvector %d: %e\n", j, maxVal );
+#endif
+            for ( int i = 1; i <= rows; ++i ) {
+                eigVec.at( i, j ) /= maxVal;
+            }
+        }
+    }
+
+    eigVec.printYourselfToFile( "wat.txt" );
     this->field->updateAll(eigVec, EModelDefaultEquationNumbering());
     if ( cr != CR_CONVERGED ) {
         OOFEM_ERROR( "Buckling solver couldn't find a solution." );

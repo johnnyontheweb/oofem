@@ -50,6 +50,8 @@
 #define _IFT_VarLinearStability_nroot "nroot"
 #define _IFT_VarLinearStability_rtolv "rtolv"
 #define _IFT_VarLinearStability_stype "stype"
+#define _IFT_VarLinearStability_flexkg "flexkg"
+#define _IFT_VarLinearStability_posonly "posonly"
 //@}
 
 namespace oofem {
@@ -88,6 +90,8 @@ private:
     /// Numerical method used to solve the static problem.
     LinSystSolverType linStype;
     std ::unique_ptr<SparseLinearSystemNM> nMethodLS;
+
+    bool posOnly = false;
 
 public:
     VarLinearStability( int i, EngngModel *master = nullptr );

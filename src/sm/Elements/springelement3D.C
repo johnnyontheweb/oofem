@@ -295,29 +295,9 @@ void SpringElement3D::computeInitialStressMatrix( FloatMatrix &answer, TimeStep 
     answer.zero();
 
     double l = this->computeLength();
-    if ( l > 0 && d==0 ) {
-        double N;
+    if ( l > 1.e-12 ) {
 
-        answer.at( 2, 2 ) = 1;
-        answer.at( 2, 8 ) = -1;
-
-        answer.at( 3, 3 ) = 1;
-        answer.at( 3, 9 ) = -1;
-
-        answer.at( 8, 2 ) = -1;
-        answer.at( 8, 8 ) = 1;
-
-        answer.at( 9, 3 ) = -1;
-        answer.at( 9, 9 ) = 1;
-
-        FloatMatrix lcs;
-        this->giveLocalCoordinateSystem( lcs );
-
-        FloatMatrix transf( 12, 12 );
-        this->computeGtoLRotationMatrix( transf );
-
-        answer.rotatedWith( transf, 'n' );
-        // ask end forces in g.c.s
+        // Get internal forces in global coordinate system
         FloatArray endForces;
         this->giveInternalForcesVector( endForces, tStep );
 
@@ -331,9 +311,88 @@ void SpringElement3D::computeInitialStressMatrix( FloatMatrix &answer, TimeStep 
         lx.beDifferenceOf( this->giveNode( 2 )->giveCoordinates(), this->giveNode( 1 )->giveCoordinates() );
         lx.normalize();
 
-        // sign of N
-        N = ( -N1.dotProduct( lx ) + N2.dotProduct( lx ) ) / 2.;
-        answer.times( N / l );
+        // Axial force (positive = tension)
+        double N = ( -N1.dotProduct( lx ) + N2.dotProduct( lx ) ) / 2.;
+
+        if ( fabs( N ) > 1.e-12 ) {
+            // Build geometric stiffness matrix in local coordinates
+            FloatMatrix Kg_local( 12, 12 );
+            Kg_local.zero();
+
+            // For simple spring (d=0): only transverse effects
+            if ( d == 0 || fabs( d ) < 1.e-12 ) {
+                // Standard geometric stiffness for truss-like element
+                // Transverse DOFs (2,3) and (8,9)
+                Kg_local.at( 2, 2 ) = N / l;
+                Kg_local.at( 2, 8 ) = -N / l;
+                Kg_local.at( 8, 2 ) = -N / l;
+                Kg_local.at( 8, 8 ) = N / l;
+
+                Kg_local.at( 3, 3 ) = N / l;
+                Kg_local.at( 3, 9 ) = -N / l;
+                Kg_local.at( 9, 3 ) = -N / l;
+                Kg_local.at( 9, 9 ) = N / l;
+            } else {
+                // Enhanced geometric stiffness including rigid arm effects
+                double dr       = d / 2.0;
+                double N_over_l = N / l;
+
+                // Basic transverse geometric stiffness
+                Kg_local.at( 2, 2 ) = N_over_l;
+                Kg_local.at( 2, 8 ) = -N_over_l;
+                Kg_local.at( 8, 2 ) = -N_over_l;
+                Kg_local.at( 8, 8 ) = N_over_l;
+
+                Kg_local.at( 3, 3 ) = N_over_l;
+                Kg_local.at( 3, 9 ) = -N_over_l;
+                Kg_local.at( 9, 3 ) = -N_over_l;
+                Kg_local.at( 9, 9 ) = N_over_l;
+
+                // Rigid arm coupling terms for geometric stiffness
+                // These arise from the coupling between transverse displacements and rotations
+                // due to the axial force acting on the offset
+
+                // Y-displacement to Z-rotation coupling
+                Kg_local.at( 2, 5 ) = N_over_l * dr;
+                Kg_local.at( 5, 2 ) = N_over_l * dr;
+                Kg_local.at( 8, 5 ) = -N_over_l * dr;
+                Kg_local.at( 5, 8 ) = -N_over_l * dr;
+
+                Kg_local.at( 2, 11 ) = -N_over_l * dr;
+                Kg_local.at( 11, 2 ) = -N_over_l * dr;
+                Kg_local.at( 8, 11 ) = N_over_l * dr;
+                Kg_local.at( 11, 8 ) = N_over_l * dr;
+
+                // Z-displacement to Y-rotation coupling
+                Kg_local.at( 3, 6 ) = -N_over_l * dr;
+                Kg_local.at( 6, 3 ) = -N_over_l * dr;
+                Kg_local.at( 9, 6 ) = N_over_l * dr;
+                Kg_local.at( 6, 9 ) = N_over_l * dr;
+
+                Kg_local.at( 3, 12 ) = N_over_l * dr;
+                Kg_local.at( 12, 3 ) = N_over_l * dr;
+                Kg_local.at( 9, 12 ) = -N_over_l * dr;
+                Kg_local.at( 12, 9 ) = -N_over_l * dr;
+
+                // Additional rotational geometric stiffness due to rigid arm
+                // These terms come from the P-Delta effect on the rigid arm
+                Kg_local.at( 5, 5 )   = N_over_l * dr * dr;
+                Kg_local.at( 5, 11 )  = -N_over_l * dr * dr;
+                Kg_local.at( 11, 5 )  = -N_over_l * dr * dr;
+                Kg_local.at( 11, 11 ) = N_over_l * dr * dr;
+
+                Kg_local.at( 6, 6 )   = N_over_l * dr * dr;
+                Kg_local.at( 6, 12 )  = -N_over_l * dr * dr;
+                Kg_local.at( 12, 6 )  = -N_over_l * dr * dr;
+                Kg_local.at( 12, 12 ) = N_over_l * dr * dr;
+            }
+
+            // Transform to global coordinate system
+            FloatMatrix transf( 12, 12 );
+            this->computeGtoLRotationMatrix( transf );
+            answer.beProductTOf( transf, Kg_local );
+            answer.beProductOf( answer, transf );
+        }
     }
 }
 

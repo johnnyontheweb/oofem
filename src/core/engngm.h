@@ -342,6 +342,9 @@ protected:
 
     std::string simulationDescription;
 
+    /// Flag to use modified initial stress matrix computation
+    bool flexkg = false;
+
 public:
     /**
      * Constructor. Creates Engng model with number i.
@@ -1072,6 +1075,9 @@ public:
     int instanciateMPM (DataReader &dr, InputRecord &ir);
     // end mpm experimental
 #endif
+
+    /// Returns true if modified initial stress matrix should be used
+    bool giveFlexuralInitialStress() const { return flexkg; }
 
 protected:
     /**
