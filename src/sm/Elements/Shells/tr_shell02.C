@@ -67,6 +67,8 @@ TR_SHELL02 :: initializeFrom(InputRecord &ir, int priority)
 {
     // proc tady neni return = this...   ??? termitovo
     StructuralElement :: initializeFrom(ir, priority);
+    plate->initializeFrom( ir, priority );
+    membrane->initializeFrom( ir, priority );
     // optional record for 1st local axes
     la1.resize(3);
     la1.at(1) = 0; la1.at(2) = 0; la1.at(3) = 0;
@@ -75,9 +77,9 @@ TR_SHELL02 :: initializeFrom(InputRecord &ir, int priority)
     this->macroElem = 0;
     IR_GIVE_OPTIONAL_FIELD(ir, this->macroElem, _IFT_TR_SHELL02_macroElem);
 
-    plate->initializeFrom(ir, priority);
+    //plate->initializeFrom(ir, priority);
     plate->la1 = la1;
-    membrane->initializeFrom(ir, priority);
+    //membrane->initializeFrom(ir, priority);
     membrane->la1 = la1;
 }
 

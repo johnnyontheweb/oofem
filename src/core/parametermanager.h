@@ -131,6 +131,7 @@ class ParameterManager {
 public:
     using paramValue = std::variant<int, double, std::string, bool, IntArray, FloatArray, FloatMatrix>;
     void setPriority(size_t componentIndex, size_t paramIndex, int priority) {
+        if ( componentIndex == 0 || componentIndex > 1000000000 ) return;
         std::unique_lock lock(mtx);
         if (componentIndex > priorities.size()) {
             priorities.resize(componentIndex);
@@ -164,6 +165,7 @@ public:
 
     void setTemParam(size_t componentIndex, size_t paramIndex, const paramValue &value) {
         std::unique_lock lock(mtx);
+        if ( componentIndex == 0 || componentIndex > 1000000000 ) return; 
         if (componentIndex >= tempParams.size()) {
             tempParams.resize(componentIndex);
         }
