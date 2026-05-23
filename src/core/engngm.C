@@ -226,6 +226,7 @@ int EngngModel :: instanciateYourself(DataReader &dr, InputRecord &ir, const cha
 
     this->Instanciate_init(); // Must be done after initializeFrom
 
+
     this->startTime = time(NULL);
 
 #  ifdef VERBOSE
@@ -364,7 +365,6 @@ EngngModel :: initializeFrom(InputRecord &ir)
             usestream = false;
         }
 #endif
-        
         fprintf(outputStream, "%s", PRG_HEADER);
         fprintf(outputStream, "\nStarting analysis on: %s\n", ctime(& this->startTime) );
         fprintf(outputStream, "%s\n", simulationDescription.c_str());
@@ -591,6 +591,7 @@ EngngModel :: solveYourself()
 {
     int smstep = 1;
     FILE *out  = this->giveOutputStream();
+
     this->timer.startTimer(EngngModelTimer :: EMTT_AnalysisTimer);
 
     TimeStep *timeStep = this->giveCurrentStep();
@@ -666,8 +667,8 @@ EngngModel :: solveYourself()
 
 
             if ( !suppressOutput ) {
-                fprintf( this->giveOutputStream(), "\nUser time consumed by solution step %d: %.3f [s]\n\n",
-                    this->giveCurrentStep()->giveNumber(), _steptime );
+                fprintf(this->giveOutputStream(), "\nUser time consumed by solution step %d: %.3f [s]\n\n",
+                        this->giveCurrentStep()->giveNumber(), _steptime);
             }
 #ifdef MEMSTR
             fprintf( out, "endStep\n" );
@@ -678,12 +679,13 @@ EngngModel :: solveYourself()
             oofem_logger.flush();
 #endif
 
-#ifdef __PARALLEL_MODE
+#ifdef __MPI_PARALLEL_MODE
             if ( loadBalancingFlag ) {
                 this->balanceLoad( this->giveCurrentStep() );
             }
+
 #endif
-        } while ( this->giveCurrentStep()->giveTargetTime() < msFinalTime );
+        }  while ( this->giveCurrentStep()->giveTargetTime() < msFinalTime );
     }
 }
 
@@ -863,7 +865,6 @@ EngngModel :: printOutputAt(FILE *file, TimeStep *tStep)
 {
     int domCount = 0;
 
-    // fprintf (File,"\nOutput for time step number %d \n\n",tStep->giveNumber());
     for ( auto &domain: domainList ) {
         domCount += domain->giveOutputManager()->testTimeStepOutput(tStep);
     }
@@ -1016,7 +1017,7 @@ void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAss
         //for ( auto &bc : domain->giveBcs() ) { //problems with OPENMP
         for (size_t i = 0; i < domain->giveBcs().size(); i++) {
             auto &bc = domain->giveBcs()[i];
-        auto abc = dynamic_cast< ActiveBoundaryCondition * >(bc.get());
+            auto abc = dynamic_cast< ActiveBoundaryCondition * >(bc.get());
         if ( abc ) {
             /// @note: Some active bcs still make changes even when they are not applied
             /// We should probably reconsider this approach, so that they e.g. just prescribe their lagrange mult. instead.
@@ -1045,15 +1046,17 @@ void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAss
                     ma.matrixFromLoad(mat, *element, bodyLoad, tStep);
 
                     if ( mat.isNotEmpty() ) {
-                        if ( element->giveRotationMatrix( R ) ) { mat.rotatedWith( R ); }
+                        if ( element->giveRotationMatrix(R) ) {
+                            mat.rotatedWith(R);
+                        }
 
-                        ma.locationFromElement( loc, *element, s );
+                        ma.locationFromElement(loc, *element, s);
 #ifdef _OPENMP
-                        omp_set_lock(&writelock);
+            			omp_set_lock(&writelock);
 #endif
-                        answer.assemble( loc, mat );
+                        answer.assemble(loc, mat);
 #ifdef _OPENMP
-			omp_unset_lock(&writelock);
+			            omp_unset_lock(&writelock);
 #endif
                     }
                 }
@@ -1073,12 +1076,12 @@ void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAss
 
                         ma.locationFromElementNodes(loc, *element, bNodes, s);
  
- #ifdef _OPENMP
-            		omp_set_lock(&writelock);
+#ifdef _OPENMP
+            			omp_set_lock(&writelock);
 #endif			
                         answer.assemble(loc, mat);
 #ifdef _OPENMP
-			omp_unset_lock(&writelock);
+			            omp_unset_lock(&writelock);
 #endif
                     }
                 }
@@ -1098,11 +1101,11 @@ void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAss
 
                         ma.locationFromElementNodes(loc, *element, bNodes, s);
 #ifdef _OPENMP
-            		omp_set_lock(&writelock);
+            			omp_set_lock(&writelock);
 #endif			
                         answer.assemble(loc, mat);
 #ifdef _OPENMP
-			omp_unset_lock(&writelock);
+			            omp_unset_lock(&writelock);
 #endif
                     }
                 }
@@ -1304,7 +1307,7 @@ void EngngModel :: assembleVectorFromBC(FloatArray &answer, TimeStep *tStep,
             NodalLoad *nLoad;
             Set *set = domain->giveSet( bc->giveSetNumber() );
 
-            if ( ( bodyLoad = dynamic_cast<BodyLoad *>( load ) ) ) { // Body load:
+            if ( ( bodyLoad = dynamic_cast< BodyLoad * >(load) ) ) { // Body load:
                 const IntArray &elements = set->giveElementList();
                 for ( int ielem = 1; ielem <= elements.giveSize(); ++ielem ) {
                     Element *element = domain->giveElement( elements.at(ielem) );
@@ -1319,14 +1322,14 @@ void EngngModel :: assembleVectorFromBC(FloatArray &answer, TimeStep *tStep,
 
                             va.locationFromElement(loc, *element, s, & dofids);
 #ifdef _OPENMP
-                	    omp_set_lock(&writelock);
+                			omp_set_lock(&writelock);
 #endif
                             answer.assemble(charVec, loc);
                             if ( eNorms ) {
                                 eNorms->assembleSquared(charVec, dofids);
                             }
 #ifdef _OPENMP
-            		    omp_unset_lock(&writelock);
+            			    omp_unset_lock(&writelock);
 #endif
                         }
                     }
@@ -1350,7 +1353,7 @@ void EngngModel :: assembleVectorFromBC(FloatArray &answer, TimeStep *tStep,
 
                             va.locationFromElementNodes(loc, *element, bNodes, s, & dofids);
 #ifdef _OPENMP
-                  	    omp_set_lock(&writelock);
+                  			omp_set_lock(&writelock);
 #endif                            
                             answer.assemble(charVec, loc);
 
@@ -1358,7 +1361,7 @@ void EngngModel :: assembleVectorFromBC(FloatArray &answer, TimeStep *tStep,
                                 eNorms->assembleSquared(charVec, dofids);
                             }
 #ifdef _OPENMP
-            		    omp_unset_lock(&writelock);
+            			    omp_unset_lock(&writelock);
 #endif                            
                         }
                     }
@@ -1381,7 +1384,7 @@ void EngngModel :: assembleVectorFromBC(FloatArray &answer, TimeStep *tStep,
 
                             va.locationFromElementNodes(loc, *element, bNodes, s, & dofids);
 #ifdef _OPENMP
-            		    omp_set_lock(&writelock);
+            			    omp_set_lock(&writelock);
 #endif                            
                             answer.assemble(charVec, loc);
 
@@ -1389,7 +1392,7 @@ void EngngModel :: assembleVectorFromBC(FloatArray &answer, TimeStep *tStep,
                                 eNorms->assembleSquared(charVec, dofids);
                             }
 #ifdef _OPENMP
-            		    omp_unset_lock(&writelock);
+            			    omp_unset_lock(&writelock);
 #endif                            
                         }
                     }
@@ -1408,7 +1411,7 @@ void EngngModel :: assembleVectorFromBC(FloatArray &answer, TimeStep *tStep,
 
                         node->giveLocationArray(nLoad->giveDofIDs(), loc, s);
 #ifdef _OPENMP
-            		omp_set_lock(&writelock);
+            			omp_set_lock(&writelock);
 #endif                        
                         answer.assemble(charVec, loc);
 
@@ -1416,7 +1419,7 @@ void EngngModel :: assembleVectorFromBC(FloatArray &answer, TimeStep *tStep,
                             eNorms->assembleSquared(charVec, dofids);
                         }
 #ifdef _OPENMP
-            		omp_unset_lock(&writelock);
+            			omp_unset_lock(&writelock);
 #endif                        
                     }
                 }
