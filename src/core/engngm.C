@@ -586,72 +586,71 @@ EngngModel::initializeYourself (TimeStep *tStep)
     }
 }
 
-void
-EngngModel :: solveYourself()
+void EngngModel ::solveYourself()
 {
     int smstep = 1;
     FILE *out  = this->giveOutputStream();
 
-    this->timer.startTimer(EngngModelTimer :: EMTT_AnalysisTimer);
+    this->timer.startTimer( EngngModelTimer ::EMTT_AnalysisTimer );
 
     TimeStep *timeStep = this->giveCurrentStep();
     if ( timeStep ) {
-      smstep = timeStepController->giveMetaStepNumber(timeStep->giveTargetTime());
+        smstep = timeStepController->giveMetaStepNumber( timeStep->giveTargetTime() );
     }
-   
 
-     for ( int imstep = smstep; imstep <= timeStepController->giveNumberOfMetaSteps(); imstep++ ) { //loop over meta steps
-        auto activeMStep = this->giveMetaStep(imstep);
-	// update state according to new meta step
-	timeStepController->setCurrentMetaStepNumber( imstep - 1 );
-	timeStepController->initMetaStepAttributes( activeMStep );
-	double msFinalTime = activeMStep->giveFinalTime() - this->giveInitialTime();
-	//
-	do {
-	    this->timer.startTimer(EngngModelTimer :: EMTT_SolutionStepTimer);
-            this->timer.initTimer(EngngModelTimer :: EMTT_NetComputationalStepTimer);
+
+    for ( int imstep = smstep; imstep <= timeStepController->giveNumberOfMetaSteps(); imstep++ ) { // loop over meta steps
+        auto activeMStep = this->giveMetaStep( imstep );
+        // update state according to new meta step
+        timeStepController->setCurrentMetaStepNumber( imstep - 1 );
+        timeStepController->initMetaStepAttributes( activeMStep );
+        double msFinalTime = activeMStep->giveFinalTime() - this->giveInitialTime();
+        //
+        do {
+            this->timer.startTimer( EngngModelTimer ::EMTT_SolutionStepTimer );
+            this->timer.initTimer( EngngModelTimer ::EMTT_NetComputationalStepTimer );
 
             this->preInitializeNextStep();
             this->giveNextStep();
-	    //hack for nlinear static - should be deleted when the time step controller is fully integrated
-	     this->giveCurrentStep()->setMetaStepNumber(imstep);
+            // hack for nlinear static - should be deleted when the time step controller is fully integrated
+            this->giveCurrentStep()->setMetaStepNumber( imstep );
 
             // renumber equations if necessary. Ensure to call forceEquationNumbering() for staggered problems
             if ( this->requiresEquationRenumbering( this->giveCurrentStep() ) ) {
                 this->forceEquationNumbering();
             }
 
-            OOFEM_LOG_DEBUG("Number of equations %d\n", this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering()) );
+            OOFEM_LOG_DEBUG( "Number of equations %d\n", this->giveNumberOfDomainEquations( 1, EModelDefaultEquationNumbering() ) );
 
             this->initializeYourself( this->giveCurrentStep() );
-	    // solving the step
-	    auto repeat = true;
-	    auto nReductions = 0;
-	    while ( repeat ) {
-	      // try to solve the step, ask time step reduction strategy to reduce time step in case of convergence issues
-	      this->giveCurrentStep()->numberOfAttempts = 1 + nReductions;
-	      try {
-		this->solveYourselfAt( this->giveCurrentStep() );
-		auto nIter = this->giveCurrentStep()->numberOfIterations;
-		this->adaptTimeStep( nIter );
-		repeat = false;
-	      } catch ( ConvergenceException &ce ) {
-		if ( timeStepController->giveCurrentMetaStep()->giveTimeStepReductionStrategy()->giveReductionFlag() ) {
-		  timeStepController->reduceTimeStep();
-		  OOFEM_LOG_INFO( "--------------------------------------------------------------------------------------\nRestarting step with new time step increment %e due to convergence problem        \n--------------------------------------------------------------------------------------\n", this->giveCurrentStep()->giveTimeIncrement() );
-		  OOFEM_LOG_INFO( "%s\n", ce.what() );
-		  this->initStepIncrements();
-		  this->restartYourself( this->giveCurrentStep() );
-		  nReductions++;
-		  if ( nReductions > activeMStep->giveNumberOfMaxTimeStepReductions() ) {
-		    OOFEM_ERROR( "Maximum number of time step reductions has been reached." );
-		  }
-		} else { // else: do nothing, i.e., continue with the analysis
+            // solving the step
+            auto repeat      = true;
+            auto nReductions = 0;
+            while ( repeat ) {
+                // try to solve the step, ask time step reduction strategy to reduce time step in case of convergence issues
+                this->giveCurrentStep()->numberOfAttempts = 1 + nReductions;
+                try {
+                    this->solveYourselfAt( this->giveCurrentStep() );
+                    auto nIter = this->giveCurrentStep()->numberOfIterations;
+                    this->adaptTimeStep( nIter );
+                    repeat = false;
+                } catch ( ConvergenceException &ce ) {
+                    if ( timeStepController->giveCurrentMetaStep()->giveTimeStepReductionStrategy()->giveReductionFlag() ) {
+                        timeStepController->reduceTimeStep();
+                        OOFEM_LOG_INFO( "--------------------------------------------------------------------------------------\nRestarting step with new time step increment %e due to convergence problem        \n--------------------------------------------------------------------------------------\n", this->giveCurrentStep()->giveTimeIncrement() );
+                        OOFEM_LOG_INFO( "%s\n", ce.what() );
+                        this->initStepIncrements();
+                        this->restartYourself( this->giveCurrentStep() );
+                        nReductions++;
+                        if ( nReductions > activeMStep->giveNumberOfMaxTimeStepReductions() ) {
+                            OOFEM_ERROR( "Maximum number of time step reductions has been reached." );
+                        }
+                    } else { // else: do nothing, i.e., continue with the analysis
 
-		  repeat = false;
-		}
-	      }
-	    }
+                        repeat = false;
+                    }
+                }
+            }
 	    //     this->solveYourselfAt( this->giveCurrentStep() );
             this->updateYourself( this->giveCurrentStep() );
 
@@ -685,7 +684,8 @@ EngngModel :: solveYourself()
             }
 
 #endif
-        }  while ( this->giveCurrentStep()->giveTargetTime() < msFinalTime );
+            // OOFEM_LOG_FORCED( "Target time %.16f", this->giveCurrentStep()->giveTargetTime() );
+        }  while ( this->giveCurrentStep()->giveTargetTime() + 1e-6 <= msFinalTime );
     }
 }
 
