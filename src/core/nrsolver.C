@@ -278,14 +278,14 @@ NRSolver :: solve(SparseMtrx &k, FloatArray &R, FloatArray *R0,
 
         if ( errorOutOfRangeFlag ) {
             status = CR_DIVERGED_TOL;
-	    throw ConvergenceException( "Divergence reached after iterations" );
+	    //throw ConvergenceException( "Divergence reached after iterations" );
             break;
         } else if ( converged && ( nite >= minIterations ) ) {
             status = CR_CONVERGED;
             break;
         } else if ( nite >= nsmax ) {	  
             status = CR_DIVERGED_ITS;
-	    throw ConvergenceException( "Maximum number of iterations reached without convergence" );
+	    //throw ConvergenceException( "Maximum number of iterations reached without convergence" );
 
             break;
         }
