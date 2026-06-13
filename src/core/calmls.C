@@ -156,7 +156,8 @@ CylindricalALM :: solve(SparseMtrx &k, FloatArray &R, FloatArray *R0,
     deltaXt.resize(neq);
     deltaXt.zero();
 
-    status = CR_UNKNOWN;
+    //status = CR_UNKNOWN;
+    status = CR_CONVERGED;
     this->giveLinearSolver();
 
     // create HPC Map if needed
@@ -477,7 +478,7 @@ restart:
 
     OOFEM_LOG_INFO("CALMLS:       Adjusted step length: %-15e\n", deltaL);
 
-    status = CR_CONVERGED;
+    // status = CR_CONVERGED;
     solved = 1;
     ReachedLambda = Lambda;
     old_dX = dX;
