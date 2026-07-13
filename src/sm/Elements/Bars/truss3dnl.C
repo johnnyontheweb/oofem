@@ -55,7 +55,8 @@ ParamKey Truss3dnl::IPK_Truss3dnl_initialStretch("initstretch");
 
 Truss3dnl :: Truss3dnl(int n, Domain *aDomain) : Truss3d(n, aDomain)
 {
-  initialStretch = 1;
+    initialStretch      = 1;
+    numberOfGaussPoints = 1;
 }
 
 
