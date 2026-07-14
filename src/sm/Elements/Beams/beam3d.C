@@ -583,7 +583,7 @@ Beam3d :: initializeFrom(InputRecord &ir, int priority)
     PM_UPDATE_PARAMETER(referenceAngle, ppm, ir, this->number, IPK_Beam3d_refangle, priority) ;
     PM_UPDATE_PARAMETER(subsoilMat, ppm, ir, this->number, IPK_Beam3d_subsoilmat, priority) ;
     PM_UPDATE_TEMP_PARAMETER( IntArray, ppm, ir, this->number, IPK_Beam3d_dofsToCondense, priority );
-
+    macroElem = 0;
     PM_UPDATE_PARAMETER( macroElem, ppm, ir, this->number, IPK_Beam3d_macroElem, priority );
     PM_UPDATE_PARAMETER( printGPs, ppm, ir, this->number, IPK_Beam3d_printGPs, priority );
 

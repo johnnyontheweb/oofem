@@ -178,7 +178,7 @@ void AbaqusUserElement6d :: postInitialize()
     this->DU.resize(this->ndofel, this->nrhs);
 
 	if (!this->coords.isNotEmpty()) {
-		this->mcrd = 1;
+		this->mcrd = 3; // 3d
 		//for (auto j : this->dofs)
 		//{
 		//	switch ((DofIDItem)j)
@@ -495,17 +495,19 @@ AbaqusUserElement6d::printOutputAt(FILE *File, TimeStep *tStep)
                 //}
                 fprintf( File, " %d", outH );
 			} else {
-                fprintf( File, " %d", int( this->svars.at( 6 + ( this->numSvars - 8 ) / 6 * ( i - 1 ) ) ) );
+                if ( this->numSvars >= 8 ) {
+                    fprintf( File, " %d", int( this->svars.at( 6 + ( this->numSvars - 8 ) / 6 * ( i - 1 ) ) ) );
+				}
 			}
 	}
+	// other 3d springs
+	if ( this->numSvars < 8 ) {
+		fprintf( File, "\n  element_svars %d ", this->numSvars );
+		for ( int i = 1; i <= this->numSvars; i++ ) {
+			fprintf( File, " %.4e", this->svars.at( i ) );
+		}
+    }
 
-#ifdef DEBUG
-	fprintf(File, "\n  element_svars %d ", this->numSvars);
-	for (int i = 1; i <= this->numSvars; i++)
-	{
-		fprintf(File, " %.4e", this->svars.at(i));
-	}
-#endif
 	fprintf(File, "\n");
 }
 

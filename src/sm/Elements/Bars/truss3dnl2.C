@@ -53,6 +53,7 @@ REGISTER_Element(Truss3dnl2);
 Truss3dnl2 :: Truss3dnl2(int n, Domain *aDomain) : Truss3d(n, aDomain)
 {
   cellGeometryWrapper = NULL;
+    numberOfGaussPoints = 1;
 }
 
 void
