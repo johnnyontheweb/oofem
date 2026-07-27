@@ -1036,6 +1036,7 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
     this->giveEndForcesVector(endForces, tStep);
 
     N = ( -endForces.at(1) + endForces.at(7) ) / 2.;
+    // if ( N > 0 ) N = 0; // no tension stiffening?
     answer.times(N / l);
 
     //answer.beLumpedOf (mass);

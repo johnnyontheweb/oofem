@@ -641,7 +641,6 @@ PdeltaNstatic :: proceedStep(int di, TimeStep *tStep)
                                         internalForcesEBENorm, loadLevel, refLoadInputMode, currentIterations, tStep);
     }
 #if 0
-
     // NLGEOM pdelta approx solution with iterations
 	// norm of previous displ. vector
     double oldNorm = totalDisplacement.computeSquaredNorm();
@@ -741,6 +740,11 @@ PdeltaNstatic ::updateMatrix( SparseMtrx &mat, TimeStep *tStep, Domain *d )
         // when secantStiffMode is on, we use the same stiffness
         // during iteration process
     }
+}
+
+void PdeltaNstatic ::updateSolution( FloatArray &solutionVector, TimeStep *tStep, Domain *d )
+{
+    // No-op: This can't really be supported in any nice way in nlinearstatic.
 }
 
 void

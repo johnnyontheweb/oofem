@@ -149,6 +149,7 @@ public:
     void updateComponent(TimeStep *tStep, NumericalCmpn, Domain *d) override;
     void updateMatrix( SparseMtrx &mat, TimeStep *tStep, Domain *d ) override;
     void updateAttributes(MetaStep *mStep) override;
+    void updateSolution( FloatArray &solutionVector, TimeStep *tStep, Domain *d ) override;
 
     double giveUnknownComponent(ValueModeType type, TimeStep *tStep, Domain *d, Dof *dof) override;
     void initializeFrom(InputRecord &ir) override;
