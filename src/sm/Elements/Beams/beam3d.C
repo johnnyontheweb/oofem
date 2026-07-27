@@ -1036,7 +1036,7 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
     this->giveEndForcesVector(endForces, tStep);
 
     N = ( -endForces.at(1) + endForces.at(7) ) / 2.;
-    // if ( N > 0 ) N = 0; // no tension stiffening?
+    if ( N > 0 ) N = 0; // no tension stiffening
     answer.times(N / l);
 
     //answer.beLumpedOf (mass);
@@ -1171,6 +1171,30 @@ Beam3d :: computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
 
         answer.add( K_IM );
         answer.add( Kg_M );
+    }
+
+    // Zero out geometric stiffness rows and columns corresponding to released DOFs (end releases)
+    if ( this->hasDofs2Condense() ) {
+        DofIDItem dofids[] = {
+            D_u, D_v, D_w, R_u, R_v, R_w
+        };
+
+        // loop over nodes to identify released DOFs
+        for ( int inode = 0; inode < 2; inode++ ) {
+            if ( ghostNodes [ inode ] ) {
+                for ( int idof = 0; idof < 6; idof++ ) {
+                    if ( ghostNodes [ inode ]->hasDofID(dofids [ idof ]) ) {
+                        int eq = inode * 6 + idof + 1;
+
+                        // Zero out row and column for released DOF
+                        for ( int j = 1; j <= 12; j++ ) {
+                            answer.at(eq, j) = 0.0;
+                            answer.at(j, eq) = 0.0;
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

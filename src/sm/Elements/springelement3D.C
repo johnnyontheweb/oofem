@@ -293,6 +293,7 @@ void SpringElement3D::computeInitialStressMatrix( FloatMatrix &answer, TimeStep 
     // computes initial stress matrix of receiver (or geometric stiffness matrix)
     answer.resize( 12, 12 );
     answer.zero();
+    return; // no geometric stiffness for spring element, could be rigid
 
     double l = this->computeLength();
     if ( l > 1.e-12 ) {
@@ -313,7 +314,7 @@ void SpringElement3D::computeInitialStressMatrix( FloatMatrix &answer, TimeStep 
 
         // Axial force (positive = tension)
         double N = ( -N1.dotProduct( lx ) + N2.dotProduct( lx ) ) / 2.;
-
+        if ( N > 0 ) N = 0; // no tension stiffening
         if ( fabs( N ) > 1.e-12 ) {
             // Build geometric stiffness matrix in local coordinates
             FloatMatrix Kg_local( 12, 12 );
@@ -333,6 +334,7 @@ void SpringElement3D::computeInitialStressMatrix( FloatMatrix &answer, TimeStep 
                 Kg_local.at( 9, 3 ) = -N / l;
                 Kg_local.at( 9, 9 ) = N / l;
             } else {
+                
                 // Enhanced geometric stiffness including rigid arm effects
                 double dr       = d / 2.0;
                 double N_over_l = N / l;
