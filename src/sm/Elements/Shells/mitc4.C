@@ -293,8 +293,8 @@ MITC4Shell::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
     Kgx.add( sxy, Kgxy );
     // once for local z
     answer.assemble( Kgx, asmz );
-    answer.assemble( Kgx, asmx ); // u
-    answer.assemble( Kgx, asmy ); // v
+    //answer.assemble( Kgx, asmx ); // u
+    //answer.assemble( Kgx, asmy ); // v
 }
 
 double

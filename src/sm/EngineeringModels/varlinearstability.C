@@ -370,7 +370,7 @@ void VarLinearStability :: solveYourselfAt(TimeStep *tStep)
         }
     }
 
-    eigVec.printYourselfToFile( "wat.txt" );
+    // eigVec.printYourselfToFile( "wat.txt" );
     this->field->updateAll(eigVec, EModelDefaultEquationNumbering());
     if ( cr != CR_CONVERGED ) {
         OOFEM_ERROR( "Buckling solver couldn't find a solution." );
