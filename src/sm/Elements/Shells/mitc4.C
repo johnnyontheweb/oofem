@@ -1,4 +1,4 @@
-/*
+﻿/*
  *
  *                 #####    #####   ######  ######  ###   ###
  *               ##   ##  ##   ##  ##      ##      ## ### ##
@@ -206,95 +206,160 @@ MITC4Shell::giveLocalDirectorVectors()
     };
 }
 
-void
+//void
+//MITC4Shell::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
+//{
+//    answer.resize( 24, 24 );
+//    answer.zero();
+//
+//    // matrix assembly vectors
+//    IntArray asmx{ 1, 7, 13, 19 }; // local u
+//    IntArray asmy{ 2, 8, 14, 20 }; // local v
+//    IntArray asmz{ 3, 9, 15, 21 }; // local z
+//
+//    // stress vector
+//    FloatArray str, str2;
+//    //this->giveCharacteristicVector(str, InternalForcesVector, VM_Total, tStep);
+//    double wsum = 0;
+//    for ( GaussPoint *gp : *this->giveDefaultIntegrationRulePtr() ) {
+//        this->giveIPValue( str2, gp, IST_ShellForceTensor, tStep );
+//        str2.times( gp->giveWeight() ); wsum += gp->giveWeight();
+//        str.add( str2 );
+//    }
+//    str.times(1.0 / wsum); // the weights sum up to 8 for a mitc4 quad
+//    // this needs to be transformed to local
+//    // FloatArrayF<6> str1 = StructuralMaterial::transformStressVectorTo( GtoLRotationMatrix, str, false); // back to local
+//    FloatMatrix strmat{ 3, 3 };
+//    strmat.at( 1, 1 ) = str.at( 1 );
+//    strmat.at( 2, 2 ) = str.at( 2 );
+//    strmat.at( 3, 3 ) = str.at( 3 );
+//    strmat.at( 1, 2 ) = str.at( 6 );
+//    strmat.at( 1, 3 ) = str.at( 5 );
+//    strmat.at( 2, 3 ) = str.at( 4 );
+//    strmat.symmetrized();
+//    strmat.rotatedWith( GtoLRotationMatrix, 't' ); // back to local
+//
+//    // if above are local and Forces by unit length
+//    // first average them
+//    double sx = 0, sy = 0, sxy = 0;
+//    //for (auto it : asm1) sx += str.at(it);
+//    //for (auto it : asm2) sy += str.at(it);
+//    //for (auto it : asm3) sxy += str.at(it);
+//    //sx = str.at(1);
+//    //sy = str.at(2);
+//    //sxy = str.at(6);
+//    sx  = strmat.at( 1, 1 );
+//    sy  = strmat.at( 2, 2 );
+//    sxy = strmat.at( 1, 2 );
+//
+//    // partial matrices
+//    FloatMatrix Kgx{ 4, 4 }, Kgy{ 4, 4 }, Kgxy{ 4, 4 };
+//
+//    // calculate the matrices - hp constant thickness
+//    const auto coordinateArrays = this->giveNodeCoordinates();
+//    const FloatArray &n1        = coordinateArrays[0];
+//    const FloatArray &n2        = coordinateArrays[1];
+//    const FloatArray &n3        = coordinateArrays[2];
+//    const FloatArray &n4        = coordinateArrays[3];
+//
+//    // then divide
+//    double a1 = n1.distance( n2 );
+//    double a2 = n4.distance( n3 );
+//    double a  = 0.25 * ( a1 + a2 );
+//    double b1 = n2.distance( n3 );
+//    double b2 = n1.distance( n4 );
+//    double b  = 0.25 * ( b1 + b2 );
+//    sx /= ( 6 * a / b );
+//    sy /= ( 6 * b / a );
+//    sxy /= ( 2 );
+//
+//    Kgx.at(1, 1) = 2; Kgx.at(2, 2) = 2; Kgx.at(3, 3) = 2; Kgx.at(4, 4) = 2;
+//    Kgx.at(1, 2) = -2; Kgx.at(1, 3) = -1; Kgx.at(1, 4) = 1;
+//    Kgx.at(2, 3) = 1; Kgx.at(2, 4) = -1; Kgx.at(3, 4) = -2;
+//
+//    Kgy.at(1, 1) = 2; Kgy.at(2, 2) = 2; Kgy.at(3, 3) = 2; Kgy.at(4, 4) = 2;
+//    Kgy.at(1, 2) = 1; Kgy.at(1, 3) = -1; Kgy.at(1, 4) = -2;
+//    Kgy.at(2, 3) = -2; Kgy.at(2, 4) = -1; Kgy.at(3, 4) = 1;
+//
+//    Kgxy.at(1, 1) = 1; Kgxy.at(2, 2) = -1; Kgxy.at(3, 3) = 1; Kgxy.at(4, 4) = -1;
+//    Kgxy.at(1, 2) = 0; Kgxy.at(1, 3) = -1; Kgxy.at(1, 4) = 0;
+//    Kgxy.at(2, 3) = 0; Kgxy.at(2, 4) = 1; Kgxy.at(3, 4) = 0;
+//
+//    Kgx.symmetrized(); Kgy.symmetrized(); Kgxy.symmetrized();
+//
+//    // assemble them
+//    Kgx.times( sx );
+//    Kgx.add( sy, Kgy );
+//    Kgx.add( sxy, Kgxy );
+//    // once for local z
+//    answer.assemble( Kgx, asmz );
+//    //answer.assemble( Kgx, asmx ); // u
+//    //answer.assemble( Kgx, asmy ); // v
+//}
+
+void 
 MITC4Shell::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
 {
     answer.resize( 24, 24 );
     answer.zero();
 
-    // matrix assembly vectors
-    IntArray asmx{ 1, 7, 13, 19 }; // local u
-    IntArray asmy{ 2, 8, 14, 20 }; // local v
-    IntArray asmz{ 3, 9, 15, 21 }; // local z
+    // solo i dof trasversali w
+    IntArray asmz{ 3, 9, 15, 21 };
 
-    // stress vector
-    FloatArray str, str2;
-    //this->giveCharacteristicVector(str, InternalForcesVector, VM_Total, tStep);
-    double wsum = 0;
-    for ( GaussPoint *gp : *this->giveDefaultIntegrationRulePtr() ) {
-        this->giveIPValue( str2, gp, IST_ShellForceTensor, tStep );
-        str2.times( gp->giveWeight() ); wsum += gp->giveWeight();
-        str.add( str2 );
+    // Usiamo solo i punti di Gauss sulla superficie media (nPointsXY)
+    // e integriamo solo l’area (non il volume)
+    IntegrationRule *iRule = this->giveDefaultIntegrationRulePtr();
+
+    for ( int igp = 0; igp < nPointsXY; igp++ ) {
+        // prendiamo il Gauss point della superficie media (r3 = 0)
+        // normalmente i punti sono ordinati come nPointsZ * igp + j
+        GaussPoint *gp = iRule->getIntegrationPoint( nPointsZ * igp ); // o il primo di ogni colonna
+
+        // coordinate parametriche del punto medio
+        FloatArrayF<3> lcoords = {
+            gp->giveNaturalCoordinate( 1 ),
+            gp->giveNaturalCoordinate( 2 ),
+            0.0 // superficie media
+        };
+
+        // 1. forze di membrana (già integrate sullo spessore)
+        FloatArray Nmem;
+        this->giveIPValue( Nmem, gp, IST_ShellForceTensor, tStep );
+        // oppure: Nmem = this->giveMidplaneIPValue(igp, IST_ShellForceTensor, tStep);
+
+        double Nx  = Nmem.at( 1 );
+        double Ny  = Nmem.at( 2 );
+        double Nxy = Nmem.at( 6 ); // verifica l’indice nel tuo tensore!
+
+        // 2. derivate delle shape functions in coordinate locali cartesiane
+        auto hk  = this->givedNdx( lcoords );
+        auto hkx = hk[0]; // ∂N/∂x
+        auto hky = hk[1]; // ∂N/∂y
+
+        // 3. matrice geometrica 4×4
+        FloatMatrix Kg( 4, 4 );
+        Kg.zero();
+
+        for ( int i = 1; i <= 4; i++ ) {
+            for ( int j = 1; j <= 4; j++ ) {
+                Kg.at( i, j ) = Nx * hkx.at( i ) * hkx.at( j )
+                    + Ny * hky.at( i ) * hky.at( j )
+                    + Nxy * ( hkx.at( i ) * hky.at( j ) + hky.at( i ) * hkx.at( j ) );
+            }
+        }
+
+        // 4. peso * |J| della sola superficie media
+        // (non usare computeVolumeAround che include lo spessore)
+        auto J = this->giveJacobian( lcoords );
+        // prendiamo solo la parte 2×2 del Jacobiano della superficie
+        FloatMatrixF<2, 2> J2 = J( { 0, 1 }, { 0, 1 } );
+        double dA             = det( J2 ) * gp->giveWeight(); // weight del punto XY
+
+        Kg.times( dA );
+
+        // 5. assemblaggio
+        answer.assemble( Kg, asmz );
     }
-    str.times(1.0 / wsum); // the weights sum up to 8 for a mitc4 quad
-    // this needs to be transformed to local
-    // FloatArrayF<6> str1 = StructuralMaterial::transformStressVectorTo( GtoLRotationMatrix, str, false); // back to local
-    FloatMatrix strmat{ 3, 3 };
-    strmat.at( 1, 1 ) = str.at( 1 );
-    strmat.at( 2, 2 ) = str.at( 2 );
-    strmat.at( 3, 3 ) = str.at( 3 );
-    strmat.at( 1, 2 ) = str.at( 6 );
-    strmat.at( 1, 3 ) = str.at( 5 );
-    strmat.at( 2, 3 ) = str.at( 4 );
-    strmat.symmetrized();
-    strmat.rotatedWith( GtoLRotationMatrix, 't' ); // back to local
-
-    // if above are local and Forces by unit length
-    // first average them
-    double sx = 0, sy = 0, sxy = 0;
-    //for (auto it : asm1) sx += str.at(it);
-    //for (auto it : asm2) sy += str.at(it);
-    //for (auto it : asm3) sxy += str.at(it);
-    //sx = str.at(1);
-    //sy = str.at(2);
-    //sxy = str.at(6);
-    sx  = strmat.at( 1, 1 );
-    sy  = strmat.at( 2, 2 );
-    sxy = strmat.at( 1, 2 );
-
-    // partial matrices
-    FloatMatrix Kgx{ 4, 4 }, Kgy{ 4, 4 }, Kgxy{ 4, 4 };
-
-    // calculate the matrices - hp constant thickness
-    const auto coordinateArrays = this->giveNodeCoordinates();
-    const FloatArray &n1        = coordinateArrays[0];
-    const FloatArray &n2        = coordinateArrays[1];
-    const FloatArray &n3        = coordinateArrays[2];
-    const FloatArray &n4        = coordinateArrays[3];
-
-    // then divide
-    double a1 = n1.distance( n2 );
-    double a2 = n4.distance( n3 );
-    double a  = 0.25 * ( a1 + a2 );
-    double b1 = n2.distance( n3 );
-    double b2 = n1.distance( n4 );
-    double b  = 0.25 * ( b1 + b2 );
-    sx /= ( 6 * a / b );
-    sy /= ( 6 * b / a );
-    sxy /= ( 2 );
-
-    Kgx.at(1, 1) = 2; Kgx.at(2, 2) = 2; Kgx.at(3, 3) = 2; Kgx.at(4, 4) = 2;
-    Kgx.at(1, 2) = -2; Kgx.at(1, 3) = -1; Kgx.at(1, 4) = 1;
-    Kgx.at(2, 3) = 1; Kgx.at(2, 4) = -1; Kgx.at(3, 4) = -2;
-
-    Kgy.at(1, 1) = 2; Kgy.at(2, 2) = 2; Kgy.at(3, 3) = 2; Kgy.at(4, 4) = 2;
-    Kgy.at(1, 2) = 1; Kgy.at(1, 3) = -1; Kgy.at(1, 4) = -2;
-    Kgy.at(2, 3) = -2; Kgy.at(2, 4) = -1; Kgy.at(3, 4) = 1;
-
-    Kgxy.at(1, 1) = 1; Kgxy.at(2, 2) = -1; Kgxy.at(3, 3) = 1; Kgxy.at(4, 4) = -1;
-    Kgxy.at(1, 2) = 0; Kgxy.at(1, 3) = -1; Kgxy.at(1, 4) = 0;
-    Kgxy.at(2, 3) = 0; Kgxy.at(2, 4) = 1; Kgxy.at(3, 4) = 0;
-
-    Kgx.symmetrized(); Kgy.symmetrized(); Kgxy.symmetrized();
-
-    // assemble them
-    Kgx.times( sx );
-    Kgx.add( sy, Kgy );
-    Kgx.add( sxy, Kgxy );
-    // once for local z
-    answer.assemble( Kgx, asmz );
-    //answer.assemble( Kgx, asmx ); // u
-    //answer.assemble( Kgx, asmy ); // v
 }
 
 double
