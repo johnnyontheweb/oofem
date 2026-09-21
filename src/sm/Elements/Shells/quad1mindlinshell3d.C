@@ -185,6 +185,54 @@ Quad1MindlinShell3D :: computeSurfaceLoadVectorAt(FloatArray &answer, Load *load
 }
 #endif
 
+
+
+
+void Quad1MindlinShell3D::computeSurfaceNMatrix( FloatMatrix &answer, int boundaryID, const FloatArray &lcoords )
+{
+    FloatArray n;
+    this->interp.evalN( n, lcoords, FEIVoidCellGeometry() );
+    // 6 dof per nodo → matrice 6×24
+    answer.beNMatrixOf( n, 6 );
+}
+
+
+double
+Quad1MindlinShell3D::computeSurfaceVolumeAround( GaussPoint *gp, int iSurf )
+{
+    double detJ = fabs( this->interp.giveTransformationJacobian(
+        gp->giveNaturalCoordinates(),
+        FEIVertexListGeometryWrapper( lnodes, this->giveGeometryType() ) ) );
+
+    return detJ * gp->giveWeight();
+}
+
+
+int Quad1MindlinShell3D::computeLoadLSToLRotationMatrix( FloatMatrix &answer, int iSurf, GaussPoint *gp )
+{
+    // Per una shell piana il sistema locale della superficie coincide
+    // con il sistema locale dell'elemento (lcsMatrix).
+    // Restituiamo quindi la matrice di rotazione 3×3 (o 6×6 se serve).
+
+    this->computeLCS(); // assicura che lcsMatrix sia aggiornata
+
+    answer.resize( 6, 6 );
+    answer.zero();
+
+    // Blocco traslazioni
+    for ( int i = 1; i <= 3; i++ ) {
+        for ( int j = 1; j <= 3; j++ ) {
+            answer.at( i, j )         = lcsMatrix.at( i, j );
+            answer.at( i + 3, j + 3 ) = lcsMatrix.at( i, j ); // rotazioni
+        }
+    }
+    return 1;
+}
+
+
+
+
+
 void
 Quad1MindlinShell3D :: computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int ui)
 {

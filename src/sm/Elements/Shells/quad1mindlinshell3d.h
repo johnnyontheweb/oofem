@@ -155,10 +155,10 @@ protected:
     int computeLoadLEToLRotationMatrix(FloatMatrix &answer, int iEdge, GaussPoint *gp) override;
     void computeVectorOfUnknowns(ValueModeType mode, TimeStep* tStep, FloatArray &shellUnknowns, FloatArray &drillUnknowns);
     virtual void computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep);
-
-    //virtual void computeSurfaceNMatrixAt(FloatMatrix &answer, GaussPoint *gp) { answer.clear(); }
-    //virtual void giveSurfaceDofMapping(IntArray &answer, int iSurf) const { answer.clear(); }
-    //virtual double computeSurfaceVolumeAround(GaussPoint *gp, int iSurf) { return 0.; }
+    // added GR
+    void computeSurfaceNMatrix( FloatMatrix &answer, int boundaryID, const FloatArray &lcoords ) override;
+    double computeSurfaceVolumeAround( GaussPoint *gp, int iSurf ) override;
+    int computeLoadLSToLRotationMatrix( FloatMatrix &answer, int iSurf, GaussPoint *gp );
 
 private:
     void giveNodeCoordinates(FloatArray& nc1, FloatArray& nc2, FloatArray& nc3, FloatArray& nc4);
