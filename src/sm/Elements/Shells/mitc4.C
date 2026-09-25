@@ -213,8 +213,8 @@ MITC4Shell::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
     answer.zero();
 
     // matrix assembly vectors
-    //IntArray asmx{ 1, 7, 13, 19 }; // local u
-    //IntArray asmy{ 2, 8, 14, 20 }; // local v
+    IntArray asmx{ 1, 7, 13, 19 }; // local u
+    IntArray asmy{ 2, 8, 14, 20 }; // local v
     IntArray asmz{ 3, 9, 15, 21 }; // local z
 
     // stress vector
@@ -293,8 +293,8 @@ MITC4Shell::computeInitialStressMatrix( FloatMatrix &answer, TimeStep *tStep )
     Kgx.add( sxy, Kgxy );
     // once for local z
     answer.assemble( Kgx, asmz );
-    //answer.assemble( Kgx, asmx ); // u
-    //answer.assemble( Kgx, asmy ); // v
+    answer.assemble( Kgx, asmx ); // u
+    answer.assemble( Kgx, asmy ); // v
 }
 
 #else
@@ -570,7 +570,7 @@ MITC4Shell::computeStiffnessMatrix(FloatMatrix &answer, MatResponseMode rMode, T
         drillCoeff = this->giveStructuralCrossSection()->give( CS_DrillingStiffness, this->giveDefaultIntegrationRulePtr()->getIntegrationPoint( 0 ) );
 
         auto drillStiffness = eye<4>() * drillCoeff; 
-#if 0
+#if 1
         // NF mod - use drilling from section input
         FloatArray n;
         drillStiffness=zero<4,4>();
@@ -605,7 +605,7 @@ MITC4Shell::giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int us
         this->computeVectorOf( VM_Total, tStep, tmp );
         drillUnknowns.beSubArrayOf( tmp, drillOrdering );
 
-#if 0
+#if 1
         for ( auto &gp : *integrationRulesArray [ 0 ] ) {
             double dV = this->computeVolumeAround(gp);
             // double drillCoeff = this->giveStructuralCrossSection()->give(CS_DrillingStiffness, gp);
