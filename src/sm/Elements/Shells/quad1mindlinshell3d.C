@@ -377,6 +377,8 @@ Quad1MindlinShell3D::computeInitialStressMatrix(FloatMatrix &answer, TimeStep *t
     answer.zero();
 
     // matrix assembly vectors
+    IntArray asmx{ 1, 7, 13, 19 }; // local u
+    IntArray asmy{ 2, 8, 14, 20 }; // local v
     IntArray asmz{ 3, 9, 15, 21 };  // local z
 
     // stress vector
@@ -445,7 +447,8 @@ Quad1MindlinShell3D::computeInitialStressMatrix(FloatMatrix &answer, TimeStep *t
     Kgx.add(sxy, Kgxy);
     // once for local z
     answer.assemble(Kgx, asmz);
-    // done
+    answer.assemble( Kgx, asmx ); // u
+    answer.assemble( Kgx, asmy ); // v
 }
 
 void
