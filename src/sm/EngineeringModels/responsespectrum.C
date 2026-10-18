@@ -66,6 +66,7 @@
 #include "sm/Elements/structuralelement.h"
 #include "nodalload.h"
 #include <math.h>
+#include <algorithm>
 
 
 #ifdef __OOFEG
@@ -1018,12 +1019,13 @@ void ResponseSpectrum::CQC()
         for ( int j = 1; reac_it2 != reactionsList.end(); ++reac_it2, ++j ) {
             FloatArray &reactions2 = *reac_it2;
             for ( int z = 1; z <= reactions.giveSize(); ++z ) {
-                combReactions.at( z ) += fabs( reactions.at( z ) * reactions2.at( z ) * rhos.at( i, j ) );
+                combReactions.at( z ) += reactions.at( z ) * reactions2.at( z ) * rhos.at( i, j );
             }
         }
     }
     for ( int z = 1; z <= combReactions.giveSize(); ++z ) {
-        combReactions.at( z ) = sqrt( combReactions.at( z ) );
+        // semidefinite positive, but can go negative due to numerical errors, so we take max with 0.0
+        combReactions.at( z ) = sqrt( std::max( 0.0, combReactions.at( z ) ) );
     }
 
     list<FloatArray>::iterator disp_it = dispList.begin();
@@ -1033,7 +1035,7 @@ void ResponseSpectrum::CQC()
         for ( int j = 1; disp_it2 != dispList.end(); ++disp_it2, ++j ) {
             FloatArray &disps2 = *disp_it2;
             for ( int z = 1; z <= disps.giveSize(); ++z ) {
-                combDisps.at( z ) += fabs( disps.at( z ) * disps2.at( z ) * rhos.at( i, j ) );
+                combDisps.at( z ) += disps.at( z ) * disps2.at( z ) * rhos.at( i, j );
             }
         }
     }
@@ -1041,7 +1043,8 @@ void ResponseSpectrum::CQC()
     disp_it           = std::next( dispList.begin(), dominantMode - 1 );
     FloatArray &disps = *disp_it; // dominant mode
     for ( int z = 1; z <= combDisps.giveSize(); ++z ) {
-        double res = sqrt( combDisps.at( z ) );
+        // semidefinite positive, but can go negative due to numerical errors, so we take max with 0.0
+        double res = sqrt( std::max( 0.0, combDisps.at( z ) ) );
         res *= signbit( disps.at( z ) ) ? -1 : 1;
         combDisps.at( z ) = res;
     }
@@ -1056,12 +1059,13 @@ void ResponseSpectrum::CQC()
         for ( int j = 1; it2 != imposedForcesList.end(); ++it2, ++j ) {
             FloatArray &forces2 = *it2;
             for ( int k = 1; k <= forces1.giveSize(); ++k ) {
-                combForces.at( k ) += fabs( forces1.at( k ) * forces2.at( k ) * rhos.at( i, j ) );
+                combForces.at( k ) += forces1.at( k ) * forces2.at( k ) * rhos.at( i, j );
             }
         }
     }
     for ( int k = 1; k <= combForces.giveSize(); ++k ) {
-        combForces.at( k ) = sqrt( combForces.at( k ) );
+        // semidefinite positive, but can go negative due to numerical errors, so we take max with 0.0
+        combForces.at( k ) = sqrt( std::max( 0.0, combForces.at( k ) ) );
     }
 
 }
@@ -1209,7 +1213,7 @@ void addMultiply( map<int, map<int, map<int, map<string, FloatArray> > > > &answ
 
                     for ( int i = 1; i <= srcRespArray.giveSize(); ++i ) {
                         // square it and add it
-                        destRespArray.at( i ) += fabs( srcRespArray.at( i ) * srcRespArray2.at( i ) * fact );
+                        destRespArray.at( i ) += srcRespArray.at( i ) * srcRespArray2.at( i ) * fact;
                     }
                 }
             }
@@ -1236,8 +1240,8 @@ void calcRoot( map<int, map<int, map<int, map<string, FloatArray> > > > &answer 
                     FloatArray &destRespArray = destRespMap_it->second;
 
                     for ( int i = 1; i <= destRespArray.giveSize(); ++i ) {
-                        // square it and add it
-                        destRespArray.at( i ) = sqrt( destRespArray.at( i ) );
+                        // semidefinite positive, but can go negative due to numerical errors, so we take max with 0.0
+                        destRespArray.at( i ) = sqrt( std::max( 0.0, destRespArray.at( i ) ) );
                     }
                 }
             }
@@ -1288,7 +1292,7 @@ void addMultiply( map<int, map<string, FloatArray> > &answer, map<int, map<strin
 
             for ( int i = 1; i <= srcRespArray.giveSize(); ++i ) {
                 // square it and add it
-                destRespArray.at( i ) += fabs( srcRespArray.at( i ) * srcRespArray2.at( i ) * fact );
+                destRespArray.at( i ) += srcRespArray.at( i ) * srcRespArray2.at( i ) * fact;
             }
         }
     }
@@ -1305,8 +1309,8 @@ void calcRoot( map<int, map<string, FloatArray> > &answer )
             FloatArray &destRespArray = destRespMap_it->second;
 
             for ( int i = 1; i <= destRespArray.giveSize(); ++i ) {
-                // square it and add it
-                destRespArray.at( i ) = sqrt( destRespArray.at( i ) );
+                // semidefinite positive, but can go negative due to numerical errors, so we take max with 0.0
+                destRespArray.at( i ) = sqrt( std::max( 0.0, destRespArray.at( i ) ) );
             }
         }
     }
