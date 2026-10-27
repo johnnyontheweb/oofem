@@ -319,6 +319,12 @@ TR_SHELL03::computeInitialStressMatrix(FloatMatrix &answer, TimeStep *tStep)
     answer.assemble( Kgx, asmy ); // v
 }
 
+double
+TR_SHELL03 ::giveCharacteristicLength( const FloatArray &normalToCrackPlane )
+{
+    return this->giveLengthInDir( normalToCrackPlane );
+}
+
 void TR_SHELL03 :: computeBodyLoadVectorAt(FloatArray &answer, Load *forLoad, TimeStep *tStep, ValueModeType mode)
 {
   FloatArray aux;

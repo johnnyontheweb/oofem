@@ -151,7 +151,7 @@ public:
     int computeNumberOfDofs() override { return 24; }
     int computeNumberOfGlobalDofs() override { return 24; }
     Element_Geometry_Type giveGeometryType() const override {return EGT_quad_1;}
-
+    double giveCharacteristicLength( const FloatArray &normalToCrackPlane ) override;
 
     void SPRNodalRecoveryMI_giveSPRAssemblyPoints(IntArray &pap) override;
     void SPRNodalRecoveryMI_giveDofMansDeterminedByPatch(IntArray &answer, int pap) override;

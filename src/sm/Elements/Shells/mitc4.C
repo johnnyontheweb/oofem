@@ -634,6 +634,12 @@ MITC4Shell::giveInternalForcesVector(FloatArray &answer, TimeStep *tStep, int us
     }
 }
 
+double
+MITC4Shell::giveCharacteristicLength( const FloatArray &normalToCrackPlane )
+{
+    return this->giveLengthInDir( normalToCrackPlane );
+}
+
 void
 MITC4Shell::computeBmatrixAt(GaussPoint *gp, FloatMatrix &answer, int li, int ui)
 // Returns the [6x20] strain-displacement matrix {B} of the receiver,

@@ -104,7 +104,7 @@ public:
     double computeVolumeAround(GaussPoint *gp) override;
     bool giveRotationMatrix(FloatMatrix &answer) override;
     int computeLoadGToLRotationMtrx(FloatMatrix &answer);
-
+    double giveCharacteristicLength( const FloatArray &normalToCrackPlane ) override;
     void updateYourself(TimeStep *tStep) override;
     void updateInternalState(TimeStep *tStep) override;
     void printOutputAt(FILE *file, TimeStep *tStep) override;

@@ -630,6 +630,9 @@ StructuralMaterial::giveStiffnessMatrix(FloatMatrix &answer,
     MaterialMode mMode = gp->giveMaterialMode();
     switch ( mMode ) {
     case _3dMat:
+    case _3dBeam:
+    case _3dShell:
+    case _3dDegeneratedShell:
         answer = this->give3dMaterialStiffnessMatrix(rMode, gp, tStep);
         break;
     case _PlaneStress:
