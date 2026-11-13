@@ -1244,7 +1244,7 @@ void BeamExportModule::doOutput( TimeStep *tStep, bool forcedOutput )
                 FloatArray forces = forces_it->second;
                 FloatArray disps  = disps_it->second;
                 FloatArray winks  = winks_it->second;
-                fprintf( this->stream, "%10.5e;%d;%10.5e;", curTime, ID, pos );
+                fprintf( this->stream, "%.8e;%d;%10.5e;", curTime, ID, pos );
 
                 for ( auto &val : forces ) {
                     fprintf( this->stream, "%10.5e;", val );
